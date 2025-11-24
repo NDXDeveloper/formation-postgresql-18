@@ -3,7 +3,7 @@
 
 ---
 
-## **Partie 1 : Introduction et Concepts Fondamentaux (Débutant)**
+## **[Partie 1 : Introduction et Concepts Fondamentaux (Débutant)](/partie-01-introduction-concepts-fondamentaux.md)**
 
 ### 1. [Introduction aux Bases de Données](01-introduction-aux-bases-de-donnees/README.md)
 - 1.1 [Qu'est-ce qu'une donnée ? Qu'est-ce qu'une base de données ?](01-introduction-aux-bases-de-donnees/01-quest-ce-quune-donnee.md)
@@ -43,7 +43,7 @@
 
 ---
 
-## **Partie 2 : Le Langage SQL - Interrogation et Manipulation (Intermédiaire)**
+## **[Partie 2 : Le Langage SQL - Interrogation et Manipulation (Intermédiaire)](/partie-02-langage-sql-interrogation-manipulation.md)**
 
 ### 5. [Requêtes de Sélection (DQL)](05-requetes-de-selection/README.md)
 - 5.1 [L'ordre d'exécution logique d'une requête SQL](05-requetes-de-selection/01-ordre-execution-logique.md)
@@ -82,7 +82,7 @@
 
 ---
 
-## **Partie 3 : SQL Avancé et Modélisation (Avancé)**
+## **[Partie 3 : SQL Avancé et Modélisation (Avancé)](/partie-03-sql-avance-modelisation.md)**
 
 ### 9. [Techniques SQL Avancées](09-techniques-sql-avancees/README.md)
 - 9.1 [Sous-requêtes (scalaires, vectorielles, table) et performance](09-techniques-sql-avancees/01-sous-requetes.md)
@@ -115,7 +115,7 @@
 
 ---
 
-## **Partie 4 : Administration, Performance et Architecture Avancée (Avancé)**
+## **[Partie 4 : Administration, Performance et Architecture Avancée (Avancé)](/partie-04-administration-performance-architecture.md)**
 
 ### 12. [Concurrence et Transactions](12-concurrence-et-transactions/README.md)
 - 12.1 [Cycle de vie d'une transaction (BEGIN, SAVEPOINT, COMMIT, ROLLBACK)](12-concurrence-et-transactions/01-cycle-de-vie-transaction.md)
@@ -246,7 +246,7 @@
 
 ---
 
-## **Partie 5 : Écosystème, Production et Ouverture**
+## **[Partie 5 : Écosystème, Production et Ouverture](/partie-05-ecosysteme-production-ouverture.md)**
 
 ### 18. [Extensions et Intégrations](18-extensions-et-integrations/README.md)
 - 18.1 [Système d'extensions PostgreSQL (CREATE EXTENSION)](18-extensions-et-integrations/01-systeme-extensions.md)
@@ -425,12 +425,12 @@
 
 ## **Points Forts de Cette Formation**
 
-✅ **Progressive** : Parcours structuré du débutant à l'expert
-✅ **Complète** : 21 chapitres + 1 chapitre bonus couvrant tous les aspects
-✅ **À jour** : Intégration complète des nouveautés PostgreSQL 18 🆕
-✅ **Professionnelle** : Production, monitoring, HA, architectures modernes
-✅ **Moderne** : Cloud, Kubernetes, IA, architectures distribuées
-✅ **Pratique** : Annexes et références techniques détaillées
+- ✅ **Progressive** : Parcours structuré du débutant à l'expert
+- ✅ **Complète** : 21 chapitres + 1 chapitre bonus couvrant tous les aspects
+- ✅ **À jour** : Intégration complète des nouveautés PostgreSQL 18 🆕
+- ✅ **Professionnelle** : Production, monitoring, HA, architectures modernes
+- ✅ **Moderne** : Cloud, Kubernetes, IA, architectures distribuées
+- ✅ **Pratique** : Annexes et références techniques détaillées
 
 **Durée estimée** : 40-60 heures de formation théorique
 **Public** : Développeurs, DevOps, DBAs débutants à avancés
