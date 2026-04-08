@@ -16,20 +16,20 @@ Avant de plonger dans la réplication logique, commençons par définir ce qu'es
 
 Les raisons principales pour mettre en place de la réplication sont :
 
-1. **Haute Disponibilité (HA)** : Si le serveur principal tombe en panne, un replica peut prendre le relais
-2. **Répartition de Charge** : Distribuer les lectures sur plusieurs serveurs pour améliorer les performances
-3. **Sauvegarde** : Avoir une copie des données à jour en permanence
-4. **Analytics et Reporting** : Décharger les requêtes lourdes vers un serveur dédié
-5. **Migration** : Déplacer une base de données vers un nouveau serveur sans interruption
+1. **Haute Disponibilité (HA)** : Si le serveur principal tombe en panne, un replica peut prendre le relais  
+2. **Répartition de Charge** : Distribuer les lectures sur plusieurs serveurs pour améliorer les performances  
+3. **Sauvegarde** : Avoir une copie des données à jour en permanence  
+4. **Analytics et Reporting** : Décharger les requêtes lourdes vers un serveur dédié  
+5. **Migration** : Déplacer une base de données vers un nouveau serveur sans interruption  
 6. **Distribution Géographique** : Placer les données près des utilisateurs pour réduire la latence
 
 ### Analogie Simple : La Photocopieuse Intelligente
 
 Imaginez une photocopieuse qui peut :
-- **Copier seulement certaines pages** d'un document (pas tout)
-- **Masquer certaines parties** sensibles avant de copier
-- **Copier en temps réel** chaque nouvelle page ajoutée au document source
-- **Envoyer les copies** à plusieurs destinations différentes
+- **Copier seulement certaines pages** d'un document (pas tout)  
+- **Masquer certaines parties** sensibles avant de copier  
+- **Copier en temps réel** chaque nouvelle page ajoutée au document source  
+- **Envoyer les copies** à plusieurs destinations différentes  
 - **Adapter le format** selon les besoins de chaque destination
 
 C'est exactement ce que fait la réplication logique avec vos données PostgreSQL !
@@ -77,11 +77,11 @@ La réplication physique copie les **blocs de données bruts** au niveau du syst
 ```
 
 **Caractéristiques** :
-- ✅ **Très rapide** : Overhead minimal
-- ✅ **Simple** : Configuration facile
-- ✅ **Complet** : Tout est répliqué automatiquement (DDL, séquences, extensions)
-- ❌ **Tout ou rien** : Impossible de sélectionner des tables spécifiques
-- ❌ **Même version** : Le primary et standby doivent avoir la même version majeure
+- ✅ **Très rapide** : Overhead minimal  
+- ✅ **Simple** : Configuration facile  
+- ✅ **Complet** : Tout est répliqué automatiquement (DDL, séquences, extensions)  
+- ❌ **Tout ou rien** : Impossible de sélectionner des tables spécifiques  
+- ❌ **Même version** : Le primary et standby doivent avoir la même version majeure  
 - ❌ **Lecture seule** : Le standby ne peut pas accepter d'écritures
 
 ### Réplication Logique (Logical Replication)
@@ -128,12 +128,12 @@ La réplication logique copie les **changements de données au niveau logique** 
 ```
 
 **Caractéristiques** :
-- ✅ **Sélectif** : Choisir quelles tables, colonnes, lignes répliquer
-- ✅ **Flexible** : Versions PostgreSQL différentes possibles
-- ✅ **Écritures possibles** : Le replica peut accepter des écritures sur tables non répliquées
-- ✅ **Multi-sources** : Un serveur peut recevoir des données de plusieurs sources
-- ⚠️ **Plus lent** : Overhead de 10-20% dû au décodage logique
-- ⚠️ **Plus complexe** : Configuration et gestion plus élaborées
+- ✅ **Sélectif** : Choisir quelles tables, colonnes, lignes répliquer  
+- ✅ **Flexible** : Versions PostgreSQL différentes possibles  
+- ✅ **Écritures possibles** : Le replica peut accepter des écritures sur tables non répliquées  
+- ✅ **Multi-sources** : Un serveur peut recevoir des données de plusieurs sources  
+- ⚠️ **Plus lent** : Overhead de 10-20% dû au décodage logique  
+- ⚠️ **Plus complexe** : Configuration et gestion plus élaborées  
 - ❌ **DDL manuel** : Les changements de schéma ne sont pas automatiques
 
 ### Tableau Comparatif Synthétique
@@ -224,8 +224,8 @@ La réplication logique s'appuie sur plusieurs composants qui travaillent ensemb
 
 ```sql
 -- Une application effectue une modification
-INSERT INTO commandes (client_id, montant, date_commande)
-VALUES (123, 99.99, NOW());
+INSERT INTO commandes (client_id, montant, date_commande)  
+VALUES (123, 99.99, NOW());  
 ```
 
 PostgreSQL enregistre cette opération dans le **WAL (Write-Ahead Log)**, un journal séquentiel de toutes les modifications.
@@ -239,9 +239,9 @@ WAL binaire : 0x4A2F8B3C1D...
 
 ↓ Décodage
 
-Opération logique :
-INSERT INTO public.commandes (id, client_id, montant, date_commande)
-VALUES (5001, 123, 99.99, '2025-11-22 14:30:00');
+Opération logique :  
+INSERT INTO public.commandes (id, client_id, montant, date_commande)  
+VALUES (5001, 123, 99.99, '2025-11-22 14:30:00');  
 ```
 
 #### Étape 3 : Filtrage par Publication
@@ -250,12 +250,12 @@ La **publication** (créée sur le serveur source) détermine quelles données s
 
 ```sql
 -- Exemple : Publier seulement certaines tables
-CREATE PUBLICATION pub_prod
-FOR TABLE commandes, clients, produits;
+CREATE PUBLICATION pub_prod  
+FOR TABLE commandes, clients, produits;  
 
 -- Ou avec filtrage avancé (PostgreSQL 15+)
-CREATE PUBLICATION pub_prod_france
-FOR TABLE commandes WHERE (pays = 'France');
+CREATE PUBLICATION pub_prod_france  
+FOR TABLE commandes WHERE (pays = 'France');  
 ```
 
 Seules les opérations sur les tables publiées sont transmises.
@@ -270,9 +270,9 @@ La **subscription** (créée sur le serveur destination) se connecte à la publi
 
 ```sql
 -- Sur le serveur destination
-CREATE SUBSCRIPTION sub_prod
-CONNECTION 'host=source.example.com dbname=production user=replicateur'
-PUBLICATION pub_prod;
+CREATE SUBSCRIPTION sub_prod  
+CONNECTION 'host=source.example.com dbname=production user=replicateur'  
+PUBLICATION pub_prod;  
 ```
 
 #### Étape 6 : Application des Changements
@@ -281,8 +281,8 @@ Un **worker de réplication logique** applique les changements dans les tables l
 
 ```sql
 -- Le worker exécute (automatiquement) :
-INSERT INTO commandes (id, client_id, montant, date_commande)
-VALUES (5001, 123, 99.99, '2025-11-22 14:30:00');
+INSERT INTO commandes (id, client_id, montant, date_commande)  
+VALUES (5001, 123, 99.99, '2025-11-22 14:30:00');  
 ```
 
 #### Étape 7 : Synchronisation Continue
@@ -300,8 +300,8 @@ Le **WAL** est le journal de toutes les transactions PostgreSQL. C'est le cœur 
 **Principe** : Avant de modifier une donnée sur disque, PostgreSQL écrit d'abord la modification dans le WAL. Cela garantit la durabilité (ACID) et permet la réplication.
 
 ```
-Transaction :
-UPDATE commandes SET statut = 'payee' WHERE id = 100;
+Transaction :  
+UPDATE commandes SET statut = 'payee' WHERE id = 100;  
 
 ┌─────────────────────────────────────────┐
 │ 1. Écriture dans le WAL (instantané)    │
@@ -385,23 +385,23 @@ PostgreSQL utilise le plugin **pgoutput** par défaut pour la réplication logiq
 **Réplication Sélective** :
 ```sql
 -- Répliquer seulement 3 tables sur 100
-CREATE PUBLICATION pub_metier
-FOR TABLE commandes, clients, produits;
+CREATE PUBLICATION pub_metier  
+FOR TABLE commandes, clients, produits;  
 ```
 
 **Filtrage par Colonnes** :
 ```sql
 -- Répliquer sans les colonnes sensibles
-CREATE PUBLICATION pub_anonymized
-FOR TABLE clients (id, nom, ville, pays);
+CREATE PUBLICATION pub_anonymized  
+FOR TABLE clients (id, nom, ville, pays);  
 -- email, telephone, adresse sont exclus
 ```
 
 **Filtrage par Lignes** :
 ```sql
 -- Répliquer seulement les données d'une région
-CREATE PUBLICATION pub_europe
-FOR TABLE commandes WHERE (region = 'Europe');
+CREATE PUBLICATION pub_europe  
+FOR TABLE commandes WHERE (region = 'Europe');  
 ```
 
 ### 2. Migration sans Interruption
@@ -426,8 +426,8 @@ Vous pouvez répliquer entre différentes versions de PostgreSQL :
 PostgreSQL 13  ────→  PostgreSQL 18
   (source)              (destination)
 
-Permet de tester la nouvelle version avec vos données réelles
-avant de migrer complètement
+Permet de tester la nouvelle version avec vos données réelles  
+avant de migrer complètement  
 ```
 
 ### 4. Architecture Distribuée
@@ -446,8 +446,8 @@ avant de migrer complètement
 │ Filiale C   │──┘
 └─────────────┘
 
-Chaque filiale publie ses données
-Le data warehouse les agrège toutes
+Chaque filiale publie ses données  
+Le data warehouse les agrège toutes  
 ```
 
 ### 5. Isolation des Charges (OLTP vs OLAP)
@@ -477,9 +477,9 @@ Les requêtes analytics n'impactent pas la production
 **Problème** : Migrer d'un ancien serveur vers un nouveau sans interruption.
 
 **Solution avec Réplication Logique** :
-1. Configurer la réplication vers le nouveau serveur
-2. Attendre la synchronisation complète
-3. Basculer l'application (downtime < 1 minute)
+1. Configurer la réplication vers le nouveau serveur  
+2. Attendre la synchronisation complète  
+3. Basculer l'application (downtime < 1 minute)  
 4. Valider et désactiver l'ancien serveur
 
 **Avantage** : Zero-downtime migration.
@@ -491,8 +491,8 @@ Les requêtes analytics n'impactent pas la production
 **Solution** :
 ```sql
 -- Répliquer seulement les données non sensibles
-CREATE PUBLICATION pub_dev_safe
-FOR TABLE produits, categories, fournisseurs;
+CREATE PUBLICATION pub_dev_safe  
+FOR TABLE produits, categories, fournisseurs;  
 -- clients, commandes, paiements NE SONT PAS répliqués
 
 -- Ou avec anonymisation (via triggers sur la destination)
@@ -505,8 +505,8 @@ FOR TABLE produits, categories, fournisseurs;
 **Solution** :
 ```sql
 -- Serveur EU : Répliquer seulement les données EU
-CREATE PUBLICATION pub_eu_only
-FOR TABLE commandes WHERE (pays IN ('FR', 'DE', 'IT', 'ES'));
+CREATE PUBLICATION pub_eu_only  
+FOR TABLE commandes WHERE (pays IN ('FR', 'DE', 'IT', 'ES'));  
 
 -- Les données des autres régions ne quittent jamais leur zone
 ```
@@ -525,10 +525,10 @@ FOR TABLE commandes WHERE (pays IN ('FR', 'DE', 'IT', 'ES'));
 **Problème** : Passer de PostgreSQL 13 à 18 sans risque.
 
 **Solution** :
-1. Configurer réplication 13 → 18
-2. Tester l'application contre PG 18
-3. Valider les performances
-4. Basculer en production
+1. Configurer réplication 13 → 18  
+2. Tester l'application contre PG 18  
+3. Valider les performances  
+4. Basculer en production  
 5. Rollback facile si problème (retour vers PG 13)
 
 ---
@@ -562,8 +562,8 @@ max_slot_wal_keep_size = 50GB
 ```
 # Autoriser la connexion pour la réplication
 # depuis les serveurs subscribers
-host    replication    replicateur    10.0.0.0/8    scram-sha-256
-host    production     replicateur    10.0.0.0/8    scram-sha-256
+host    replication    replicateur    10.0.0.0/8    scram-sha-256  
+host    production     replicateur    10.0.0.0/8    scram-sha-256  
 ```
 
 #### 3. Utilisateur de Réplication
@@ -573,8 +573,8 @@ host    production     replicateur    10.0.0.0/8    scram-sha-256
 CREATE ROLE replicateur WITH LOGIN REPLICATION PASSWORD 'mot_de_passe_securise';
 
 -- Accorder les permissions sur les tables à répliquer
-GRANT SELECT ON ALL TABLES IN SCHEMA public TO replicateur;
-GRANT USAGE ON SCHEMA public TO replicateur;
+GRANT SELECT ON ALL TABLES IN SCHEMA public TO replicateur;  
+GRANT USAGE ON SCHEMA public TO replicateur;  
 ```
 
 ### Configuration Serveur Destination (Subscriber)
@@ -700,8 +700,8 @@ SELECT
     pubupdate,
     pubdelete,
     pubtruncate
-FROM pg_publication
-WHERE pubname = 'pub_prod';
+FROM pg_publication  
+WHERE pubname = 'pub_prod';  
 ```
 
 #### 2. État des Subscriptions (Serveur Destination)
@@ -744,8 +744,8 @@ SELECT
     pg_size_pretty(
         pg_wal_lsn_diff(pg_current_wal_lsn(), restart_lsn)
     ) AS wal_retained
-FROM pg_replication_slots
-WHERE slot_type = 'logical';
+FROM pg_replication_slots  
+WHERE slot_type = 'logical';  
 ```
 
 ### Métriques Clés à Surveiller
@@ -804,10 +804,10 @@ WHERE slot_type = 'logical';
 ### Limitations à Connaître
 
 **Ce qui N'est PAS répliqué** :
-- ❌ Modifications de schéma (DDL)
-- ❌ Valeurs de séquences
-- ❌ Large Objects (BLOB via `pg_largeobject`)
-- ❌ Tables sans clé primaire (par défaut)
+- ❌ Modifications de schéma (DDL)  
+- ❌ Valeurs de séquences  
+- ❌ Large Objects (BLOB via `pg_largeobject`)  
+- ❌ Tables sans clé primaire (par défaut)  
 - ❌ Tables temporaires et non journalisées
 
 Ces limitations seront détaillées dans la section suivante.
@@ -820,19 +820,19 @@ PostgreSQL 18 (septembre 2025) apporte des améliorations significatives :
 
 ### 1. Performances Améliorées
 
-- **Décodage logique optimisé** : Réduction de l'overhead CPU
-- **Parallélisation étendue** : Meilleure utilisation des workers
+- **Décodage logique optimisé** : Réduction de l'overhead CPU  
+- **Parallélisation étendue** : Meilleure utilisation des workers  
 - **Compression améliorée** : Réduction de la bande passante réseau
 
 ### 2. Nouvelles Fonctionnalités
 
-- **Authentification OAuth 2.0** : Intégration moderne des identités
-- **Statistiques étendues** : Nouvelles métriques dans `pg_stat_subscription`
+- **Authentification OAuth 2.0** : Intégration moderne des identités  
+- **Statistiques étendues** : Nouvelles métriques dans `pg_stat_subscription`  
 - **Gestion améliorée des conflits** : Nouvelles options de résolution
 
 ### 3. Fiabilité
 
-- **Data Checksums par défaut** : Détection de corruption automatique
+- **Data Checksums par défaut** : Détection de corruption automatique  
 - **Améliorations du décodage WAL** : Moins d'erreurs en cas de charge élevée
 
 ---
@@ -849,8 +849,8 @@ La **réplication logique** est un outil puissant qui offre une flexibilité in�
 Contrairement à la réplication physique qui est "tout ou rien", la réplication logique vous permet de **choisir précisément** quelles données répliquer, vers quelles destinations, et comment.
 
 Dans les sections suivantes, nous allons explorer en détail :
-- **17.3.1** : Publications et Subscriptions (mécanismes fondamentaux)
-- **17.3.2** : Cas d'usage concrets (migrations, réplication sélective)
+- **17.3.1** : Publications et Subscriptions (mécanismes fondamentaux)  
+- **17.3.2** : Cas d'usage concrets (migrations, réplication sélective)  
 - **17.3.3** : Limitations et considérations (ce qu'il faut savoir)
 
 ---

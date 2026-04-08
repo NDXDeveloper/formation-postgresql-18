@@ -29,8 +29,8 @@ PostgreSQL a une particularité architecturale fondamentale : le **MVCC**.
 **Principe de base** :
 Quand vous **modifiez ou supprimez** une ligne, PostgreSQL ne la supprime pas immédiatement. Au lieu de cela :
 
-1. **L'ancienne version** est marquée comme "morte" (obsolète)
-2. **Une nouvelle version** est créée (pour les UPDATE)
+1. **L'ancienne version** est marquée comme "morte" (obsolète)  
+2. **Une nouvelle version** est créée (pour les UPDATE)  
 3. Les deux versions coexistent temporairement
 
 **Exemple concret** :
@@ -60,16 +60,16 @@ UPDATE users SET email = 'alice.nouveau@exemple.com' WHERE id = 1;
 **Évolution typique sans maintenance** :
 
 ```
-Semaine 1 : Table de 100 MB, 5% de bloat     → 105 MB total
-Semaine 2 : Table de 100 MB, 15% de bloat    → 115 MB total
-Semaine 3 : Table de 100 MB, 30% de bloat    → 130 MB total
-Semaine 4 : Table de 100 MB, 50% de bloat    → 150 MB total
+Semaine 1 : Table de 100 MB, 5% de bloat     → 105 MB total  
+Semaine 2 : Table de 100 MB, 15% de bloat    → 115 MB total  
+Semaine 3 : Table de 100 MB, 30% de bloat    → 130 MB total  
+Semaine 4 : Table de 100 MB, 50% de bloat    → 150 MB total  
 ```
 
 **Impact** :
-- ❌ **Espace disque gaspillé** : La table occupe 150 MB au lieu de 100 MB
-- ❌ **Requêtes plus lentes** : PostgreSQL doit parcourir 150 MB au lieu de 100 MB
-- ❌ **Sauvegardes plus longues** : Vous sauvegardez 50% de données inutiles
+- ❌ **Espace disque gaspillé** : La table occupe 150 MB au lieu de 100 MB  
+- ❌ **Requêtes plus lentes** : PostgreSQL doit parcourir 150 MB au lieu de 100 MB  
+- ❌ **Sauvegardes plus longues** : Vous sauvegardez 50% de données inutiles  
 - ❌ **Cache moins efficace** : La RAM est remplie de données obsolètes
 
 #### Problème B : Statistiques obsolètes
@@ -93,8 +93,8 @@ PostgreSQL utilise des **statistiques** pour optimiser vos requêtes :
 ```
 
 **Impact** :
-- ❌ **Plans de requêtes sous-optimaux** : PostgreSQL choisit la mauvaise stratégie
-- ❌ **Performances dégradées** : Requêtes 10× à 100× plus lentes
+- ❌ **Plans de requêtes sous-optimaux** : PostgreSQL choisit la mauvaise stratégie  
+- ❌ **Performances dégradées** : Requêtes 10× à 100× plus lentes  
 - ❌ **Ressources gaspillées** : CPU et I/O utilisés inefficacement
 
 #### Problème C : XID Wraparound (Catastrophe potentielle)
@@ -109,13 +109,13 @@ PostgreSQL utilise des **Transaction IDs (XID)** pour gérer les versions :
 - Pour éviter la corruption, **PostgreSQL s'arrête automatiquement** !
 
 ```
-WARNING: database "mydb" must be vacuumed within 1000000 transactions
-ERROR: database is not accepting commands to avoid wraparound data loss
+WARNING: database "mydb" must be vacuumed within 1000000 transactions  
+ERROR: database is not accepting commands to avoid wraparound data loss  
 ```
 
 **Impact** :
-- ❌ **Arrêt complet de la base** : Votre application devient indisponible
-- ❌ **Perte de données potentielle** : Si non traité
+- ❌ **Arrêt complet de la base** : Votre application devient indisponible  
+- ❌ **Perte de données potentielle** : Si non traité  
 - ❌ **Opération de récupération longue** : Plusieurs heures d'indisponibilité
 
 ### 3. La maintenance préventive vs corrective
@@ -124,22 +124,22 @@ ERROR: database is not accepting commands to avoid wraparound data loss
 ```
 Maintenance légère quotidienne → Base de données saine → Performances optimales
 ```
-- ✅ Opérations courtes (secondes à minutes)
-- ✅ Peu d'impact sur les utilisateurs
-- ✅ Automatisable
+- ✅ Opérations courtes (secondes à minutes)  
+- ✅ Peu d'impact sur les utilisateurs  
+- ✅ Automatisable  
 - ✅ Prévisible
 
 **Maintenance corrective** (ce que nous voulons éviter) :
 ```
 Pas de maintenance → Problèmes s'accumulent → CRISE → Maintenance d'urgence
 ```
-- ❌ Opérations longues (heures)
-- ❌ Impact majeur sur les utilisateurs (downtime)
-- ❌ Stress et urgence
+- ❌ Opérations longues (heures)  
+- ❌ Impact majeur sur les utilisateurs (downtime)  
+- ❌ Stress et urgence  
 - ❌ Risques de complications
 
 **Analogie** : Comme pour une voiture
-- **Préventif** : Vidange tous les 15 000 km → moteur sain, pas de panne
+- **Préventif** : Vidange tous les 15 000 km → moteur sain, pas de panne  
 - **Correctif** : Jamais de vidange → moteur grippe → réparation coûteuse et longue
 
 ---
@@ -238,9 +238,9 @@ Pas de maintenance → Problèmes s'accumulent → CRISE → Maintenance d'urgen
 
 Autovacuum est un **système de processus d'arrière-plan** qui :
 
-1. **Se réveille périodiquement** (toutes les 1 minute par défaut, 10s dans PG 18)
-2. **Inspecte vos tables** pour détecter l'activité (insertions, mises à jour, suppressions)
-3. **Décide automatiquement** quelles tables nécessitent un VACUUM ou ANALYZE
+1. **Se réveille périodiquement** (toutes les 1 minute par défaut, 10s dans PG 18)  
+2. **Inspecte vos tables** pour détecter l'activité (insertions, mises à jour, suppressions)  
+3. **Décide automatiquement** quelles tables nécessitent un VACUUM ou ANALYZE  
 4. **Lance les opérations** de maintenance sans intervention humaine
 
 ### Architecture d'autovacuum
@@ -281,8 +281,8 @@ Si `nombre_de_modifications > Seuil` → Autovacuum lance ANALYZE
 **Exemple** :
 ```sql
 -- Paramètres par défaut
-autovacuum_vacuum_threshold = 50
-autovacuum_vacuum_scale_factor = 0.2  -- 20%
+autovacuum_vacuum_threshold = 50  
+autovacuum_vacuum_scale_factor = 0.2  -- 20%  
 
 -- Table avec 100 000 lignes
 Seuil = 50 + (0.2 × 100 000) = 20 050
@@ -295,13 +295,13 @@ Seuil = 50 + (0.2 × 100 000) = 20 050
 
 ```sql
 -- Vérifier la configuration actuelle
-SHOW autovacuum;                           -- on/off (doit être 'on' !)
-SHOW autovacuum_naptime;                   -- Fréquence de réveil (1min défaut)
-SHOW autovacuum_max_workers;               -- Nombre de workers (3 défaut)
-SHOW autovacuum_vacuum_threshold;          -- 50
-SHOW autovacuum_vacuum_scale_factor;       -- 0.2 (20%)
-SHOW autovacuum_analyze_threshold;         -- 50
-SHOW autovacuum_analyze_scale_factor;      -- 0.1 (10%)
+SHOW autovacuum;                           -- on/off (doit être 'on' !)  
+SHOW autovacuum_naptime;                   -- Fréquence de réveil (1min défaut)  
+SHOW autovacuum_max_workers;               -- Nombre de workers (3 défaut)  
+SHOW autovacuum_vacuum_threshold;          -- 50  
+SHOW autovacuum_vacuum_scale_factor;       -- 0.2 (20%)  
+SHOW autovacuum_analyze_threshold;         -- 50  
+SHOW autovacuum_analyze_scale_factor;      -- 0.1 (10%)  
 ```
 
 ### Nouveautés PostgreSQL 18
@@ -341,8 +341,8 @@ SHOW autovacuum;
 
 ⚠️ **Si 'off'** : Votre base est en danger ! Activez-le immédiatement :
 ```sql
-ALTER SYSTEM SET autovacuum = on;
-SELECT pg_reload_conf();
+ALTER SYSTEM SET autovacuum = on;  
+SELECT pg_reload_conf();  
 ```
 
 ### 2. Y a-t-il des tables avec beaucoup de bloat ?
@@ -356,16 +356,16 @@ SELECT
     ROUND(n_dead_tup * 100.0 / NULLIF(n_live_tup + n_dead_tup, 0), 2) AS dead_pct,
     pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename)) AS size,
     last_autovacuum
-FROM pg_stat_user_tables
-WHERE n_dead_tup > 1000
-ORDER BY n_dead_tup DESC
-LIMIT 20;
+FROM pg_stat_user_tables  
+WHERE n_dead_tup > 1000  
+ORDER BY n_dead_tup DESC  
+LIMIT 20;  
 ```
 
 **Indicateurs** :
-- `dead_pct < 10%` → ✅ Excellent
-- `dead_pct 10-20%` → ✅ Correct
-- `dead_pct 20-30%` → ⚠️ Attention
+- `dead_pct < 10%` → ✅ Excellent  
+- `dead_pct 10-20%` → ✅ Correct  
+- `dead_pct 20-30%` → ⚠️ Attention  
 - `dead_pct > 30%` → 🔴 Problème, action requise
 
 ### 3. Les statistiques sont-elles à jour ?
@@ -379,15 +379,15 @@ SELECT
     ROUND(n_mod_since_analyze * 100.0 / NULLIF(n_live_tup, 0), 2) AS mod_pct,
     last_analyze,
     last_autoanalyze
-FROM pg_stat_user_tables
-WHERE n_mod_since_analyze > 1000
-ORDER BY n_mod_since_analyze DESC
-LIMIT 20;
+FROM pg_stat_user_tables  
+WHERE n_mod_since_analyze > 1000  
+ORDER BY n_mod_since_analyze DESC  
+LIMIT 20;  
 ```
 
 **Indicateurs** :
-- `mod_pct < 10%` → ✅ Statistiques fraîches
-- `mod_pct 10-20%` → ⚠️ Devrait être analysé bientôt
+- `mod_pct < 10%` → ✅ Statistiques fraîches  
+- `mod_pct 10-20%` → ⚠️ Devrait être analysé bientôt  
 - `mod_pct > 20%` → 🔴 Statistiques obsolètes, ANALYZE recommandé
 
 ### 4. Risque de XID wraparound ?
@@ -403,14 +403,14 @@ SELECT
         WHEN age(datfrozenxid) < 180000000 THEN '🟡 Attention'
         ELSE '🔴 URGENT'
     END AS status
-FROM pg_database
-ORDER BY age(datfrozenxid) DESC;
+FROM pg_database  
+ORDER BY age(datfrozenxid) DESC;  
 ```
 
 **Seuils critiques** :
-- `< 100M` → ✅ Aucun risque
-- `100-150M` → ⚠️ Surveiller
-- `150-180M` → 🟡 Planifier un vacuum
+- `< 100M` → ✅ Aucun risque  
+- `100-150M` → ⚠️ Surveiller  
+- `150-180M` → 🟡 Planifier un vacuum  
 - `> 180M` → 🔴 Action urgente requise
 
 ### 5. Autovacuum tourne-t-il régulièrement ?
@@ -428,10 +428,10 @@ SELECT
         WHEN last_autovacuum < NOW() - INTERVAL '1 day' THEN '✅ Récent'
         ELSE '✅ Très récent'
     END AS status
-FROM pg_stat_user_tables
-WHERE schemaname = 'public'
-ORDER BY last_autovacuum DESC NULLS LAST
-LIMIT 20;
+FROM pg_stat_user_tables  
+WHERE schemaname = 'public'  
+ORDER BY last_autovacuum DESC NULLS LAST  
+LIMIT 20;  
 ```
 
 ---
@@ -444,8 +444,8 @@ LIMIT 20;
 
 **Règle d'or** :
 ```
-Autovacuum = 95% du travail
-Interventions manuelles = 5% (cas spécifiques)
+Autovacuum = 95% du travail  
+Interventions manuelles = 5% (cas spécifiques)  
 ```
 
 ❌ **À NE PAS FAIRE** :
@@ -507,15 +507,15 @@ REINDEX INDEX CONCURRENTLY mon_index;
 **Périodes de faible activité** (nuit, week-end) :
 ```sql
 -- Autovacuum plus agressif
-ALTER SYSTEM SET autovacuum_vacuum_cost_delay = 0;  -- Pas de throttling
-SELECT pg_reload_conf();
+ALTER SYSTEM SET autovacuum_vacuum_cost_delay = 0;  -- Pas de throttling  
+SELECT pg_reload_conf();  
 ```
 
 **Périodes de forte activité** (heures de pointe) :
 ```sql
 -- Autovacuum plus "gentil"
-ALTER SYSTEM SET autovacuum_vacuum_cost_delay = 10;  -- Throttling fort
-SELECT pg_reload_conf();
+ALTER SYSTEM SET autovacuum_vacuum_cost_delay = 10;  -- Throttling fort  
+SELECT pg_reload_conf();  
 ```
 
 #### 5. Configuration par table pour les cas spécifiques
@@ -540,31 +540,31 @@ ALTER TABLE logs_archives SET (
 
 ### Quotidienne (Automatique via monitoring)
 
-- ✅ Vérifier que autovacuum est activé
-- ✅ Surveiller le nombre de tables avec bloat > 20%
-- ✅ Vérifier qu'il n'y a pas de workers autovacuum bloqués
+- ✅ Vérifier que autovacuum est activé  
+- ✅ Surveiller le nombre de tables avec bloat > 20%  
+- ✅ Vérifier qu'il n'y a pas de workers autovacuum bloqués  
 - ✅ Consulter les logs pour des erreurs de maintenance
 
 ### Hebdomadaire (Revue rapide)
 
-- ✅ Analyser les tables avec le plus de bloat
-- ✅ Vérifier les tables qui n'ont pas été vacuum depuis > 7 jours
-- ✅ Contrôler l'évolution de l'âge XID
+- ✅ Analyser les tables avec le plus de bloat  
+- ✅ Vérifier les tables qui n'ont pas été vacuum depuis > 7 jours  
+- ✅ Contrôler l'évolution de l'âge XID  
 - ✅ Identifier les requêtes lentes qui pourraient bénéficier d'un ANALYZE
 
 ### Mensuelle (Audit approfondi)
 
-- ✅ Analyser la fréquence des autovacuum par table
-- ✅ Évaluer si la configuration autovacuum est optimale
-- ✅ Identifier les tables candidates pour un REINDEX
-- ✅ Audit des index inutilisés ou redondants
+- ✅ Analyser la fréquence des autovacuum par table  
+- ✅ Évaluer si la configuration autovacuum est optimale  
+- ✅ Identifier les tables candidates pour un REINDEX  
+- ✅ Audit des index inutilisés ou redondants  
 - ✅ Vérifier la croissance de la taille de la base
 
 ### Trimestrielle (Stratégie)
 
-- ✅ Réévaluer les paramètres d'autovacuum selon l'évolution de la charge
-- ✅ Planifier des VACUUM FULL si nécessaire (fenêtre de maintenance)
-- ✅ Revoir les stratégies de partitionnement si applicable
+- ✅ Réévaluer les paramètres d'autovacuum selon l'évolution de la charge  
+- ✅ Planifier des VACUUM FULL si nécessaire (fenêtre de maintenance)  
+- ✅ Revoir les stratégies de partitionnement si applicable  
 - ✅ Audit de performance global (avec EXPLAIN ANALYZE)
 
 ---
@@ -637,8 +637,8 @@ autovacuum_max_workers = 3  -- Trop peu pour 100+ tables actives
 **Correctif** :
 ```sql
 -- ✅ Adapter à votre charge (PostgreSQL 18)
-autovacuum_worker_slots = 12;
-autovacuum_vacuum_max_threshold = 2000000;
+autovacuum_worker_slots = 12;  
+autovacuum_vacuum_max_threshold = 2000000;  
 ```
 
 ---
@@ -647,8 +647,8 @@ autovacuum_vacuum_max_threshold = 2000000;
 
 ### 1. Pourquoi la maintenance est vitale
 
-- 🧹 **MVCC crée des lignes mortes** qui s'accumulent sans nettoyage
-- 📊 **Les statistiques obsolètes** dégradent les performances des requêtes
+- 🧹 **MVCC crée des lignes mortes** qui s'accumulent sans nettoyage  
+- 📊 **Les statistiques obsolètes** dégradent les performances des requêtes  
 - ⚠️ **Le XID wraparound** peut arrêter votre base de données
 
 ### 2. Les trois piliers
@@ -661,15 +661,15 @@ autovacuum_vacuum_max_threshold = 2000000;
 
 ### 3. Autovacuum : Votre meilleur ami
 
-- ✅ **Toujours activé** (c'est non négociable)
-- 🤖 **Automatique** : fait 95% du travail pour vous
-- 🎯 **Intelligent** : s'adapte à l'activité de vos tables
+- ✅ **Toujours activé** (c'est non négociable)  
+- 🤖 **Automatique** : fait 95% du travail pour vous  
+- 🎯 **Intelligent** : s'adapte à l'activité de vos tables  
 - 🚀 **PostgreSQL 18** : encore plus performant et flexible
 
 ### 4. Votre rôle
 
-- 📊 **Surveiller** : Dashboard de monitoring
-- ⚙️ **Configurer** : Ajuster selon votre charge
+- 📊 **Surveiller** : Dashboard de monitoring  
+- ⚙️ **Configurer** : Ajuster selon votre charge  
 - 🛠️ **Intervenir** : Seulement dans les 5% de cas spécifiques
 
 ---

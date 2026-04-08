@@ -93,7 +93,7 @@ Attaquant vole le disque dur → Monte le disque sur son PC
 ### Définition
 
 **TDE (Transparent Data Encryption)** est une technologie qui chiffre automatiquement les données :
-- **Avant** de les écrire sur le disque
+- **Avant** de les écrire sur le disque  
 - **Après** les avoir lues depuis le disque
 
 **"Transparent"** signifie :
@@ -151,34 +151,34 @@ Application ← Résultat : 'Alice', 'alice@example.com'
 **Chiffrement Applicatif :**
 ```sql
 -- L'application chiffre AVANT d'envoyer à PostgreSQL
-INSERT INTO users (nom, email_chiffre)
-VALUES ('Alice', encrypt('alice@example.com', 'ma_cle_secrete'));
+INSERT INTO users (nom, email_chiffre)  
+VALUES ('Alice', encrypt('alice@example.com', 'ma_cle_secrete'));  
 
 -- L'application doit déchiffrer APRÈS avoir lu
-SELECT nom, decrypt(email_chiffre, 'ma_cle_secrete')
-FROM users;
+SELECT nom, decrypt(email_chiffre, 'ma_cle_secrete')  
+FROM users;  
 ```
 
 **Problèmes :**
-- ❌ Modification du code application nécessaire
-- ❌ Impossible d'indexer ou de rechercher sur les données chiffrées
-- ❌ Complexité accrue
+- ❌ Modification du code application nécessaire  
+- ❌ Impossible d'indexer ou de rechercher sur les données chiffrées  
+- ❌ Complexité accrue  
 - ❌ Gestion des clés par l'application
 
 **TDE (Transparent) :**
 ```sql
 -- Aucun changement dans l'application
-INSERT INTO users (nom, email)
-VALUES ('Alice', 'alice@example.com');
+INSERT INTO users (nom, email)  
+VALUES ('Alice', 'alice@example.com');  
 
 SELECT nom, email FROM users WHERE email LIKE '%@example.com';
 -- Fonctionne normalement !
 ```
 
 **Avantages :**
-- ✅ Aucune modification de code
-- ✅ Index fonctionnels
-- ✅ Recherches normales
+- ✅ Aucune modification de code  
+- ✅ Index fonctionnels  
+- ✅ Recherches normales  
 - ✅ Gestion centralisée des clés
 
 ---
@@ -298,9 +298,9 @@ Administrateur cloud → Crée un snapshot de la VM
 - C'est une fonctionnalité **très demandée** mais techniquement complexe
 
 **Pourquoi TDE n'est pas encore dans le core ?**
-1. **Complexité technique** : Impacte beaucoup de composants (WAL, buffers, réplication)
-2. **Performance** : Le chiffrement a un coût CPU
-3. **Gestion des clés** : Architecture complexe requise
+1. **Complexité technique** : Impacte beaucoup de composants (WAL, buffers, réplication)  
+2. **Performance** : Le chiffrement a un coût CPU  
+3. **Gestion des clés** : Architecture complexe requise  
 4. **Réplication** : Doit fonctionner avec la réplication logique et physique
 
 **Bonne nouvelle :** Des solutions existent via :
@@ -357,17 +357,17 @@ Administrateur cloud → Crée un snapshot de la VM
 
 #### Avantages
 
-- ✅ **Simple** : Pas de modification de PostgreSQL
-- ✅ **Universel** : Protège tout (PostgreSQL + logs + config)
-- ✅ **Mature** : LUKS est utilisé depuis des années
-- ✅ **Performance** : Accélération matérielle (AES-NI)
+- ✅ **Simple** : Pas de modification de PostgreSQL  
+- ✅ **Universel** : Protège tout (PostgreSQL + logs + config)  
+- ✅ **Mature** : LUKS est utilisé depuis des années  
+- ✅ **Performance** : Accélération matérielle (AES-NI)  
 - ✅ **Gratuit** : Intégré dans Linux
 
 #### Inconvénients
 
-- ❌ **Protection limitée** : Ne protège que si le serveur est éteint
-- ❌ **Clé en mémoire** : Une fois démarré, les données sont accessibles
-- ❌ **Pas de granularité** : Tout ou rien (impossible de chiffrer seulement certaines tables)
+- ❌ **Protection limitée** : Ne protège que si le serveur est éteint  
+- ❌ **Clé en mémoire** : Une fois démarré, les données sont accessibles  
+- ❌ **Pas de granularité** : Tout ou rien (impossible de chiffrer seulement certaines tables)  
 - ❌ **Sauvegardes** : Les sauvegardes logiques (pg_dump) ne sont pas chiffrées
 
 #### Configuration (Linux avec LUKS)
@@ -393,8 +393,8 @@ mount /dev/mapper/postgresql_encrypted /var/lib/postgresql
 ```bash
 # Stocker la clé dans un fichier sécurisé (attention à la sécurité !)
 # Mieux : utiliser un HSM ou un service de gestion de clés
-echo "ma_passphrase_ultra_secrete" > /root/.luks_key
-chmod 600 /root/.luks_key
+echo "ma_passphrase_ultra_secrete" > /root/.luks_key  
+chmod 600 /root/.luks_key  
 
 # Ajouter à /etc/crypttab pour ouverture automatique
 echo "postgresql_encrypted /dev/sdb1 /root/.luks_key luks" >> /etc/crypttab
@@ -419,8 +419,8 @@ echo "postgresql_encrypted /dev/sdb1 /root/.luks_key luks" >> /etc/crypttab
 **Similaire à LUKS** mais au niveau du système de fichiers.
 
 **Avantages supplémentaires :**
-- ✅ Chiffrement par dataset/filesystem (plus granulaire que LUKS)
-- ✅ Snapshots chiffrés
+- ✅ Chiffrement par dataset/filesystem (plus granulaire que LUKS)  
+- ✅ Snapshots chiffrés  
 - ✅ Meilleure intégration avec fonctionnalités avancées (compression, déduplication)
 
 **Exemple avec ZFS :**
@@ -443,13 +443,13 @@ zfs mount tank/postgresql
 **Description :** Extension développée par Cybertec offrant TDE complet.
 
 **Fonctionnalités :**
-- ✅ Chiffrement transparent des données
-- ✅ Chiffrement du WAL
-- ✅ Gestion des clés intégrée
+- ✅ Chiffrement transparent des données  
+- ✅ Chiffrement du WAL  
+- ✅ Gestion des clés intégrée  
 - ✅ Compatible avec réplication
 
 **Limitation :**
-- ⚠️ Extension commerciale (payante)
+- ⚠️ Extension commerciale (payante)  
 - ⚠️ Nécessite version patchée de PostgreSQL
 
 **Site web :** https://www.cybertec-postgresql.com/en/products/cybertec-postgresql-transparent-data-encryption/
@@ -466,18 +466,18 @@ zfs mount tank/postgresql
 CREATE EXTENSION pgcrypto;
 
 -- Chiffrer des données
-INSERT INTO users (nom, email_chiffre)
-VALUES ('Alice', pgp_sym_encrypt('alice@example.com', 'cle_secrete'));
+INSERT INTO users (nom, email_chiffre)  
+VALUES ('Alice', pgp_sym_encrypt('alice@example.com', 'cle_secrete'));  
 
 -- Déchiffrer
-SELECT nom, pgp_sym_decrypt(email_chiffre, 'cle_secret') AS email
-FROM users;
+SELECT nom, pgp_sym_decrypt(email_chiffre, 'cle_secret') AS email  
+FROM users;  
 ```
 
 **Limitations :**
-- ❌ Pas transparent (modification du code)
-- ❌ Pas d'index sur données chiffrées
-- ❌ Performance réduite
+- ❌ Pas transparent (modification du code)  
+- ❌ Pas d'index sur données chiffrées  
+- ❌ Performance réduite  
 - ❌ Complexité applicative
 
 ### Solution 4 : Forks PostgreSQL avec TDE Intégré
@@ -487,20 +487,20 @@ FROM users;
 **Description :** Fork commercial de PostgreSQL avec TDE natif.
 
 **Fonctionnalités :**
-- ✅ TDE complètement intégré
-- ✅ Chiffrement des données et du WAL
-- ✅ Gestion avancée des clés
+- ✅ TDE complètement intégré  
+- ✅ Chiffrement des données et du WAL  
+- ✅ Gestion avancée des clés  
 - ✅ Compatible avec tous les outils PostgreSQL
 
 **Limitation :**
-- ⚠️ Solution commerciale (licence payante)
+- ⚠️ Solution commerciale (licence payante)  
 - ⚠️ Pas du PostgreSQL "vanilla"
 
 #### Autres Forks
 
-- **Percona Distribution for PostgreSQL** : Envisage d'intégrer TDE
-- **Amazon RDS PostgreSQL** : Chiffrement au repos via AWS KMS
-- **Google Cloud SQL PostgreSQL** : Chiffrement automatique
+- **Percona Distribution for PostgreSQL** : Envisage d'intégrer TDE  
+- **Amazon RDS PostgreSQL** : Chiffrement au repos via AWS KMS  
+- **Google Cloud SQL PostgreSQL** : Chiffrement automatique  
 - **Azure Database for PostgreSQL** : Chiffrement avec clés managées
 
 ### Solution 5 : Chiffrement Cloud-Native
@@ -523,14 +523,14 @@ aws rds create-db-instance \
 ```
 
 **Avantages :**
-- ✅ Totalement managé (pas de gestion manuelle)
-- ✅ Rotation automatique des clés
-- ✅ Intégration avec IAM
+- ✅ Totalement managé (pas de gestion manuelle)  
+- ✅ Rotation automatique des clés  
+- ✅ Intégration avec IAM  
 - ✅ Sauvegardes automatiquement chiffrées
 
 **Inconvénients :**
-- ❌ Vendor lock-in
-- ❌ Coût additionnel
+- ❌ Vendor lock-in  
+- ❌ Coût additionnel  
 - ❌ Moins de contrôle
 
 #### Google Cloud SQL
@@ -592,18 +592,18 @@ aws rds create-db-instance \
 
 ```bash
 # Créer une clé
-openssl rand -base64 32 > /etc/postgresql/encryption.key
-chmod 600 /etc/postgresql/encryption.key
-chown postgres:postgres /etc/postgresql/encryption.key
+openssl rand -base64 32 > /etc/postgresql/encryption.key  
+chmod 600 /etc/postgresql/encryption.key  
+chown postgres:postgres /etc/postgresql/encryption.key  
 ```
 
 **Avantages :**
-- ✅ Simple
+- ✅ Simple  
 - ✅ Gratuit
 
 **Inconvénients :**
-- ❌ Clé sur le même serveur que les données
-- ❌ Vulnérable si le serveur est compromis
+- ❌ Clé sur le même serveur que les données  
+- ❌ Vulnérable si le serveur est compromis  
 - ❌ Pas de rotation facile
 
 **Quand l'utiliser :**
@@ -629,9 +629,9 @@ sudo -u postgres PGENCRYPTION_KEY=$PGENCRYPTION_KEY pg_ctl start
 **Principe :** Dispositif matériel dédié pour stocker et gérer les clés.
 
 **Caractéristiques :**
-- ✅ Clé ne quitte jamais le HSM
-- ✅ Résistant aux attaques physiques
-- ✅ Certification FIPS 140-2 Level 3 ou 4
+- ✅ Clé ne quitte jamais le HSM  
+- ✅ Résistant aux attaques physiques  
+- ✅ Certification FIPS 140-2 Level 3 ou 4  
 - ✅ Rotation de clés facilitée
 
 **Exemples de HSM :**
@@ -640,7 +640,7 @@ sudo -u postgres PGENCRYPTION_KEY=$PGENCRYPTION_KEY pg_ctl start
 - Gemalto SafeNet
 
 **Inconvénients :**
-- ❌ Très coûteux (10 000$ - 100 000$+)
+- ❌ Très coûteux (10 000$ - 100 000$+)  
 - ❌ Complexité de mise en place
 
 **Quand l'utiliser :**
@@ -652,16 +652,16 @@ sudo -u postgres PGENCRYPTION_KEY=$PGENCRYPTION_KEY pg_ctl start
 **Principe :** Service managé pour gérer les clés de chiffrement.
 
 **Exemples :**
-- **AWS KMS** (Key Management Service)
-- **Google Cloud KMS**
-- **Azure Key Vault**
+- **AWS KMS** (Key Management Service)  
+- **Google Cloud KMS**  
+- **Azure Key Vault**  
 - **HashiCorp Vault**
 
 **Avantages :**
-- ✅ Managé (pas d'infrastructure HSM à gérer)
-- ✅ Rotation automatique
-- ✅ Audit et logs
-- ✅ Intégration IAM
+- ✅ Managé (pas d'infrastructure HSM à gérer)  
+- ✅ Rotation automatique  
+- ✅ Audit et logs  
+- ✅ Intégration IAM  
 - ✅ Prix raisonnable
 
 **Exemple avec AWS KMS :**
@@ -682,10 +682,10 @@ aws kms decrypt \
 **Principe :** Solution open-source pour gestion centralisée des secrets et clés.
 
 **Fonctionnalités :**
-- ✅ Stockage sécurisé des clés
-- ✅ Rotation automatique
-- ✅ Audit complet
-- ✅ Intégration avec PostgreSQL
+- ✅ Stockage sécurisé des clés  
+- ✅ Rotation automatique  
+- ✅ Audit complet  
+- ✅ Intégration avec PostgreSQL  
 - ✅ Multi-cloud
 
 **Exemple d'intégration :**
@@ -741,19 +741,19 @@ vault kv get -field=encryption_key secret/postgresql/production > /tmp/encryptio
 **Quel est votre environnement ?**
 
 ```
-Bare Metal / VM on-premise → LUKS, ZFS, TDE commercial
-Cloud AWS → RDS with KMS
-Cloud GCP → Cloud SQL with Cloud KMS
-Cloud Azure → Azure Database with Key Vault
-Multi-cloud → HashiCorp Vault + solution TDE
+Bare Metal / VM on-premise → LUKS, ZFS, TDE commercial  
+Cloud AWS → RDS with KMS  
+Cloud GCP → Cloud SQL with Cloud KMS  
+Cloud Azure → Azure Database with Key Vault  
+Multi-cloud → HashiCorp Vault + solution TDE  
 ```
 
 **Quel est votre budget ?**
 
 ```
-Budget limité (< 1000€/mois) → LUKS, ZFS (gratuit)
-Budget moyen (1000-5000€/mois) → Cloud managé (RDS, Cloud SQL)
-Budget élevé (> 5000€/mois) → Solution TDE commercial + HSM
+Budget limité (< 1000€/mois) → LUKS, ZFS (gratuit)  
+Budget moyen (1000-5000€/mois) → Cloud managé (RDS, Cloud SQL)  
+Budget élevé (> 5000€/mois) → Solution TDE commercial + HSM  
 ```
 
 ---
@@ -828,8 +828,8 @@ vault write database/rotate-root/postgres-prod
 **Exemple de monitoring avec Vault :**
 ```bash
 # Vérifier les accès à la clé
-vault audit list
-vault audit enable file file_path=/var/log/vault_audit.log
+vault audit list  
+vault audit enable file file_path=/var/log/vault_audit.log  
 ```
 
 ### 6. Conformité et Documentation
@@ -865,9 +865,9 @@ vault audit enable file file_path=/var/log/vault_audit.log
 
 **Benchmark typique :**
 ```
-Sans chiffrement : 10 000 requêtes/sec
-Avec LUKS :        9 500 requêtes/sec (-5%)
-Avec TDE :         9 000 requêtes/sec (-10%)
+Sans chiffrement : 10 000 requêtes/sec  
+Avec LUKS :        9 500 requêtes/sec (-5%)  
+Avec TDE :         9 000 requêtes/sec (-10%)  
 ```
 
 ### Limitation #2 : Données en Mémoire Non Chiffrées
@@ -909,15 +909,15 @@ Avec TDE :         9 000 requêtes/sec (-10%)
 
 ## 🧠 Points Clés à Retenir
 
-1. **Chiffrement au repos** protège les données stockées sur disque
-2. **TDE** = chiffrement transparent (aucune modification application)
-3. **PostgreSQL core** n'a pas de TDE natif (mais c'est en discussion)
-4. **Solutions disponibles** : LUKS, ZFS, TDE commercial, Cloud managé
-5. **LUKS** = simple et gratuit, protection de base
-6. **Cloud (RDS, Cloud SQL)** = chiffrement managé, recommandé pour le cloud
-7. **Gestion des clés** est critique : KMS/Vault recommandés
-8. **Chiffrer les sauvegardes** séparément est essentiel
-9. **Performance** : impact 5-15% (acceptable pour la plupart des cas)
+1. **Chiffrement au repos** protège les données stockées sur disque  
+2. **TDE** = chiffrement transparent (aucune modification application)  
+3. **PostgreSQL core** n'a pas de TDE natif (mais c'est en discussion)  
+4. **Solutions disponibles** : LUKS, ZFS, TDE commercial, Cloud managé  
+5. **LUKS** = simple et gratuit, protection de base  
+6. **Cloud (RDS, Cloud SQL)** = chiffrement managé, recommandé pour le cloud  
+7. **Gestion des clés** est critique : KMS/Vault recommandés  
+8. **Chiffrer les sauvegardes** séparément est essentiel  
+9. **Performance** : impact 5-15% (acceptable pour la plupart des cas)  
 10. **Rotation des clés** régulière et tests de récupération obligatoires
 
 ---
@@ -979,30 +979,30 @@ Avec TDE :         9 000 requêtes/sec (-10%)
 
 Dans les sections suivantes du tutoriel :
 
-- **16.7** : SSL/TLS et chiffrement des connexions (en transit)
-- **16.11** : Sauvegardes et restauration
+- **16.7** : SSL/TLS et chiffrement des connexions (en transit)  
+- **16.11** : Sauvegardes et restauration  
 - **19.4** : Troubleshooting et monitoring de sécurité
 
 ### Ressources Complémentaires
 
 **Documentation et Standards :**
-- [PostgreSQL Security Best Practices](https://www.postgresql.org/docs/current/encryption-options.html)
-- [NIST Guidelines on Cryptography](https://csrc.nist.gov/publications/sp800)
+- [PostgreSQL Security Best Practices](https://www.postgresql.org/docs/current/encryption-options.html)  
+- [NIST Guidelines on Cryptography](https://csrc.nist.gov/publications/sp800)  
 - [OWASP Cryptographic Storage Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Cryptographic_Storage_Cheat_Sheet.html)
 
 **Solutions Commerciales :**
-- [Cybertec PostgreSQL TDE](https://www.cybertec-postgresql.com/en/products/cybertec-postgresql-transparent-data-encryption/)
-- [EDB Postgres Advanced Server](https://www.enterprisedb.com/products/edb-postgres-advanced-server-secure-ha-oracle-compatible)
+- [Cybertec PostgreSQL TDE](https://www.cybertec-postgresql.com/en/products/cybertec-postgresql-transparent-data-encryption/)  
+- [EDB Postgres Advanced Server](https://www.enterprisedb.com/products/edb-postgres-advanced-server-secure-ha-oracle-compatible)  
 - [Percona Distribution for PostgreSQL](https://www.percona.com/software/postgresql-distribution)
 
 **Open Source :**
-- [LUKS Cryptsetup](https://gitlab.com/cryptsetup/cryptsetup)
-- [HashiCorp Vault](https://www.vaultproject.io/)
+- [LUKS Cryptsetup](https://gitlab.com/cryptsetup/cryptsetup)  
+- [HashiCorp Vault](https://www.vaultproject.io/)  
 - [ZFS Encryption](https://openzfs.github.io/openzfs-docs/man/8/zfs-load-key.8.html)
 
 **Blogs et Tutoriels :**
-- [Encrypting PostgreSQL Data at Rest](https://www.percona.com/blog/)
-- [AWS RDS Encryption](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/Overview.Encryption.html)
+- [Encrypting PostgreSQL Data at Rest](https://www.percona.com/blog/)  
+- [AWS RDS Encryption](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/Overview.Encryption.html)  
 - [Google Cloud SQL Encryption](https://cloud.google.com/sql/docs/postgres/data-encryption)
 
 ---

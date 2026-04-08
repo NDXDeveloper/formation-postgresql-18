@@ -31,10 +31,10 @@ La **promotion** est l'action de transformer un serveur Standby (réplica en lec
 Le **failover** est le processus complet de basculement depuis un Primary défaillant vers un Standby promu.
 
 **Le failover inclut** :
-1. Détection de la panne du Primary
-2. Sélection d'un Standby approprié
-3. Promotion de ce Standby en nouveau Primary
-4. Reconfiguration des autres Standby pour suivre le nouveau Primary
+1. Détection de la panne du Primary  
+2. Sélection d'un Standby approprié  
+3. Promotion de ce Standby en nouveau Primary  
+4. Reconfiguration des autres Standby pour suivre le nouveau Primary  
 5. Redirection des applications vers le nouveau Primary
 
 **Analogie** : C'est comme un plan de succession dans une entreprise. Si le PDG démissionne soudainement, il faut non seulement nommer un nouveau PDG (promotion), mais aussi réorganiser toute l'entreprise autour de ce nouveau leader (failover).
@@ -61,11 +61,11 @@ Le **failover** est le processus complet de basculement depuis un Primary défai
 En production, les pannes ne sont pas une question de "si", mais de "quand" :
 
 **Causes de panne courantes** :
-- 💥 **Panne matérielle** : Disque dur défaillant, RAM défectueuse, alimentation coupée
-- 🔥 **Incident datacenter** : Incendie, inondation, coupure électrique
-- 🌐 **Problème réseau** : Câble sectionné, routeur en panne, DDoS
-- 🐛 **Bug logiciel** : Corruption de données, bug PostgreSQL (rare), bug du kernel
-- 👤 **Erreur humaine** : Suppression accidentelle, mauvaise commande, mauvaise configuration
+- 💥 **Panne matérielle** : Disque dur défaillant, RAM défectueuse, alimentation coupée  
+- 🔥 **Incident datacenter** : Incendie, inondation, coupure électrique  
+- 🌐 **Problème réseau** : Câble sectionné, routeur en panne, DDoS  
+- 🐛 **Bug logiciel** : Corruption de données, bug PostgreSQL (rare), bug du kernel  
+- 👤 **Erreur humaine** : Suppression accidentelle, mauvaise commande, mauvaise configuration  
 - 🔄 **Maintenance** : Mise à jour OS, migration hardware, patch de sécurité
 
 ### Impact d'une Panne sans HA
@@ -96,10 +96,10 @@ Retour à la normale à 10h45
 
 Un bon système de failover vise à :
 
-1. **Minimiser le RTO** (Recovery Time Objective) : Temps d'indisponibilité
-2. **Minimiser le RPO** (Recovery Point Objective) : Perte de données
-3. **Éviter le split-brain** : Deux Primary actifs simultanément
-4. **Automatiser** : Réduire l'intervention humaine
+1. **Minimiser le RTO** (Recovery Time Objective) : Temps d'indisponibilité  
+2. **Minimiser le RPO** (Recovery Point Objective) : Perte de données  
+3. **Éviter le split-brain** : Deux Primary actifs simultanément  
+4. **Automatiser** : Réduire l'intervention humaine  
 5. **Assurer la cohérence** : Garantir l'intégrité des données
 
 ---
@@ -113,9 +113,9 @@ Le **RTO** est le temps maximum acceptable d'indisponibilité de votre système.
 **Question** : "Combien de temps mon application peut-elle être en panne ?"
 
 **Exemples** :
-- **Site e-commerce** : RTO = 1-2 minutes (chaque minute = perte de revenus)
-- **Application interne** : RTO = 15-30 minutes (acceptable pendant heures de bureau)
-- **Service financier** : RTO = 30 secondes (critique)
+- **Site e-commerce** : RTO = 1-2 minutes (chaque minute = perte de revenus)  
+- **Application interne** : RTO = 15-30 minutes (acceptable pendant heures de bureau)  
+- **Service financier** : RTO = 30 secondes (critique)  
 - **Blog personnel** : RTO = 1 heure (moins critique)
 
 **Impact du RTO sur l'architecture** :
@@ -134,9 +134,9 @@ Le **RPO** est la quantité maximale de données que vous pouvez vous permettre 
 **Question** : "Combien de transactions puis-je perdre en cas de panne ?"
 
 **Exemples** :
-- **Banque** : RPO = 0 (perte de transactions = catastrophe)
-- **Réseau social** : RPO = 1-5 minutes (quelques posts perdus = acceptable)
-- **Application de logs** : RPO = 15 minutes (logs récents perdus = acceptable)
+- **Banque** : RPO = 0 (perte de transactions = catastrophe)  
+- **Réseau social** : RPO = 1-5 minutes (quelques posts perdus = acceptable)  
+- **Application de logs** : RPO = 15 minutes (logs récents perdus = acceptable)  
 - **Analytics** : RPO = 1 heure (données agrégées = recalculables)
 
 **Impact du RPO sur la réplication** :
@@ -164,8 +164,8 @@ Le **RPO** est la quantité maximale de données que vous pouvez vous permettre 
         │                             │
         └──────────────RTO────────────┘
 
-RPO = Données perdues (axe temporel)
-RTO = Durée d'indisponibilité (axe temporel)
+RPO = Données perdues (axe temporel)  
+RTO = Durée d'indisponibilité (axe temporel)  
 ```
 
 **Objectif idéal** : RTO et RPO les plus courts possibles
@@ -225,15 +225,15 @@ Timeline 1               Timeline 2
 ### Conséquences du Split-Brain
 
 **Impact immédiat** :
-- 💥 Deux copies de données qui divergent
-- 💥 Impossible de les réconcilier automatiquement
-- 💥 Perte de données garantie
+- 💥 Deux copies de données qui divergent  
+- 💥 Impossible de les réconcilier automatiquement  
+- 💥 Perte de données garantie  
 - 💥 Corruption potentielle
 
 **Impact à long terme** :
-- 🚨 Restauration complexe (heures/jours)
-- 🚨 Perte de confiance des utilisateurs
-- 🚨 Analyse forensique nécessaire
+- 🚨 Restauration complexe (heures/jours)  
+- 🚨 Perte de confiance des utilisateurs  
+- 🚨 Analyse forensique nécessaire  
 - 🚨 Possible perte définitive de données
 
 ### Comment Éviter le Split-Brain ?
@@ -243,8 +243,8 @@ Timeline 1               Timeline 2
 Le **fencing** consiste à isoler physiquement l'ancien Primary pour garantir qu'il ne peut plus accepter d'écritures.
 
 **Techniques de fencing** :
-- **STONITH** (Shoot The Other Node In The Head) : Éteindre physiquement le serveur
-- **Isolation réseau** : Couper la connexion réseau
+- **STONITH** (Shoot The Other Node In The Head) : Éteindre physiquement le serveur  
+- **Isolation réseau** : Couper la connexion réseau  
 - **PostgreSQL pause** : Mettre PostgreSQL en pause automatiquement
 
 **Exemple avec Patroni** :
@@ -286,8 +286,8 @@ Standby ne voit plus le Primary
        ↓
 Standby demande au Witness : "Est-ce que tu vois le Primary ?"
        ↓
-Si Witness dit "Non" → C'est une vraie panne → OK pour promouvoir
-Si Witness dit "Oui" → C'est juste un problème réseau local → NE PAS promouvoir
+Si Witness dit "Non" → C'est une vraie panne → OK pour promouvoir  
+Si Witness dit "Oui" → C'est juste un problème réseau local → NE PAS promouvoir  
 ```
 
 ---
@@ -299,9 +299,9 @@ Si Witness dit "Oui" → C'est juste un problème réseau local → NE PAS promo
 **Contexte** : Le Primary tombe en panne de manière inattendue.
 
 **Caractéristiques** :
-- ⚠️ Aucune préparation
-- ⚠️ Risque de perte de données (RPO > 0)
-- ⚠️ Urgence maximum
+- ⚠️ Aucune préparation  
+- ⚠️ Risque de perte de données (RPO > 0)  
+- ⚠️ Urgence maximum  
 - ⚠️ Stress élevé pour l'équipe
 
 **Déclencheurs** :
@@ -317,9 +317,9 @@ Si Witness dit "Oui" → C'est juste un problème réseau local → NE PAS promo
 **Contexte** : Vous décidez volontairement de basculer vers un Standby.
 
 **Caractéristiques** :
-- ✅ Maintenance planifiée
-- ✅ Aucune perte de données (RPO = 0)
-- ✅ Processus contrôlé
+- ✅ Maintenance planifiée  
+- ✅ Aucune perte de données (RPO = 0)  
+- ✅ Processus contrôlé  
 - ✅ Downtime minimal
 
 **Cas d'usage** :
@@ -353,15 +353,15 @@ Cette section présente trois approches pour gérer le failover, de la plus simp
 **Outil** : `pg_ctl promote`
 
 **Avantages** :
-- ✅ Simplicité maximale
-- ✅ Pas d'infrastructure additionnelle
-- ✅ Contrôle total
+- ✅ Simplicité maximale  
+- ✅ Pas d'infrastructure additionnelle  
+- ✅ Contrôle total  
 - ✅ Pas de faux positifs
 
 **Inconvénients** :
-- ❌ Intervention humaine requise 24/7
-- ❌ RTO élevé (plusieurs minutes minimum)
-- ❌ Risque d'erreur humaine
+- ❌ Intervention humaine requise 24/7  
+- ❌ RTO élevé (plusieurs minutes minimum)  
+- ❌ Risque d'erreur humaine  
 - ❌ Pas de protection split-brain automatique
 
 **Cas d'usage** :
@@ -389,16 +389,16 @@ Cette section présente trois approches pour gérer le failover, de la plus simp
 **Outil** : Patroni + etcd/Consul/ZooKeeper
 
 **Avantages** :
-- ✅ Failover automatique (15-30 secondes)
-- ✅ Protection split-brain excellente
-- ✅ Fencing automatique
-- ✅ Pas d'intervention humaine nécessaire
+- ✅ Failover automatique (15-30 secondes)  
+- ✅ Protection split-brain excellente  
+- ✅ Fencing automatique  
+- ✅ Pas d'intervention humaine nécessaire  
 - ✅ Idéal pour production critique
 
 **Inconvénients** :
-- ❌ Complexité élevée
-- ❌ Infrastructure additionnelle (etcd/Consul)
-- ❌ Courbe d'apprentissage importante
+- ❌ Complexité élevée  
+- ❌ Infrastructure additionnelle (etcd/Consul)  
+- ❌ Courbe d'apprentissage importante  
 - ❌ Coût d'exploitation plus élevé
 
 **Cas d'usage** :
@@ -433,16 +433,16 @@ Cette section présente trois approches pour gérer le failover, de la plus simp
 **Outil** : Repmgr + repmgrd
 
 **Avantages** :
-- ✅ Simplicité relative
-- ✅ Pas d'infrastructure externe obligatoire
-- ✅ Failover automatique possible (avec witness)
-- ✅ Courbe d'apprentissage courte
+- ✅ Simplicité relative  
+- ✅ Pas d'infrastructure externe obligatoire  
+- ✅ Failover automatique possible (avec witness)  
+- ✅ Courbe d'apprentissage courte  
 - ✅ Excellent pour cloner des Standby
 
 **Inconvénients** :
-- ⚠️ Protection split-brain moins robuste
-- ⚠️ Pas de fencing automatique
-- ⚠️ RTO un peu plus long (30-60 secondes)
+- ⚠️ Protection split-brain moins robuste  
+- ⚠️ Pas de fencing automatique  
+- ⚠️ RTO un peu plus long (30-60 secondes)  
 - ⚠️ Nécessite un witness pour être fiable
 
 **Cas d'usage** :
@@ -490,26 +490,26 @@ Cette section présente trois approches pour gérer le failover, de la plus simp
 ### Matrice de Décision
 
 **Utilisez la promotion MANUELLE (17.5.1) si** :
-- 📌 Vous êtes en environnement de développement ou test
-- 📌 Votre RTO acceptable est > 15 minutes
-- 📌 Vous avez une équipe disponible 24/7
-- 📌 Votre budget est très limité
+- 📌 Vous êtes en environnement de développement ou test  
+- 📌 Votre RTO acceptable est > 15 minutes  
+- 📌 Vous avez une équipe disponible 24/7  
+- 📌 Votre budget est très limité  
 - 📌 Vous voulez comprendre les mécanismes de base
 
 **Utilisez PATRONI (17.5.2) si** :
-- 📌 Votre RTO doit être < 1 minute
-- 📌 Vous avez des exigences de uptime critiques (99.99%+)
-- 📌 Vous gérez un cluster complexe (5+ nœuds)
-- 📌 Vous déployez dans Kubernetes
-- 📌 Vous avez les ressources pour gérer etcd/Consul
+- 📌 Votre RTO doit être < 1 minute  
+- 📌 Vous avez des exigences de uptime critiques (99.99%+)  
+- 📌 Vous gérez un cluster complexe (5+ nœuds)  
+- 📌 Vous déployez dans Kubernetes  
+- 📌 Vous avez les ressources pour gérer etcd/Consul  
 - 📌 Le split-brain doit être impossible
 
 **Utilisez REPMGR (17.5.3) si** :
-- 📌 Vous voulez plus que du manuel mais moins que Patroni
-- 📌 Votre RTO acceptable est 1-5 minutes
-- 📌 Vous gérez un cluster simple (2-5 nœuds)
-- 📌 Vous privilégiez la simplicité
-- 📌 Votre budget est moyen
+- 📌 Vous voulez plus que du manuel mais moins que Patroni  
+- 📌 Votre RTO acceptable est 1-5 minutes  
+- 📌 Vous gérez un cluster simple (2-5 nœuds)  
+- 📌 Vous privilégiez la simplicité  
+- 📌 Votre budget est moyen  
 - 📌 Vous voulez faciliter le clonage de Standby
 
 ### Questions à Se Poser
@@ -644,45 +644,45 @@ Avant de mettre en place un système de failover, assurez-vous que :
 
 ### Infrastructure
 
-- [ ] Au moins 1 Primary + 1 Standby configurés et testés
-- [ ] Réplication en streaming fonctionnelle
-- [ ] pg_rewind activé (`wal_log_hints = on` ou checksums)
-- [ ] Réseau stable entre les nœuds
+- [ ] Au moins 1 Primary + 1 Standby configurés et testés  
+- [ ] Réplication en streaming fonctionnelle  
+- [ ] pg_rewind activé (`wal_log_hints = on` ou checksums)  
+- [ ] Réseau stable entre les nœuds  
 - [ ] Latence réseau acceptable (< 10ms pour synchro)
 
 ### Sécurité
 
-- [ ] Mots de passe robustes pour réplication
-- [ ] pg_hba.conf correctement configuré
-- [ ] SSL/TLS activé pour la réplication (recommandé)
+- [ ] Mots de passe robustes pour réplication  
+- [ ] pg_hba.conf correctement configuré  
+- [ ] SSL/TLS activé pour la réplication (recommandé)  
 - [ ] Firewall configuré
 
 ### Monitoring
 
-- [ ] Monitoring du Primary (heartbeat)
-- [ ] Monitoring des Standby (lag, état)
-- [ ] Alertes configurées (Primary down, lag élevé)
+- [ ] Monitoring du Primary (heartbeat)  
+- [ ] Monitoring des Standby (lag, état)  
+- [ ] Alertes configurées (Primary down, lag élevé)  
 - [ ] Logs centralisés
 
 ### Documentation
 
-- [ ] Architecture documentée
-- [ ] Runbook de failover rédigé et testé
-- [ ] Contacts d'urgence à jour
+- [ ] Architecture documentée  
+- [ ] Runbook de failover rédigé et testé  
+- [ ] Contacts d'urgence à jour  
 - [ ] Procédure de rollback documentée
 
 ### Tests
 
-- [ ] Test de switchover planifié réussi
-- [ ] Test de failover non planifié réussi
-- [ ] Test de réintégration de l'ancien Primary
+- [ ] Test de switchover planifié réussi  
+- [ ] Test de failover non planifié réussi  
+- [ ] Test de réintégration de l'ancien Primary  
 - [ ] Test de reconstruction complète d'un Standby
 
 ### Backup
 
-- [ ] Backups automatisés actifs
-- [ ] Test de restauration récent (< 1 mois)
-- [ ] PITR configuré et testé
+- [ ] Backups automatisés actifs  
+- [ ] Test de restauration récent (< 1 mois)  
+- [ ] PITR configuré et testé  
 - [ ] Backups stockés hors site
 
 ---
@@ -799,23 +799,23 @@ Jour 5+ : Optimisation continue
 
 ### Documentation Officielle
 
-- **PostgreSQL** : https://www.postgresql.org/docs/current/warm-standby.html
-- **Patroni** : https://patroni.readthedocs.io/
-- **Repmgr** : https://www.repmgr.org/docs/current/
-- **etcd** : https://etcd.io/docs/
+- **PostgreSQL** : https://www.postgresql.org/docs/current/warm-standby.html  
+- **Patroni** : https://patroni.readthedocs.io/  
+- **Repmgr** : https://www.repmgr.org/docs/current/  
+- **etcd** : https://etcd.io/docs/  
 - **Consul** : https://www.consul.io/docs
 
 ### Blogs Techniques Recommandés
 
-- **2ndQuadrant** : https://www.2ndquadrant.com/en/blog/
-- **Percona** : https://www.percona.com/blog/
-- **CrunchyData** : https://www.crunchydata.com/blog
+- **2ndQuadrant** : https://www.2ndquadrant.com/en/blog/  
+- **Percona** : https://www.percona.com/blog/  
+- **CrunchyData** : https://www.crunchydata.com/blog  
 - **Zalando** : https://engineering.zalando.com/tags/postgresql.html
 
 ### Conférences
 
-- **PGConf** (conférences régionales et internationales)
-- **PostgreSQL sessions** (France)
+- **PGConf** (conférences régionales et internationales)  
+- **PostgreSQL sessions** (France)  
 - **FOSDEM** (Bruxelles) - Track PostgreSQL
 
 ---
@@ -824,8 +824,8 @@ Jour 5+ : Optimisation continue
 
 Le failover et la promotion sont au cœur de toute stratégie de haute disponibilité PostgreSQL. La compréhension de ces mécanismes est essentielle pour :
 
-- **Protéger votre business** contre les interruptions
-- **Minimiser les pertes de données** en cas d'incident
+- **Protéger votre business** contre les interruptions  
+- **Minimiser les pertes de données** en cas d'incident  
 - **Dormir tranquille** en sachant que votre système peut se réparer (partiellement ou totalement)
 
 Cette section vous donne les clés pour choisir et implémenter la solution adaptée à vos besoins, que vous privilégiez :
@@ -838,11 +838,11 @@ Cette section vous donne les clés pour choisir et implémenter la solution adap
 ---
 
 **Points clés à retenir** :
-- ✅ Le failover est inévitable en production
-- ✅ RTO et RPO doivent guider votre choix d'architecture
-- ✅ Le split-brain est la pire situation possible (évitez-le à tout prix)
-- ✅ Trois approches existent : manuelle, Patroni, Repmgr
-- ✅ Testez régulièrement votre procédure de failover
+- ✅ Le failover est inévitable en production  
+- ✅ RTO et RPO doivent guider votre choix d'architecture  
+- ✅ Le split-brain est la pire situation possible (évitez-le à tout prix)  
+- ✅ Trois approches existent : manuelle, Patroni, Repmgr  
+- ✅ Testez régulièrement votre procédure de failover  
 - ✅ La documentation et les backups sont aussi importants que la solution technique
 
 Bonne lecture et bon apprentissage ! 🚀

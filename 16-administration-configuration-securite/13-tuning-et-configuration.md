@@ -26,10 +26,10 @@ Considérez cette situation typique :
 
 **Configuration PostgreSQL par défaut** :
 ```conf
-shared_buffers = 128MB        # 0.2% de la RAM !
-work_mem = 4MB                # Minuscule
-max_connections = 100         # Conservateur
-effective_cache_size = 4GB    # 6% de la RAM
+shared_buffers = 128MB        # 0.2% de la RAM !  
+work_mem = 4MB                # Minuscule  
+max_connections = 100         # Conservateur  
+effective_cache_size = 4GB    # 6% de la RAM  
 ```
 
 **Résultat** : Votre serveur haut de gamme fonctionne comme s'il avait 2 GB de RAM !
@@ -40,16 +40,16 @@ effective_cache_size = 4GB    # 6% de la RAM
 
 **1. Performances dégradées**
 ```
-Scénario : E-commerce avec 1000 requêtes/sec
-Configuration par défaut : 150 ms de latence moyenne
-Configuration optimisée : 15 ms de latence moyenne
+Scénario : E-commerce avec 1000 requêtes/sec  
+Configuration par défaut : 150 ms de latence moyenne  
+Configuration optimisée : 15 ms de latence moyenne  
 → Amélioration : 10× plus rapide !
 ```
 
 **2. Coûts matériels inutiles**
 ```
-Option A : Serveur 64 GB mal configuré → 100 TPS (transactions/sec)
-Option B : Serveur 16 GB bien configuré → 150 TPS
+Option A : Serveur 64 GB mal configuré → 100 TPS (transactions/sec)  
+Option B : Serveur 16 GB bien configuré → 150 TPS  
 → Économie : ~3,000€ avec de meilleures performances !
 ```
 
@@ -90,13 +90,13 @@ grep -E "^#?[a-z_]+ =" /etc/postgresql/18/main/postgresql.conf | wc -l
 ```
 
 **Catégories principales** :
-- 🧠 **Mémoire** : 50+ paramètres (shared_buffers, work_mem, etc.)
-- 💾 **I/O et Stockage** : 40+ paramètres (WAL, checkpoints, etc.)
-- 🔄 **Concurrence** : 30+ paramètres (connexions, verrous, etc.)
-- 📊 **Planificateur** : 40+ paramètres (coûts, statistiques, etc.)
-- 🧹 **Maintenance** : 25+ paramètres (autovacuum, etc.)
-- 📝 **Logging** : 30+ paramètres
-- 🔐 **Sécurité** : 20+ paramètres
+- 🧠 **Mémoire** : 50+ paramètres (shared_buffers, work_mem, etc.)  
+- 💾 **I/O et Stockage** : 40+ paramètres (WAL, checkpoints, etc.)  
+- 🔄 **Concurrence** : 30+ paramètres (connexions, verrous, etc.)  
+- 📊 **Planificateur** : 40+ paramètres (coûts, statistiques, etc.)  
+- 🧹 **Maintenance** : 25+ paramètres (autovacuum, etc.)  
+- 📝 **Logging** : 30+ paramètres  
+- 🔐 **Sécurité** : 20+ paramètres  
 - 🔧 **Divers** : 85+ paramètres
 
 > **🎯 Bonne nouvelle** : Seuls **20-30 paramètres** ont un impact significatif sur les performances dans 90% des cas. Nous allons nous concentrer sur ceux-là !
@@ -120,9 +120,9 @@ autovacuum_work_mem → maintenance_work_mem
 **Cas concret** :
 ```conf
 # Configuration apparemment raisonnable mais dangereuse
-shared_buffers = 16GB        # OK
-work_mem = 100MB             # Semble OK
-max_connections = 500        # Semble OK
+shared_buffers = 16GB        # OK  
+work_mem = 100MB             # Semble OK  
+max_connections = 500        # Semble OK  
 
 # Mais : 500 connexions × 100MB × 3 opérations par connexion
 # = 150 GB de RAM potentiellement nécessaire ! 💥
@@ -174,9 +174,9 @@ Analytics (requêtes lourdes) :
 **Cas 1 : Startup qui a crashé en production** (histoire vraie)
 ```conf
 # Configuration appliquée sans tests
-shared_buffers = 32GB        # Sur serveur avec 32GB RAM
-work_mem = 500MB             # Énorme !
-max_connections = 200
+shared_buffers = 32GB        # Sur serveur avec 32GB RAM  
+work_mem = 500MB             # Énorme !  
+max_connections = 200  
 
 # Résultat lors du pic Black Friday :
 # 200 connexions × 500MB × 3 = 300GB nécessaires
@@ -187,9 +187,9 @@ max_connections = 200
 **Cas 2 : Data warehouse avec performances catastrophiques**
 ```conf
 # Configuration OLTP sur workload OLAP
-work_mem = 4MB               # Beaucoup trop faible
-max_parallel_workers = 0     # Pas de parallélisation
-random_page_cost = 4.0       # Pensait avoir des HDD, avait des SSD
+work_mem = 4MB               # Beaucoup trop faible  
+max_parallel_workers = 0     # Pas de parallélisation  
+random_page_cost = 4.0       # Pensait avoir des HDD, avait des SSD  
 
 # Résultat :
 # Requêtes analytiques : 30 minutes au lieu de 2 minutes
@@ -239,16 +239,16 @@ SELECT
 FROM pg_statio_user_tables;
 
 -- 2. Requêtes lentes (avec pg_stat_statements)
-SELECT query, calls, mean_exec_time, max_exec_time
-FROM pg_stat_statements
-ORDER BY mean_exec_time DESC
-LIMIT 10;
+SELECT query, calls, mean_exec_time, max_exec_time  
+FROM pg_stat_statements  
+ORDER BY mean_exec_time DESC  
+LIMIT 10;  
 
 -- 3. Tables les plus consultées
-SELECT schemaname, tablename, seq_scan, idx_scan
-FROM pg_stat_user_tables
-ORDER BY seq_scan + idx_scan DESC
-LIMIT 10;
+SELECT schemaname, tablename, seq_scan, idx_scan  
+FROM pg_stat_user_tables  
+ORDER BY seq_scan + idx_scan DESC  
+LIMIT 10;  
 
 -- 4. État des connexions
 SELECT count(*), state FROM pg_stat_activity GROUP BY state;
@@ -267,18 +267,18 @@ SELECT count(*), state FROM pg_stat_activity GROUP BY state;
 **Objectif** : Appliquer des configurations de base solides adaptées au matériel.
 
 **Approche recommandée** :
-1. Utiliser **PGTune** pour générer une configuration de départ
-2. Appliquer en environnement de test
-3. Valider la stabilité
+1. Utiliser **PGTune** pour générer une configuration de départ  
+2. Appliquer en environnement de test  
+3. Valider la stabilité  
 4. Déployer en production
 
 ```conf
 # Exemple de configuration générée pour serveur 32GB RAM
-shared_buffers = 8GB
-effective_cache_size = 24GB
-maintenance_work_mem = 2GB
-work_mem = 16MB
-max_connections = 200
+shared_buffers = 8GB  
+effective_cache_size = 24GB  
+maintenance_work_mem = 2GB  
+work_mem = 16MB  
+max_connections = 200  
 ```
 
 #### Phase 3 : Monitoring (1-2 semaines)
@@ -375,13 +375,13 @@ Ces paramètres définissent comment PostgreSQL utilise la RAM, la ressource la 
 
 ```conf
 # Cache des données
-shared_buffers = 8GB                  # Mémoire partagée pour cache
-effective_cache_size = 24GB           # Estimation cache total (PG + OS)
+shared_buffers = 8GB                  # Mémoire partagée pour cache  
+effective_cache_size = 24GB           # Estimation cache total (PG + OS)  
 
 # Mémoire de travail
-work_mem = 16MB                       # Par opération (tri, hash, etc.)
-maintenance_work_mem = 2GB            # Pour maintenance (VACUUM, INDEX, etc.)
-autovacuum_work_mem = 512MB           # Spécifique autovacuum
+work_mem = 16MB                       # Par opération (tri, hash, etc.)  
+maintenance_work_mem = 2GB            # Pour maintenance (VACUUM, INDEX, etc.)  
+autovacuum_work_mem = 512MB           # Spécifique autovacuum  
 
 # Buffers WAL
 wal_buffers = 16MB                    # Buffer pour Write-Ahead Log
@@ -397,15 +397,15 @@ Contrôlent les écritures sur disque et la durabilité des données :
 
 ```conf
 # WAL (Write-Ahead Log)
-wal_level = replica                   # Niveau de logging
-max_wal_size = 8GB                    # Taille max avant checkpoint
-min_wal_size = 2GB                    # Taille min à conserver
-checkpoint_timeout = 15min            # Intervalle entre checkpoints
-checkpoint_completion_target = 0.9    # Étalement des I/O
+wal_level = replica                   # Niveau de logging  
+max_wal_size = 8GB                    # Taille max avant checkpoint  
+min_wal_size = 2GB                    # Taille min à conserver  
+checkpoint_timeout = 15min            # Intervalle entre checkpoints  
+checkpoint_completion_target = 0.9    # Étalement des I/O  
 
 # I/O Asynchrone (PostgreSQL 18)
-io_method = 'async'                   # Nouveau : I/O non-bloquant
-io_combine_limit = 256kB              # Combinaison opérations I/O
+io_method = 'worker'                  # Défaut PG 18 : I/O asynchrone via workers  
+io_combine_limit = 256kB              # Combinaison opérations I/O  
 ```
 
 **À couvrir dans 16.13.2 et 16.13.3**
@@ -418,19 +418,19 @@ Gèrent le nettoyage automatique des tuples morts et préviennent le bloat :
 
 ```conf
 # Activation et workers
-autovacuum = on                       # JAMAIS désactiver !
-autovacuum_max_workers = 5            # Nombre de workers simultanés
-autovacuum_naptime = 30s              # Fréquence de réveil
+autovacuum = on                       # JAMAIS désactiver !  
+autovacuum_max_workers = 5            # Nombre de workers simultanés  
+autovacuum_naptime = 30s              # Fréquence de réveil  
 
 # Seuils de déclenchement
-autovacuum_vacuum_threshold = 50
-autovacuum_vacuum_scale_factor = 0.1  # 10% de tuples morts
-autovacuum_analyze_threshold = 50
-autovacuum_analyze_scale_factor = 0.05
+autovacuum_vacuum_threshold = 50  
+autovacuum_vacuum_scale_factor = 0.1  # 10% de tuples morts  
+autovacuum_analyze_threshold = 50  
+autovacuum_analyze_scale_factor = 0.05  
 
 # Performance
-autovacuum_vacuum_cost_delay = 2ms    # Throttling
-autovacuum_vacuum_cost_limit = 400
+autovacuum_vacuum_cost_delay = 2ms    # Throttling  
+autovacuum_vacuum_cost_limit = 400  
 ```
 
 **À couvrir dans 16.13.4**
@@ -443,13 +443,13 @@ Gèrent le nombre et le comportement des connexions :
 
 ```conf
 # Limites
-max_connections = 200                 # Connexions simultanées max
-superuser_reserved_connections = 3    # Réservées pour admin
+max_connections = 200                 # Connexions simultanées max  
+superuser_reserved_connections = 3    # Réservées pour admin  
 
 # Timeouts
-statement_timeout = 0                 # Timeout requête (0 = désactivé)
-idle_in_transaction_session_timeout = 0
-tcp_keepalives_idle = 600
+statement_timeout = 0                 # Timeout requête (0 = désactivé)  
+idle_in_transaction_session_timeout = 0  
+tcp_keepalives_idle = 600  
 ```
 
 **Note** : Pour gérer des milliers de connexions, utilisez **PgBouncer** (connection pooling)
@@ -464,16 +464,16 @@ Influencent les décisions du planificateur de requêtes :
 
 ```conf
 # Coûts relatifs
-random_page_cost = 1.1                # SSD : 1.1, HDD : 4.0
-seq_page_cost = 1.0                   # Référence
-cpu_tuple_cost = 0.01
-cpu_index_tuple_cost = 0.005
-cpu_operator_cost = 0.0025
+random_page_cost = 1.1                # SSD : 1.1, HDD : 4.0  
+seq_page_cost = 1.0                   # Référence  
+cpu_tuple_cost = 0.01  
+cpu_index_tuple_cost = 0.005  
+cpu_operator_cost = 0.0025  
 
 # Parallélisation
-max_parallel_workers_per_gather = 4   # Workers par requête
-max_parallel_workers = 8              # Workers totaux
-max_parallel_maintenance_workers = 4  # Pour CREATE INDEX, etc.
+max_parallel_workers_per_gather = 4   # Workers par requête  
+max_parallel_workers = 8              # Workers totaux  
+max_parallel_maintenance_workers = 4  # Pour CREATE INDEX, etc.  
 
 # Statistiques
 default_statistics_target = 100       # Précision statistiques
@@ -487,18 +487,18 @@ Contrôlent ce qui est logué et comment :
 
 ```conf
 # Quoi logger
-log_min_duration_statement = 1000     # Requêtes > 1s
-log_checkpoints = on
-log_connections = on
-log_disconnections = on
-log_autovacuum_min_duration = 0       # Toutes les opérations autovacuum
+log_min_duration_statement = 1000     # Requêtes > 1s  
+log_checkpoints = on  
+log_connections = on  
+log_disconnections = on  
+log_autovacuum_min_duration = 0       # Toutes les opérations autovacuum  
 
 # Où logger
-logging_collector = on
-log_directory = 'log'
-log_filename = 'postgresql-%Y-%m-%d_%H%M%S.log'
-log_rotation_age = 1d
-log_rotation_size = 100MB
+logging_collector = on  
+log_directory = 'log'  
+log_filename = 'postgresql-%Y-%m-%d_%H%M%S.log'  
+log_rotation_age = 1d  
+log_rotation_size = 100MB  
 
 # Format
 log_line_prefix = '%m [%p] %q%u@%d '
@@ -510,14 +510,14 @@ log_line_prefix = '%m [%p] %q%u@%d '
 
 ```conf
 # Authentification
-password_encryption = scram-sha-256   # Algorithme de hash
-ssl = on                              # Chiffrement SSL/TLS
-ssl_cert_file = 'server.crt'
-ssl_key_file = 'server.key'
+password_encryption = scram-sha-256   # Algorithme de hash  
+ssl = on                              # Chiffrement SSL/TLS  
+ssl_cert_file = 'server.crt'  
+ssl_key_file = 'server.key'  
 
 # Limites
-max_locks_per_transaction = 64
-max_pred_locks_per_transaction = 64
+max_locks_per_transaction = 64  
+max_pred_locks_per_transaction = 64  
 ```
 
 ---
@@ -551,17 +551,17 @@ C:\Program Files\PostgreSQL\18\data\postgresql.conf
 #------------------------------------------------------------------------------
 # FILE LOCATIONS
 #------------------------------------------------------------------------------
-data_directory = '/var/lib/postgresql/18/main'
-hba_file = '/etc/postgresql/18/main/pg_hba.conf'
-ident_file = '/etc/postgresql/18/main/pg_ident.conf'
+data_directory = '/var/lib/postgresql/18/main'  
+hba_file = '/etc/postgresql/18/main/pg_hba.conf'  
+ident_file = '/etc/postgresql/18/main/pg_ident.conf'  
 
 #------------------------------------------------------------------------------
 # CONNECTIONS AND AUTHENTICATION
 #------------------------------------------------------------------------------
 # - Connection Settings -
-listen_addresses = 'localhost'
-port = 5432
-max_connections = 100
+listen_addresses = 'localhost'  
+port = 5432  
+max_connections = 100  
 
 # - Security and Authentication -
 #authentication_timeout = 1min
@@ -574,8 +574,8 @@ max_connections = 100
 shared_buffers = 128MB
 #huge_pages = try
 #temp_buffers = 8MB
-work_mem = 4MB
-maintenance_work_mem = 64MB
+work_mem = 4MB  
+maintenance_work_mem = 64MB  
 ...
 
 # [250+ autres paramètres]
@@ -614,8 +614,8 @@ sudo systemctl restart postgresql
 
 ```sql
 -- Modifier via SQL (écrit dans postgresql.auto.conf)
-ALTER SYSTEM SET work_mem = '32MB';
-ALTER SYSTEM SET maintenance_work_mem = '1GB';
+ALTER SYSTEM SET work_mem = '32MB';  
+ALTER SYSTEM SET maintenance_work_mem = '1GB';  
 
 -- Recharger la configuration
 SELECT pg_reload_conf();
@@ -630,8 +630,8 @@ SHOW work_mem;
 ```conf
 # Do not edit this file manually!
 # It will be overwritten by the ALTER SYSTEM command.
-work_mem = '32MB'
-maintenance_work_mem = '1GB'
+work_mem = '32MB'  
+maintenance_work_mem = '1GB'  
 ```
 
 **Priorité** : `postgresql.auto.conf` > `postgresql.conf`
@@ -651,18 +651,18 @@ postgres -D /data -c shared_buffers=16GB -c max_connections=500
 
 ```conf
 # Mémoire partagée
-shared_buffers
-huge_pages
-max_connections
+shared_buffers  
+huge_pages  
+max_connections  
 
 # WAL
-wal_buffers (si > 2048 blocs)
-wal_level
+wal_buffers (si > 2048 blocs)  
+wal_level  
 
 # Divers
-max_worker_processes
-max_prepared_transactions
-track_activity_query_size
+max_worker_processes  
+max_prepared_transactions  
+track_activity_query_size  
 ```
 
 **Tous les autres paramètres** peuvent être modifiés avec un simple `RELOAD` :
@@ -676,32 +676,32 @@ SELECT pg_reload_conf();
 
 ```sql
 -- Voir toutes les valeurs
-SELECT name, setting, unit, context, source
-FROM pg_settings
-ORDER BY name;
+SELECT name, setting, unit, context, source  
+FROM pg_settings  
+ORDER BY name;  
 
 -- Voir un paramètre spécifique
-SHOW shared_buffers;
-SHOW work_mem;
+SHOW shared_buffers;  
+SHOW work_mem;  
 
 -- Voir les paramètres modifiés (différents du défaut)
-SELECT name, setting, source
-FROM pg_settings
-WHERE source != 'default'
-ORDER BY name;
+SELECT name, setting, source  
+FROM pg_settings  
+WHERE source != 'default'  
+ORDER BY name;  
 
 -- Voir uniquement les paramètres du fichier de config
-SELECT name, setting
-FROM pg_settings
-WHERE source = 'configuration file';
+SELECT name, setting  
+FROM pg_settings  
+WHERE source = 'configuration file';  
 ```
 
 ### Réinitialiser un Paramètre
 
 ```sql
 -- Retour à la valeur par défaut
-ALTER SYSTEM RESET work_mem;
-SELECT pg_reload_conf();
+ALTER SYSTEM RESET work_mem;  
+SELECT pg_reload_conf();  
 
 -- Ou dans postgresql.conf : commenter la ligne
 # work_mem = 32MB  ← Commenté, retour au défaut
@@ -732,11 +732,11 @@ Entrées :
 - SSD
 - Web Application
 
-Génère :
-shared_buffers = 8GB
-effective_cache_size = 24GB
-maintenance_work_mem = 2GB
-work_mem = 10MB
+Génère :  
+shared_buffers = 8GB  
+effective_cache_size = 24GB  
+maintenance_work_mem = 2GB  
+work_mem = 10MB  
 ...
 ```
 
@@ -753,17 +753,17 @@ work_mem = 10MB
 ```
 
 **Modes** :
-- **Transaction** : Une connexion par transaction (recommandé)
+- **Transaction** : Une connexion par transaction (recommandé)  
 - **Session** : Une connexion par session client (compatible)
 
 **À couvrir en détail dans 16.13.6**
 
 ### 3. Autres Outils
 
-- **timescaledb-tune** : Pour séries temporelles
-- **postgresqltuner** : Audit configuration existante
-- **pg_stat_statements** : Extension pour analyser requêtes
-- **pgBadger** : Analyse de logs
+- **timescaledb-tune** : Pour séries temporelles  
+- **postgresqltuner** : Audit configuration existante  
+- **pg_stat_statements** : Extension pour analyser requêtes  
+- **pgBadger** : Analyse de logs  
 - **Prometheus + Grafana** : Monitoring temps réel
 
 ---
@@ -774,16 +774,16 @@ Cette section 16.13 est organisée en 6 sous-sections complémentaires :
 
 ### 16.13.1. Paramètres Critiques
 **Objectif** : Maîtriser les 4 paramètres les plus importants
-- `shared_buffers` : Le cache central
-- `work_mem` : Mémoire par opération
-- `maintenance_work_mem` : Mémoire pour maintenance
+- `shared_buffers` : Le cache central  
+- `work_mem` : Mémoire par opération  
+- `maintenance_work_mem` : Mémoire pour maintenance  
 - `effective_cache_size` : Estimation du cache total
 
 **Impact** : ⭐⭐⭐⭐⭐ Ces 4 paramètres ont le plus d'impact sur les performances
 
 ### 16.13.2. I/O Asynchrone (Nouveauté PostgreSQL 18)
 **Objectif** : Exploiter le nouveau sous-système I/O asynchrone
-- Configuration `io_method = 'async'`
+- Configuration `io_method` (`worker` par défaut, `io_uring` sur Linux)
 - Gains de performance jusqu'à 3×
 - Optimisations pour SSD NVMe
 
@@ -791,8 +791,8 @@ Cette section 16.13 est organisée en 6 sous-sections complémentaires :
 
 ### 16.13.3. Configuration WAL
 **Objectif** : Optimiser le Write-Ahead Log
-- `wal_level` : Niveau de logging
-- `max_wal_size` : Taille avant checkpoint
+- `wal_level` : Niveau de logging  
+- `max_wal_size` : Taille avant checkpoint  
 - `checkpoint_timeout` : Intervalle checkpoints
 
 **Impact** : ⭐⭐⭐⭐ Critique pour performances d'écriture
@@ -939,9 +939,9 @@ SELECT
     calls,
     mean_exec_time,
     max_exec_time
-FROM pg_stat_statements
-ORDER BY mean_exec_time DESC
-LIMIT 10;
+FROM pg_stat_statements  
+ORDER BY mean_exec_time DESC  
+LIMIT 10;  
 
 -- Objectif : Réduction de 20-50% du mean_exec_time
 ```
@@ -957,19 +957,19 @@ pgbench -c 20 -j 4 -T 60 mydb
 #### 2. Métriques Applicatives
 
 ```
-Temps de réponse API :
-Avant : 200ms moyenne
-Après : 50ms moyenne
+Temps de réponse API :  
+Avant : 200ms moyenne  
+Après : 50ms moyenne  
 → Amélioration : 4×
 
-Pages par seconde :
-Avant : 100 pages/sec
-Après : 300 pages/sec
+Pages par seconde :  
+Avant : 100 pages/sec  
+Après : 300 pages/sec  
 → Amélioration : 3×
 
-Taux d'erreur :
-Avant : 2% (connexions refusées)
-Après : 0.1%
+Taux d'erreur :  
+Avant : 2% (connexions refusées)  
+Après : 0.1%  
 → Amélioration : 20×
 ```
 
@@ -981,13 +981,13 @@ Temps de chargement site web :
 < 3 secondes : référence
 > 3 secondes : -40% conversions
 
-Satisfaction utilisateur :
-Latence < 100ms : 98% satisfaction
-Latence 100-500ms : 85% satisfaction
-Latence > 500ms : 60% satisfaction
+Satisfaction utilisateur :  
+Latence < 100ms : 98% satisfaction  
+Latence 100-500ms : 85% satisfaction  
+Latence > 500ms : 60% satisfaction  
 
-Coûts infrastructure :
-Configuration optimale : -30% serveurs nécessaires
+Coûts infrastructure :  
+Configuration optimale : -30% serveurs nécessaires  
 → Économie : 50,000€/an
 ```
 
@@ -1052,16 +1052,16 @@ Dev → Staging → Charge Tests → Production
 **3. TOUJOURS avoir un plan de rollback**
 ```bash
 # Si problème en production
-sudo cp postgresql.conf.backup.20241122 postgresql.conf
-sudo systemctl restart postgresql
+sudo cp postgresql.conf.backup.20241122 postgresql.conf  
+sudo systemctl restart postgresql  
 ```
 
 **4. TOUJOURS documenter**
 ```
-Pourquoi ce changement ?
-Quelle était la valeur avant ?
-Quel est l'impact attendu ?
-Comment revenir en arrière ?
+Pourquoi ce changement ?  
+Quelle était la valeur avant ?  
+Quel est l'impact attendu ?  
+Comment revenir en arrière ?  
 ```
 
 ---
@@ -1072,42 +1072,42 @@ Avant de plonger dans les sections détaillées, voici une checklist pour démar
 
 ### ✅ Phase Préparation
 
-- [ ] Inventaire matériel (RAM, CPU, type stockage)
-- [ ] Identifier type de workload (OLTP, OLAP, Mixed)
-- [ ] Estimer nombre de connexions simultanées
-- [ ] Installer outils de monitoring (pg_stat_statements, pgBadger)
+- [ ] Inventaire matériel (RAM, CPU, type stockage)  
+- [ ] Identifier type de workload (OLTP, OLAP, Mixed)  
+- [ ] Estimer nombre de connexions simultanées  
+- [ ] Installer outils de monitoring (pg_stat_statements, pgBadger)  
 - [ ] Établir baseline de performances actuelles
 
 ### ✅ Phase Configuration Initiale
 
-- [ ] Utiliser PGTune pour générer config de base
-- [ ] Backup de postgresql.conf existant
-- [ ] Appliquer configuration générée
-- [ ] Redémarrer PostgreSQL
+- [ ] Utiliser PGTune pour générer config de base  
+- [ ] Backup de postgresql.conf existant  
+- [ ] Appliquer configuration générée  
+- [ ] Redémarrer PostgreSQL  
 - [ ] Vérifier démarrage sans erreurs
 
 ### ✅ Phase Validation
 
-- [ ] Vérifier que paramètres sont appliqués (SHOW)
-- [ ] Tester connexion application
-- [ ] Vérifier logs PostgreSQL (aucune erreur)
-- [ ] Lancer tests de charge basiques
+- [ ] Vérifier que paramètres sont appliqués (SHOW)  
+- [ ] Tester connexion application  
+- [ ] Vérifier logs PostgreSQL (aucune erreur)  
+- [ ] Lancer tests de charge basiques  
 - [ ] Comparer avec baseline
 
 ### ✅ Phase Monitoring (1-2 semaines)
 
-- [ ] Surveiller cache hit ratio quotidiennement
-- [ ] Vérifier absence de clients en attente (connexions)
-- [ ] Identifier slow queries
-- [ ] Surveiller bloat tables
+- [ ] Surveiller cache hit ratio quotidiennement  
+- [ ] Vérifier absence de clients en attente (connexions)  
+- [ ] Identifier slow queries  
+- [ ] Surveiller bloat tables  
 - [ ] Vérifier fréquence checkpoints
 
 ### ✅ Phase Ajustements
 
-- [ ] Identifier 1-2 bottlenecks principaux
-- [ ] Ajuster paramètres correspondants
-- [ ] Re-tester et comparer
-- [ ] Documenter changements
+- [ ] Identifier 1-2 bottlenecks principaux  
+- [ ] Ajuster paramètres correspondants  
+- [ ] Re-tester et comparer  
+- [ ] Documenter changements  
 - [ ] Répéter si nécessaire
 
 ---

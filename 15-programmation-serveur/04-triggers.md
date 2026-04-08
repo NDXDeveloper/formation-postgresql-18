@@ -10,13 +10,13 @@ Un **trigger** (ou "déclencheur" en français) est un objet de base de données
 
 Imaginez une maison intelligente avec des capteurs :
 
-- **Événement déclencheur** : Quelqu'un ouvre la porte d'entrée
-- **Trigger** : Le système de sécurité qui surveille la porte
+- **Événement déclencheur** : Quelqu'un ouvre la porte d'entrée  
+- **Trigger** : Le système de sécurité qui surveille la porte  
 - **Action automatique** : Allumer les lumières, désactiver l'alarme, enregistrer l'heure dans un journal
 
 En PostgreSQL, c'est la même logique :
-- **Événement déclencheur** : INSERT, UPDATE ou DELETE sur une table
-- **Trigger** : Fonction qui surveille ces opérations
+- **Événement déclencheur** : INSERT, UPDATE ou DELETE sur une table  
+- **Trigger** : Fonction qui surveille ces opérations  
 - **Action automatique** : Validation, calcul, journalisation, notification, etc.
 
 ### Pourquoi utiliser des triggers ?
@@ -52,18 +52,18 @@ Les triggers permettent de :
 
 ```sql
 -- Sans trigger : l'utilisateur doit penser à tout
-INSERT INTO commandes (client_id, produit_id, quantite, prix_unitaire)
-VALUES (123, 456, 5, 99.99);
+INSERT INTO commandes (client_id, produit_id, quantite, prix_unitaire)  
+VALUES (123, 456, 5, 99.99);  
 
 -- L'utilisateur doit aussi penser à :
-UPDATE commandes SET montant_total = quantite * prix_unitaire WHERE id = ...;
-UPDATE commandes SET date_creation = now() WHERE id = ...;
-UPDATE clients SET nb_commandes = nb_commandes + 1 WHERE id = 123;
-UPDATE produits SET stock = stock - 5 WHERE id = 456;
+UPDATE commandes SET montant_total = quantite * prix_unitaire WHERE id = ...;  
+UPDATE commandes SET date_creation = now() WHERE id = ...;  
+UPDATE clients SET nb_commandes = nb_commandes + 1 WHERE id = 123;  
+UPDATE produits SET stock = stock - 5 WHERE id = 456;  
 
 -- Avec trigger : tout est automatique !
-INSERT INTO commandes (client_id, produit_id, quantite, prix_unitaire)
-VALUES (123, 456, 5, 99.99);
+INSERT INTO commandes (client_id, produit_id, quantite, prix_unitaire)  
+VALUES (123, 456, 5, 99.99);  
 -- Le trigger calcule montant_total
 -- Le trigger ajoute date_creation
 -- Le trigger met à jour nb_commandes du client
@@ -84,9 +84,9 @@ C'est une fonction PL/pgSQL spéciale qui contient le code à exécuter. Elle do
 - Retourner NEW, OLD ou NULL
 
 ```sql
-CREATE OR REPLACE FUNCTION ma_fonction_trigger()
-RETURNS TRIGGER AS $$
-BEGIN
+CREATE OR REPLACE FUNCTION ma_fonction_trigger()  
+RETURNS TRIGGER AS $$  
+BEGIN  
   -- Logique métier ici
   RETURN NEW;  -- ou OLD, ou NULL
 END;
@@ -149,25 +149,25 @@ Le trigger s'exécute **avant** que l'opération soit réellement effectuée dan
 
 #### Caractéristiques BEFORE
 
-- ✅ Peut **modifier** les données avant insertion/mise à jour
-- ✅ Peut **annuler** l'opération en retournant NULL
-- ✅ Idéal pour la **validation** et la **transformation**
+- ✅ Peut **modifier** les données avant insertion/mise à jour  
+- ✅ Peut **annuler** l'opération en retournant NULL  
+- ✅ Idéal pour la **validation** et la **transformation**  
 - ❌ Les données ne sont pas encore dans la table
 
 #### Cas d'usage typiques BEFORE
 
-1. **Validation avancée** : Vérifier des règles métier complexes
-2. **Normalisation** : Mettre en forme les données (trim, lowercase, etc.)
-3. **Calculs automatiques** : Remplir des colonnes calculées
-4. **Valeurs par défaut** : Générer des valeurs automatiques
+1. **Validation avancée** : Vérifier des règles métier complexes  
+2. **Normalisation** : Mettre en forme les données (trim, lowercase, etc.)  
+3. **Calculs automatiques** : Remplir des colonnes calculées  
+4. **Valeurs par défaut** : Générer des valeurs automatiques  
 5. **Prévention** : Bloquer certaines opérations
 
 #### Exemple BEFORE
 
 ```sql
-CREATE OR REPLACE FUNCTION valider_email()
-RETURNS TRIGGER AS $$
-BEGIN
+CREATE OR REPLACE FUNCTION valider_email()  
+RETURNS TRIGGER AS $$  
+BEGIN  
   -- Normaliser l'email
   NEW.email := LOWER(TRIM(NEW.email));
 
@@ -192,25 +192,25 @@ Le trigger s'exécute **après** que l'opération ait été effectuée dans la t
 
 #### Caractéristiques AFTER
 
-- ❌ Ne peut **pas modifier** les données de l'opération en cours
-- ✅ Peut effectuer des actions sur **d'autres tables**
-- ✅ Idéal pour l'**audit**, la **synchronisation** et les **notifications**
+- ❌ Ne peut **pas modifier** les données de l'opération en cours  
+- ✅ Peut effectuer des actions sur **d'autres tables**  
+- ✅ Idéal pour l'**audit**, la **synchronisation** et les **notifications**  
 - ✅ Les données sont déjà dans la table
 
 #### Cas d'usage typiques AFTER
 
-1. **Audit** : Enregistrer les modifications dans une table d'historique
-2. **Synchronisation** : Mettre à jour des tables liées
-3. **Statistiques** : Maintenir des compteurs à jour
-4. **Notifications** : Déclencher des alertes ou événements
+1. **Audit** : Enregistrer les modifications dans une table d'historique  
+2. **Synchronisation** : Mettre à jour des tables liées  
+3. **Statistiques** : Maintenir des compteurs à jour  
+4. **Notifications** : Déclencher des alertes ou événements  
 5. **Journalisation** : Logger les opérations importantes
 
 #### Exemple AFTER
 
 ```sql
-CREATE OR REPLACE FUNCTION auditer_modification()
-RETURNS TRIGGER AS $$
-BEGIN
+CREATE OR REPLACE FUNCTION auditer_modification()  
+RETURNS TRIGGER AS $$  
+BEGIN  
   -- Enregistrer dans la table d'audit
   INSERT INTO audit_log (
     table_name,
@@ -249,36 +249,36 @@ Le trigger **remplace complètement** l'opération normale. Disponible **uniquem
 
 #### Caractéristiques INSTEAD OF
 
-- ⚠️ **Uniquement pour les vues** (pas les tables)
-- ✅ Permet de rendre des vues **modifiables**
-- ✅ Définit **exactement** ce qui doit se passer
+- ⚠️ **Uniquement pour les vues** (pas les tables)  
+- ✅ Permet de rendre des vues **modifiables**  
+- ✅ Définit **exactement** ce qui doit se passer  
 - ✅ Utile pour les vues complexes (jointures, agrégations)
 
 #### Cas d'usage typiques INSTEAD OF
 
-1. **Vues modifiables** : Permettre INSERT/UPDATE/DELETE sur vues complexes
-2. **Abstraction** : Cacher la complexité du schéma physique
-3. **Distribution** : Répartir les modifications sur plusieurs tables
+1. **Vues modifiables** : Permettre INSERT/UPDATE/DELETE sur vues complexes  
+2. **Abstraction** : Cacher la complexité du schéma physique  
+3. **Distribution** : Répartir les modifications sur plusieurs tables  
 4. **Validation complexe** : Appliquer une logique métier élaborée
 
 #### Exemple INSTEAD OF
 
 ```sql
 -- Vue qui joint deux tables
-CREATE VIEW vue_employes_complet AS
-SELECT
+CREATE VIEW vue_employes_complet AS  
+SELECT  
   e.id,
   e.nom,
   e.prenom,
   d.nom_departement,
   d.budget
-FROM employes e
-JOIN departements d ON e.departement_id = d.id;
+FROM employes e  
+JOIN departements d ON e.departement_id = d.id;  
 
 -- Trigger INSTEAD OF pour permettre l'insertion via la vue
-CREATE OR REPLACE FUNCTION inserer_employe_via_vue()
-RETURNS TRIGGER AS $$
-DECLARE
+CREATE OR REPLACE FUNCTION inserer_employe_via_vue()  
+RETURNS TRIGGER AS $$  
+DECLARE  
   dept_id INTEGER;
 BEGIN
   -- Trouver ou créer le département
@@ -306,8 +306,8 @@ CREATE TRIGGER trigger_insert_vue
   EXECUTE FUNCTION inserer_employe_via_vue();
 
 -- Maintenant on peut insérer directement dans la vue !
-INSERT INTO vue_employes_complet (nom, prenom, nom_departement)
-VALUES ('Dupont', 'Jean', 'Informatique');
+INSERT INTO vue_employes_complet (nom, prenom, nom_departement)  
+VALUES ('Dupont', 'Jean', 'Informatique');  
 ```
 
 ---
@@ -384,7 +384,7 @@ CREATE TRIGGER trigger_insert
 ```
 
 **Variables disponibles :**
-- ✅ NEW (la ligne à insérer)
+- ✅ NEW (la ligne à insérer)  
 - ❌ OLD (n'existe pas encore)
 
 ### 2. UPDATE
@@ -399,7 +399,7 @@ CREATE TRIGGER trigger_update
 ```
 
 **Variables disponibles :**
-- ✅ NEW (la ligne après modification)
+- ✅ NEW (la ligne après modification)  
 - ✅ OLD (la ligne avant modification)
 
 ### 3. DELETE
@@ -414,7 +414,7 @@ CREATE TRIGGER trigger_delete
 ```
 
 **Variables disponibles :**
-- ❌ NEW (n'existe plus)
+- ❌ NEW (n'existe plus)  
 - ✅ OLD (la ligne supprimée)
 
 ### 4. TRUNCATE
@@ -429,7 +429,7 @@ CREATE TRIGGER trigger_truncate
 ```
 
 **Particularité :**
-- ⚠️ Toujours de type STATEMENT (jamais ROW)
+- ⚠️ Toujours de type STATEMENT (jamais ROW)  
 - ❌ Pas de NEW ni OLD (opération en masse)
 
 ### Combiner plusieurs événements
@@ -447,9 +447,9 @@ CREATE TRIGGER trigger_multi
 Dans la fonction, utilisez `TG_OP` pour distinguer l'opération :
 
 ```sql
-CREATE OR REPLACE FUNCTION ma_fonction()
-RETURNS TRIGGER AS $$
-BEGIN
+CREATE OR REPLACE FUNCTION ma_fonction()  
+RETURNS TRIGGER AS $$  
+BEGIN  
   IF TG_OP = 'INSERT' THEN
     -- Logique spécifique à INSERT
     RAISE NOTICE 'Insertion détectée';
@@ -494,9 +494,9 @@ Nom unique du trigger dans la table.
 Le moment d'exécution (expliqué précédemment).
 
 #### événement [ OR ... ]
-- `INSERT` : Insertion
-- `UPDATE [ OF colonne1, colonne2, ... ]` : Mise à jour (optionnellement sur certaines colonnes seulement)
-- `DELETE` : Suppression
+- `INSERT` : Insertion  
+- `UPDATE [ OF colonne1, colonne2, ... ]` : Mise à jour (optionnellement sur certaines colonnes seulement)  
+- `DELETE` : Suppression  
 - `TRUNCATE` : Vidage de table
 
 #### ON nom_table
@@ -504,7 +504,7 @@ La table (ou vue) sur laquelle le trigger est attaché.
 
 #### FOR EACH ROW | FOR EACH STATEMENT
 Le niveau de granularité :
-- `FOR EACH ROW` : Une exécution par ligne affectée
+- `FOR EACH ROW` : Une exécution par ligne affectée  
 - `FOR EACH STATEMENT` : Une seule exécution par instruction SQL
 
 *(Détaillé dans les sections suivantes 15.4.1 et 15.4.2)*
@@ -542,9 +542,9 @@ CREATE TABLE articles (
 );
 
 -- Fonction trigger
-CREATE OR REPLACE FUNCTION gerer_timestamps()
-RETURNS TRIGGER AS $$
-BEGIN
+CREATE OR REPLACE FUNCTION gerer_timestamps()  
+RETURNS TRIGGER AS $$  
+BEGIN  
   IF TG_OP = 'INSERT' THEN
     NEW.created_at := now();
     NEW.updated_at := now();
@@ -567,8 +567,8 @@ CREATE TRIGGER trigger_timestamps
 **Utilisation :**
 ```sql
 -- L'utilisateur n'a pas besoin de gérer les dates
-INSERT INTO articles (titre, contenu)
-VALUES ('Mon article', 'Contenu intéressant');
+INSERT INTO articles (titre, contenu)  
+VALUES ('Mon article', 'Contenu intéressant');  
 
 -- created_at et updated_at sont automatiquement remplis
 
@@ -589,9 +589,9 @@ CREATE TABLE employes (
   manager_id INTEGER REFERENCES employes(id)
 );
 
-CREATE OR REPLACE FUNCTION valider_hierarchie_salaire()
-RETURNS TRIGGER AS $$
-DECLARE
+CREATE OR REPLACE FUNCTION valider_hierarchie_salaire()  
+RETURNS TRIGGER AS $$  
+DECLARE  
   salaire_manager NUMERIC(10,2);
 BEGIN
   -- Si l'employé a un manager
@@ -636,9 +636,9 @@ CREATE TABLE commandes (
   montant NUMERIC(10,2)
 );
 
-CREATE OR REPLACE FUNCTION maj_compteur_commandes()
-RETURNS TRIGGER AS $$
-BEGIN
+CREATE OR REPLACE FUNCTION maj_compteur_commandes()  
+RETURNS TRIGGER AS $$  
+BEGIN  
   IF TG_OP = 'INSERT' THEN
     -- Incrémenter le compteur
     UPDATE clients
@@ -697,9 +697,9 @@ CREATE TABLE audit_trail (
   changed_at TIMESTAMP DEFAULT now()
 );
 
-CREATE OR REPLACE FUNCTION audit_changes()
-RETURNS TRIGGER AS $$
-BEGIN
+CREATE OR REPLACE FUNCTION audit_changes()  
+RETURNS TRIGGER AS $$  
+BEGIN  
   INSERT INTO audit_trail (
     table_name,
     operation,
@@ -760,17 +760,17 @@ Si plusieurs triggers du **même type** existent, ils s'exécutent par **ordre a
 
 ```sql
 -- Ces triggers s'exécutent dans cet ordre :
-CREATE TRIGGER a_premier ...
-CREATE TRIGGER b_deuxieme ...
-CREATE TRIGGER c_troisieme ...
+CREATE TRIGGER a_premier ...  
+CREATE TRIGGER b_deuxieme ...  
+CREATE TRIGGER c_troisieme ...  
 ```
 
 **Astuce :** Préfixez vos triggers avec des numéros pour contrôler l'ordre :
 
 ```sql
-CREATE TRIGGER trigger_01_validation ...
-CREATE TRIGGER trigger_02_transformation ...
-CREATE TRIGGER trigger_03_audit ...
+CREATE TRIGGER trigger_01_validation ...  
+CREATE TRIGGER trigger_02_transformation ...  
+CREATE TRIGGER trigger_03_audit ...  
 ```
 
 ### 3. Exemple d'ordre complet
@@ -783,9 +783,9 @@ CREATE TABLE test_ordre (
 );
 
 -- Triggers pour observer l'ordre
-CREATE OR REPLACE FUNCTION logger_ordre()
-RETURNS TRIGGER AS $$
-BEGIN
+CREATE OR REPLACE FUNCTION logger_ordre()  
+RETURNS TRIGGER AS $$  
+BEGIN  
   RAISE NOTICE '% % % sur %',
     TG_NAME, TG_WHEN, TG_LEVEL, TG_TABLE_NAME;
   RETURN NEW;
@@ -843,14 +843,14 @@ SELECT
     ELSE 'AFTER'
   END AS timing,
   tgenabled AS statut
-FROM pg_trigger
-WHERE tgrelid = 'ma_table'::regclass
+FROM pg_trigger  
+WHERE tgrelid = 'ma_table'::regclass  
   AND tgisinternal = false;
 
 -- Méthode 2 : Obtenir la définition complète
-SELECT pg_get_triggerdef(oid) AS definition
-FROM pg_trigger
-WHERE tgrelid = 'ma_table'::regclass
+SELECT pg_get_triggerdef(oid) AS definition  
+FROM pg_trigger  
+WHERE tgrelid = 'ma_table'::regclass  
   AND tgisinternal = false;
 ```
 
@@ -916,18 +916,18 @@ CREATE OR REPLACE TRIGGER mon_trigger
 
 ### ✅ Avantages
 
-1. **Automatisation** : Les règles sont appliquées automatiquement, impossible de les oublier
-2. **Centralisation** : La logique métier est dans la base, pas dispersée dans le code applicatif
-3. **Cohérence** : Garantit que les règles sont appliquées quelle que soit l'application
-4. **Performance** : Évite les aller-retours entre application et base
+1. **Automatisation** : Les règles sont appliquées automatiquement, impossible de les oublier  
+2. **Centralisation** : La logique métier est dans la base, pas dispersée dans le code applicatif  
+3. **Cohérence** : Garantit que les règles sont appliquées quelle que soit l'application  
+4. **Performance** : Évite les aller-retours entre application et base  
 5. **Sécurité** : Les règles sont appliquées même si l'application est contournée
 
 ### ❌ Inconvénients
 
-1. **Complexité cachée** : Les triggers sont "invisibles" depuis l'application
-2. **Debugging difficile** : Erreurs parfois difficiles à tracer
-3. **Performance** : Peut ralentir les opérations en masse
-4. **Maintenance** : Logique métier fragmentée entre code et base
+1. **Complexité cachée** : Les triggers sont "invisibles" depuis l'application  
+2. **Debugging difficile** : Erreurs parfois difficiles à tracer  
+3. **Performance** : Peut ralentir les opérations en masse  
+4. **Maintenance** : Logique métier fragmentée entre code et base  
 5. **Portabilité** : Dépendance forte à PostgreSQL
 
 ### Quand utiliser des triggers ?
@@ -949,18 +949,18 @@ CREATE OR REPLACE TRIGGER mon_trigger
 
 ```sql
 -- ✅ Bon : Trigger simple et rapide
-CREATE OR REPLACE FUNCTION maj_timestamp()
-RETURNS TRIGGER AS $$
-BEGIN
+CREATE OR REPLACE FUNCTION maj_timestamp()  
+RETURNS TRIGGER AS $$  
+BEGIN  
   NEW.updated_at := now();
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
 -- ❌ Mauvais : Trigger complexe et lent
-CREATE OR REPLACE FUNCTION trigger_complexe()
-RETURNS TRIGGER AS $$
-BEGIN
+CREATE OR REPLACE FUNCTION trigger_complexe()  
+RETURNS TRIGGER AS $$  
+BEGIN  
   PERFORM heavy_computation();
   PERFORM call_external_api();
   PERFORM recursive_operation();
@@ -972,8 +972,8 @@ $$ LANGUAGE plpgsql;
 ### 2. Documenter abondamment
 
 ```sql
-CREATE OR REPLACE FUNCTION ma_fonction()
-RETURNS TRIGGER AS $$
+CREATE OR REPLACE FUNCTION ma_fonction()  
+RETURNS TRIGGER AS $$  
 /**
  * Trigger : Validation des prix
  * Table : produits
@@ -1019,9 +1019,9 @@ CREATE TRIGGER t1
 ### 4. Gérer les erreurs proprement
 
 ```sql
-CREATE OR REPLACE FUNCTION fonction_securisee()
-RETURNS TRIGGER AS $$
-BEGIN
+CREATE OR REPLACE FUNCTION fonction_securisee()  
+RETURNS TRIGGER AS $$  
+BEGIN  
   -- Logique métier
   IF NEW.valeur < 0 THEN
     RAISE EXCEPTION 'Valeur négative interdite : %', NEW.valeur
@@ -1054,9 +1054,9 @@ CREATE TRIGGER trigger_b
   EXECUTE FUNCTION update_table_a();
 
 -- ✅ Solution : Utiliser des conditions
-CREATE OR REPLACE FUNCTION update_avec_protection()
-RETURNS TRIGGER AS $$
-BEGIN
+CREATE OR REPLACE FUNCTION update_avec_protection()  
+RETURNS TRIGGER AS $$  
+BEGIN  
   -- Éviter la récursion avec une condition
   IF NOT (NEW.updated_by_trigger) THEN
     NEW.updated_by_trigger := TRUE;
@@ -1081,14 +1081,14 @@ $$ LANGUAGE plpgsql;
 
 ### Les quatre événements
 
-- **INSERT** : Nouvelle ligne (NEW disponible)
-- **UPDATE** : Modification (NEW et OLD disponibles)
-- **DELETE** : Suppression (OLD disponible)
+- **INSERT** : Nouvelle ligne (NEW disponible)  
+- **UPDATE** : Modification (NEW et OLD disponibles)  
+- **DELETE** : Suppression (OLD disponible)  
 - **TRUNCATE** : Vidage complet (ni NEW ni OLD)
 
 ### Structure d'un trigger
 
-1. **Fonction trigger** : Contient la logique (type TRIGGER)
+1. **Fonction trigger** : Contient la logique (type TRIGGER)  
 2. **Trigger** : Lie la fonction à un événement sur une table
 
 ### Quand utiliser quoi ?
@@ -1111,8 +1111,8 @@ Les triggers sont des outils puissants qui permettent d'**automatiser** et de **
 **Principe directeur :** Un bon trigger est simple, bien documenté, et résout un problème d'intégrité ou d'automatisation qui ne peut pas être facilement géré au niveau applicatif.
 
 Dans les sections suivantes, nous approfondirons :
-- **15.4.1** : Triggers par ligne (FOR EACH ROW) - Exécution pour chaque enregistrement
-- **15.4.2** : Triggers par instruction (FOR EACH STATEMENT) - Exécution une fois par opération
+- **15.4.1** : Triggers par ligne (FOR EACH ROW) - Exécution pour chaque enregistrement  
+- **15.4.2** : Triggers par instruction (FOR EACH STATEMENT) - Exécution une fois par opération  
 - **15.4.3** : Variables spéciales (NEW, OLD, TG_OP) - Accès aux données et métadonnées
 
 ---

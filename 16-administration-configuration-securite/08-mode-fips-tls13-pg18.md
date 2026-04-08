@@ -6,7 +6,7 @@
 
 PostgreSQL 18, publié en septembre 2025, apporte des améliorations majeures en matière de sécurité des connexions. Deux nouveautés se distinguent particulièrement :
 
-1. **Le mode FIPS** : Support complet des standards cryptographiques du gouvernement américain
+1. **Le mode FIPS** : Support complet des standards cryptographiques du gouvernement américain  
 2. **Configuration avancée TLS 1.3** : Contrôle fin des algorithmes de chiffrement modernes
 
 Ces fonctionnalités répondent aux besoins croissants de **conformité réglementaire** et de **sécurité renforcée** dans les environnements sensibles : gouvernement, défense, santé, finance, et secteurs hautement régulés.
@@ -107,8 +107,8 @@ FIPS 140 définit **4 niveaux de sécurité** :
 
 Avant d'activer le mode FIPS dans PostgreSQL, vous devez avoir :
 
-1. **PostgreSQL 18** installé
-2. **OpenSSL compilé en mode FIPS** sur le système
+1. **PostgreSQL 18** installé  
+2. **OpenSSL compilé en mode FIPS** sur le système  
 3. **Certificats SSL/TLS** configurés
 
 ### Vérification du Support FIPS d'OpenSSL
@@ -152,14 +152,14 @@ ssl_fips = on
 ssl = on
 
 # Certificats
-ssl_cert_file = 'server.crt'
-ssl_key_file = 'server.key'
+ssl_cert_file = 'server.crt'  
+ssl_key_file = 'server.key'  
 
 # ===== CONFIGURATION TLS STRICTE =====
 
 # Versions TLS autorisées (FIPS exige TLS 1.2+)
-ssl_min_protocol_version = 'TLSv1.2'
-ssl_max_protocol_version = 'TLSv1.3'
+ssl_min_protocol_version = 'TLSv1.2'  
+ssl_max_protocol_version = 'TLSv1.3'  
 
 # Algorithmes de chiffrement FIPS uniquement
 # En mode FIPS, PostgreSQL limite automatiquement aux algorithmes approuvés
@@ -192,24 +192,24 @@ sudo -u postgres psql -c "SHOW ssl_fips;"
 # Résultat attendu : on
 
 # Vérifier les paramètres SSL
-sudo -u postgres psql -c "SHOW ssl_min_protocol_version;"
-sudo -u postgres psql -c "SHOW ssl_ciphers;"
+sudo -u postgres psql -c "SHOW ssl_min_protocol_version;"  
+sudo -u postgres psql -c "SHOW ssl_ciphers;"  
 ```
 
 ### Comportement du Mode FIPS
 
 Lorsque `ssl_fips = on` est activé, PostgreSQL :
 
-1. ✅ **Restreint les algorithmes** : Seuls les algorithmes validés FIPS sont autorisés
-2. ✅ **Vérifie OpenSSL** : Vérifie qu'OpenSSL est en mode FIPS
-3. ❌ **Refuse de démarrer** : Si OpenSSL n'est pas configuré pour FIPS
-4. ✅ **Applique TLS 1.2+** : Force automatiquement TLS 1.2 minimum
+1. ✅ **Restreint les algorithmes** : Seuls les algorithmes validés FIPS sont autorisés  
+2. ✅ **Vérifie OpenSSL** : Vérifie qu'OpenSSL est en mode FIPS  
+3. ❌ **Refuse de démarrer** : Si OpenSSL n'est pas configuré pour FIPS  
+4. ✅ **Applique TLS 1.2+** : Force automatiquement TLS 1.2 minimum  
 5. ❌ **Bloque les algorithmes faibles** : MD5, RC4, DES, 3DES, etc.
 
 **Exemple de rejet :**
 ```
-FATAL: could not enable FIPS mode
-HINT: Ensure OpenSSL is compiled with FIPS support and properly configured
+FATAL: could not enable FIPS mode  
+HINT: Ensure OpenSSL is compiled with FIPS support and properly configured  
 ```
 
 ---
@@ -233,10 +233,10 @@ SSL 2.0 (1995) → SSL 3.0 (1996) → TLS 1.0 (1999) → TLS 1.1 (2006) → TLS 
 
 **TLS 1.2 : Handshake 2-RTT (Round-Trip Time)**
 ```
-Client  →  ClientHello                →  Serveur
-Client  ←  ServerHello + Certificat   ←  Serveur
-Client  →  ClientKeyExchange          →  Serveur
-Client  ←  ChangeCipherSpec + Finished ← Serveur
+Client  →  ClientHello                →  Serveur  
+Client  ←  ServerHello + Certificat   ←  Serveur  
+Client  →  ClientKeyExchange          →  Serveur  
+Client  ←  ChangeCipherSpec + Finished ← Serveur  
            ⬇️
     2 aller-retours (2-RTT)
     Temps : ~200ms (sur latence 50ms)
@@ -244,8 +244,8 @@ Client  ←  ChangeCipherSpec + Finished ← Serveur
 
 **TLS 1.3 : Handshake 1-RTT**
 ```
-Client  →  ClientHello + KeyShare     →  Serveur
-Client  ←  ServerHello + KeyShare + Finished ← Serveur
+Client  →  ClientHello + KeyShare     →  Serveur  
+Client  ←  ServerHello + KeyShare + Finished ← Serveur  
            ⬇️
     1 seul aller-retour (1-RTT)
     Temps : ~100ms (sur latence 50ms)
@@ -266,16 +266,16 @@ Client  →  ClientHello + Données Application →  Serveur
 #### 2. Sécurité : Suppression des Algorithmes Faibles
 
 **TLS 1.3 a supprimé :**
-- ❌ RSA key exchange (vulnérable)
-- ❌ Algorithmes CBC (vulnérables au padding oracle)
-- ❌ SHA-1 et MD5 (obsolètes)
-- ❌ RC4, 3DES, DES (faibles)
-- ❌ Compression (vulnérable à CRIME)
+- ❌ RSA key exchange (vulnérable)  
+- ❌ Algorithmes CBC (vulnérables au padding oracle)  
+- ❌ SHA-1 et MD5 (obsolètes)  
+- ❌ RC4, 3DES, DES (faibles)  
+- ❌ Compression (vulnérable à CRIME)  
 - ❌ Renégociation (source de bugs)
 
 **TLS 1.3 conserve uniquement :**
-- ✅ AEAD ciphers (Authenticated Encryption with Associated Data)
-- ✅ Perfect Forward Secrecy obligatoire
+- ✅ AEAD ciphers (Authenticated Encryption with Associated Data)  
+- ✅ Perfect Forward Secrecy obligatoire  
 - ✅ Algorithmes modernes (AES-GCM, ChaCha20-Poly1305)
 
 #### 3. Simplicité : Moins de Choix, Plus de Sécurité
@@ -335,8 +335,8 @@ ssl_tls13_ciphers = 'liste_des_ciphers_séparés_par_deux_points'
 # postgresql.conf - Sécurité maximale
 
 # TLS 1.3 uniquement
-ssl_min_protocol_version = 'TLSv1.3'
-ssl_max_protocol_version = 'TLSv1.3'
+ssl_min_protocol_version = 'TLSv1.3'  
+ssl_max_protocol_version = 'TLSv1.3'  
 
 # Algorithme le plus fort uniquement (AES-256)
 ssl_tls13_ciphers = 'TLS_AES_256_GCM_SHA384'
@@ -346,10 +346,10 @@ ssl_fips = on
 ```
 
 **Caractéristiques :**
-- ✅ Chiffrement 256-bit
-- ✅ FIPS-compliant
-- ✅ Sécurité maximale
-- ⚠️ Légèrement plus lent que AES-128
+- ✅ Chiffrement 256-bit  
+- ✅ FIPS-compliant  
+- ✅ Sécurité maximale  
+- ⚠️ Légèrement plus lent que AES-128  
 - ⚠️ Pas de compatibilité TLS 1.2
 
 #### Configuration 2 : Équilibre Sécurité/Performance
@@ -360,8 +360,8 @@ ssl_fips = on
 # postgresql.conf - Équilibre
 
 # TLS 1.2 et 1.3 (compatibilité)
-ssl_min_protocol_version = 'TLSv1.2'
-ssl_max_protocol_version = 'TLSv1.3'
+ssl_min_protocol_version = 'TLSv1.2'  
+ssl_max_protocol_version = 'TLSv1.3'  
 
 # Deux algorithmes forts (ordre de préférence)
 ssl_tls13_ciphers = 'TLS_AES_256_GCM_SHA384:TLS_AES_128_GCM_SHA256'
@@ -373,9 +373,9 @@ ssl_prefer_server_ciphers = on
 ```
 
 **Caractéristiques :**
-- ✅ Sécurité forte
-- ✅ Bonnes performances
-- ✅ Compatibilité clients anciens (TLS 1.2)
+- ✅ Sécurité forte  
+- ✅ Bonnes performances  
+- ✅ Compatibilité clients anciens (TLS 1.2)  
 - ✅ Préférence pour TLS 1.3 si disponible
 
 #### Configuration 3 : Performance Optimale
@@ -385,8 +385,8 @@ ssl_prefer_server_ciphers = on
 ```ini
 # postgresql.conf - Performance
 
-ssl_min_protocol_version = 'TLSv1.3'
-ssl_max_protocol_version = 'TLSv1.3'
+ssl_min_protocol_version = 'TLSv1.3'  
+ssl_max_protocol_version = 'TLSv1.3'  
 
 # ChaCha20 en priorité (rapide sur mobile)
 ssl_tls13_ciphers = 'TLS_CHACHA20_POLY1305_SHA256:TLS_AES_128_GCM_SHA256'
@@ -395,9 +395,9 @@ ssl_prefer_server_ciphers = on
 ```
 
 **Caractéristiques :**
-- ✅ Très rapide sur CPU sans AES-NI
-- ✅ Idéal pour mobile
-- ✅ Handshake 1-RTT
+- ✅ Très rapide sur CPU sans AES-NI  
+- ✅ Idéal pour mobile  
+- ✅ Handshake 1-RTT  
 - ⚠️ Pas FIPS-compliant (ChaCha20 pas dans FIPS)
 
 #### Configuration 4 : Compatibilité Maximale
@@ -408,8 +408,8 @@ ssl_prefer_server_ciphers = on
 # postgresql.conf - Compatibilité
 
 # Large plage de versions TLS
-ssl_min_protocol_version = 'TLSv1.2'
-ssl_max_protocol_version = 'TLSv1.3'
+ssl_min_protocol_version = 'TLSv1.2'  
+ssl_max_protocol_version = 'TLSv1.3'  
 
 # Tous les algorithmes TLS 1.3
 ssl_tls13_ciphers = 'TLS_AES_256_GCM_SHA384:TLS_AES_128_GCM_SHA256:TLS_CHACHA20_POLY1305_SHA256'
@@ -421,8 +421,8 @@ ssl_prefer_server_ciphers = on
 ```
 
 **Caractéristiques :**
-- ✅ Supporte quasi tous les clients modernes
-- ✅ Dégradation gracieuse vers TLS 1.2
+- ✅ Supporte quasi tous les clients modernes  
+- ✅ Dégradation gracieuse vers TLS 1.2  
 - ⚠️ Moins restrictif (sécurité moyenne)
 
 ---
@@ -444,16 +444,16 @@ ssl_prefer_server_ciphers = on
 ssl_fips = on
 
 # TLS 1.2 minimum (FIPS exige)
-ssl_min_protocol_version = 'TLSv1.2'
-ssl_max_protocol_version = 'TLSv1.3'
+ssl_min_protocol_version = 'TLSv1.2'  
+ssl_max_protocol_version = 'TLSv1.3'  
 
 # Algorithmes FIPS uniquement
-ssl_ciphers = 'FIPS'
-ssl_tls13_ciphers = 'TLS_AES_256_GCM_SHA384:TLS_AES_128_GCM_SHA256'
+ssl_ciphers = 'FIPS'  
+ssl_tls13_ciphers = 'TLS_AES_256_GCM_SHA384:TLS_AES_128_GCM_SHA256'  
 
 # Certificats
-ssl_cert_file = 'server.crt'
-ssl_key_file = 'server.key'
+ssl_cert_file = 'server.crt'  
+ssl_key_file = 'server.key'  
 
 # Forcer SSL pour toutes les connexions
 ```
@@ -492,8 +492,8 @@ psql -c "SELECT version, cipher FROM pg_stat_ssl WHERE pid = pg_backend_pid();"
 ssl_fips = off
 
 # TLS 1.3 prioritaire, TLS 1.2 en fallback
-ssl_min_protocol_version = 'TLSv1.2'
-ssl_max_protocol_version = 'TLSv1.3'
+ssl_min_protocol_version = 'TLSv1.2'  
+ssl_max_protocol_version = 'TLSv1.3'  
 
 # TLS 1.3 : AES-128 en priorité (plus rapide)
 ssl_tls13_ciphers = 'TLS_AES_128_GCM_SHA256:TLS_CHACHA20_POLY1305_SHA256:TLS_AES_256_GCM_SHA384'
@@ -504,8 +504,8 @@ ssl_ciphers = 'ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-E
 ssl_prefer_server_ciphers = on
 
 # Certificat Let's Encrypt
-ssl_cert_file = '/etc/letsencrypt/live/db.startup.com/fullchain.pem'
-ssl_key_file = '/etc/letsencrypt/live/db.startup.com/privkey.pem'
+ssl_cert_file = '/etc/letsencrypt/live/db.startup.com/fullchain.pem'  
+ssl_key_file = '/etc/letsencrypt/live/db.startup.com/privkey.pem'  
 ```
 
 **Monitoring :**
@@ -515,10 +515,10 @@ SELECT
   version AS tls_version,
   COUNT(*) AS connections,
   ROUND(AVG(bits)) AS avg_key_size
-FROM pg_stat_ssl
-WHERE ssl = true
-GROUP BY version
-ORDER BY connections DESC;
+FROM pg_stat_ssl  
+WHERE ssl = true  
+GROUP BY version  
+ORDER BY connections DESC;  
 
 -- Résultat attendu :
 -- TLSv1.3 | 850 | 256
@@ -540,12 +540,12 @@ ORDER BY connections DESC;
 ssl_fips = on
 
 # TLS 1.2 minimum (PCI-DSS exige)
-ssl_min_protocol_version = 'TLSv1.2'
-ssl_max_protocol_version = 'TLSv1.3'
+ssl_min_protocol_version = 'TLSv1.2'  
+ssl_max_protocol_version = 'TLSv1.3'  
 
 # Algorithmes forts uniquement
-ssl_ciphers = 'FIPS'
-ssl_tls13_ciphers = 'TLS_AES_256_GCM_SHA384'  # 256-bit uniquement
+ssl_ciphers = 'FIPS'  
+ssl_tls13_ciphers = 'TLS_AES_256_GCM_SHA384'  # 256-bit uniquement  
 
 ssl_prefer_server_ciphers = on
 
@@ -561,8 +561,8 @@ hostssl  all  all  0.0.0.0/0  cert clientcert=verify-full
 **Audit automatisé :**
 ```sql
 -- Script d'audit mensuel
-DO $$
-DECLARE
+DO $$  
+DECLARE  
   weak_connections INT;
 BEGIN
   -- Vérifier s'il y a des connexions avec TLS < 1.2
@@ -594,8 +594,8 @@ END $$;
 ssl_fips = off
 
 # TLS 1.3 pour performance (1-RTT)
-ssl_min_protocol_version = 'TLSv1.3'
-ssl_max_protocol_version = 'TLSv1.3'
+ssl_min_protocol_version = 'TLSv1.3'  
+ssl_max_protocol_version = 'TLSv1.3'  
 
 # ChaCha20 en priorité (rapide sans AES hardware)
 ssl_tls13_ciphers = 'TLS_CHACHA20_POLY1305_SHA256:TLS_AES_128_GCM_SHA256'
@@ -693,8 +693,8 @@ SELECT
   cipher,
   bits AS key_size,
   client_dn
-FROM pg_stat_ssl
-WHERE pid = pg_backend_pid();
+FROM pg_stat_ssl  
+WHERE pid = pg_backend_pid();  
 
 -- Résultat exemple :
 -- ssl | tls_version | cipher                     | key_size | client_dn
@@ -737,10 +737,10 @@ SELECT
   cipher,
   COUNT(*) AS nb_connections,
   AVG(bits) AS avg_key_size
-FROM pg_stat_ssl
-WHERE ssl = true
-GROUP BY version, cipher
-ORDER BY nb_connections DESC;
+FROM pg_stat_ssl  
+WHERE ssl = true  
+GROUP BY version, cipher  
+ORDER BY nb_connections DESC;  
 
 -- Exemple de résultat :
 -- tls_version | cipher                     | nb_connections | avg_key_size
@@ -754,8 +754,8 @@ ORDER BY nb_connections DESC;
 **Script de surveillance :**
 ```sql
 -- Créer une fonction d'alerte
-CREATE OR REPLACE FUNCTION check_tls_security()
-RETURNS TABLE(
+CREATE OR REPLACE FUNCTION check_tls_security()  
+RETURNS TABLE(  
   alert_level TEXT,
   message TEXT,
   count BIGINT
@@ -809,8 +809,8 @@ SELECT * FROM check_tls_security();
 - Drivers PostgreSQL récents
 
 **Clients incompatibles TLS 1.3 :**
-- ❌ Systèmes avec OpenSSL < 1.1.1
-- ❌ Applications très anciennes (pré-2018)
+- ❌ Systèmes avec OpenSSL < 1.1.1  
+- ❌ Applications très anciennes (pré-2018)  
 - ❌ Certains IoT avec firmware ancien
 
 **Solution :**
@@ -819,15 +819,15 @@ SELECT * FROM check_tls_security();
 
 ```ini
 # Configuration de transition
-ssl_min_protocol_version = 'TLSv1.2'  # Fallback
-ssl_max_protocol_version = 'TLSv1.3'  # Préféré
+ssl_min_protocol_version = 'TLSv1.2'  # Fallback  
+ssl_max_protocol_version = 'TLSv1.3'  # Préféré  
 ```
 
 ### Limitation #2 : Mode FIPS et Performance
 
 **Impact performance du mode FIPS :**
-- ⚠️ Légère surcharge CPU (5-10%)
-- ⚠️ Algorithmes moins variés (moins d'optimisation)
+- ⚠️ Légère surcharge CPU (5-10%)  
+- ⚠️ Algorithmes moins variés (moins d'optimisation)  
 - ⚠️ Restrictions sur certaines optimisations
 
 **Recommandation :**
@@ -843,8 +843,8 @@ ssl_max_protocol_version = 'TLSv1.3'  # Préféré
 **Impact :**
 ```ini
 # Mode FIPS
-ssl_fips = on
-ssl_tls13_ciphers = 'TLS_CHACHA20_POLY1305_SHA256:TLS_AES_128_GCM_SHA256'
+ssl_fips = on  
+ssl_tls13_ciphers = 'TLS_CHACHA20_POLY1305_SHA256:TLS_AES_128_GCM_SHA256'  
                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
                      ❌ Sera ignoré en mode FIPS
 
@@ -854,17 +854,17 @@ ssl_tls13_ciphers = 'TLS_CHACHA20_POLY1305_SHA256:TLS_AES_128_GCM_SHA256'
 **Solution :**
 ```ini
 # Configuration FIPS correcte
-ssl_fips = on
-ssl_tls13_ciphers = 'TLS_AES_256_GCM_SHA384:TLS_AES_128_GCM_SHA256'
+ssl_fips = on  
+ssl_tls13_ciphers = 'TLS_AES_256_GCM_SHA384:TLS_AES_128_GCM_SHA256'  
                      ✅ Tous deux FIPS-approuvés
 ```
 
 ### Limitation #4 : Certificats et FIPS
 
 **Exigences FIPS sur les certificats :**
-- ✅ Clés RSA : 2048 bits minimum (3072 ou 4096 recommandé)
-- ✅ Clés ECDSA : Courbes P-256, P-384, P-521
-- ❌ Clés RSA 1024 bits : Rejetées
+- ✅ Clés RSA : 2048 bits minimum (3072 ou 4096 recommandé)  
+- ✅ Clés ECDSA : Courbes P-256, P-384, P-521  
+- ❌ Clés RSA 1024 bits : Rejetées  
 - ❌ Courbes elliptiques faibles : Rejetées
 
 **Vérification :**
@@ -881,13 +881,13 @@ openssl genpkey -algorithm RSA -out server.key -pkeyopt rsa_keygen_bits:3072
 
 ## 🧠 Points Clés à Retenir
 
-1. **PostgreSQL 18** apporte le mode FIPS et la configuration avancée TLS 1.3
-2. **Mode FIPS** : Obligatoire pour gouvernement US et secteurs régulés
-3. **TLS 1.3** : 50% plus rapide (1-RTT), plus sûr, plus simple
-4. **ssl_fips = on** : Active le mode FIPS (nécessite OpenSSL FIPS)
-5. **ssl_tls13_ciphers** : Configure les algorithmes TLS 1.3
-6. **3 algorithmes TLS 1.3** : AES-256-GCM (fort), AES-128-GCM (standard), ChaCha20 (mobile)
-7. **FIPS + ChaCha20** : Incompatibles (ChaCha20 non approuvé FIPS)
+1. **PostgreSQL 18** apporte le mode FIPS et la configuration avancée TLS 1.3  
+2. **Mode FIPS** : Obligatoire pour gouvernement US et secteurs régulés  
+3. **TLS 1.3** : 50% plus rapide (1-RTT), plus sûr, plus simple  
+4. **ssl_fips = on** : Active le mode FIPS (nécessite OpenSSL FIPS)  
+5. **ssl_tls13_ciphers** : Configure les algorithmes TLS 1.3  
+6. **3 algorithmes TLS 1.3** : AES-256-GCM (fort), AES-128-GCM (standard), ChaCha20 (mobile)  
+7. **FIPS + ChaCha20** : Incompatibles (ChaCha20 non approuvé FIPS)  
 8. **Compatibilité** : TLS 1.3 nécessite OpenSSL 1.1.1+ et drivers récents
 
 ---
@@ -934,25 +934,25 @@ openssl genpkey -algorithm RSA -out server.key -pkeyopt rsa_keygen_bits:3072
 
 Dans les sections suivantes du tutoriel :
 
-- **16.7** : SSL/TLS et chiffrement des connexions (bases)
-- **16.9** : Chiffrement au repos (Transparent Data Encryption)
+- **16.7** : SSL/TLS et chiffrement des connexions (bases)  
+- **16.9** : Chiffrement au repos (Transparent Data Encryption)  
 - **19.4** : Troubleshooting des connexions SSL/TLS
 
 ### Ressources Complémentaires
 
 **Documentation officielle :**
-- [PostgreSQL 18 Release Notes - SSL/TLS](https://www.postgresql.org/docs/18/release-18.html)
-- [NIST FIPS 140-2](https://csrc.nist.gov/publications/detail/fips/140/2/final)
+- [PostgreSQL 18 Release Notes - SSL/TLS](https://www.postgresql.org/docs/18/release-18.html)  
+- [NIST FIPS 140-2](https://csrc.nist.gov/publications/detail/fips/140/2/final)  
 - [RFC 8446 - TLS 1.3](https://datatracker.ietf.org/doc/html/rfc8446)
 
 **Standards et conformité :**
-- [NIST Cryptographic Module Validation Program (CMVP)](https://csrc.nist.gov/projects/cryptographic-module-validation-program)
-- [FedRAMP Security Controls](https://www.fedramp.gov/)
+- [NIST Cryptographic Module Validation Program (CMVP)](https://csrc.nist.gov/projects/cryptographic-module-validation-program)  
+- [FedRAMP Security Controls](https://www.fedramp.gov/)  
 - [PCI-DSS Requirements](https://www.pcisecuritystandards.org/)
 
 **Outils :**
-- [OpenSSL FIPS User Guide](https://www.openssl.org/docs/fips.html)
-- [Mozilla SSL Configuration Generator](https://ssl-config.mozilla.org/)
+- [OpenSSL FIPS User Guide](https://www.openssl.org/docs/fips.html)  
+- [Mozilla SSL Configuration Generator](https://ssl-config.mozilla.org/)  
 - [testssl.sh - Test TLS/SSL](https://testssl.sh/)
 
 ---

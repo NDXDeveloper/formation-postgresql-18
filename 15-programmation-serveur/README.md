@@ -11,7 +11,7 @@ Jusqu'à présent dans ce tutoriel, nous avons exploré le **SQL standard** : le
 La **programmation serveur** consiste à écrire du code qui s'exécute **directement dans la base de données**, plutôt que dans votre application (Python, Java, Node.js, etc.).
 
 **Analogie simple** :
-- **SQL standard** = Poser une question à quelqu'un : "Combien font 2+2 ?"
+- **SQL standard** = Poser une question à quelqu'un : "Combien font 2+2 ?"  
 - **Programmation serveur** = Donner une série d'instructions : "Si le résultat est positif, fais ceci, sinon fais cela, puis répète 10 fois..."
 
 ### Pourquoi programmer dans la base de données ?
@@ -53,9 +53,9 @@ Au lieu d'avoir la même logique métier répétée dans chaque application (web
 
 ```sql
 -- Logique de calcul de prix complexe centralisée
-CREATE FUNCTION calculer_prix_final(...)
-RETURNS NUMERIC
-AS $$
+CREATE FUNCTION calculer_prix_final(...)  
+RETURNS NUMERIC  
+AS $$  
     -- Règles métier complexes
     -- Remises, promotions, TVA, etc.
 $$;
@@ -90,10 +90,10 @@ CALL transferer_argent(compte_source, compte_dest, montant);
 
 **PL/pgSQL** signifie **Procedural Language/PostgreSQL**. C'est un langage de programmation spécialement conçu pour PostgreSQL qui étend le SQL avec :
 
-- ✅ **Variables** : Stocker des valeurs temporaires
-- ✅ **Structures de contrôle** : IF/ELSE, CASE, boucles (LOOP, WHILE, FOR)
-- ✅ **Gestion d'erreurs** : Capturer et traiter les exceptions
-- ✅ **Fonctions et procédures** : Encapsuler du code réutilisable
+- ✅ **Variables** : Stocker des valeurs temporaires  
+- ✅ **Structures de contrôle** : IF/ELSE, CASE, boucles (LOOP, WHILE, FOR)  
+- ✅ **Gestion d'erreurs** : Capturer et traiter les exceptions  
+- ✅ **Fonctions et procédures** : Encapsuler du code réutilisable  
 - ✅ **Triggers** : Réagir automatiquement aux changements de données
 
 ### SQL vs PL/pgSQL : Quelle différence ?
@@ -150,11 +150,11 @@ PostgreSQL propose plusieurs types d'objets programmables :
 Une fonction **retourne toujours une valeur**.
 
 ```sql
-CREATE FUNCTION calculer_tva(prix_ht NUMERIC, taux NUMERIC)
-RETURNS NUMERIC
-LANGUAGE plpgsql
-AS $$
-BEGIN
+CREATE FUNCTION calculer_tva(prix_ht NUMERIC, taux NUMERIC)  
+RETURNS NUMERIC  
+LANGUAGE plpgsql  
+AS $$  
+BEGIN  
     RETURN prix_ht * (1 + taux / 100);
 END;
 $$;
@@ -164,9 +164,9 @@ SELECT calculer_tva(100, 20);  -- Retourne 120
 ```
 
 **Caractéristiques** :
-- ✅ Retourne obligatoirement une valeur (ou un ensemble de valeurs)
-- ✅ Peut être utilisée dans un SELECT
-- ✅ S'exécute dans la transaction de l'appelant
+- ✅ Retourne obligatoirement une valeur (ou un ensemble de valeurs)  
+- ✅ Peut être utilisée dans un SELECT  
+- ✅ S'exécute dans la transaction de l'appelant  
 - ❌ Ne peut pas faire de COMMIT/ROLLBACK interne
 
 ### 2. **Procédures** (Procedures)
@@ -174,10 +174,10 @@ SELECT calculer_tva(100, 20);  -- Retourne 120
 Une procédure **ne retourne pas de valeur** mais peut contrôler les transactions.
 
 ```sql
-CREATE PROCEDURE archiver_anciennes_commandes()
-LANGUAGE plpgsql
-AS $$
-BEGIN
+CREATE PROCEDURE archiver_anciennes_commandes()  
+LANGUAGE plpgsql  
+AS $$  
+BEGIN  
     INSERT INTO archive SELECT * FROM commandes WHERE date < NOW() - INTERVAL '1 year';
     COMMIT;  -- ✅ Possible dans une procédure !
 
@@ -191,9 +191,9 @@ CALL archiver_anciennes_commandes();
 ```
 
 **Caractéristiques** :
-- ❌ Ne retourne pas de valeur (sauf paramètres OUT/INOUT)
-- ❌ Ne peut pas être utilisée dans un SELECT
-- ✅ Peut faire des COMMIT/ROLLBACK internes
+- ❌ Ne retourne pas de valeur (sauf paramètres OUT/INOUT)  
+- ❌ Ne peut pas être utilisée dans un SELECT  
+- ✅ Peut faire des COMMIT/ROLLBACK internes  
 - ✅ Idéale pour les traitements par lots
 
 ### 3. **Triggers** (Déclencheurs)
@@ -202,11 +202,11 @@ Un trigger est une fonction qui s'exécute **automatiquement** lors d'événemen
 
 ```sql
 -- Fonction trigger
-CREATE FUNCTION log_modifications()
-RETURNS TRIGGER
-LANGUAGE plpgsql
-AS $$
-BEGIN
+CREATE FUNCTION log_modifications()  
+RETURNS TRIGGER  
+LANGUAGE plpgsql  
+AS $$  
+BEGIN  
     INSERT INTO audit_log (table_name, action, timestamp)
     VALUES (TG_TABLE_NAME, TG_OP, NOW());
     RETURN NEW;
@@ -214,15 +214,15 @@ END;
 $$;
 
 -- Associer le trigger à une table
-CREATE TRIGGER audit_clients
-AFTER INSERT OR UPDATE OR DELETE ON clients
-FOR EACH ROW EXECUTE FUNCTION log_modifications();
+CREATE TRIGGER audit_clients  
+AFTER INSERT OR UPDATE OR DELETE ON clients  
+FOR EACH ROW EXECUTE FUNCTION log_modifications();  
 ```
 
 **Caractéristiques** :
-- ✅ S'exécute automatiquement (INSERT, UPDATE, DELETE)
-- ✅ Accès aux anciennes (OLD) et nouvelles (NEW) valeurs
-- ✅ Peut modifier les données avant insertion (BEFORE trigger)
+- ✅ S'exécute automatiquement (INSERT, UPDATE, DELETE)  
+- ✅ Accès aux anciennes (OLD) et nouvelles (NEW) valeurs  
+- ✅ Peut modifier les données avant insertion (BEFORE trigger)  
 - ✅ Utile pour l'audit, validation, synchronisation
 
 ### 4. **Event Triggers** (Déclencheurs d'événements)
@@ -230,24 +230,24 @@ FOR EACH ROW EXECUTE FUNCTION log_modifications();
 Un event trigger réagit aux modifications de **structure** (DDL) :
 
 ```sql
-CREATE FUNCTION audit_ddl()
-RETURNS EVENT_TRIGGER
-LANGUAGE plpgsql
-AS $$
-BEGIN
+CREATE FUNCTION audit_ddl()  
+RETURNS EVENT_TRIGGER  
+LANGUAGE plpgsql  
+AS $$  
+BEGIN  
     INSERT INTO ddl_history (command, user, timestamp)
     VALUES (TG_TAG, current_user, NOW());
 END;
 $$;
 
-CREATE EVENT TRIGGER log_ddl_commands
-ON ddl_command_end
-EXECUTE FUNCTION audit_ddl();
+CREATE EVENT TRIGGER log_ddl_commands  
+ON ddl_command_end  
+EXECUTE FUNCTION audit_ddl();  
 ```
 
 **Caractéristiques** :
-- ✅ Surveille CREATE, ALTER, DROP, etc.
-- ✅ Audit de changements de schéma
+- ✅ Surveille CREATE, ALTER, DROP, etc.  
+- ✅ Audit de changements de schéma  
 - ✅ Protection contre suppressions accidentelles
 
 ---
@@ -256,20 +256,20 @@ EXECUTE FUNCTION audit_ddl();
 
 ### ✅ Utilisez-la quand :
 
-1. **Logique métier complexe** nécessitant conditions et boucles
-2. **Traitement de gros volumes** (éviter des milliers d'allers-retours)
-3. **Opérations atomiques** critiques (tout ou rien)
-4. **Audit et traçabilité** automatiques (triggers)
-5. **Calculs intensifs** sur des données déjà en base
-6. **Réutilisation** de logique entre plusieurs applications
+1. **Logique métier complexe** nécessitant conditions et boucles  
+2. **Traitement de gros volumes** (éviter des milliers d'allers-retours)  
+3. **Opérations atomiques** critiques (tout ou rien)  
+4. **Audit et traçabilité** automatiques (triggers)  
+5. **Calculs intensifs** sur des données déjà en base  
+6. **Réutilisation** de logique entre plusieurs applications  
 7. **Sécurité** : limiter l'accès direct aux tables
 
 ### ❌ N'en abusez pas quand :
 
-1. **Logique d'interface utilisateur** (mieux dans l'application)
-2. **Logique métier changeante fréquemment** (plus facile à déployer côté app)
-3. **Calculs nécessitant des bibliothèques externes** (mieux dans l'app)
-4. **Tests unitaires complexes** (plus facile côté application)
+1. **Logique d'interface utilisateur** (mieux dans l'application)  
+2. **Logique métier changeante fréquemment** (plus facile à déployer côté app)  
+3. **Calculs nécessitant des bibliothèques externes** (mieux dans l'app)  
+4. **Tests unitaires complexes** (plus facile côté application)  
 5. **Scalabilité horizontale** nécessaire (base de données = point unique)
 
 ---
@@ -305,35 +305,35 @@ EXECUTE FUNCTION audit_ddl();
 PostgreSQL ne se limite pas à PL/pgSQL. Plusieurs langages sont disponibles :
 
 ### 1. **PL/pgSQL** (par défaut)
-- ✅ Installé par défaut
-- ✅ Syntaxe proche du SQL
-- ✅ Performance optimale
+- ✅ Installé par défaut  
+- ✅ Syntaxe proche du SQL  
+- ✅ Performance optimale  
 - ✅ Intégration native
 
 ### 2. **SQL pur**
-- ✅ Encore plus simple que PL/pgSQL
-- ✅ Fonctions très performantes
+- ✅ Encore plus simple que PL/pgSQL  
+- ✅ Fonctions très performantes  
 - ⚠️ Limité (pas de structures de contrôle)
 
 ### 3. **PL/Python** (extension)
-- ✅ Puissance de Python
-- ✅ Accès à des bibliothèques Python
-- ⚠️ Moins performant que PL/pgSQL
+- ✅ Puissance de Python  
+- ✅ Accès à des bibliothèques Python  
+- ⚠️ Moins performant que PL/pgSQL  
 - ⚠️ Risques de sécurité
 
 ### 4. **PL/Perl** (extension)
-- ✅ Expressions régulières puissantes
-- ✅ Manipulation de texte avancée
+- ✅ Expressions régulières puissantes  
+- ✅ Manipulation de texte avancée  
 - ⚠️ Moins populaire aujourd'hui
 
 ### 5. **PL/v8** (extension)
-- ✅ JavaScript côté serveur
-- ✅ Familier pour les développeurs web
+- ✅ JavaScript côté serveur  
+- ✅ Familier pour les développeurs web  
 - ⚠️ Maintenance moins active
 
 ### 6. **C** (pour experts)
-- ✅ Performance maximale
-- ✅ Accès bas niveau
+- ✅ Performance maximale  
+- ✅ Accès bas niveau  
 - ❌ Complexe et dangereux
 
 **Recommandation pour débutants** : Commencez avec **PL/pgSQL** (couvert dans ce chapitre) ou **SQL pur** pour les cas simples.
@@ -375,21 +375,21 @@ Avant de commencer, voici quelques conventions que nous suivrons :
 
 ```sql
 -- ✅ BON : Noms explicites
-CREATE FUNCTION calculer_prix_ttc(...)
-CREATE PROCEDURE archiver_commandes_anciennes()
+CREATE FUNCTION calculer_prix_ttc(...)  
+CREATE PROCEDURE archiver_commandes_anciennes()  
 
 -- ❌ ÉVITER : Noms vagues
-CREATE FUNCTION calc(...)
-CREATE PROCEDURE proc1()
+CREATE FUNCTION calc(...)  
+CREATE PROCEDURE proc1()  
 ```
 
 ### 2. **Documentation**
 
 ```sql
-CREATE FUNCTION ma_fonction(param INTEGER)
-RETURNS TEXT
-LANGUAGE plpgsql
-AS $$
+CREATE FUNCTION ma_fonction(param INTEGER)  
+RETURNS TEXT  
+LANGUAGE plpgsql  
+AS $$  
 -- Cette fonction fait ceci et cela
 -- Paramètres :
 --   param : Description du paramètre
@@ -422,11 +422,11 @@ END;
 
 ```sql
 -- ✅ BON : Code indenté et lisible
-CREATE FUNCTION exemple()
-RETURNS INTEGER
-LANGUAGE plpgsql
-AS $$
-DECLARE
+CREATE FUNCTION exemple()  
+RETURNS INTEGER  
+LANGUAGE plpgsql  
+AS $$  
+DECLARE  
     compteur INTEGER := 0;
 BEGIN
     FOR i IN 1..10 LOOP
@@ -448,16 +448,16 @@ Voici un exemple simple mais complet pour illustrer la puissance de PL/pgSQL :
 
 ```sql
 -- Fonction qui calcule des statistiques sur les commandes d'un client
-CREATE FUNCTION stats_client(client_id INTEGER)
-RETURNS TABLE(
+CREATE FUNCTION stats_client(client_id INTEGER)  
+RETURNS TABLE(  
     nb_commandes INTEGER,
     montant_total NUMERIC,
     montant_moyen NUMERIC,
     derniere_commande DATE
 )
-LANGUAGE plpgsql
-AS $$
-DECLARE
+LANGUAGE plpgsql  
+AS $$  
+DECLARE  
     v_nb INTEGER;
     v_total NUMERIC;
 BEGIN
@@ -490,10 +490,10 @@ SELECT * FROM stats_client(42);
 ```
 
 **Ce que cet exemple démontre** :
-- ✅ Déclaration de variables (`DECLARE`)
-- ✅ Conditions (`IF...THEN...END IF`)
-- ✅ Récupération de valeurs (`INTO`)
-- ✅ Retour de résultats tabulaires (`RETURN QUERY`)
+- ✅ Déclaration de variables (`DECLARE`)  
+- ✅ Conditions (`IF...THEN...END IF`)  
+- ✅ Récupération de valeurs (`INTO`)  
+- ✅ Retour de résultats tabulaires (`RETURN QUERY`)  
 - ✅ Logique métier (gestion du cas "aucune commande")
 
 ---
@@ -536,13 +536,13 @@ SELECT * FROM stats_client(42);
 ## Ressources Complémentaires
 
 ### Documentation officielle PostgreSQL
-- [PL/pgSQL Guide](https://www.postgresql.org/docs/current/plpgsql.html)
-- [Function Creation](https://www.postgresql.org/docs/current/sql-createfunction.html)
+- [PL/pgSQL Guide](https://www.postgresql.org/docs/current/plpgsql.html)  
+- [Function Creation](https://www.postgresql.org/docs/current/sql-createfunction.html)  
 - [Procedure Creation](https://www.postgresql.org/docs/current/sql-createprocedure.html)
 
 ### Livres recommandés
-- **"PostgreSQL: Up and Running"** - Regina Obe & Leo Hsu
-- **"The Art of PostgreSQL"** - Dimitri Fontaine
+- **"PostgreSQL: Up and Running"** - Regina Obe & Leo Hsu  
+- **"The Art of PostgreSQL"** - Dimitri Fontaine  
 - **"Mastering PostgreSQL"** - Hans-Jürgen Schönig
 
 ### Communautés
@@ -557,11 +557,11 @@ SELECT * FROM stats_client(42);
 
 Avant de plonger dans les détails techniques des sections suivantes, assurez-vous de bien comprendre :
 
-- [ ] La différence entre SQL standard et PL/pgSQL
-- [ ] Pourquoi programmer côté serveur (performance, centralisation, sécurité)
-- [ ] Les différents objets : fonctions, procédures, triggers, event triggers
-- [ ] Quand utiliser la programmation serveur (et quand l'éviter)
-- [ ] Les avantages et inconvénients de cette approche
+- [ ] La différence entre SQL standard et PL/pgSQL  
+- [ ] Pourquoi programmer côté serveur (performance, centralisation, sécurité)  
+- [ ] Les différents objets : fonctions, procédures, triggers, event triggers  
+- [ ] Quand utiliser la programmation serveur (et quand l'éviter)  
+- [ ] Les avantages et inconvénients de cette approche  
 - [ ] Les bonnes pratiques de nommage et documentation
 
 **Vous êtes maintenant prêt à explorer la programmation serveur PostgreSQL !**

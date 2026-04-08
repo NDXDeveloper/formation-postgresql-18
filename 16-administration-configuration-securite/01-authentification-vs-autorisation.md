@@ -33,8 +33,8 @@ Dans PostgreSQL, l'authentification se produit lors de la **connexion à la base
 **Exemple concret :**
 ```sql
 -- Tentative de connexion depuis la ligne de commande
-psql -h localhost -U alice -d ma_base
-Password for user alice: ********
+psql -h localhost -U alice -d ma_base  
+Password for user alice: ********  
 ```
 
 Ici, PostgreSQL demande à l'utilisateur de prouver qu'il est bien "alice" en fournissant un mot de passe.
@@ -108,25 +108,25 @@ DELETE FROM employes WHERE id = 1;
 
 PostgreSQL gère de nombreux types de permissions :
 
-1. **Permissions sur les tables** :
-   - `SELECT` : Lire les données
-   - `INSERT` : Ajouter de nouvelles lignes
-   - `UPDATE` : Modifier des lignes existantes
-   - `DELETE` : Supprimer des lignes
-   - `TRUNCATE` : Vider une table
-   - `REFERENCES` : Créer des clés étrangères
+1. **Permissions sur les tables** :  
+   - `SELECT` : Lire les données  
+   - `INSERT` : Ajouter de nouvelles lignes  
+   - `UPDATE` : Modifier des lignes existantes  
+   - `DELETE` : Supprimer des lignes  
+   - `TRUNCATE` : Vider une table  
+   - `REFERENCES` : Créer des clés étrangères  
    - `TRIGGER` : Créer des triggers
 
-2. **Permissions sur les schémas** :
-   - `USAGE` : Accéder au schéma
+2. **Permissions sur les schémas** :  
+   - `USAGE` : Accéder au schéma  
    - `CREATE` : Créer des objets dans le schéma
 
-3. **Permissions sur les bases de données** :
-   - `CONNECT` : Se connecter à la base
-   - `CREATE` : Créer des schémas dans la base
+3. **Permissions sur les bases de données** :  
+   - `CONNECT` : Se connecter à la base  
+   - `CREATE` : Créer des schémas dans la base  
    - `TEMP` : Créer des tables temporaires
 
-4. **Permissions sur les fonctions** :
+4. **Permissions sur les fonctions** :  
    - `EXECUTE` : Exécuter une fonction ou procédure
 
 ### Ce que l'Autorisation NE fait PAS
@@ -168,8 +168,8 @@ Voici un scénario complet illustrant les deux concepts :
 ```sql
 -- ÉTAPE 1 : AUTHENTIFICATION
 -- L'utilisateur "bob" tente de se connecter
-psql -h localhost -U bob -d entreprise
-Password: ********
+psql -h localhost -U bob -d entreprise  
+Password: ********  
 -- ✅ PostgreSQL vérifie le mot de passe dans pg_authid
 -- ✅ Authentification réussie : Bob est connecté
 
@@ -213,9 +213,9 @@ SELECT * FROM projets;
 - Méthode : SCRAM-SHA-256 (mot de passe sécurisé)
 
 **Autorisation** :
-- `app_ecommerce` a les droits :
-  - `SELECT`, `INSERT`, `UPDATE` sur la table `commandes`
-  - `SELECT` uniquement sur la table `produits`
+- `app_ecommerce` a les droits :  
+  - `SELECT`, `INSERT`, `UPDATE` sur la table `commandes`  
+  - `SELECT` uniquement sur la table `produits`  
   - `AUCUN droit` sur la table `utilisateurs_admin`
 
 ### Cas 2 : Utilisateurs Multiples
@@ -245,11 +245,11 @@ SELECT * FROM projets;
 
 ## 🧠 Points Clés à Retenir
 
-1. **Authentification = Identité** : "Qui êtes-vous ?"
-2. **Autorisation = Permissions** : "Que pouvez-vous faire ?"
-3. **Ordre séquentiel** : Toujours authentification d'abord, autorisation ensuite
-4. **Indépendance** : Vous pouvez être authentifié mais ne rien avoir le droit de faire
-5. **Complémentarité** : Les deux sont nécessaires pour une sécurité complète
+1. **Authentification = Identité** : "Qui êtes-vous ?"  
+2. **Autorisation = Permissions** : "Que pouvez-vous faire ?"  
+3. **Ordre séquentiel** : Toujours authentification d'abord, autorisation ensuite  
+4. **Indépendance** : Vous pouvez être authentifié mais ne rien avoir le droit de faire  
+5. **Complémentarité** : Les deux sont nécessaires pour une sécurité complète  
 6. **Granularité** : PostgreSQL permet un contrôle très fin des autorisations (table, colonne, ligne)
 
 ---
@@ -258,10 +258,10 @@ SELECT * FROM projets;
 
 Dans les sections suivantes du tutoriel, nous explorerons :
 
-- **16.2** : Configuration détaillée de l'authentification (`pg_hba.conf`)
-- **16.3** : Migration vers SCRAM-SHA-256 (méthode moderne et sécurisée)
-- **16.4** : Gestion fine des autorisations avec `GRANT` et `REVOKE`
-- **16.5** : Rôles et groupes : simplifier la gestion des permissions
+- **16.2** : Configuration détaillée de l'authentification (`pg_hba.conf`)  
+- **16.3** : Migration vers SCRAM-SHA-256 (méthode moderne et sécurisée)  
+- **16.4** : Gestion fine des autorisations avec `GRANT` et `REVOKE`  
+- **16.5** : Rôles et groupes : simplifier la gestion des permissions  
 - **16.6** : Row-Level Security (RLS) : autorisation au niveau des lignes
 
 ---
@@ -289,18 +289,18 @@ Créez des utilisateurs spécifiques pour chaque application :
 psql -U postgres
 
 -- ✅ BON : Créer un utilisateur dédié avec droits limités
-CREATE USER app_web WITH PASSWORD 'mot_de_passe_fort';
-GRANT CONNECT ON DATABASE ma_base TO app_web;
-GRANT USAGE ON SCHEMA public TO app_web;
-GRANT SELECT, INSERT ON TABLE articles TO app_web;
+CREATE USER app_web WITH PASSWORD 'mot_de_passe_fort';  
+GRANT CONNECT ON DATABASE ma_base TO app_web;  
+GRANT USAGE ON SCHEMA public TO app_web;  
+GRANT SELECT, INSERT ON TABLE articles TO app_web;  
 ```
 
 ### Bonne Pratique #3 : Séparer les Environnements
 
 Utilisez des comptes différents selon l'environnement :
 
-- **Développement** : Droits larges pour faciliter le travail
-- **Staging** : Droits similaires à la production
+- **Développement** : Droits larges pour faciliter le travail  
+- **Staging** : Droits similaires à la production  
 - **Production** : Droits minimaux et strictement contrôlés
 
 ---
@@ -378,8 +378,8 @@ GRANT SELECT, INSERT, UPDATE ON TABLE ma_table TO app_user;
 
 ## 📚 Ressources Complémentaires
 
-- **Documentation PostgreSQL** : [Client Authentication](https://www.postgresql.org/docs/current/client-authentication.html)
-- **Documentation PostgreSQL** : [Database Roles](https://www.postgresql.org/docs/current/user-manag.html)
+- **Documentation PostgreSQL** : [Client Authentication](https://www.postgresql.org/docs/current/client-authentication.html)  
+- **Documentation PostgreSQL** : [Database Roles](https://www.postgresql.org/docs/current/user-manag.html)  
 - **Best Practices** : [PostgreSQL Security Best Practices](https://www.postgresql.org/docs/current/security.html)
 
 ---

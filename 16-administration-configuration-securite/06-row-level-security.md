@@ -90,8 +90,8 @@ SELECT * FROM documents;
 -- ❌ Facile d'oublier le filtre dans une sous-requête
 SELECT d.*,
   (SELECT COUNT(*) FROM documents WHERE tenant_id = d.tenant_id) AS total
-FROM documents d
-WHERE tenant_id = 1;  -- Filtre dans la requête principale
+FROM documents d  
+WHERE tenant_id = 1;  -- Filtre dans la requête principale  
 -- Mais la sous-requête compte TOUS les documents (bug !) ⚠️
 ```
 
@@ -117,14 +117,14 @@ Avec RLS, PostgreSQL **ajoute automatiquement** un filtre invisible à **toutes*
 SELECT * FROM documents;
 
 -- Ce que PostgreSQL exécute réellement (avec RLS) :
-SELECT * FROM documents
-WHERE tenant_id = current_setting('app.current_tenant')::INT;
+SELECT * FROM documents  
+WHERE tenant_id = current_setting('app.current_tenant')::INT;  
 ```
 
 **Avantages majeurs :**
-- ✅ **Automatique** : Plus besoin de filtrer manuellement
-- ✅ **Invisible** : Le développeur ne peut pas oublier
-- ✅ **Sécurité en profondeur** : Protection au niveau de la base de données
+- ✅ **Automatique** : Plus besoin de filtrer manuellement  
+- ✅ **Invisible** : Le développeur ne peut pas oublier  
+- ✅ **Sécurité en profondeur** : Protection au niveau de la base de données  
 - ✅ **Centralisé** : Les règles sont définies une seule fois
 
 ---
@@ -170,10 +170,10 @@ CREATE POLICY tenant_isolation_policy
 ```
 
 **Explication :**
-- `tenant_isolation_policy` : Nom de la politique
-- `ON documents` : S'applique à la table "documents"
-- `FOR SELECT` : Pour les requêtes SELECT (lecture)
-- `TO PUBLIC` : Pour tous les utilisateurs
+- `tenant_isolation_policy` : Nom de la politique  
+- `ON documents` : S'applique à la table "documents"  
+- `FOR SELECT` : Pour les requêtes SELECT (lecture)  
+- `TO PUBLIC` : Pour tous les utilisateurs  
 - `USING (...)` : Condition qui doit être vraie pour voir une ligne
 
 ---
@@ -415,8 +415,8 @@ PostgreSQL ne le sait pas automatiquement ! Vous devez le **configurer explicite
 **Exemple :**
 ```sql
 -- Créer des utilisateurs PostgreSQL par personne
-CREATE USER alice WITH PASSWORD 'pwd';
-CREATE USER bob WITH PASSWORD 'pwd';
+CREATE USER alice WITH PASSWORD 'pwd';  
+CREATE USER bob WITH PASSWORD 'pwd';  
 
 -- Politique basée sur current_user
 CREATE POLICY user_sees_own_data
@@ -430,11 +430,11 @@ SELECT * FROM documents;
 ```
 
 **Avantages :**
-- ✅ Simple
+- ✅ Simple  
 - ✅ Pas de configuration supplémentaire
 
 **Inconvénients :**
-- ❌ Nécessite un utilisateur PostgreSQL par utilisateur (non scalable)
+- ❌ Nécessite un utilisateur PostgreSQL par utilisateur (non scalable)  
 - ❌ Gestion des connexions complexe
 
 ### Méthode 2 : Variables de Session (current_setting)
@@ -444,8 +444,8 @@ SELECT * FROM documents;
 **Configuration côté application :**
 ```sql
 -- Au début de chaque session (connexion)
-SET app.current_user_id = '123';
-SET app.current_tenant_id = '5';
+SET app.current_user_id = '123';  
+SET app.current_tenant_id = '5';  
 ```
 
 **Politique utilisant les variables :**
@@ -472,12 +472,12 @@ cursor = conn.execute("SELECT * FROM documents")
 ```
 
 **Avantages :**
-- ✅ Scalable (un seul utilisateur PostgreSQL pour l'application)
-- ✅ Flexible
+- ✅ Scalable (un seul utilisateur PostgreSQL pour l'application)  
+- ✅ Flexible  
 - ✅ Facile à intégrer dans les applications modernes
 
 **Inconvénients :**
-- ❌ Nécessite de définir les variables à chaque connexion
+- ❌ Nécessite de définir les variables à chaque connexion  
 - ❌ Risque d'oubli (mitigation : utiliser un middleware)
 
 ### Méthode 3 : Variables de Transaction Locales (Recommandé)
@@ -502,8 +502,8 @@ COMMIT;
 ```
 
 **Avantages :**
-- ✅ Sécurisé : La variable disparaît automatiquement
-- ✅ Isolation : Pas de risque de "pollution" entre transactions
+- ✅ Sécurisé : La variable disparaît automatiquement  
+- ✅ Isolation : Pas de risque de "pollution" entre transactions  
 - ✅ Scalable
 
 ---
@@ -535,8 +535,8 @@ CREATE TABLE orders (
 **Configuration RLS :**
 ```sql
 -- Activer RLS sur toutes les tables
-ALTER TABLE customers ENABLE ROW LEVEL SECURITY;
-ALTER TABLE orders ENABLE ROW LEVEL SECURITY;
+ALTER TABLE customers ENABLE ROW LEVEL SECURITY;  
+ALTER TABLE orders ENABLE ROW LEVEL SECURITY;  
 
 -- Politique d'isolation par tenant
 CREATE POLICY tenant_isolation_customers
@@ -558,15 +558,15 @@ CREATE POLICY tenant_isolation_orders
 SET app.current_tenant_id = '5';
 
 -- Requêtes automatiquement filtrées
-SELECT * FROM customers;  -- Seulement tenant_id = 5
-SELECT * FROM orders;     -- Seulement tenant_id = 5
+SELECT * FROM customers;  -- Seulement tenant_id = 5  
+SELECT * FROM orders;     -- Seulement tenant_id = 5  
 
 -- Impossible de voir les données d'autres tenants !
 ```
 
 **Sécurité garantie :**
-- ✅ Même si l'application a un bug, PostgreSQL filtre
-- ✅ Impossible d'accéder aux données d'un autre tenant
+- ✅ Même si l'application a un bug, PostgreSQL filtre  
+- ✅ Impossible d'accéder aux données d'un autre tenant  
 - ✅ Pas besoin de filtrer dans chaque requête SQL
 
 ### Cas 2 : Système RH - Fiches de Paie
@@ -622,13 +622,13 @@ CREATE POLICY hr_see_all_payslips
 **Résultat :**
 ```sql
 -- Alice (employé normal) se connecte
-SET ROLE alice;
-SELECT * FROM payslips;
+SET ROLE alice;  
+SELECT * FROM payslips;  
 -- Voit uniquement ses propres fiches
 
 -- Bob (RH) se connecte
-SET ROLE bob;
-SELECT * FROM payslips;
+SET ROLE bob;  
+SELECT * FROM payslips;  
 -- Voit toutes les fiches de tous les employés
 ```
 
@@ -735,8 +735,8 @@ SELECT
   roles,
   cmd,         -- ALL, SELECT, INSERT, UPDATE, DELETE
   qual         -- Expression USING
-FROM pg_policies
-WHERE tablename = 'documents';
+FROM pg_policies  
+WHERE tablename = 'documents';  
 ```
 
 **Depuis psql :**
@@ -817,8 +817,8 @@ CREATE POLICY tenant_read
 -- ❌ Manque WITH CHECK !
 
 -- Problème lors de INSERT
-INSERT INTO documents (tenant_id, title)
-VALUES (999, 'Document malveillant');
+INSERT INTO documents (tenant_id, title)  
+VALUES (999, 'Document malveillant');  
 -- ✅ Insertion réussie ! (bug de sécurité)
 -- L'utilisateur peut insérer pour un autre tenant !
 ```
@@ -900,8 +900,8 @@ SELECT * FROM documents;
 
 ```sql
 -- Créer un utilisateur de test
-CREATE USER test_user WITH PASSWORD 'pwd';
-GRANT SELECT ON documents TO test_user;
+CREATE USER test_user WITH PASSWORD 'pwd';  
+GRANT SELECT ON documents TO test_user;  
 
 -- Se connecter en tant que test_user
 SET ROLE test_user;
@@ -936,8 +936,8 @@ CREATE VIEW documents_for_tenant AS
   WHERE tenant_id = current_setting('app.current_tenant_id')::INT;
 
 -- Donner accès à la vue uniquement
-GRANT SELECT ON documents_for_tenant TO app_user;
-REVOKE ALL ON documents FROM app_user;
+GRANT SELECT ON documents_for_tenant TO app_user;  
+REVOKE ALL ON documents FROM app_user;  
 ```
 
 | Critère | RLS | Vues Dédiées |
@@ -981,8 +981,8 @@ CREATE POLICY tenant_isolation
 
 ```sql
 -- Créer une fonction réutilisable
-CREATE FUNCTION current_tenant_id()
-RETURNS INT AS $$
+CREATE FUNCTION current_tenant_id()  
+RETURNS INT AS $$  
   SELECT current_setting('app.current_tenant_id')::INT;
 $$ LANGUAGE SQL STABLE;
 
@@ -1001,8 +1001,8 @@ CREATE POLICY tenant_isolation
 CREATE POLICY policy1 ON documents ...
 
 -- ✅ Nom descriptif
-CREATE POLICY tenant_isolation_select ON documents ...
-CREATE POLICY block_archived_documents ON documents ...
+CREATE POLICY tenant_isolation_select ON documents ...  
+CREATE POLICY block_archived_documents ON documents ...  
 ```
 
 ### 4. Documenter les Politiques
@@ -1018,8 +1018,8 @@ COMMENT ON POLICY tenant_isolation ON documents IS
 
 ```sql
 -- Toujours tester avec un rôle non-privilégié
-CREATE ROLE test_user;
-GRANT SELECT, INSERT ON documents TO test_user;
+CREATE ROLE test_user;  
+GRANT SELECT, INSERT ON documents TO test_user;  
 
 SET ROLE test_user;
 -- Tester les politiques
@@ -1033,11 +1033,11 @@ RESET ROLE;
 \timing on
 
 -- Comparer avec et sans RLS
-ALTER TABLE documents DISABLE ROW LEVEL SECURITY;
-EXPLAIN ANALYZE SELECT * FROM documents WHERE ...;
+ALTER TABLE documents DISABLE ROW LEVEL SECURITY;  
+EXPLAIN ANALYZE SELECT * FROM documents WHERE ...;  
 
-ALTER TABLE documents ENABLE ROW LEVEL SECURITY;
-EXPLAIN ANALYZE SELECT * FROM documents WHERE ...;
+ALTER TABLE documents ENABLE ROW LEVEL SECURITY;  
+EXPLAIN ANALYZE SELECT * FROM documents WHERE ...;  
 ```
 
 ### 7. Utiliser FORCE pour les Tests de Sécurité
@@ -1054,15 +1054,15 @@ SELECT * FROM documents;  -- RLS s'applique maintenant
 
 ## 🧠 Points Clés à Retenir
 
-1. **RLS = Filtrage automatique** au niveau des lignes, invisible pour l'application
-2. **Activation en deux étapes** : `ENABLE ROW LEVEL SECURITY` + `CREATE POLICY`
+1. **RLS = Filtrage automatique** au niveau des lignes, invisible pour l'application  
+2. **Activation en deux étapes** : `ENABLE ROW LEVEL SECURITY` + `CREATE POLICY`  
 3. **USING vs WITH CHECK** :
    - USING : Quelles lignes voir/modifier
    - WITH CHECK : Quelles lignes créer/résultat après modification
-4. **PERMISSIVE (OR) vs RESTRICTIVE (AND)** : Choisir selon le besoin
-5. **Configuration utilisateur** : Via `current_user` ou `current_setting()`
-6. **RLS ne s'applique pas** aux superusers/propriétaires (sauf FORCE)
-7. **Toujours tester** avec un utilisateur normal
+4. **PERMISSIVE (OR) vs RESTRICTIVE (AND)** : Choisir selon le besoin  
+5. **Configuration utilisateur** : Via `current_user` ou `current_setting()`  
+6. **RLS ne s'applique pas** aux superusers/propriétaires (sauf FORCE)  
+7. **Toujours tester** avec un utilisateur normal  
 8. **Performance** : Attention aux politiques complexes sur grandes tables
 
 ---
@@ -1119,8 +1119,8 @@ SELECT * FROM documents;  -- RLS s'applique maintenant
 
 Dans les sections suivantes du tutoriel :
 
-- **16.4** : Gestion des autorisations (`GRANT`/`REVOKE`)
-- **16.5** : Rôles, Groupes et principe du moindre privilège
+- **16.4** : Gestion des autorisations (`GRANT`/`REVOKE`)  
+- **16.5** : Rôles, Groupes et principe du moindre privilège  
 - **19.4** : Troubleshooting et performance des politiques RLS
 
 ### Concepts Avancés
@@ -1141,9 +1141,9 @@ Dans les sections suivantes du tutoriel :
 
 ## 📚 Ressources Complémentaires
 
-- **Documentation PostgreSQL** : [Row Security Policies](https://www.postgresql.org/docs/current/ddl-rowsecurity.html)
-- **Documentation PostgreSQL** : [CREATE POLICY](https://www.postgresql.org/docs/current/sql-createpolicy.html)
-- **Blog** : [Row-Level Security in Practice](https://www.postgresql.org/about/news/row-level-security-1622/)
+- **Documentation PostgreSQL** : [Row Security Policies](https://www.postgresql.org/docs/current/ddl-rowsecurity.html)  
+- **Documentation PostgreSQL** : [CREATE POLICY](https://www.postgresql.org/docs/current/sql-createpolicy.html)  
+- **Blog** : [Row-Level Security in Practice](https://www.postgresql.org/about/news/row-level-security-1622/)  
 - **Tutorial** : [Multi-Tenant Applications with RLS](https://www.citusdata.com/blog/2016/10/03/designing-your-saas-database-for-high-scalability/)
 
 ---

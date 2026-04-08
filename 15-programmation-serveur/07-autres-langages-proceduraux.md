@@ -26,9 +26,9 @@ PostgreSQL a été conçu dès le départ avec une architecture extensible. L'un
 
 Chaque langage apporte ses forces uniques :
 
-- **PL/pgSQL** : Intégration native SQL, performance optimale
-- **PL/Python** : Écosystème riche (IA, data science, APIs modernes)
-- **PL/Perl** : Expressions régulières puissantes, manipulation de texte
+- **PL/pgSQL** : Intégration native SQL, performance optimale  
+- **PL/Python** : Écosystème riche (IA, data science, APIs modernes)  
+- **PL/Perl** : Expressions régulières puissantes, manipulation de texte  
 - **PL/v8** : JavaScript moderne, manipulation JSON native
 
 Cette diversité permet de **choisir le meilleur outil** selon le contexte plutôt que d'être limité à un seul langage.
@@ -55,21 +55,21 @@ Certaines tâches sont beaucoup plus faciles dans un langage que dans un autre :
 **Le langage par défaut de PostgreSQL**
 
 ```sql
-CREATE OR REPLACE FUNCTION exemple_plpgsql(montant NUMERIC)
-RETURNS NUMERIC AS $$
-BEGIN
+CREATE OR REPLACE FUNCTION exemple_plpgsql(montant NUMERIC)  
+RETURNS NUMERIC AS $$  
+BEGIN  
     RETURN montant * 1.20;  -- TVA 20%
 END;
 $$ LANGUAGE plpgsql;
 ```
 
 **Caractéristiques** :
-- ✅ **Natif** : Inclus par défaut dans PostgreSQL
-- ✅ **Performance** : Optimisé pour les opérations SQL
-- ✅ **Intégration** : Accès direct à toutes les fonctionnalités PostgreSQL
-- ✅ **Stabilité** : Éprouvé et mature
-- ✅ **Transactions** : Gestion native des transactions
-- ⚠️ **Syntaxe** : Spécifique à PostgreSQL (courbe d'apprentissage)
+- ✅ **Natif** : Inclus par défaut dans PostgreSQL  
+- ✅ **Performance** : Optimisé pour les opérations SQL  
+- ✅ **Intégration** : Accès direct à toutes les fonctionnalités PostgreSQL  
+- ✅ **Stabilité** : Éprouvé et mature  
+- ✅ **Transactions** : Gestion native des transactions  
+- ⚠️ **Syntaxe** : Spécifique à PostgreSQL (courbe d'apprentissage)  
 - ⚠️ **Bibliothèques** : Limitées aux fonctionnalités PostgreSQL
 
 **Utilisé pour** :
@@ -85,8 +85,8 @@ $$ LANGUAGE plpgsql;
 **Python 3 dans PostgreSQL**
 
 ```sql
-CREATE OR REPLACE FUNCTION exemple_python(texte TEXT)
-RETURNS TEXT AS $$
+CREATE OR REPLACE FUNCTION exemple_python(texte TEXT)  
+RETURNS TEXT AS $$  
     import json
     data = {"message": texte.upper()}
     return json.dumps(data)
@@ -94,13 +94,13 @@ $$ LANGUAGE plpython3u;
 ```
 
 **Caractéristiques** :
-- ✅ **Écosystème** : Accès à pip/PyPI (NumPy, pandas, requests, etc.)
-- ✅ **Populaire** : Langage très utilisé (data science, IA, web)
-- ✅ **Lisible** : Syntaxe claire et accessible
-- ✅ **Moderne** : Écosystème actif et en évolution
-- ✅ **Polyvalent** : Data science, APIs, transformations
-- ⚠️ **Performance** : Plus lent que PL/pgSQL pour SQL pur
-- ⚠️ **Overhead** : Interpréteur Python par session
+- ✅ **Écosystème** : Accès à pip/PyPI (NumPy, pandas, requests, etc.)  
+- ✅ **Populaire** : Langage très utilisé (data science, IA, web)  
+- ✅ **Lisible** : Syntaxe claire et accessible  
+- ✅ **Moderne** : Écosystème actif et en évolution  
+- ✅ **Polyvalent** : Data science, APIs, transformations  
+- ⚠️ **Performance** : Plus lent que PL/pgSQL pour SQL pur  
+- ⚠️ **Overhead** : Interpréteur Python par session  
 - ⚠️ **Sécurité** : plpython3u = untrusted (accès système complet)
 
 **Utilisé pour** :
@@ -117,8 +117,8 @@ $$ LANGUAGE plpython3u;
 **Perl dans PostgreSQL**
 
 ```sql
-CREATE OR REPLACE FUNCTION exemple_perl(texte TEXT)
-RETURNS TEXT AS $$
+CREATE OR REPLACE FUNCTION exemple_perl(texte TEXT)  
+RETURNS TEXT AS $$  
     my $texte = shift;
     $texte =~ s/(\d{4})-(\d{2})-(\d{2})/$3\/$2\/$1/g;
     return $texte;
@@ -126,13 +126,13 @@ $$ LANGUAGE plperlu;
 ```
 
 **Caractéristiques** :
-- ✅ **Regex** : Les meilleures expressions régulières
-- ✅ **Texte** : Manipulation de texte exceptionnelle
-- ✅ **CPAN** : Accès à des milliers de modules Perl
-- ✅ **Mature** : Langage éprouvé depuis 1987
-- ✅ **Parsing** : Excellent pour logs, formats propriétaires
-- ⚠️ **Popularité** : Moins utilisé aujourd'hui
-- ⚠️ **Syntaxe** : Considérée comme complexe
+- ✅ **Regex** : Les meilleures expressions régulières  
+- ✅ **Texte** : Manipulation de texte exceptionnelle  
+- ✅ **CPAN** : Accès à des milliers de modules Perl  
+- ✅ **Mature** : Langage éprouvé depuis 1987  
+- ✅ **Parsing** : Excellent pour logs, formats propriétaires  
+- ⚠️ **Popularité** : Moins utilisé aujourd'hui  
+- ⚠️ **Syntaxe** : Considérée comme complexe  
 - ⚠️ **Communauté** : Plus petite qu'avant
 
 **Utilisé pour** :
@@ -149,8 +149,8 @@ $$ LANGUAGE plperlu;
 **JavaScript (moteur V8 de Google) dans PostgreSQL**
 
 ```sql
-CREATE OR REPLACE FUNCTION exemple_v8(data JSONB)
-RETURNS JSONB AS $$
+CREATE OR REPLACE FUNCTION exemple_v8(data JSONB)  
+RETURNS JSONB AS $$  
     return data.map(item => ({
         ...item,
         prix_ttc: item.prix * 1.20
@@ -159,13 +159,13 @@ $$ LANGUAGE plv8 IMMUTABLE STRICT;
 ```
 
 **Caractéristiques** :
-- ✅ **Moderne** : JavaScript ES6+ (const, let, arrow functions, classes)
-- ✅ **JSON** : Manipulation JSON native et triviale
-- ✅ **Performance** : Moteur V8 ultra-optimisé
-- ✅ **Populaire** : Langage le plus utilisé au monde
-- ✅ **Stack unifiée** : Même langage frontend/backend/database
-- ⚠️ **Extension tierce** : Pas inclus par défaut
-- ⚠️ **npm** : Pas d'accès natif aux modules npm
+- ✅ **Moderne** : JavaScript ES6+ (const, let, arrow functions, classes)  
+- ✅ **JSON** : Manipulation JSON native et triviale  
+- ✅ **Performance** : Moteur V8 ultra-optimisé  
+- ✅ **Populaire** : Langage le plus utilisé au monde  
+- ✅ **Stack unifiée** : Même langage frontend/backend/database  
+- ⚠️ **Extension tierce** : Pas inclus par défaut  
+- ⚠️ **npm** : Pas d'accès natif aux modules npm  
 - ⚠️ **Disponibilité** : Variable selon l'hébergement
 
 **Utilisé pour** :
@@ -254,9 +254,9 @@ $$ LANGUAGE plv8 IMMUTABLE STRICT;
 
 ```sql
 -- Gestion de commandes avec transactions
-CREATE OR REPLACE FUNCTION passer_commande(...)
-RETURNS INTEGER AS $$
-DECLARE
+CREATE OR REPLACE FUNCTION passer_commande(...)  
+RETURNS INTEGER AS $$  
+DECLARE  
     commande_id INTEGER;
 BEGIN
     -- Insert commande
@@ -290,8 +290,8 @@ $$ LANGUAGE plpgsql;
 
 ```sql
 -- Prédiction avec modèle ML
-CREATE OR REPLACE FUNCTION predire_prix(caracteristiques JSONB)
-RETURNS NUMERIC AS $$
+CREATE OR REPLACE FUNCTION predire_prix(caracteristiques JSONB)  
+RETURNS NUMERIC AS $$  
     import pickle
     import numpy as np
 
@@ -327,8 +327,8 @@ $$ LANGUAGE plpython3u;
 
 ```sql
 -- Parser des logs Apache complexes
-CREATE OR REPLACE FUNCTION parser_log_serveur(log_line TEXT)
-RETURNS TABLE(
+CREATE OR REPLACE FUNCTION parser_log_serveur(log_line TEXT)  
+RETURNS TABLE(  
     ip TEXT,
     timestamp TIMESTAMP,
     methode TEXT,
@@ -373,8 +373,8 @@ $$ LANGUAGE plperlu;
 
 ```sql
 -- Transformation d'API REST
-CREATE OR REPLACE FUNCTION transformer_api_response(response JSONB)
-RETURNS JSONB AS $$
+CREATE OR REPLACE FUNCTION transformer_api_response(response JSONB)  
+RETURNS JSONB AS $$  
     // Destructuring et transformation native
     const { users } = response;
 
@@ -442,27 +442,27 @@ Dans un projet réel, il est **courant et recommandé** d'utiliser plusieurs lan
 
 ```sql
 -- 1. PL/pgSQL : Logique transactionnelle
-CREATE OR REPLACE FUNCTION valider_commande(commande_id INT)
-RETURNS BOOLEAN AS $$
+CREATE OR REPLACE FUNCTION valider_commande(commande_id INT)  
+RETURNS BOOLEAN AS $$  
     -- Logique SQL pure avec transactions
 $$ LANGUAGE plpgsql;
 
 -- 2. PL/Python : Recommandations ML
-CREATE OR REPLACE FUNCTION recommander_produits(user_id INT)
-RETURNS TABLE(produit_id INT, score FLOAT) AS $$
+CREATE OR REPLACE FUNCTION recommander_produits(user_id INT)  
+RETURNS TABLE(produit_id INT, score FLOAT) AS $$  
     import sklearn  # Modèle ML de recommandation
     # ...
 $$ LANGUAGE plpython3u;
 
 -- 3. PL/Perl : Parsing logs serveur
-CREATE OR REPLACE FUNCTION analyser_logs_acces(log_file TEXT)
-RETURNS TABLE(ip TEXT, url TEXT, timestamp TIMESTAMP) AS $$
+CREATE OR REPLACE FUNCTION analyser_logs_acces(log_file TEXT)  
+RETURNS TABLE(ip TEXT, url TEXT, timestamp TIMESTAMP) AS $$  
     # Regex puissantes pour parsing
 $$ LANGUAGE plperlu;
 
 -- 4. PL/v8 : API GraphQL interne
-CREATE OR REPLACE FUNCTION graphql_query(query JSONB)
-RETURNS JSONB AS $$
+CREATE OR REPLACE FUNCTION graphql_query(query JSONB)  
+RETURNS JSONB AS $$  
     // Résolution de requêtes GraphQL
     // Transformation JSON native
 $$ LANGUAGE plv8;
@@ -501,9 +501,9 @@ Les langages procéduraux ont deux variantes :
 
 ```sql
 -- Exemple de variantes
-CREATE EXTENSION plpython3u;  -- Untrusted (u suffix)
-CREATE EXTENSION plperl;      -- Trusted
-CREATE EXTENSION plperlu;     -- Untrusted (u suffix)
+CREATE EXTENSION plpython3u;  -- Untrusted (u suffix)  
+CREATE EXTENSION plperl;      -- Trusted  
+CREATE EXTENSION plperlu;     -- Untrusted (u suffix)  
 ```
 
 **Règle** : Utilisez toujours la version **untrusted** pour accéder aux bibliothèques externes (pip, CPAN), mais soyez conscient des implications de sécurité.
@@ -513,10 +513,10 @@ CREATE EXTENSION plperlu;     -- Untrusted (u suffix)
 ```
 Performance relative (100 = PL/pgSQL)
 
-PL/pgSQL:  ████████████████████████ 100
-PL/v8:     ████████████████████     80-90
-PL/Perl:   ████████████████         70
-PL/Python: ████████████             60
+PL/pgSQL:  ████████████████████████ 100  
+PL/v8:     ████████████████████     80-90  
+PL/Perl:   ████████████████         70  
+PL/Python: ████████████             60  
 
 (Pour logique SQL intensive)
 ```
@@ -548,9 +548,9 @@ PL/Python: ████████████             60
 
 ```sql
 -- Fonction PL/pgSQL appelant PL/Python
-CREATE OR REPLACE FUNCTION analyser_commande(commande_id INT)
-RETURNS JSONB AS $$
-DECLARE
+CREATE OR REPLACE FUNCTION analyser_commande(commande_id INT)  
+RETURNS JSONB AS $$  
+DECLARE  
     data JSONB;
     prediction NUMERIC;
 BEGIN
@@ -618,8 +618,8 @@ LANGUAGE plperlu;
 Toujours documenter **pourquoi** vous avez choisi un langage particulier :
 
 ```sql
-CREATE OR REPLACE FUNCTION analyser_sentiment(commentaire TEXT)
-RETURNS NUMERIC AS $$
+CREATE OR REPLACE FUNCTION analyser_sentiment(commentaire TEXT)  
+RETURNS NUMERIC AS $$  
     """
     Analyse de sentiment avec modèle NLP pré-entraîné.
 
@@ -678,9 +678,9 @@ SELECT
 
 ### 🎯 Règle Générale
 
-1. **Par défaut** : PL/pgSQL
-2. **Besoin spécifique** : Langage adapté
-3. **Performance critique** : PL/pgSQL ou PL/v8
+1. **Par défaut** : PL/pgSQL  
+2. **Besoin spécifique** : Langage adapté  
+3. **Performance critique** : PL/pgSQL ou PL/v8  
 4. **Lisibilité/Maintenance** : Langage le plus connu de l'équipe
 
 ### 🏆 Champions par Catégorie
@@ -722,8 +722,8 @@ Légende: ✓✓✓ Excellent | ✓✓ Très bon | ✓ Bon | ✗ Pas adapté
 
 Dans les sections suivantes, nous explorerons en détail chacun de ces langages :
 
-- **15.7.1. PL/Python (plpython3u)** : Installation, syntaxe, exemples complets, intégration avec pip/PyPI
-- **15.7.2. PL/Perl (plperlu)** : Expressions régulières avancées, CPAN, parsing de texte
+- **15.7.1. PL/Python (plpython3u)** : Installation, syntaxe, exemples complets, intégration avec pip/PyPI  
+- **15.7.2. PL/Perl (plperlu)** : Expressions régulières avancées, CPAN, parsing de texte  
 - **15.7.3. PL/v8 (JavaScript)** : Manipulation JSON, ES6+, moteur V8, stack JavaScript unifiée
 
 Chaque section comprendra :
@@ -742,10 +742,10 @@ PostgreSQL offre une **flexibilité exceptionnelle** avec son support multi-lang
 
 **Recommandations finales** :
 
-1. ✅ **Maîtrisez PL/pgSQL** : C'est le fondamental
-2. ✅ **Apprenez au moins un langage alternatif** : Selon votre domaine
-3. ✅ **N'ayez pas peur de mélanger** : Utilisez le meilleur outil pour chaque tâche
-4. ✅ **Documentez vos choix** : Expliquez pourquoi vous avez choisi tel langage
+1. ✅ **Maîtrisez PL/pgSQL** : C'est le fondamental  
+2. ✅ **Apprenez au moins un langage alternatif** : Selon votre domaine  
+3. ✅ **N'ayez pas peur de mélanger** : Utilisez le meilleur outil pour chaque tâche  
+4. ✅ **Documentez vos choix** : Expliquez pourquoi vous avez choisi tel langage  
 5. ✅ **Testez et benchmarker** : Validez que votre choix est optimal
 
 PostgreSQL ne vous limite pas : il vous donne le pouvoir de choisir ! 🚀

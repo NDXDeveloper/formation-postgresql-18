@@ -7,7 +7,7 @@
 Dans PostgreSQL, une **fonction** est un bloc de code réutilisable qui peut être appelé depuis n'importe quelle requête SQL. Les fonctions permettent d'encapsuler de la logique métier, de simplifier des requêtes complexes et de centraliser du code qui serait autrement répété.
 
 PostgreSQL propose plusieurs langages pour écrire des fonctions, mais les deux principaux sont :
-- **SQL** : Un langage déclaratif, simple et direct
+- **SQL** : Un langage déclaratif, simple et direct  
 - **PL/pgSQL** : Un langage procédural, plus puissant et flexible
 
 Cette section explore leurs différences fondamentales et leurs cas d'usage respectifs.
@@ -22,18 +22,18 @@ Une **fonction SQL** est une fonction écrite directement en langage SQL standar
 
 ### 1.2. Caractéristiques principales
 
-- **Déclarative** : On décrit *ce qu'on veut* obtenir, pas *comment* l'obtenir
-- **Simple** : Pas de structures de contrôle (IF, LOOP, etc.)
-- **Performante** : Le planificateur peut optimiser directement le code SQL
+- **Déclarative** : On décrit *ce qu'on veut* obtenir, pas *comment* l'obtenir  
+- **Simple** : Pas de structures de contrôle (IF, LOOP, etc.)  
+- **Performante** : Le planificateur peut optimiser directement le code SQL  
 - **Inline** : PostgreSQL peut parfois "dérouler" la fonction dans la requête appelante (fonction inline)
 
 ### 1.3. Syntaxe de base
 
 ```sql
-CREATE FUNCTION nom_fonction(parametre1 TYPE, parametre2 TYPE, ...)
-RETURNS TYPE_RETOUR
-LANGUAGE SQL
-AS $$
+CREATE FUNCTION nom_fonction(parametre1 TYPE, parametre2 TYPE, ...)  
+RETURNS TYPE_RETOUR  
+LANGUAGE SQL  
+AS $$  
     -- Requête(s) SQL
     SELECT ...
 $$;
@@ -42,10 +42,10 @@ $$;
 ### 1.4. Exemple simple : Calculer le prix TTC
 
 ```sql
-CREATE FUNCTION calculer_prix_ttc(prix_ht NUMERIC, taux_tva NUMERIC)
-RETURNS NUMERIC
-LANGUAGE SQL
-AS $$
+CREATE FUNCTION calculer_prix_ttc(prix_ht NUMERIC, taux_tva NUMERIC)  
+RETURNS NUMERIC  
+LANGUAGE SQL  
+AS $$  
     SELECT prix_ht * (1 + taux_tva / 100);
 $$;
 
@@ -62,10 +62,10 @@ SELECT calculer_prix_ttc(100, 20);  -- Retourne 120.00
 ### 1.5. Exemple avec accès à une table
 
 ```sql
-CREATE FUNCTION obtenir_nom_client(id_client INTEGER)
-RETURNS TEXT
-LANGUAGE SQL
-AS $$
+CREATE FUNCTION obtenir_nom_client(id_client INTEGER)  
+RETURNS TEXT  
+LANGUAGE SQL  
+AS $$  
     SELECT nom FROM clients WHERE id = id_client;
 $$;
 
@@ -78,10 +78,10 @@ SELECT obtenir_nom_client(42);
 Une fonction SQL peut retourner un ensemble de lignes (table) plutôt qu'une seule valeur :
 
 ```sql
-CREATE FUNCTION clients_par_ville(ville_recherchee TEXT)
-RETURNS TABLE(id INTEGER, nom TEXT, email TEXT)
-LANGUAGE SQL
-AS $$
+CREATE FUNCTION clients_par_ville(ville_recherchee TEXT)  
+RETURNS TABLE(id INTEGER, nom TEXT, email TEXT)  
+LANGUAGE SQL  
+AS $$  
     SELECT id, nom, email
     FROM clients
     WHERE ville = ville_recherchee;
@@ -93,16 +93,16 @@ SELECT * FROM clients_par_ville('Paris');
 
 ### 1.7. Avantages des fonctions SQL
 
-- ✅ **Simplicité** : Syntaxe minimale, facile à lire et maintenir
-- ✅ **Performance** : Le planificateur peut optimiser directement le SQL
-- ✅ **Inline expansion** : PostgreSQL peut "intégrer" la fonction dans la requête parente
+- ✅ **Simplicité** : Syntaxe minimale, facile à lire et maintenir  
+- ✅ **Performance** : Le planificateur peut optimiser directement le SQL  
+- ✅ **Inline expansion** : PostgreSQL peut "intégrer" la fonction dans la requête parente  
 - ✅ **Sécurité** : Moins de risques d'erreurs logiques complexes
 
 ### 1.8. Limites des fonctions SQL
 
-- ❌ **Pas de logique conditionnelle** : Impossible d'utiliser IF, CASE complexes, LOOP, etc.
-- ❌ **Pas de gestion d'erreurs** : Pas de bloc EXCEPTION pour capturer les erreurs
-- ❌ **Pas de variables temporaires** : On ne peut pas stocker d'états intermédiaires
+- ❌ **Pas de logique conditionnelle** : Impossible d'utiliser IF, CASE complexes, LOOP, etc.  
+- ❌ **Pas de gestion d'erreurs** : Pas de bloc EXCEPTION pour capturer les erreurs  
+- ❌ **Pas de variables temporaires** : On ne peut pas stocker d'états intermédiaires  
 - ❌ **Une seule instruction de retour** : Limite la complexité des traitements
 
 ---
@@ -115,20 +115,20 @@ SELECT * FROM clients_par_ville('Paris');
 
 ### 2.2. Caractéristiques principales
 
-- **Procédurale** : On décrit *comment* faire les choses, étape par étape
-- **Structures de contrôle** : IF/ELSIF/ELSE, CASE, LOOP, WHILE, FOR
-- **Variables locales** : Stockage d'états intermédiaires
-- **Gestion d'exceptions** : Capture et traitement des erreurs
+- **Procédurale** : On décrit *comment* faire les choses, étape par étape  
+- **Structures de contrôle** : IF/ELSIF/ELSE, CASE, LOOP, WHILE, FOR  
+- **Variables locales** : Stockage d'états intermédiaires  
+- **Gestion d'exceptions** : Capture et traitement des erreurs  
 - **Plus puissante** : Pour des logiques métier complexes
 
 ### 2.3. Syntaxe de base
 
 ```sql
-CREATE FUNCTION nom_fonction(parametre1 TYPE, parametre2 TYPE, ...)
-RETURNS TYPE_RETOUR
-LANGUAGE plpgsql
-AS $$
-DECLARE
+CREATE FUNCTION nom_fonction(parametre1 TYPE, parametre2 TYPE, ...)  
+RETURNS TYPE_RETOUR  
+LANGUAGE plpgsql  
+AS $$  
+DECLARE  
     -- Déclaration de variables locales
     variable1 TYPE;
     variable2 TYPE;
@@ -152,10 +152,10 @@ CREATE FUNCTION calculer_prix_avec_remise(
     taux_tva NUMERIC,
     montant_commande NUMERIC
 )
-RETURNS NUMERIC
-LANGUAGE plpgsql
-AS $$
-DECLARE
+RETURNS NUMERIC  
+LANGUAGE plpgsql  
+AS $$  
+DECLARE  
     prix_ttc NUMERIC;
     remise NUMERIC := 0;
 BEGIN
@@ -189,11 +189,11 @@ SELECT calculer_prix_avec_remise(100, 20, 600);  -- Retourne 114.00 (avec 5% de 
 ### 2.5. Exemple avec boucle : Calcul itératif
 
 ```sql
-CREATE FUNCTION calculer_factorielle(n INTEGER)
-RETURNS INTEGER
-LANGUAGE plpgsql
-AS $$
-DECLARE
+CREATE FUNCTION calculer_factorielle(n INTEGER)  
+RETURNS INTEGER  
+LANGUAGE plpgsql  
+AS $$  
+DECLARE  
     resultat INTEGER := 1;
     i INTEGER;
 BEGIN
@@ -218,11 +218,11 @@ SELECT calculer_factorielle(5);  -- Retourne 120
 ### 2.6. Exemple avec gestion d'erreurs
 
 ```sql
-CREATE FUNCTION diviser_securise(numerateur NUMERIC, denominateur NUMERIC)
-RETURNS NUMERIC
-LANGUAGE plpgsql
-AS $$
-BEGIN
+CREATE FUNCTION diviser_securise(numerateur NUMERIC, denominateur NUMERIC)  
+RETURNS NUMERIC  
+LANGUAGE plpgsql  
+AS $$  
+BEGIN  
     -- Tentative de division
     RETURN numerateur / denominateur;
 EXCEPTION
@@ -243,17 +243,17 @@ SELECT diviser_securise(10, 0);  -- Retourne NULL avec un message
 
 ### 2.7. Avantages des fonctions PL/pgSQL
 
-- ✅ **Logique complexe** : Conditions, boucles, gestion d'états
-- ✅ **Gestion d'erreurs robuste** : Blocs EXCEPTION pour capturer et traiter les erreurs
-- ✅ **Variables et états** : Stockage et manipulation d'informations temporaires
-- ✅ **Réutilisabilité** : Encapsulation de logique métier complexe
+- ✅ **Logique complexe** : Conditions, boucles, gestion d'états  
+- ✅ **Gestion d'erreurs robuste** : Blocs EXCEPTION pour capturer et traiter les erreurs  
+- ✅ **Variables et états** : Stockage et manipulation d'informations temporaires  
+- ✅ **Réutilisabilité** : Encapsulation de logique métier complexe  
 - ✅ **Débogage** : Messages avec RAISE NOTICE/DEBUG
 
 ### 2.8. Limites des fonctions PL/pgSQL
 
-- ❌ **Performances** : Moins optimisable par le planificateur que le SQL pur
-- ❌ **Complexité** : Plus difficile à lire et maintenir pour des cas simples
-- ❌ **Pas d'inline** : Ne peut pas être "déroulée" dans la requête parente
+- ❌ **Performances** : Moins optimisable par le planificateur que le SQL pur  
+- ❌ **Complexité** : Plus difficile à lire et maintenir pour des cas simples  
+- ❌ **Pas d'inline** : Ne peut pas être "déroulée" dans la requête parente  
 - ❌ **Overhead** : Coût d'exécution légèrement plus élevé
 
 ---
@@ -282,10 +282,10 @@ SELECT diviser_securise(10, 0);  -- Retourne NULL avec un message
 
 **Exemple** : Calculer le total d'une commande
 ```sql
-CREATE FUNCTION total_commande(commande_id INTEGER)
-RETURNS NUMERIC
-LANGUAGE SQL
-AS $$
+CREATE FUNCTION total_commande(commande_id INTEGER)  
+RETURNS NUMERIC  
+LANGUAGE SQL  
+AS $$  
     SELECT SUM(quantite * prix_unitaire)
     FROM lignes_commande
     WHERE id_commande = commande_id;
@@ -296,10 +296,10 @@ $$;
 
 **Exemple** : Récupérer les clients actifs
 ```sql
-CREATE FUNCTION clients_actifs()
-RETURNS TABLE(id INTEGER, nom TEXT, email TEXT)
-LANGUAGE SQL
-AS $$
+CREATE FUNCTION clients_actifs()  
+RETURNS TABLE(id INTEGER, nom TEXT, email TEXT)  
+LANGUAGE SQL  
+AS $$  
     SELECT id, nom, email
     FROM clients
     WHERE actif = true;
@@ -323,10 +323,10 @@ CREATE FUNCTION creer_commande_validee(
     produits INTEGER[],
     quantites INTEGER[]
 )
-RETURNS INTEGER
-LANGUAGE plpgsql
-AS $$
-DECLARE
+RETURNS INTEGER  
+LANGUAGE plpgsql  
+AS $$  
+DECLARE  
     commande_id INTEGER;
     credit_client NUMERIC;
     montant_total NUMERIC := 0;
@@ -422,10 +422,10 @@ CREATE FUNCTION calc(...)
 ### 6.3. Documentation
 
 ```sql
-CREATE FUNCTION calculer_remise(montant NUMERIC)
-RETURNS NUMERIC
-LANGUAGE plpgsql
-AS $$
+CREATE FUNCTION calculer_remise(montant NUMERIC)  
+RETURNS NUMERIC  
+LANGUAGE plpgsql  
+AS $$  
 -- Cette fonction calcule la remise applicable selon le montant
 -- Règles :
 --   - 10% si montant > 1000
@@ -467,21 +467,21 @@ Pensez toujours à tester :
 
 **Version SQL** (recommandée pour ce cas) :
 ```sql
-CREATE FUNCTION celsius_vers_fahrenheit(celsius NUMERIC)
-RETURNS NUMERIC
-LANGUAGE SQL
-AS $$
+CREATE FUNCTION celsius_vers_fahrenheit(celsius NUMERIC)  
+RETURNS NUMERIC  
+LANGUAGE SQL  
+AS $$  
     SELECT celsius * 9.0 / 5.0 + 32;
 $$;
 ```
 
 **Version PL/pgSQL** (surcharge inutile) :
 ```sql
-CREATE FUNCTION celsius_vers_fahrenheit(celsius NUMERIC)
-RETURNS NUMERIC
-LANGUAGE plpgsql
-AS $$
-DECLARE
+CREATE FUNCTION celsius_vers_fahrenheit(celsius NUMERIC)  
+RETURNS NUMERIC  
+LANGUAGE plpgsql  
+AS $$  
+DECLARE  
     fahrenheit NUMERIC;
 BEGIN
     fahrenheit := celsius * 9.0 / 5.0 + 32;
@@ -507,10 +507,10 @@ CREATE FUNCTION appliquer_promotion(
     produit_id INTEGER,
     code_promo TEXT
 )
-RETURNS NUMERIC
-LANGUAGE plpgsql
-AS $$
-DECLARE
+RETURNS NUMERIC  
+LANGUAGE plpgsql  
+AS $$  
+DECLARE  
     prix_actuel NUMERIC;
     reduction NUMERIC := 0;
     stock_disponible INTEGER;
@@ -550,15 +550,15 @@ $$;
 ## 8. Résumé des Concepts Clés
 
 ### Fonctions SQL
-- ✅ Simples et performantes
-- ✅ Optimisées par le planificateur
-- ✅ Pas de variables ni logique procédurale
+- ✅ Simples et performantes  
+- ✅ Optimisées par le planificateur  
+- ✅ Pas de variables ni logique procédurale  
 - 🎯 **Idéal pour** : requêtes déclaratives, calculs simples, encapsulation de SELECT
 
 ### Fonctions PL/pgSQL
-- ✅ Puissantes et flexibles
-- ✅ Structures de contrôle complètes
-- ✅ Gestion d'erreurs robuste
+- ✅ Puissantes et flexibles  
+- ✅ Structures de contrôle complètes  
+- ✅ Gestion d'erreurs robuste  
 - 🎯 **Idéal pour** : logique métier, validations, traitements complexes
 
 ### Principe directeur
@@ -571,11 +571,11 @@ $$;
 ### ⚠️ Erreur courante n°1 : Utiliser PL/pgSQL par défaut
 ```sql
 -- ❌ Mauvais : PL/pgSQL pour une simple requête
-CREATE FUNCTION get_user(uid INTEGER)
-RETURNS TEXT
-LANGUAGE plpgsql
-AS $$
-DECLARE
+CREATE FUNCTION get_user(uid INTEGER)  
+RETURNS TEXT  
+LANGUAGE plpgsql  
+AS $$  
+DECLARE  
     username TEXT;
 BEGIN
     SELECT name INTO username FROM users WHERE id = uid;
@@ -584,10 +584,10 @@ END;
 $$;
 
 -- ✅ Bon : SQL suffit largement
-CREATE FUNCTION get_user(uid INTEGER)
-RETURNS TEXT
-LANGUAGE SQL
-AS $$
+CREATE FUNCTION get_user(uid INTEGER)  
+RETURNS TEXT  
+LANGUAGE SQL  
+AS $$  
     SELECT name FROM users WHERE id = uid;
 $$;
 ```
@@ -595,8 +595,8 @@ $$;
 ### ⚠️ Erreur courante n°2 : Oublier le RETURN
 ```sql
 -- ❌ Mauvais : Pas de RETURN en PL/pgSQL
-CREATE FUNCTION test() RETURNS INTEGER LANGUAGE plpgsql AS $$
-BEGIN
+CREATE FUNCTION test() RETURNS INTEGER LANGUAGE plpgsql AS $$  
+BEGIN  
     -- Oubli du RETURN !
 END;
 $$;
@@ -611,8 +611,8 @@ CREATE FUNCTION f() RETURNS INTEGER LANGUAGE SQL AS $$
 $$;
 
 -- En PL/pgSQL : assignation avec :=
-CREATE FUNCTION f() RETURNS INTEGER LANGUAGE plpgsql AS $$
-DECLARE
+CREATE FUNCTION f() RETURNS INTEGER LANGUAGE plpgsql AS $$  
+DECLARE  
     x INTEGER;
 BEGIN
     x := 42;  -- ✅ Correct
@@ -628,7 +628,7 @@ $$;
 
 Les fonctions SQL et PL/pgSQL sont deux outils complémentaires dans votre arsenal PostgreSQL :
 
-- **SQL** : Votre choix par défaut pour les traitements simples et performants
+- **SQL** : Votre choix par défaut pour les traitements simples et performants  
 - **PL/pgSQL** : Votre solution pour les logiques métier complexes nécessitant des structures de contrôle
 
 La maîtrise des deux vous permet de choisir l'outil adapté à chaque situation, en optimisant à la fois la lisibilité du code, la maintenabilité et les performances.

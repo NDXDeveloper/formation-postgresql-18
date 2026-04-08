@@ -20,7 +20,7 @@ C'est là qu'interviennent les **Event Triggers** (déclencheurs d'événements)
 ### Analogie simple
 
 Imaginez un bâtiment :
-- **Trigger classique** = Caméra de surveillance dans une pièce (surveille ce qui se passe dans cette pièce)
+- **Trigger classique** = Caméra de surveillance dans une pièce (surveille ce qui se passe dans cette pièce)  
 - **Event Trigger** = Alarme qui se déclenche quand on modifie la structure du bâtiment (abattre un mur, ajouter une porte, etc.)
 
 ---
@@ -32,18 +32,18 @@ Imaginez un bâtiment :
 Un **Event Trigger** est une fonction qui s'exécute automatiquement lorsqu'un **événement DDL** (Data Definition Language) se produit dans la base de données.
 
 **DDL** = Commandes qui modifient la structure :
-- `CREATE TABLE`, `CREATE INDEX`
-- `ALTER TABLE`, `ALTER COLUMN`
-- `DROP TABLE`, `DROP FUNCTION`
+- `CREATE TABLE`, `CREATE INDEX`  
+- `ALTER TABLE`, `ALTER COLUMN`  
+- `DROP TABLE`, `DROP FUNCTION`  
 - `GRANT`, `REVOKE`
 - Et bien d'autres...
 
 ### 1.2. Pourquoi utiliser des Event Triggers ?
 
-- ✅ **Audit** : Enregistrer qui fait quoi et quand
-- ✅ **Protection** : Empêcher certaines modifications dangereuses
-- ✅ **Conformité** : Appliquer des standards de nommage
-- ✅ **Notification** : Alerter les administrateurs de changements
+- ✅ **Audit** : Enregistrer qui fait quoi et quand  
+- ✅ **Protection** : Empêcher certaines modifications dangereuses  
+- ✅ **Conformité** : Appliquer des standards de nommage  
+- ✅ **Notification** : Alerter les administrateurs de changements  
 - ✅ **Documentation automatique** : Maintenir un historique des changements
 
 ---
@@ -94,20 +94,20 @@ Se déclenche **juste avant** qu'un objet soit supprimé.
 
 ```sql
 -- Étape 1 : Créer la fonction qui sera appelée
-CREATE OR REPLACE FUNCTION ma_fonction_event()
-RETURNS event_trigger
-LANGUAGE plpgsql
-AS $$
-BEGIN
+CREATE OR REPLACE FUNCTION ma_fonction_event()  
+RETURNS event_trigger  
+LANGUAGE plpgsql  
+AS $$  
+BEGIN  
     -- Code à exécuter
     RAISE NOTICE 'Un événement DDL s'est produit !';
 END;
 $$;
 
 -- Étape 2 : Créer l'Event Trigger
-CREATE EVENT TRIGGER nom_event_trigger
-ON ddl_command_start  -- ou ddl_command_end, sql_drop, table_rewrite
-EXECUTE FUNCTION ma_fonction_event();
+CREATE EVENT TRIGGER nom_event_trigger  
+ON ddl_command_start  -- ou ddl_command_end, sql_drop, table_rewrite  
+EXECUTE FUNCTION ma_fonction_event();  
 ```
 
 **Points importants** :
@@ -130,11 +130,11 @@ CREATE TABLE ddl_history (
 );
 
 -- Fonction de logging
-CREATE OR REPLACE FUNCTION log_ddl_command()
-RETURNS event_trigger
-LANGUAGE plpgsql
-AS $$
-DECLARE
+CREATE OR REPLACE FUNCTION log_ddl_command()  
+RETURNS event_trigger  
+LANGUAGE plpgsql  
+AS $$  
+DECLARE  
     obj RECORD;
 BEGIN
     -- Insérer dans l'historique
@@ -153,9 +153,9 @@ END;
 $$;
 
 -- Event Trigger
-CREATE EVENT TRIGGER log_all_ddl
-ON ddl_command_end
-EXECUTE FUNCTION log_ddl_command();
+CREATE EVENT TRIGGER log_all_ddl  
+ON ddl_command_end  
+EXECUTE FUNCTION log_ddl_command();  
 ```
 
 **Test** :
@@ -185,17 +185,17 @@ PostgreSQL fournit des variables spéciales pour obtenir des informations sur l'
 Le type d'événement qui a déclenché l'Event Trigger.
 
 **Valeurs possibles** :
-- `ddl_command_start`
-- `ddl_command_end`
-- `sql_drop`
+- `ddl_command_start`  
+- `ddl_command_end`  
+- `sql_drop`  
 - `table_rewrite`
 
 ```sql
-CREATE OR REPLACE FUNCTION afficher_event_type()
-RETURNS event_trigger
-LANGUAGE plpgsql
-AS $$
-BEGIN
+CREATE OR REPLACE FUNCTION afficher_event_type()  
+RETURNS event_trigger  
+LANGUAGE plpgsql  
+AS $$  
+BEGIN  
     RAISE NOTICE 'Type d''événement : %', TG_EVENT;
 END;
 $$;
@@ -206,18 +206,18 @@ $$;
 La commande SQL qui a été exécutée.
 
 **Exemples de valeurs** :
-- `CREATE TABLE`
-- `ALTER TABLE`
-- `DROP INDEX`
-- `CREATE FUNCTION`
+- `CREATE TABLE`  
+- `ALTER TABLE`  
+- `DROP INDEX`  
+- `CREATE FUNCTION`  
 - `GRANT`
 
 ```sql
-CREATE OR REPLACE FUNCTION afficher_command_tag()
-RETURNS event_trigger
-LANGUAGE plpgsql
-AS $$
-BEGIN
+CREATE OR REPLACE FUNCTION afficher_command_tag()  
+RETURNS event_trigger  
+LANGUAGE plpgsql  
+AS $$  
+BEGIN  
     RAISE NOTICE 'Commande : %', TG_TAG;
 END;
 $$;
@@ -228,11 +228,11 @@ $$;
 Fonction spéciale qui retourne des détails sur les objets créés (disponible uniquement dans `ddl_command_end`).
 
 ```sql
-CREATE OR REPLACE FUNCTION details_objets_crees()
-RETURNS event_trigger
-LANGUAGE plpgsql
-AS $$
-DECLARE
+CREATE OR REPLACE FUNCTION details_objets_crees()  
+RETURNS event_trigger  
+LANGUAGE plpgsql  
+AS $$  
+DECLARE  
     obj RECORD;
 BEGIN
     -- Récupérer les détails des objets créés/modifiés
@@ -244,9 +244,9 @@ BEGIN
 END;
 $$;
 
-CREATE EVENT TRIGGER show_created_objects
-ON ddl_command_end
-EXECUTE FUNCTION details_objets_crees();
+CREATE EVENT TRIGGER show_created_objects  
+ON ddl_command_end  
+EXECUTE FUNCTION details_objets_crees();  
 ```
 
 **Test** :
@@ -260,11 +260,11 @@ CREATE TABLE ma_table (id INTEGER);
 Fonction qui retourne les objets qui vont être supprimés (disponible uniquement dans `sql_drop`).
 
 ```sql
-CREATE OR REPLACE FUNCTION details_objets_supprimes()
-RETURNS event_trigger
-LANGUAGE plpgsql
-AS $$
-DECLARE
+CREATE OR REPLACE FUNCTION details_objets_supprimes()  
+RETURNS event_trigger  
+LANGUAGE plpgsql  
+AS $$  
+DECLARE  
     obj RECORD;
 BEGIN
     FOR obj IN SELECT * FROM pg_event_trigger_dropped_objects()
@@ -275,9 +275,9 @@ BEGIN
 END;
 $$;
 
-CREATE EVENT TRIGGER show_dropped_objects
-ON sql_drop
-EXECUTE FUNCTION details_objets_supprimes();
+CREATE EVENT TRIGGER show_dropped_objects  
+ON sql_drop  
+EXECUTE FUNCTION details_objets_supprimes();  
 ```
 
 **Test** :
@@ -293,11 +293,11 @@ DROP TABLE ma_table;
 ### 5.1. Protéger contre la suppression de tables
 
 ```sql
-CREATE OR REPLACE FUNCTION prevent_table_drop()
-RETURNS event_trigger
-LANGUAGE plpgsql
-AS $$
-DECLARE
+CREATE OR REPLACE FUNCTION prevent_table_drop()  
+RETURNS event_trigger  
+LANGUAGE plpgsql  
+AS $$  
+DECLARE  
     obj RECORD;
 BEGIN
     -- Vérifier si on essaie de supprimer une table
@@ -315,31 +315,31 @@ BEGIN
 END;
 $$;
 
-CREATE EVENT TRIGGER no_critical_table_drop
-ON sql_drop
-EXECUTE FUNCTION prevent_table_drop();
+CREATE EVENT TRIGGER no_critical_table_drop  
+ON sql_drop  
+EXECUTE FUNCTION prevent_table_drop();  
 ```
 
 **Test** :
 ```sql
 -- Table normale : OK
-CREATE TABLE test_temp (id INTEGER);
-DROP TABLE test_temp;  -- ✅ Fonctionne
+CREATE TABLE test_temp (id INTEGER);  
+DROP TABLE test_temp;  -- ✅ Fonctionne  
 
 -- Table critique : BLOQUÉ
-CREATE TABLE clients (id INTEGER);
-DROP TABLE clients;
+CREATE TABLE clients (id INTEGER);  
+DROP TABLE clients;  
 -- ❌ ERREUR : Suppression de la table public.clients interdite ! Table critique.
 ```
 
 ### 5.2. Empêcher les modifications le week-end
 
 ```sql
-CREATE OR REPLACE FUNCTION no_ddl_on_weekend()
-RETURNS event_trigger
-LANGUAGE plpgsql
-AS $$
-BEGIN
+CREATE OR REPLACE FUNCTION no_ddl_on_weekend()  
+RETURNS event_trigger  
+LANGUAGE plpgsql  
+AS $$  
+BEGIN  
     -- Vérifier si on est en week-end
     IF EXTRACT(DOW FROM NOW()) IN (0, 6) THEN  -- 0 = Dimanche, 6 = Samedi
         RAISE EXCEPTION 'Les modifications de structure sont interdites le week-end ! Commande : %', TG_TAG;
@@ -347,19 +347,19 @@ BEGIN
 END;
 $$;
 
-CREATE EVENT TRIGGER block_weekend_ddl
-ON ddl_command_start
-EXECUTE FUNCTION no_ddl_on_weekend();
+CREATE EVENT TRIGGER block_weekend_ddl  
+ON ddl_command_start  
+EXECUTE FUNCTION no_ddl_on_weekend();  
 ```
 
 ### 5.3. Appliquer un standard de nommage
 
 ```sql
-CREATE OR REPLACE FUNCTION enforce_naming_convention()
-RETURNS event_trigger
-LANGUAGE plpgsql
-AS $$
-DECLARE
+CREATE OR REPLACE FUNCTION enforce_naming_convention()  
+RETURNS event_trigger  
+LANGUAGE plpgsql  
+AS $$  
+DECLARE  
     obj RECORD;
 BEGIN
     -- Vérifier uniquement pour la création de tables
@@ -376,9 +376,9 @@ BEGIN
 END;
 $$;
 
-CREATE EVENT TRIGGER enforce_table_naming
-ON ddl_command_end
-EXECUTE FUNCTION enforce_naming_convention();
+CREATE EVENT TRIGGER enforce_table_naming  
+ON ddl_command_end  
+EXECUTE FUNCTION enforce_naming_convention();  
 ```
 
 **Test** :
@@ -415,11 +415,11 @@ CREATE TABLE schema_audit (
 );
 
 -- Fonction d'audit complète
-CREATE OR REPLACE FUNCTION audit_schema_changes()
-RETURNS event_trigger
-LANGUAGE plpgsql
-AS $$
-DECLARE
+CREATE OR REPLACE FUNCTION audit_schema_changes()  
+RETURNS event_trigger  
+LANGUAGE plpgsql  
+AS $$  
+DECLARE  
     obj RECORD;
     query TEXT;
 BEGIN
@@ -484,13 +484,13 @@ BEGIN
 END;
 $$;
 
-CREATE EVENT TRIGGER full_schema_audit
-ON ddl_command_end
-EXECUTE FUNCTION audit_schema_changes();
+CREATE EVENT TRIGGER full_schema_audit  
+ON ddl_command_end  
+EXECUTE FUNCTION audit_schema_changes();  
 
-CREATE EVENT TRIGGER full_schema_audit_drop
-ON sql_drop
-EXECUTE FUNCTION audit_schema_changes();
+CREATE EVENT TRIGGER full_schema_audit_drop  
+ON sql_drop  
+EXECUTE FUNCTION audit_schema_changes();  
 ```
 
 **Consultation de l'audit** :
@@ -501,9 +501,9 @@ SELECT
     command_tag,
     object_identity,
     username
-FROM schema_audit
-ORDER BY event_time DESC
-LIMIT 10;
+FROM schema_audit  
+ORDER BY event_time DESC  
+LIMIT 10;  
 
 -- Voir qui a supprimé quoi
 SELECT
@@ -511,28 +511,28 @@ SELECT
     object_identity,
     username,
     query_text
-FROM schema_audit
-WHERE command_tag LIKE 'DROP%'
-ORDER BY event_time DESC;
+FROM schema_audit  
+WHERE command_tag LIKE 'DROP%'  
+ORDER BY event_time DESC;  
 ```
 
 ### 6.2. Notification Slack/Email lors de changements
 
 ```sql
-CREATE OR REPLACE FUNCTION notify_ddl_changes()
-RETURNS event_trigger
-LANGUAGE plpgsql
-AS $$
-DECLARE
+CREATE OR REPLACE FUNCTION notify_ddl_changes()  
+RETURNS event_trigger  
+LANGUAGE plpgsql  
+AS $$  
+DECLARE  
     message TEXT;
     obj RECORD;
 BEGIN
     -- Construire le message
     message := format(
         '🔔 Alerte DDL sur %s
-Utilisateur : %s
-Commande : %s
-Heure : %s',
+Utilisateur : %s  
+Commande : %s  
+Heure : %s',  
         current_database(),
         current_user,
         TG_TAG,
@@ -560,19 +560,19 @@ Objet : %s (%s)', obj.object_identity, obj.object_type);
 END;
 $$;
 
-CREATE EVENT TRIGGER notify_on_ddl
-ON ddl_command_end
-EXECUTE FUNCTION notify_ddl_changes();
+CREATE EVENT TRIGGER notify_on_ddl  
+ON ddl_command_end  
+EXECUTE FUNCTION notify_ddl_changes();  
 ```
 
 ### 6.3. Protection en production
 
 ```sql
-CREATE OR REPLACE FUNCTION protect_production()
-RETURNS event_trigger
-LANGUAGE plpgsql
-AS $$
-DECLARE
+CREATE OR REPLACE FUNCTION protect_production()  
+RETURNS event_trigger  
+LANGUAGE plpgsql  
+AS $$  
+DECLARE  
     allowed_users TEXT[] := ARRAY['dba_user', 'migration_user'];
 BEGIN
     -- Vérifier l'environnement (via une variable de configuration)
@@ -596,9 +596,9 @@ BEGIN
 END;
 $$;
 
-CREATE EVENT TRIGGER production_protection
-ON ddl_command_start
-EXECUTE FUNCTION protect_production();
+CREATE EVENT TRIGGER production_protection  
+ON ddl_command_start  
+EXECUTE FUNCTION protect_production();  
 ```
 
 **Configuration** :
@@ -620,41 +620,41 @@ Vous pouvez limiter quand un Event Trigger se déclenche avec une clause `WHEN` 
 
 ```sql
 -- Se déclenche uniquement pour CREATE TABLE et DROP TABLE
-CREATE EVENT TRIGGER audit_table_changes
-ON ddl_command_end
-WHEN TAG IN ('CREATE TABLE', 'DROP TABLE')
-EXECUTE FUNCTION log_ddl_command();
+CREATE EVENT TRIGGER audit_table_changes  
+ON ddl_command_end  
+WHEN TAG IN ('CREATE TABLE', 'DROP TABLE')  
+EXECUTE FUNCTION log_ddl_command();  
 ```
 
 ### 7.2. Filtrer par type d'objet
 
 ```sql
 -- Se déclenche uniquement pour les modifications de fonctions
-CREATE EVENT TRIGGER audit_function_changes
-ON ddl_command_end
-WHEN TAG IN ('CREATE FUNCTION', 'ALTER FUNCTION', 'DROP FUNCTION')
-EXECUTE FUNCTION log_ddl_command();
+CREATE EVENT TRIGGER audit_function_changes  
+ON ddl_command_end  
+WHEN TAG IN ('CREATE FUNCTION', 'ALTER FUNCTION', 'DROP FUNCTION')  
+EXECUTE FUNCTION log_ddl_command();  
 ```
 
 ### 7.3. Exemple complet avec filtres
 
 ```sql
 -- Event Trigger spécifique pour les tables
-CREATE EVENT TRIGGER audit_tables_only
-ON ddl_command_end
-WHEN TAG IN ('CREATE TABLE', 'ALTER TABLE', 'DROP TABLE')
-EXECUTE FUNCTION audit_table_operations();
+CREATE EVENT TRIGGER audit_tables_only  
+ON ddl_command_end  
+WHEN TAG IN ('CREATE TABLE', 'ALTER TABLE', 'DROP TABLE')  
+EXECUTE FUNCTION audit_table_operations();  
 
 -- Event Trigger spécifique pour les index
-CREATE EVENT TRIGGER audit_indexes_only
-ON ddl_command_end
-WHEN TAG IN ('CREATE INDEX', 'DROP INDEX', 'REINDEX')
-EXECUTE FUNCTION audit_index_operations();
+CREATE EVENT TRIGGER audit_indexes_only  
+ON ddl_command_end  
+WHEN TAG IN ('CREATE INDEX', 'DROP INDEX', 'REINDEX')  
+EXECUTE FUNCTION audit_index_operations();  
 
 -- Event Trigger pour tout le reste
-CREATE EVENT TRIGGER audit_other_ddl
-ON ddl_command_end
-EXECUTE FUNCTION audit_other_operations();
+CREATE EVENT TRIGGER audit_other_ddl  
+ON ddl_command_end  
+EXECUTE FUNCTION audit_other_operations();  
 ```
 
 ---
@@ -670,8 +670,8 @@ SELECT
     evtevent AS event,
     evtfoid::regproc AS function_name,
     evtenabled AS enabled
-FROM pg_event_trigger
-ORDER BY evtname;
+FROM pg_event_trigger  
+ORDER BY evtname;  
 ```
 
 **Avec psql** :
@@ -695,8 +695,8 @@ ALTER EVENT TRIGGER nom_event_trigger ENABLE;
 ALTER EVENT TRIGGER audit_ddl DISABLE;
 
 -- Faire la migration
-CREATE TABLE ...;
-ALTER TABLE ...;
+CREATE TABLE ...;  
+ALTER TABLE ...;  
 -- Pas de logging pendant cette période
 
 -- Réactiver après
@@ -712,27 +712,27 @@ DROP EVENT TRIGGER nom_event_trigger;
 ### 8.4. Modifier un Event Trigger
 
 Pour modifier un Event Trigger, vous devez :
-1. Modifier la fonction associée
+1. Modifier la fonction associée  
 2. Ou supprimer et recréer l'Event Trigger
 
 ```sql
 -- Option 1 : Modifier la fonction
-CREATE OR REPLACE FUNCTION ma_fonction_event()
-RETURNS event_trigger
-LANGUAGE plpgsql
-AS $$
-BEGIN
+CREATE OR REPLACE FUNCTION ma_fonction_event()  
+RETURNS event_trigger  
+LANGUAGE plpgsql  
+AS $$  
+BEGIN  
     -- Nouvelle logique
 END;
 $$;
 -- L'Event Trigger utilise automatiquement la nouvelle version
 
 -- Option 2 : Recréer l'Event Trigger
-DROP EVENT TRIGGER mon_event_trigger;
-CREATE EVENT TRIGGER mon_event_trigger
-ON ddl_command_end
-WHEN TAG IN ('CREATE TABLE')
-EXECUTE FUNCTION ma_fonction_event();
+DROP EVENT TRIGGER mon_event_trigger;  
+CREATE EVENT TRIGGER mon_event_trigger  
+ON ddl_command_end  
+WHEN TAG IN ('CREATE TABLE')  
+EXECUTE FUNCTION ma_fonction_event();  
 ```
 
 ---
@@ -781,8 +781,8 @@ Un Event Trigger **ne peut pas** déclencher d'autres Event Triggers pour évite
 Les Event Triggers ajoutent un overhead à chaque commande DDL.
 
 **Recommandations** :
-- ✅ Gardez les fonctions rapides
-- ✅ Évitez les opérations complexes
+- ✅ Gardez les fonctions rapides  
+- ✅ Évitez les opérations complexes  
 - ✅ Désactivez les Event Triggers pendant les grosses migrations
 
 ### 9.5. Commandes non interceptables
@@ -800,62 +800,62 @@ Certaines commandes ne déclenchent **pas** d'Event Triggers :
 
 ```sql
 -- ✅ BON : Nom descriptif
-CREATE EVENT TRIGGER audit_schema_changes_for_compliance
-ON ddl_command_end
-EXECUTE FUNCTION audit_ddl();
+CREATE EVENT TRIGGER audit_schema_changes_for_compliance  
+ON ddl_command_end  
+EXECUTE FUNCTION audit_ddl();  
 
 -- ❌ ÉVITER : Nom vague
-CREATE EVENT TRIGGER et1
-ON ddl_command_end
-EXECUTE FUNCTION f();
+CREATE EVENT TRIGGER et1  
+ON ddl_command_end  
+EXECUTE FUNCTION f();  
 ```
 
 ### ✅ Pratique #2 : Documenter la raison d'être
 
 ```sql
-CREATE EVENT TRIGGER prevent_weekend_changes
-ON ddl_command_start
-EXECUTE FUNCTION no_ddl_on_weekend();
+CREATE EVENT TRIGGER prevent_weekend_changes  
+ON ddl_command_start  
+EXECUTE FUNCTION no_ddl_on_weekend();  
 
 COMMENT ON EVENT TRIGGER prevent_weekend_changes IS
 'Empêche toute modification de schéma le week-end pour respecter
-la politique de gel des changements pendant les périodes de faible activité.
-Créé le : 2025-01-15
-Responsable : Équipe DBA';
+la politique de gel des changements pendant les périodes de faible activité.  
+Créé le : 2025-01-15  
+Responsable : Équipe DBA';  
 ```
 
 ### ✅ Pratique #3 : Utiliser des filtres WHEN
 
 ```sql
 -- ✅ BON : Filtre pour éviter de traiter tous les événements
-CREATE EVENT TRIGGER audit_critical_operations
-ON ddl_command_end
-WHEN TAG IN ('DROP TABLE', 'DROP DATABASE', 'ALTER TABLE')
-EXECUTE FUNCTION audit_critical_ddl();
+CREATE EVENT TRIGGER audit_critical_operations  
+ON ddl_command_end  
+WHEN TAG IN ('DROP TABLE', 'DROP DATABASE', 'ALTER TABLE')  
+EXECUTE FUNCTION audit_critical_ddl();  
 
 -- ❌ MOINS BON : Filtre dans la fonction (plus lent)
-CREATE EVENT TRIGGER audit_all
-ON ddl_command_end
-EXECUTE FUNCTION audit_with_internal_filter();  -- Vérifie TG_TAG dans la fonction
+CREATE EVENT TRIGGER audit_all  
+ON ddl_command_end  
+EXECUTE FUNCTION audit_with_internal_filter();  -- Vérifie TG_TAG dans la fonction  
 ```
 
 ### ✅ Pratique #4 : Prévoir une désactivation facile
 
 ```sql
 -- Créer une fonction de contrôle
-CREATE OR REPLACE FUNCTION should_audit_ddl()
-RETURNS BOOLEAN
-LANGUAGE SQL
-AS $$
+CREATE OR REPLACE FUNCTION should_audit_ddl()  
+RETURNS BOOLEAN  
+LANGUAGE SQL  
+AS $$  
     SELECT current_setting('app.audit_ddl', true)::BOOLEAN;
 $$;
 
 -- L'utiliser dans l'Event Trigger
-CREATE OR REPLACE FUNCTION audit_ddl_with_control()
-RETURNS event_trigger
-LANGUAGE plpgsql
-AS $$
-BEGIN
+CREATE OR REPLACE FUNCTION audit_ddl_with_control()  
+RETURNS event_trigger  
+LANGUAGE plpgsql  
+AS $$  
+BEGIN  
     -- Vérifier si l'audit est activé
     IF NOT should_audit_ddl() THEN
         RETURN;
@@ -879,14 +879,14 @@ ALTER DATABASE mydb SET app.audit_ddl = true;
 -- avant de déployer en production
 
 -- En dev : Version permissive avec seulement du logging
-CREATE EVENT TRIGGER dev_audit
-ON ddl_command_end
-EXECUTE FUNCTION log_ddl();
+CREATE EVENT TRIGGER dev_audit  
+ON ddl_command_end  
+EXECUTE FUNCTION log_ddl();  
 
 -- En prod : Version stricte avec blocages
-CREATE EVENT TRIGGER prod_protection
-ON ddl_command_start
-EXECUTE FUNCTION prevent_dangerous_ddl();
+CREATE EVENT TRIGGER prod_protection  
+ON ddl_command_start  
+EXECUTE FUNCTION prevent_dangerous_ddl();  
 ```
 
 ---
@@ -896,11 +896,11 @@ EXECUTE FUNCTION prevent_dangerous_ddl();
 ### 11.1. Générer automatiquement des index
 
 ```sql
-CREATE OR REPLACE FUNCTION auto_create_indexes()
-RETURNS event_trigger
-LANGUAGE plpgsql
-AS $$
-DECLARE
+CREATE OR REPLACE FUNCTION auto_create_indexes()  
+RETURNS event_trigger  
+LANGUAGE plpgsql  
+AS $$  
+DECLARE  
     obj RECORD;
     has_id_column BOOLEAN;
 BEGIN
@@ -930,10 +930,10 @@ BEGIN
 END;
 $$;
 
-CREATE EVENT TRIGGER auto_index_creation
-ON ddl_command_end
-WHEN TAG IN ('CREATE TABLE')
-EXECUTE FUNCTION auto_create_indexes();
+CREATE EVENT TRIGGER auto_index_creation  
+ON ddl_command_end  
+WHEN TAG IN ('CREATE TABLE')  
+EXECUTE FUNCTION auto_create_indexes();  
 ```
 
 **Test** :
@@ -957,11 +957,11 @@ CREATE TABLE function_versions (
     created_at TIMESTAMP DEFAULT NOW()
 );
 
-CREATE OR REPLACE FUNCTION version_functions()
-RETURNS event_trigger
-LANGUAGE plpgsql
-AS $$
-DECLARE
+CREATE OR REPLACE FUNCTION version_functions()  
+RETURNS event_trigger  
+LANGUAGE plpgsql  
+AS $$  
+DECLARE  
     obj RECORD;
     func_def TEXT;
 BEGIN
@@ -988,20 +988,20 @@ BEGIN
 END;
 $$;
 
-CREATE EVENT TRIGGER track_function_versions
-ON ddl_command_end
-WHEN TAG IN ('CREATE FUNCTION', 'CREATE OR REPLACE FUNCTION')
-EXECUTE FUNCTION version_functions();
+CREATE EVENT TRIGGER track_function_versions  
+ON ddl_command_end  
+WHEN TAG IN ('CREATE FUNCTION', 'CREATE OR REPLACE FUNCTION')  
+EXECUTE FUNCTION version_functions();  
 ```
 
 ### 11.3. Alertes sur opérations longues
 
 ```sql
-CREATE OR REPLACE FUNCTION alert_table_rewrite()
-RETURNS event_trigger
-LANGUAGE plpgsql
-AS $$
-DECLARE
+CREATE OR REPLACE FUNCTION alert_table_rewrite()  
+RETURNS event_trigger  
+LANGUAGE plpgsql  
+AS $$  
+DECLARE  
     obj RECORD;
 BEGIN
     FOR obj IN SELECT * FROM pg_event_trigger_table_rewrite_oid()
@@ -1013,16 +1013,16 @@ Cette opération peut être très longue et verrouiller la table !',
 END;
 $$;
 
-CREATE EVENT TRIGGER warn_on_table_rewrite
-ON table_rewrite
-EXECUTE FUNCTION alert_table_rewrite();
+CREATE EVENT TRIGGER warn_on_table_rewrite  
+ON table_rewrite  
+EXECUTE FUNCTION alert_table_rewrite();  
 ```
 
 **Test** :
 ```sql
 -- Créer une table avec des données
-CREATE TABLE test (id INTEGER, data TEXT);
-INSERT INTO test SELECT i, 'data' FROM generate_series(1, 1000) i;
+CREATE TABLE test (id INTEGER, data TEXT);  
+INSERT INTO test SELECT i, 'data' FROM generate_series(1, 1000) i;  
 
 -- Changer le type de colonne (force une réécriture)
 ALTER TABLE test ALTER COLUMN id TYPE BIGINT;
@@ -1037,11 +1037,11 @@ ALTER TABLE test ALTER COLUMN id TYPE BIGINT;
 
 ```sql
 -- Ajouter du logging détaillé
-CREATE OR REPLACE FUNCTION debug_event_trigger()
-RETURNS event_trigger
-LANGUAGE plpgsql
-AS $$
-BEGIN
+CREATE OR REPLACE FUNCTION debug_event_trigger()  
+RETURNS event_trigger  
+LANGUAGE plpgsql  
+AS $$  
+BEGIN  
     RAISE NOTICE '─────────────────────────────────────';
     RAISE NOTICE 'Event Trigger déclenché !';
     RAISE NOTICE 'TG_EVENT: %', TG_EVENT;
@@ -1057,11 +1057,11 @@ $$;
 ### 12.2. Gérer les erreurs dans les Event Triggers
 
 ```sql
-CREATE OR REPLACE FUNCTION safe_event_trigger()
-RETURNS event_trigger
-LANGUAGE plpgsql
-AS $$
-BEGIN
+CREATE OR REPLACE FUNCTION safe_event_trigger()  
+RETURNS event_trigger  
+LANGUAGE plpgsql  
+AS $$  
+BEGIN  
     BEGIN
         -- Logique principale
         INSERT INTO audit_log ...;
@@ -1116,15 +1116,15 @@ $$;
 
 Avant de déployer des Event Triggers en production :
 
-- [ ] Testé sur environnement de développement
-- [ ] Performance évaluée (pas de ralentissement)
-- [ ] Gestion d'erreurs robuste (ne bloque pas les DDL critiques)
-- [ ] Documentation complète (COMMENT ON)
-- [ ] Noms clairs et descriptifs
-- [ ] Clause WHEN pour filtrer si possible
-- [ ] Mécanisme de désactivation facile
-- [ ] Permissions vérifiées (superutilisateur)
-- [ ] Plan de rollback défini
+- [ ] Testé sur environnement de développement  
+- [ ] Performance évaluée (pas de ralentissement)  
+- [ ] Gestion d'erreurs robuste (ne bloque pas les DDL critiques)  
+- [ ] Documentation complète (COMMENT ON)  
+- [ ] Noms clairs et descriptifs  
+- [ ] Clause WHEN pour filtrer si possible  
+- [ ] Mécanisme de désactivation facile  
+- [ ] Permissions vérifiées (superutilisateur)  
+- [ ] Plan de rollback défini  
 - [ ] Équipe informée des changements
 
 ---
@@ -1133,17 +1133,17 @@ Avant de déployer des Event Triggers en production :
 
 Les **Event Triggers** sont un outil puissant pour :
 
-1. **Surveiller** tous les changements de structure de votre base
-2. **Protéger** contre les opérations dangereuses
-3. **Auditer** qui fait quoi et quand
+1. **Surveiller** tous les changements de structure de votre base  
+2. **Protéger** contre les opérations dangereuses  
+3. **Auditer** qui fait quoi et quand  
 4. **Automatiser** certaines tâches (création d'index, versionning)
 
 **Points clés à retenir** :
-- ✅ Les Event Triggers surveillent les commandes DDL (structure), pas DML (données)
-- ✅ Quatre événements : `ddl_command_start`, `ddl_command_end`, `sql_drop`, `table_rewrite`
-- ✅ Variables spéciales : `TG_EVENT`, `TG_TAG`, `pg_event_trigger_*_objects()`
-- ✅ Seuls les superutilisateurs peuvent créer des Event Triggers
-- ✅ Utilisez la clause `WHEN` pour filtrer les événements
+- ✅ Les Event Triggers surveillent les commandes DDL (structure), pas DML (données)  
+- ✅ Quatre événements : `ddl_command_start`, `ddl_command_end`, `sql_drop`, `table_rewrite`  
+- ✅ Variables spéciales : `TG_EVENT`, `TG_TAG`, `pg_event_trigger_*_objects()`  
+- ✅ Seuls les superutilisateurs peuvent créer des Event Triggers  
+- ✅ Utilisez la clause `WHEN` pour filtrer les événements  
 - ✅ Testez toujours en développement avant la production
 
 **Recommandation** :

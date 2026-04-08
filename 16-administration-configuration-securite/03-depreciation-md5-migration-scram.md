@@ -18,7 +18,7 @@ Cette section explique **pourquoi** MD5 est obsolète et **comment** comprendre 
 
 **MD5** (Message Digest 5) est un **algorithme de hachage cryptographique** créé en 1991. Dans le contexte de PostgreSQL, MD5 était utilisé pour :
 
-1. **Stocker les mots de passe** de manière hachée (et non en clair)
+1. **Stocker les mots de passe** de manière hachée (et non en clair)  
 2. **Authentifier les utilisateurs** lors de la connexion
 
 **Comment ça fonctionne (simplifié) :**
@@ -43,8 +43,8 @@ MD5 a été conçu il y a plus de 30 ans. À l'époque, les ordinateurs étaient
 Une **collision** se produit quand deux mots de passe différents produisent le même hash MD5.
 
 ```
-Mot de passe A : "password123"  ➡️  Hash : "abc123def..."
-Mot de passe B : "p@ssw0rd456"  ➡️  Hash : "abc123def..." (même hash !)
+Mot de passe A : "password123"  ➡️  Hash : "abc123def..."  
+Mot de passe B : "p@ssw0rd456"  ➡️  Hash : "abc123def..." (même hash !)  
 ```
 
 ⚠️ **Problème** : Un attaquant peut trouver un mot de passe différent qui produit le même hash et ainsi se connecter.
@@ -54,7 +54,7 @@ Mot de passe B : "p@ssw0rd456"  ➡️  Hash : "abc123def..." (même hash !)
 Avec les ordinateurs modernes (et surtout les GPU), il est possible de tester des **milliards de combinaisons par seconde** pour casser un hash MD5.
 
 **Exemple de vitesse d'attaque :**
-- **MD5** : ~60 milliards de hashs/seconde sur un GPU moderne
+- **MD5** : ~60 milliards de hashs/seconde sur un GPU moderne  
 - **SCRAM-SHA-256** : ~1000 hashs/seconde (60 millions de fois plus lent !)
 
 #### 4. **Vulnérable aux Rainbow Tables**
@@ -76,25 +76,25 @@ Un **salt** est une valeur aléatoire ajoutée au mot de passe avant le hachage 
 
 **Sans salt (MD5 dans PostgreSQL) :**
 ```
-Utilisateur A : "password" ➡️ Hash : "5f4dcc3b5..."
-Utilisateur B : "password" ➡️ Hash : "5f4dcc3b5..." (identique !)
+Utilisateur A : "password" ➡️ Hash : "5f4dcc3b5..."  
+Utilisateur B : "password" ➡️ Hash : "5f4dcc3b5..." (identique !)  
 ```
 
 Si un attaquant casse un hash, il casse tous les utilisateurs avec le même mot de passe.
 
 **Avec salt (SCRAM-SHA-256) :**
 ```
-Utilisateur A : "password" + salt aléatoire ➡️ Hash : "a1b2c3d4..."
-Utilisateur B : "password" + salt différent ➡️ Hash : "x9y8z7w6..." (différent !)
+Utilisateur A : "password" + salt aléatoire ➡️ Hash : "a1b2c3d4..."  
+Utilisateur B : "password" + salt différent ➡️ Hash : "x9y8z7w6..." (différent !)  
 ```
 
 Chaque utilisateur a un hash unique, même avec le même mot de passe.
 
 ### Déclarations Officielles
 
-- **2017** : PostgreSQL annonce que MD5 est considéré comme non sécurisé
-- **PostgreSQL 10 (2017)** : Introduction de SCRAM-SHA-256
-- **PostgreSQL 14 (2021)** : SCRAM-SHA-256 devient la méthode par défaut
+- **2017** : PostgreSQL annonce que MD5 est considéré comme non sécurisé  
+- **PostgreSQL 10 (2017)** : Introduction de SCRAM-SHA-256  
+- **PostgreSQL 14 (2021)** : SCRAM-SHA-256 devient la méthode par défaut  
 - **Aujourd'hui** : MD5 est **officiellement déprécié** mais toujours supporté pour la rétrocompatibilité
 
 ⚠️ **PostgreSQL recommande fortement** de ne plus utiliser MD5 pour les nouvelles installations et de migrer les systèmes existants.
@@ -106,7 +106,7 @@ Chaque utilisateur a un hash unique, même avec le même mot de passe.
 ### Définition
 
 **SCRAM-SHA-256** signifie :
-- **SCRAM** : Salted Challenge Response Authentication Mechanism
+- **SCRAM** : Salted Challenge Response Authentication Mechanism  
 - **SHA-256** : Secure Hash Algorithm 256-bit
 
 C'est un mécanisme d'authentification moderne standardisé (RFC 7677) et considéré comme **hautement sécurisé**.
@@ -127,9 +127,9 @@ SHA-256 fait partie de la famille SHA-2, conçue par la NSA en 2001 et largement
 Chaque mot de passe reçoit automatiquement un **salt aléatoire unique** lors du stockage.
 
 ```
-Utilisateur : alice, Mot de passe : "MonMotDePasse"
-Salt aléatoire généré : "a1b2c3d4e5f6..."
-Hash final stocké : SCRAM-SHA-256$4096:a1b2c3d4e5f6...$hash_complexe
+Utilisateur : alice, Mot de passe : "MonMotDePasse"  
+Salt aléatoire généré : "a1b2c3d4e5f6..."  
+Hash final stocké : SCRAM-SHA-256$4096:a1b2c3d4e5f6...$hash_complexe  
 ```
 
 **Avantage** : Même avec le même mot de passe, chaque utilisateur a un hash totalement différent.
@@ -140,10 +140,10 @@ SCRAM-SHA-256 applique l'algorithme de hachage **plusieurs milliers de fois** (p
 
 **Principe :**
 ```
-Mot de passe : "password"
-Itération 1 : hash1 = SHA256(password + salt)
-Itération 2 : hash2 = SHA256(hash1)
-Itération 3 : hash3 = SHA256(hash2)
+Mot de passe : "password"  
+Itération 1 : hash1 = SHA256(password + salt)  
+Itération 2 : hash2 = SHA256(hash1)  
+Itération 3 : hash3 = SHA256(hash2)  
 ...
 Itération 4096 : hash_final = SHA256(hash4095)
 ```
@@ -200,9 +200,9 @@ SCRAM-SHA-256 est conçu pour être résistant aux **attaques par analyse tempor
 
 ### Pourquoi Migrer ?
 
-1. **Sécurité** : MD5 n'est plus considéré comme sûr
-2. **Conformité** : De nombreuses normes de sécurité (PCI-DSS, HIPAA) interdisent MD5
-3. **Bonnes pratiques** : Suivre les recommandations officielles PostgreSQL
+1. **Sécurité** : MD5 n'est plus considéré comme sûr  
+2. **Conformité** : De nombreuses normes de sécurité (PCI-DSS, HIPAA) interdisent MD5  
+3. **Bonnes pratiques** : Suivre les recommandations officielles PostgreSQL  
 4. **Pérennité** : MD5 pourrait être complètement supprimé dans les futures versions
 
 ### Quand Migrer ?
@@ -225,8 +225,8 @@ SCRAM-SHA-256 est conçu pour être résistant aux **attaques par analyse tempor
 Les hashs MD5 et SCRAM-SHA-256 sont **incompatibles** :
 
 ```
-Hash MD5 :          md5abc123def456...
-Hash SCRAM-SHA-256: SCRAM-SHA-256$4096:salt$hash...
+Hash MD5 :          md5abc123def456...  
+Hash SCRAM-SHA-256: SCRAM-SHA-256$4096:salt$hash...  
 ```
 
 **Conséquence** : Il est **impossible** de convertir directement un hash MD5 en hash SCRAM-SHA-256 sans connaître le mot de passe original.
@@ -249,12 +249,12 @@ Deux approches possibles :
 Tous les clients PostgreSQL ne supportent pas SCRAM-SHA-256 :
 
 **Support SCRAM-SHA-256 :**
-- ✅ **psql** : depuis PostgreSQL 10
-- ✅ **libpq** : depuis PostgreSQL 10
-- ✅ **psycopg2** (Python) : version 2.8+ (2019)
-- ✅ **psycopg3** (Python) : toutes versions
-- ✅ **node-postgres** : version 7.0+ (2017)
-- ✅ **JDBC** : version 42.2.0+ (2017)
+- ✅ **psql** : depuis PostgreSQL 10  
+- ✅ **libpq** : depuis PostgreSQL 10  
+- ✅ **psycopg2** (Python) : version 2.8+ (2019)  
+- ✅ **psycopg3** (Python) : toutes versions  
+- ✅ **node-postgres** : version 7.0+ (2017)  
+- ✅ **JDBC** : version 42.2.0+ (2017)  
 - ✅ **Npgsql** (.NET) : version 3.2+ (2017)
 
 ❌ **Clients anciens (pré-2017)** : peuvent ne pas supporter SCRAM
@@ -268,11 +268,11 @@ Tous les clients PostgreSQL ne supportent pas SCRAM-SHA-256 :
 - Réinitialiser tous les mots de passe
 
 **Avantages :**
-- ✅ Sécurité maximale immédiate
+- ✅ Sécurité maximale immédiate  
 - ✅ Simplicité de gestion (un seul système)
 
 **Inconvénients :**
-- ❌ Interruption de service possible
+- ❌ Interruption de service possible  
 - ❌ Contraignant pour les utilisateurs
 
 **Quand l'utiliser :**
@@ -294,12 +294,12 @@ host    all    all    0.0.0.0/0    scram-sha-256,md5
 ```
 
 **Avantages :**
-- ✅ Pas d'interruption de service
-- ✅ Migration en douceur
+- ✅ Pas d'interruption de service  
+- ✅ Migration en douceur  
 - ✅ Temps d'adaptation pour les utilisateurs
 
 **Inconvénients :**
-- ❌ Période de transition avec MD5 toujours actif
+- ❌ Période de transition avec MD5 toujours actif  
 - ❌ Gestion plus complexe temporairement
 
 **Quand l'utiliser :**
@@ -323,12 +323,12 @@ host    all    all    0.0.0.0/0    scram-sha-256,md5
 ```
 
 **Avantages :**
-- ✅ Totalement transparent pour l'utilisateur
-- ✅ Aucune action requise des utilisateurs
+- ✅ Totalement transparent pour l'utilisateur  
+- ✅ Aucune action requise des utilisateurs  
 - ✅ Migration automatique et progressive
 
 **Inconvénients :**
-- ❌ Nécessite du développement (trigger ou script)
+- ❌ Nécessite du développement (trigger ou script)  
 - ❌ Fenêtre de vulnérabilité jusqu'à migration complète
 
 **Quand l'utiliser :**
@@ -404,8 +404,8 @@ SELECT rolname,
          WHEN rolpassword LIKE 'SCRAM-SHA-256%' THEN 'SCRAM-SHA-256'
          ELSE 'Autre'
        END AS password_type
-FROM pg_authid
-WHERE rolname = 'alice';
+FROM pg_authid  
+WHERE rolname = 'alice';  
 ```
 
 #### Option B : Migration Automatique
@@ -515,9 +515,9 @@ SELECT
   END AS auth_method,
   rolconnlimit,
   rolvaliduntil
-FROM pg_authid
-WHERE rolcanlogin = true
-ORDER BY rolname;
+FROM pg_authid  
+WHERE rolcanlogin = true  
+ORDER BY rolname;  
 ```
 
 ---
@@ -572,7 +572,7 @@ pg_ctl reload
 
 **Important à comprendre :**
 
-- **`password_encryption`** (postgresql.conf) : Définit comment les **nouveaux** mots de passe sont **stockés**
+- **`password_encryption`** (postgresql.conf) : Définit comment les **nouveaux** mots de passe sont **stockés**  
 - **`pg_hba.conf`** : Définit quelles méthodes d'authentification sont **acceptées** lors de la **connexion**
 
 **Exemple de confusion :**
@@ -638,11 +638,11 @@ hostssl    all    all    0.0.0.0/0    scram-sha-256
 
 **Planning :**
 ```
-Semaine 1 : Communication et préparation
-Semaine 2 : Mode mixte (MD5 + SCRAM)
-Semaine 3-4 : Migration des utilisateurs par département
-Semaine 5 : Vérification et tests
-Semaine 6 : Désactivation MD5
+Semaine 1 : Communication et préparation  
+Semaine 2 : Mode mixte (MD5 + SCRAM)  
+Semaine 3-4 : Migration des utilisateurs par département  
+Semaine 5 : Vérification et tests  
+Semaine 6 : Désactivation MD5  
 ```
 
 ### Cas 3 : Plateforme SaaS avec Milliers d'Utilisateurs
@@ -652,23 +652,23 @@ Semaine 6 : Désactivation MD5
 **Stratégie recommandée :** Migration Automatique Transparente
 
 **Approche :**
-1. Déployer un mécanisme de migration automatique lors de la connexion
-2. Activer le mode mixte (MD5 + SCRAM)
-3. Laisser les utilisateurs migrer naturellement pendant 3-6 mois
-4. Identifier et contacter les utilisateurs restants
+1. Déployer un mécanisme de migration automatique lors de la connexion  
+2. Activer le mode mixte (MD5 + SCRAM)  
+3. Laisser les utilisateurs migrer naturellement pendant 3-6 mois  
+4. Identifier et contacter les utilisateurs restants  
 5. Désactiver MD5 avec communication préalable
 
 ---
 
 ## 🧠 Points Clés à Retenir
 
-1. **MD5 est obsolète** : Vulnérable aux attaques modernes, officiellement déprécié
-2. **SCRAM-SHA-256 est le standard** : Recommandé par PostgreSQL depuis 2021
-3. **Sécurité multi-couches** : Salt unique + itérations multiples + challenge-response
-4. **Migration nécessaire** : Impossible de convertir directement les hashs MD5
-5. **Stratégies multiples** : Choisir selon la taille et la criticité du système
-6. **Compatibilité clients** : Vérifier que tous les drivers supportent SCRAM (2017+)
-7. **Configuration double** : `password_encryption` (stockage) + `pg_hba.conf` (connexion)
+1. **MD5 est obsolète** : Vulnérable aux attaques modernes, officiellement déprécié  
+2. **SCRAM-SHA-256 est le standard** : Recommandé par PostgreSQL depuis 2021  
+3. **Sécurité multi-couches** : Salt unique + itérations multiples + challenge-response  
+4. **Migration nécessaire** : Impossible de convertir directement les hashs MD5  
+5. **Stratégies multiples** : Choisir selon la taille et la criticité du système  
+6. **Compatibilité clients** : Vérifier que tous les drivers supportent SCRAM (2017+)  
+7. **Configuration double** : `password_encryption` (stockage) + `pg_hba.conf` (connexion)  
 8. **Cohabitation temporaire possible** : MD5 et SCRAM peuvent coexister pendant la transition
 
 ---
@@ -679,8 +679,8 @@ Semaine 6 : Désactivation MD5
 
 ```sql
 -- ✅ 1. Tous les utilisateurs sont en SCRAM
-SELECT COUNT(*) FROM pg_authid
-WHERE rolcanlogin = true AND rolpassword LIKE 'md5%';
+SELECT COUNT(*) FROM pg_authid  
+WHERE rolcanlogin = true AND rolpassword LIKE 'md5%';  
 -- Résultat attendu : 0
 
 -- ✅ 2. password_encryption est configuré
@@ -705,16 +705,16 @@ SHOW password_encryption;
 
 Dans les sections suivantes du tutoriel :
 
-- **16.2** : Configuration détaillée de `pg_hba.conf`
-- **16.4** : Gestion des autorisations (`GRANT`/`REVOKE`)
-- **16.7** : SSL/TLS et chiffrement des connexions
+- **16.2** : Configuration détaillée de `pg_hba.conf`  
+- **16.4** : Gestion des autorisations (`GRANT`/`REVOKE`)  
+- **16.7** : SSL/TLS et chiffrement des connexions  
 - **16.8** : Nouveautés PostgreSQL 18 - OAuth 2.0 et TLS 1.3
 
 ### Ressources Externes
 
-- **RFC 7677** : Spécification SCRAM-SHA-256
-- **PostgreSQL Documentation** : [Password Authentication](https://www.postgresql.org/docs/current/auth-password.html)
-- **OWASP** : Bonnes pratiques de stockage de mots de passe
+- **RFC 7677** : Spécification SCRAM-SHA-256  
+- **PostgreSQL Documentation** : [Password Authentication](https://www.postgresql.org/docs/current/auth-password.html)  
+- **OWASP** : Bonnes pratiques de stockage de mots de passe  
 - **NIST Guidelines** : Standards de sécurité des mots de passe
 
 ---

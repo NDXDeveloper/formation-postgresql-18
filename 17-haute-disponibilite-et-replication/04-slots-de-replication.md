@@ -77,9 +77,9 @@ Serveur Principal              Serveur Standby
 
 Un **slot de réplication** est un objet persistant sur le serveur principal qui :
 
-1. **Garde une trace** de la position de réplication d'un consommateur (standby ou abonnement logique)
-2. **Empêche la suppression** des fichiers WAL nécessaires à ce consommateur
-3. **Survit aux redémarrages** du serveur PostgreSQL
+1. **Garde une trace** de la position de réplication d'un consommateur (standby ou abonnement logique)  
+2. **Empêche la suppression** des fichiers WAL nécessaires à ce consommateur  
+3. **Survit aux redémarrages** du serveur PostgreSQL  
 4. **Est identifié par un nom unique**
 
 ---
@@ -158,8 +158,8 @@ Les slots physiques sont utilisés dans le cadre de la **réplication en streami
      - Même architecture CPU (x86_64, ARM, etc.)
      - Même endianness (little-endian / big-endian)
 
-3. **Réplication complète**
-   - **Toutes** les bases de données sont répliquées
+3. **Réplication complète**  
+   - **Toutes** les bases de données sont répliquées  
    - **Toutes** les tables de chaque base sont répliquées
    - Impossible de filtrer ou sélectionner
 
@@ -233,10 +233,10 @@ FROM pg_replication_slots;
 ```
 
 **Interprétation des colonnes :**
-- `slot_name` : Nom du slot
-- `slot_type` : `physical` ou `logical`
-- `active` : `t` (true) si un client est connecté
-- `restart_lsn` : Position WAL minimale à conserver
+- `slot_name` : Nom du slot  
+- `slot_type` : `physical` ou `logical`  
+- `active` : `t` (true) si un client est connecté  
+- `restart_lsn` : Position WAL minimale à conserver  
 - `confirmed_flush_lsn` : Pour les slots logiques (position confirmée)
 
 #### Vérifier le retard de réplication
@@ -247,8 +247,8 @@ SELECT
     slot_name,
     pg_wal_lsn_diff(pg_current_wal_lsn(), restart_lsn) AS lag_bytes,
     pg_size_pretty(pg_wal_lsn_diff(pg_current_wal_lsn(), restart_lsn)) AS lag_size
-FROM pg_replication_slots
-WHERE slot_type = 'physical';
+FROM pg_replication_slots  
+WHERE slot_type = 'physical';  
 ```
 
 **Exemple de résultat :**
@@ -259,7 +259,7 @@ WHERE slot_type = 'physical';
 ```
 
 **Interprétation :**
-- `lag_bytes = 0` : Le standby est parfaitement à jour
+- `lag_bytes = 0` : Le standby est parfaitement à jour  
 - `lag_bytes > 0` : Le standby est en retard de X octets de WAL
 
 ### 3.5. Avantages des slots physiques
@@ -397,7 +397,7 @@ SELECT pg_create_logical_replication_slot('my_logical_slot', 'pgoutput');
 ```
 
 **Paramètres :**
-- `'my_logical_slot'` : Nom du slot (unique)
+- `'my_logical_slot'` : Nom du slot (unique)  
 - `'pgoutput'` : Plugin de décodage (standard depuis PG 10)
 
 **Résultat :**
@@ -487,8 +487,8 @@ SELECT
     confirmed_flush_lsn,
     pg_wal_lsn_diff(pg_current_wal_lsn(), confirmed_flush_lsn) AS lag_bytes,
     pg_size_pretty(pg_wal_lsn_diff(pg_current_wal_lsn(), confirmed_flush_lsn)) AS lag_size
-FROM pg_replication_slots
-WHERE slot_type = 'logical';
+FROM pg_replication_slots  
+WHERE slot_type = 'logical';  
 ```
 
 #### Statistiques avancées (PostgreSQL 14+)
@@ -501,12 +501,12 @@ SELECT
     spill_bytes,     -- Octets écrits sur disque
     total_txns,      -- Total de transactions décodées
     total_bytes      -- Total d'octets décodés
-FROM pg_stat_replication_slots
-WHERE slot_type = 'logical';
+FROM pg_stat_replication_slots  
+WHERE slot_type = 'logical';  
 ```
 
 **Interprétation :**
-- `spill_txns > 0` : Des transactions sont trop volumineuses pour rester en mémoire
+- `spill_txns > 0` : Des transactions sont trop volumineuses pour rester en mémoire  
 - `spill_bytes` élevé : Considérer d'augmenter `logical_decoding_work_mem`
 
 ### 4.6. Avantages des slots logiques
@@ -576,9 +576,9 @@ SELECT
     active_pid,
     client_addr,
     state
-FROM pg_replication_slots
-JOIN pg_stat_replication ON pg_replication_slots.active_pid = pg_stat_replication.pid
-WHERE slot_name = 'slot_name';
+FROM pg_replication_slots  
+JOIN pg_stat_replication ON pg_replication_slots.active_pid = pg_stat_replication.pid  
+WHERE slot_name = 'slot_name';  
 
 -- 2. Terminer la connexion du client
 SELECT pg_terminate_backend(active_pid);
@@ -662,7 +662,7 @@ FROM pg_replication_slots;
 ```
 
 **Seuils d'alerte recommandés :**
-- ⚠️ Warning : lag > 500 MB
+- ⚠️ Warning : lag > 500 MB  
 - 🚨 Critical : lag > 2 GB
 
 #### 2. Taille du répertoire pg_wal/
@@ -675,7 +675,7 @@ FROM pg_ls_waldir();
 ```
 
 **Seuils d'alerte :**
-- ⚠️ Warning : pg_wal/ > 5 GB
+- ⚠️ Warning : pg_wal/ > 5 GB  
 - 🚨 Critical : pg_wal/ > 10 GB (ou 80% de l'espace disque disponible)
 
 #### 3. Slots inactifs depuis longtemps
@@ -688,9 +688,9 @@ SELECT
     active,
     restart_lsn,
     pg_wal_lsn_diff(pg_current_wal_lsn(), restart_lsn) AS lag_bytes
-FROM pg_replication_slots
-WHERE active = false
-ORDER BY lag_bytes DESC;
+FROM pg_replication_slots  
+WHERE active = false  
+ORDER BY lag_bytes DESC;  
 ```
 
 **Action :** Investiguer pourquoi le slot est inactif et envisager sa suppression après validation.
@@ -745,10 +745,10 @@ groups:
 #!/bin/bash
 # check_replication_slots.sh
 
-PGHOST="localhost"
-PGUSER="postgres"
-LAG_WARNING_MB=500
-LAG_CRITICAL_MB=2000
+PGHOST="localhost"  
+PGUSER="postgres"  
+LAG_WARNING_MB=500  
+LAG_CRITICAL_MB=2000  
 
 # Vérifier le lag de tous les slots
 psql -h "$PGHOST" -U "$PGUSER" -t -A -c "
@@ -774,8 +774,8 @@ psql -h "$PGHOST" -U "$PGUSER" -t -A -c "
   fi
 done
 
-echo "OK: All replication slots are healthy"
-exit 0
+echo "OK: All replication slots are healthy"  
+exit 0  
 ```
 
 **Utilisation avec cron :**
@@ -806,8 +806,8 @@ Primary (Production)
 **Configuration :**
 ```sql
 -- Sur le Primary
-CREATE ROLE replication_physical WITH REPLICATION LOGIN PASSWORD 'pass1';
-CREATE ROLE replication_logical WITH REPLICATION LOGIN PASSWORD 'pass2';
+CREATE ROLE replication_physical WITH REPLICATION LOGIN PASSWORD 'pass1';  
+CREATE ROLE replication_logical WITH REPLICATION LOGIN PASSWORD 'pass2';  
 
 -- Slot physique pour le standby HA
 SELECT pg_create_physical_replication_slot('ha_standby_slot');
@@ -836,8 +836,8 @@ Standby 2
 hot_standby = on
 
 # postgresql.auto.conf
-primary_conninfo = 'host=primary ...'
-primary_slot_name = 'standby1'
+primary_conninfo = 'host=primary ...'  
+primary_slot_name = 'standby1'  
 ```
 
 **Activer le mode cascade sur Standby 1 :**
@@ -848,8 +848,8 @@ ALTER SYSTEM SET max_replication_slots = 5;
 
 **Configuration Standby 2 :**
 ```ini
-primary_conninfo = 'host=standby1 ...'
-primary_slot_name = 'standby2'
+primary_conninfo = 'host=standby1 ...'  
+primary_slot_name = 'standby2'  
 ```
 
 ### 7.3. Multi-Master avec Logical Replication
@@ -897,9 +897,9 @@ SELECT
     slot_name,
     active,
     pg_size_pretty(pg_wal_lsn_diff(pg_current_wal_lsn(), restart_lsn)) AS lag
-FROM pg_replication_slots
-WHERE pg_wal_lsn_diff(pg_current_wal_lsn(), restart_lsn) > 1073741824  -- > 1 GB
-ORDER BY lag DESC;
+FROM pg_replication_slots  
+WHERE pg_wal_lsn_diff(pg_current_wal_lsn(), restart_lsn) > 1073741824  -- > 1 GB  
+ORDER BY lag DESC;  
 ```
 
 **Solutions :**
@@ -949,9 +949,9 @@ SELECT
     query_start,
     state_change,
     query
-FROM pg_stat_activity
-WHERE backend_xmin IS NOT NULL OR backend_xid IS NOT NULL
-ORDER BY query_start;
+FROM pg_stat_activity  
+WHERE backend_xmin IS NOT NULL OR backend_xid IS NOT NULL  
+ORDER BY query_start;  
 
 -- 3. Vérifier les spillages (transactions trop volumineuses)
 SELECT * FROM pg_stat_replication_slots WHERE spill_txns > 0;
@@ -1097,8 +1097,8 @@ max_slot_wal_keep_size = 10GB  # Limite la rétention WAL par slot
 SELECT pg_create_physical_replication_slot('slot1');
 
 -- ✅ Bon : nom descriptif
-SELECT pg_create_physical_replication_slot('prod_standby_paris_slot');
-SELECT pg_create_logical_replication_slot('analytics_dwh_slot', 'pgoutput');
+SELECT pg_create_physical_replication_slot('prod_standby_paris_slot');  
+SELECT pg_create_logical_replication_slot('analytics_dwh_slot', 'pgoutput');  
 ```
 
 ### 10.2. Performance et optimisation
@@ -1166,13 +1166,13 @@ psql -c "
 ### 10.4. Documentation opérationnelle
 
 Pour chaque slot créé, documentez :
-- **Nom** : Identifiant unique
-- **Type** : Physical ou Logical
-- **Objectif** : HA, Analytics, CDC, etc.
-- **Destination** : Serveur/application consommateur
-- **Criticité** : Critical, Important, Nice-to-have
-- **Contact** : Équipe ou personne responsable
-- **Date de création**
+- **Nom** : Identifiant unique  
+- **Type** : Physical ou Logical  
+- **Objectif** : HA, Analytics, CDC, etc.  
+- **Destination** : Serveur/application consommateur  
+- **Criticité** : Critical, Important, Nice-to-have  
+- **Contact** : Équipe ou personne responsable  
+- **Date de création**  
 - **Procédure de recréation** en cas de problème
 
 **Exemple de tableau de bord :**
@@ -1316,18 +1316,18 @@ SELECT pg_drop_replication_slot('migration_slot');
 ### Ce qu'il faut retenir 🔑
 
 #### Slots de Réplication en Général
-1. **Empêchent la suppression du WAL** nécessaire aux consommateurs (replicas, subscribers)
-2. **Persistent entre les redémarrages** de PostgreSQL
+1. **Empêchent la suppression du WAL** nécessaire aux consommateurs (replicas, subscribers)  
+2. **Persistent entre les redémarrages** de PostgreSQL  
 3. **Peuvent saturer pg_wal/** si mal surveillés → **Critique à monitorer**
 
 #### Slots Physiques
-- ✅ **Usage** : Haute disponibilité, Disaster Recovery
-- ✅ **Avantages** : Performance, Simplicité, Fiabilité
+- ✅ **Usage** : Haute disponibilité, Disaster Recovery  
+- ✅ **Avantages** : Performance, Simplicité, Fiabilité  
 - ⚠️ **Limitation** : Tout ou rien (pas de granularité)
 
 #### Slots Logiques
-- ✅ **Usage** : Migrations, CDC, Analytics, Réplication sélective
-- ✅ **Avantages** : Flexibilité, Transformations, Multi-versions
+- ✅ **Usage** : Migrations, CDC, Analytics, Réplication sélective  
+- ✅ **Avantages** : Flexibilité, Transformations, Multi-versions  
 - ⚠️ **Limitations** : Overhead, Pas de DDL, Conflits potentiels
 
 #### Configuration Minimale
@@ -1347,15 +1347,15 @@ primary_slot_name = 'my_slot'
 wal_level = logical
 ```
 ```sql
-CREATE PUBLICATION my_pub FOR TABLE t1, t2;
-CREATE SUBSCRIPTION my_sub CONNECTION '...' PUBLICATION my_pub;
+CREATE PUBLICATION my_pub FOR TABLE t1, t2;  
+CREATE SUBSCRIPTION my_sub CONNECTION '...' PUBLICATION my_pub;  
 ```
 
 #### Monitoring Essentiel
 ```sql
 -- Vérifier le lag
-SELECT slot_name, pg_size_pretty(pg_wal_lsn_diff(pg_current_wal_lsn(), restart_lsn))
-FROM pg_replication_slots;
+SELECT slot_name, pg_size_pretty(pg_wal_lsn_diff(pg_current_wal_lsn(), restart_lsn))  
+FROM pg_replication_slots;  
 
 -- Vérifier les slots inactifs
 SELECT * FROM pg_replication_slots WHERE active = false;
@@ -1369,8 +1369,8 @@ max_slot_wal_keep_size = 10GB  # Limite la rétention par slot
 ### Prochaines Étapes
 
 Maintenant que vous maîtrisez les slots de réplication :
-- **17.5** : Failover et Promotion (gestion des basculements)
-- **17.6** : Architectures HA complètes (Patroni, Repmgr)
+- **17.5** : Failover et Promotion (gestion des basculements)  
+- **17.6** : Architectures HA complètes (Patroni, Repmgr)  
 - **Chapitre 18** : Extensions et cas d'usage avancés
 
 ---
@@ -1378,14 +1378,14 @@ Maintenant que vous maîtrisez les slots de réplication :
 ## Ressources Complémentaires
 
 ### Documentation Officielle
-- [PostgreSQL: Replication Slots](https://www.postgresql.org/docs/current/warm-standby.html#STREAMING-REPLICATION-SLOTS)
-- [PostgreSQL: Logical Replication](https://www.postgresql.org/docs/current/logical-replication.html)
+- [PostgreSQL: Replication Slots](https://www.postgresql.org/docs/current/warm-standby.html#STREAMING-REPLICATION-SLOTS)  
+- [PostgreSQL: Logical Replication](https://www.postgresql.org/docs/current/logical-replication.html)  
 - [PostgreSQL: Logical Decoding](https://www.postgresql.org/docs/current/logicaldecoding.html)
 
 ### Outils de l'Écosystème
-- **Patroni** : HA cluster avec gestion automatique des slots
-- **Debezium** : Plateforme CDC complète
-- **pgBackRest** : Gestion des sauvegardes et slots
+- **Patroni** : HA cluster avec gestion automatique des slots  
+- **Debezium** : Plateforme CDC complète  
+- **pgBackRest** : Gestion des sauvegardes et slots  
 - **Repmgr** : Gestion de réplication simplifiée
 
 ### Articles et Blogs Techniques
@@ -1394,7 +1394,7 @@ Maintenant que vous maîtrisez les slots de réplication :
 - Cybertec: "Monitoring Replication Slots"
 
 ### Livres Recommandés
-- "PostgreSQL: Up and Running" - Chapitre Replication
+- "PostgreSQL: Up and Running" - Chapitre Replication  
 - "Mastering PostgreSQL 13" - Advanced Replication Topics
 
 ---

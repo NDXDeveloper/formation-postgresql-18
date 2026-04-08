@@ -19,11 +19,11 @@ Ce chapitre explore les différentes architectures et stratégies pour construir
 La **Haute Disponibilité** est la capacité d'un système à rester **opérationnel et accessible** même en cas de défaillance de certains de ses composants.
 
 **Analogie simple :** Imaginez un pont reliant deux villes :
-- **Sans HA** : Un seul pont. S'il s'effondre, le trafic est complètement interrompu.
+- **Sans HA** : Un seul pont. S'il s'effondre, le trafic est complètement interrompu.  
 - **Avec HA** : Plusieurs ponts. Si l'un s'effondre, le trafic continue par les autres ponts (peut-être avec un peu plus de congestion, mais sans interruption totale).
 
 Dans le contexte de PostgreSQL :
-- **Sans HA** : Un seul serveur. S'il tombe, votre application est en panne jusqu'à sa réparation.
+- **Sans HA** : Un seul serveur. S'il tombe, votre application est en panne jusqu'à sa réparation.  
 - **Avec HA** : Plusieurs serveurs. Si le Primary tombe, un Standby prend automatiquement le relais en quelques secondes.
 
 ### Les Niveaux de Disponibilité
@@ -64,8 +64,8 @@ Les interruptions de service ont un coût direct :
 #### 2. Exigences Réglementaires
 
 Certains secteurs ont des obligations légales :
-- **Banque/Finance** : Bâle III, PSD2 (temps d'arrêt maximum)
-- **Santé** : HIPAA, disponibilité des dossiers médicaux
+- **Banque/Finance** : Bâle III, PSD2 (temps d'arrêt maximum)  
+- **Santé** : HIPAA, disponibilité des dossiers médicaux  
 - **Télécommunications** : Réglementations sur la disponibilité du service
 
 #### 3. Expérience Utilisateur
@@ -88,8 +88,8 @@ Une seule panne peut faire perdre des utilisateurs de manière permanente.
 **Question :** "Combien de temps notre système peut-il être en panne avant que cela devienne inacceptable ?"
 
 **Exemples :**
-- **E-commerce** : RTO = 5 minutes (basculement automatique rapide)
-- **Blog personnel** : RTO = 4 heures (intervention manuelle acceptable)
+- **E-commerce** : RTO = 5 minutes (basculement automatique rapide)  
+- **Blog personnel** : RTO = 4 heures (intervention manuelle acceptable)  
 - **Services d'urgence** : RTO = 30 secondes (basculement quasi-instantané)
 
 **Impact sur l'architecture :**
@@ -103,8 +103,8 @@ Une seule panne peut faire perdre des utilisateurs de manière permanente.
 **Question :** "Combien de données pouvons-nous nous permettre de perdre ?"
 
 **Exemples :**
-- **Transactions bancaires** : RPO = 0 (aucune perte acceptable → réplication synchrone)
-- **Analytics** : RPO = 1 heure (données reconstituables)
+- **Transactions bancaires** : RPO = 0 (aucune perte acceptable → réplication synchrone)  
+- **Analytics** : RPO = 1 heure (données reconstituables)  
 - **Réseau social** : RPO = quelques secondes (réplication asynchrone acceptable)
 
 **Impact sur l'architecture :**
@@ -137,9 +137,9 @@ Disponibilité (%) = (Temps total - Temps d'arrêt) / Temps total × 100
 **Définition :** Un **point de défaillance unique** est un composant dont la panne entraîne l'arrêt complet du système.
 
 **Exemples de SPOF dans PostgreSQL :**
-- ❌ Un seul serveur PostgreSQL (pas de réplication)
-- ❌ Un seul load balancer (pas de redondance)
-- ❌ Un seul switch réseau
+- ❌ Un seul serveur PostgreSQL (pas de réplication)  
+- ❌ Un seul load balancer (pas de redondance)  
+- ❌ Un seul switch réseau  
 - ❌ Une seule source d'alimentation électrique
 
 **Objectif de la HA :** **Éliminer tous les SPOF** de l'architecture.
@@ -155,11 +155,11 @@ Une architecture PostgreSQL hautement disponible se compose de plusieurs briques
 **Objectif :** Maintenir des copies des données sur plusieurs serveurs.
 
 **Types :**
-- **Réplication physique (Streaming Replication)** : Copie bloc par bloc du serveur Primary vers les Standby
+- **Réplication physique (Streaming Replication)** : Copie bloc par bloc du serveur Primary vers les Standby  
 - **Réplication logique** : Réplication au niveau des transactions (plus flexible)
 
 **Modes :**
-- **Synchrone** : Le Primary attend la confirmation des Standby (RPO = 0)
+- **Synchrone** : Le Primary attend la confirmation des Standby (RPO = 0)  
 - **Asynchrone** : Le Primary envoie les données sans attendre (meilleure performance)
 
 → **Voir section 17.6.1** pour le détail des trade-offs
@@ -169,8 +169,8 @@ Une architecture PostgreSQL hautement disponible se compose de plusieurs briques
 **Objectif :** Détecter rapidement qu'un serveur est en panne ou ne répond plus.
 
 **Mécanismes :**
-- **Health checks réseau** : Vérification régulière de la connectivité (ping, connexion TCP)
-- **Health checks applicatifs** : Exécution de requêtes SQL simples (`SELECT 1`)
+- **Health checks réseau** : Vérification régulière de la connectivité (ping, connexion TCP)  
+- **Health checks applicatifs** : Exécution de requêtes SQL simples (`SELECT 1`)  
 - **Monitoring des métriques** : CPU, mémoire, I/O, replication lag
 
 **Fréquence typique :** 1 à 10 secondes
@@ -182,14 +182,14 @@ Une architecture PostgreSQL hautement disponible se compose de plusieurs briques
 **Objectif :** Promouvoir automatiquement un Standby en Primary lorsque le Primary tombe.
 
 **Types :**
-- **Failover manuel** : L'administrateur décide et lance la promotion
+- **Failover manuel** : L'administrateur décide et lance la promotion  
 - **Failover automatique** : Détection et promotion automatiques (ex: Patroni, Repmgr)
 
 **Étapes typiques d'un failover :**
-1. Détection de la panne du Primary
-2. Élection d'un nouveau Primary parmi les Standby
-3. Promotion du Standby élu en Primary
-4. Redirection du trafic vers le nouveau Primary
+1. Détection de la panne du Primary  
+2. Élection d'un nouveau Primary parmi les Standby  
+3. Promotion du Standby élu en Primary  
+4. Redirection du trafic vers le nouveau Primary  
 5. Reconfiguration des autres Standby
 
 **Durée :** De quelques secondes à quelques minutes selon l'automatisation.
@@ -202,13 +202,13 @@ Une architecture PostgreSQL hautement disponible se compose de plusieurs briques
 Si deux serveurs croient tous les deux être le Primary → corruption de données !
 
 **Solutions :**
-- **Algorithmes de consensus** : Raft, Paxos (utilisés par etcd, Consul, Zookeeper)
-- **Quorum** : Décisions prises par majorité
+- **Algorithmes de consensus** : Raft, Paxos (utilisés par etcd, Consul, Zookeeper)  
+- **Quorum** : Décisions prises par majorité  
 - **Fencing** : Isolation forcée du serveur défaillant
 
 **Outils pour PostgreSQL :**
-- **Patroni** + etcd/Consul/Zookeeper
-- **Repmgr** + repmgrd
+- **Patroni** + etcd/Consul/Zookeeper  
+- **Repmgr** + repmgrd  
 - **Pacemaker** + Corosync
 
 ### 5. Load Balancing (Répartition de Charge)
@@ -219,8 +219,8 @@ Si deux serveurs croient tous les deux être le Primary → corruption de donné
 - Détecter et retirer les serveurs défaillants
 
 **Solutions :**
-- **HAProxy** : Proxy TCP rapide et léger
-- **PgPool-II** : Middleware PostgreSQL avec routing intelligent
+- **HAProxy** : Proxy TCP rapide et léger  
+- **PgPool-II** : Middleware PostgreSQL avec routing intelligent  
 - **PgBouncer** : Connection pooler (souvent combiné avec HAProxy)
 
 → **Voir section 17.6.3** pour une comparaison détaillée
@@ -233,8 +233,8 @@ Si deux serveurs croient tous les deux être le Primary → corruption de donné
 - Catastrophes (perte complète du datacenter)
 
 **Types :**
-- **Sauvegardes logiques** : pg_dump (base ou tables spécifiques)
-- **Sauvegardes physiques** : pg_basebackup (copie complète)
+- **Sauvegardes logiques** : pg_dump (base ou tables spécifiques)  
+- **Sauvegardes physiques** : pg_basebackup (copie complète)  
 - **PITR (Point-In-Time Recovery)** : Restauration à un instant précis via WAL
 
 **Note :** La réplication ne remplace PAS les backups ! Elle protège contre les pannes matérielles, pas contre les erreurs logiques.
@@ -252,9 +252,9 @@ Standby (Hot Standby)
 ```
 
 **Caractéristiques :**
-- ✅ Simple à mettre en place
-- ✅ Coût réduit (2 serveurs minimum)
-- ⚠️ RTO élevé (intervention humaine nécessaire)
+- ✅ Simple à mettre en place  
+- ✅ Coût réduit (2 serveurs minimum)  
+- ⚠️ RTO élevé (intervention humaine nécessaire)  
 - ⚠️ Risque d'erreur humaine pendant le failover
 
 **Disponibilité visée :** 99% - 99.9%
@@ -274,9 +274,9 @@ Standby2
 ```
 
 **Caractéristiques :**
-- ✅ Basculement automatique (30 secondes à 2 minutes)
-- ✅ Pas d'intervention humaine nécessaire
-- ⚠️ Complexité accrue (système de consensus)
+- ✅ Basculement automatique (30 secondes à 2 minutes)  
+- ✅ Pas d'intervention humaine nécessaire  
+- ⚠️ Complexité accrue (système de consensus)  
 - ⚠️ Coût plus élevé (3+ serveurs recommandés)
 
 **Disponibilité visée :** 99.9% - 99.99%
@@ -296,9 +296,9 @@ Standby2
 ```
 
 **Caractéristiques :**
-- ✅ Aucune perte de données (RPO = 0)
-- ✅ Tolérance aux pannes (quorum)
-- ⚠️ Impact sur les performances (latence synchrone)
+- ✅ Aucune perte de données (RPO = 0)  
+- ✅ Tolérance aux pannes (quorum)  
+- ⚠️ Impact sur les performances (latence synchrone)  
 - ⚠️ Nécessite 3+ serveurs
 
 **Disponibilité visée :** 99.99% - 99.999%
@@ -321,10 +321,10 @@ Datacenter 1 (Principal)        Datacenter 2 (Secours)
 ```
 
 **Caractéristiques :**
-- ✅ Protection géographique (catastrophe naturelle)
-- ✅ RPO faible localement (synchrone local)
-- ✅ Résilience maximale
-- ⚠️ Complexité élevée
+- ✅ Protection géographique (catastrophe naturelle)  
+- ✅ RPO faible localement (synchrone local)  
+- ✅ Résilience maximale  
+- ⚠️ Complexité élevée  
 - ⚠️ Coût important (infrastructure multi-sites)
 
 **Disponibilité visée :** 99.99% - 99.999%
@@ -353,10 +353,10 @@ Datacenter 1 (Principal)        Datacenter 2 (Secours)
 ```
 
 **Caractéristiques :**
-- ✅ Aucun SPOF
-- ✅ Failover automatique multi-niveaux
-- ✅ Disponibilité maximale
-- ⚠️ Complexité opérationnelle très élevée
+- ✅ Aucun SPOF  
+- ✅ Failover automatique multi-niveaux  
+- ✅ Disponibilité maximale  
+- ⚠️ Complexité opérationnelle très élevée  
 - ⚠️ Coût important (personnel, infrastructure)
 
 **Disponibilité visée :** 99.999% - 99.9999%
@@ -372,21 +372,21 @@ Construire une architecture HA implique toujours des compromis :
 ### 1. Performance vs Fiabilité
 
 **Réplication synchrone :**
-- ➕ RPO = 0 (aucune perte de données)
+- ➕ RPO = 0 (aucune perte de données)  
 - ➖ Latence accrue (attente des Standby)
 
 **Réplication asynchrone :**
-- ➕ Performance maximale
+- ➕ Performance maximale  
 - ➖ Risque de perte de quelques secondes de données
 
 ### 2. Simplicité vs Résilience
 
 **Architecture simple (2 serveurs, failover manuel) :**
-- ➕ Facile à comprendre et maintenir
+- ➕ Facile à comprendre et maintenir  
 - ➖ RTO élevé, intervention humaine nécessaire
 
 **Architecture complexe (5+ serveurs, multi-datacenter, failover auto) :**
-- ➕ RTO très faible, résilience maximale
+- ➕ RTO très faible, résilience maximale  
 - ➖ Complexité opérationnelle, coût élevé
 
 ### 3. Coût vs Disponibilité
@@ -403,11 +403,11 @@ Construire une architecture HA implique toujours des compromis :
 ### 4. Automatisation vs Contrôle
 
 **Failover automatique :**
-- ➕ Réaction rapide (secondes)
+- ➕ Réaction rapide (secondes)  
 - ➖ Risque de faux positifs (promotion inutile)
 
 **Failover manuel :**
-- ➕ Contrôle total (pas de surprise)
+- ➕ Contrôle total (pas de surprise)  
 - ➖ RTO élevé (attente de l'humain)
 
 ---
@@ -420,8 +420,8 @@ Construire une architecture HA implique toujours des compromis :
 ```
 Disponibilité = MTBF / (MTBF + MTTR)
 
-MTBF = Mean Time Between Failures (temps moyen entre pannes)
-MTTR = Mean Time To Repair (temps moyen de réparation)
+MTBF = Mean Time Between Failures (temps moyen entre pannes)  
+MTTR = Mean Time To Repair (temps moyen de réparation)  
 ```
 
 **Exemple :**
@@ -455,12 +455,12 @@ MTTR = Mean Time To Repair (temps moyen de réparation)
 **Fréquence recommandée :** Tous les 3 à 6 mois
 
 **Procédure :**
-1. Planifier le test en dehors des heures de pointe
-2. Documenter l'état initial
-3. Déclencher une panne du Primary (arrêt propre)
-4. Mesurer le temps de détection + promotion
-5. Vérifier l'intégrité des données
-6. Tester la réintégration de l'ancien Primary
+1. Planifier le test en dehors des heures de pointe  
+2. Documenter l'état initial  
+3. Déclencher une panne du Primary (arrêt propre)  
+4. Mesurer le temps de détection + promotion  
+5. Vérifier l'intégrité des données  
+6. Tester la réintégration de l'ancien Primary  
 7. Documenter les observations
 
 **Métriques à mesurer :**
@@ -501,53 +501,53 @@ MTTR = Mean Time To Repair (temps moyen de réparation)
 Utilisez cette checklist pour évaluer où vous en êtes :
 
 ### Niveau 0 : Aucune HA
-- [ ] Un seul serveur PostgreSQL
-- [ ] Pas de réplication
-- [ ] Sauvegardes manuelles (ou inexistantes)
-- [ ] Pas de monitoring
-- **Disponibilité :** ~95% - 99%
+- [ ] Un seul serveur PostgreSQL  
+- [ ] Pas de réplication  
+- [ ] Sauvegardes manuelles (ou inexistantes)  
+- [ ] Pas de monitoring  
+- **Disponibilité :** ~95% - 99%  
 - **Action :** Mettre en place des backups automatiques dès maintenant !
 
 ### Niveau 1 : HA Basique
-- [ ] 1 Primary + 1 Standby en streaming replication
-- [ ] Sauvegardes automatisées (pg_dump ou pg_basebackup)
-- [ ] Monitoring basique (CPU, mémoire, disque)
-- [ ] Procédure de failover documentée (manuel)
-- **Disponibilité :** 99% - 99.9%
+- [ ] 1 Primary + 1 Standby en streaming replication  
+- [ ] Sauvegardes automatisées (pg_dump ou pg_basebackup)  
+- [ ] Monitoring basique (CPU, mémoire, disque)  
+- [ ] Procédure de failover documentée (manuel)  
+- **Disponibilité :** 99% - 99.9%  
 - **Action :** Tester le failover manuel au moins une fois
 
 ### Niveau 2 : HA Intermédiaire
-- [ ] 1 Primary + 2+ Standby
-- [ ] Réplication streaming + WAL archiving
-- [ ] Sauvegardes avec PITR
-- [ ] Monitoring avancé (pg_stat_replication, lag, locks)
-- [ ] Alerting configuré (PagerDuty, OpsGenie, etc.)
-- [ ] Load balancer basique (HAProxy)
-- **Disponibilité :** 99.9% - 99.99%
+- [ ] 1 Primary + 2+ Standby  
+- [ ] Réplication streaming + WAL archiving  
+- [ ] Sauvegardes avec PITR  
+- [ ] Monitoring avancé (pg_stat_replication, lag, locks)  
+- [ ] Alerting configuré (PagerDuty, OpsGenie, etc.)  
+- [ ] Load balancer basique (HAProxy)  
+- **Disponibilité :** 99.9% - 99.99%  
 - **Action :** Implémenter un failover automatique
 
 ### Niveau 3 : HA Avancée
-- [ ] Architecture avec quorum (3+ Standby)
-- [ ] Failover automatique (Patroni, Repmgr)
-- [ ] Réplication synchrone locale + asynchrone distante
-- [ ] Load balancing intelligent (PgPool-II ou HAProxy avec détection auto)
-- [ ] Connection pooling (PgBouncer)
-- [ ] Monitoring complet (métriques + logs + APM)
-- [ ] Tests de failover réguliers
-- [ ] Runbooks détaillés
-- **Disponibilité :** 99.99% - 99.999%
+- [ ] Architecture avec quorum (3+ Standby)  
+- [ ] Failover automatique (Patroni, Repmgr)  
+- [ ] Réplication synchrone locale + asynchrone distante  
+- [ ] Load balancing intelligent (PgPool-II ou HAProxy avec détection auto)  
+- [ ] Connection pooling (PgBouncer)  
+- [ ] Monitoring complet (métriques + logs + APM)  
+- [ ] Tests de failover réguliers  
+- [ ] Runbooks détaillés  
+- **Disponibilité :** 99.99% - 99.999%  
 - **Action :** Effectuer des tests de chaos engineering
 
 ### Niveau 4 : HA Expert
-- [ ] Multi-datacenter avec réplication géographique
-- [ ] Aucun SPOF (load balancers redondants, etc.)
-- [ ] Quorum-based commit configuré
-- [ ] Disaster Recovery testé régulièrement
-- [ ] Automatisation complète (Terraform, Ansible, Kubernetes Operator)
-- [ ] Observabilité avancée (traces distribuées)
-- [ ] Game days trimestriels
-- [ ] RTO < 30 secondes, RPO = 0
-- **Disponibilité :** 99.999% - 99.9999%
+- [ ] Multi-datacenter avec réplication géographique  
+- [ ] Aucun SPOF (load balancers redondants, etc.)  
+- [ ] Quorum-based commit configuré  
+- [ ] Disaster Recovery testé régulièrement  
+- [ ] Automatisation complète (Terraform, Ansible, Kubernetes Operator)  
+- [ ] Observabilité avancée (traces distribuées)  
+- [ ] Game days trimestriels  
+- [ ] RTO < 30 secondes, RPO = 0  
+- **Disponibilité :** 99.999% - 99.9999%  
 - **Action :** Partager vos pratiques avec la communauté ! 🎉
 
 ---
@@ -658,11 +658,11 @@ La Haute Disponibilité n'est pas un produit qu'on achète, c'est une **discipli
 
 **Points clés à retenir :**
 
-1. 🎯 **Définissez vos objectifs** : RTO, RPO, disponibilité cible
-2. 🎯 **Éliminez les SPOF** : Redondance à tous les niveaux
-3. 🎯 **Automatisez intelligemment** : Réduisez le MTTR sans créer de faux positifs
-4. 🎯 **Testez, testez, testez** : Une HA non testée est une illusion
-5. 🎯 **Évoluez progressivement** : Ne sur-architecturez pas dès le départ
+1. 🎯 **Définissez vos objectifs** : RTO, RPO, disponibilité cible  
+2. 🎯 **Éliminez les SPOF** : Redondance à tous les niveaux  
+3. 🎯 **Automatisez intelligemment** : Réduisez le MTTR sans créer de faux positifs  
+4. 🎯 **Testez, testez, testez** : Une HA non testée est une illusion  
+5. 🎯 **Évoluez progressivement** : Ne sur-architecturez pas dès le départ  
 6. 🎯 **Documentez tout** : Les runbooks sauvent des vies (et des emplois)
 
 La haute disponibilité est un voyage, pas une destination. Commencez par les fondations solides (backups, monitoring), puis progressez vers l'automatisation et la résilience maximale.

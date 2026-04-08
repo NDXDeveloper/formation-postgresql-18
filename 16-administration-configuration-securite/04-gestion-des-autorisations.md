@@ -40,10 +40,10 @@ DELETE FROM clients;  -- Catastrophe !
 
 ### Les Bénéfices d'une Bonne Gestion
 
-- ✅ **Sécurité renforcée** : Chaque utilisateur n'a accès qu'à ce dont il a besoin
-- ✅ **Conformité réglementaire** : Traçabilité et contrôle des accès
-- ✅ **Limitation des dégâts** : Un compte compromis a un impact limité
-- ✅ **Responsabilisation** : Chacun a des permissions adaptées à son rôle
+- ✅ **Sécurité renforcée** : Chaque utilisateur n'a accès qu'à ce dont il a besoin  
+- ✅ **Conformité réglementaire** : Traçabilité et contrôle des accès  
+- ✅ **Limitation des dégâts** : Un compte compromis a un impact limité  
+- ✅ **Responsabilisation** : Chacun a des permissions adaptées à son rôle  
 - ✅ **Confiance** : Les données sensibles sont protégées
 
 ---
@@ -105,7 +105,7 @@ SELECT * FROM clients;
 
 Dans PostgreSQL, on ne parle pas vraiment "d'utilisateurs" mais de **rôles** (roles). Un rôle peut être :
 
-- **Un utilisateur** : Un rôle avec l'attribut LOGIN qui peut se connecter
+- **Un utilisateur** : Un rôle avec l'attribut LOGIN qui peut se connecter  
 - **Un groupe** : Un rôle sans LOGIN qui regroupe des permissions
 
 ```sql
@@ -171,14 +171,14 @@ GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO PUBLIC;
 ✅ **Bonne pratique** :
 ```sql
 -- Permissions granulaires selon le besoin
-GRANT SELECT ON TABLE clients TO lecteur_commercial;
-GRANT SELECT, INSERT, UPDATE ON TABLE commandes TO application_web;
+GRANT SELECT ON TABLE clients TO lecteur_commercial;  
+GRANT SELECT, INSERT, UPDATE ON TABLE commandes TO application_web;  
 ```
 
 **Avantages** :
-- 🔒 Limite l'impact d'un compte compromis
-- 🎯 Facilite les audits de sécurité
-- 📊 Rend les responsabilités claires
+- 🔒 Limite l'impact d'un compte compromis  
+- 🎯 Facilite les audits de sécurité  
+- 📊 Rend les responsabilités claires  
 - 🛡️ Réduit la surface d'attaque
 
 ---
@@ -198,17 +198,17 @@ GRANT privilege_type ON object_type object_name TO role_name;
 ### Anatomie d'une Commande GRANT
 
 ```sql
-GRANT  SELECT, INSERT          -- 1. Quels privilèges ?
-ON     TABLE clients           -- 2. Sur quel type d'objet ?
-TO     app_backend;            -- 3. À quel rôle ?
+GRANT  SELECT, INSERT          -- 1. Quels privilèges ?  
+ON     TABLE clients           -- 2. Sur quel type d'objet ?  
+TO     app_backend;            -- 3. À quel rôle ?  
 ```
 
 Décomposons :
-1. **GRANT** : Le verbe d'action (accorder)
-2. **SELECT, INSERT** : Les privilèges spécifiques
-3. **ON TABLE** : Le type d'objet concerné
-4. **clients** : Le nom de l'objet
-5. **TO** : Destinataire
+1. **GRANT** : Le verbe d'action (accorder)  
+2. **SELECT, INSERT** : Les privilèges spécifiques  
+3. **ON TABLE** : Le type d'objet concerné  
+4. **clients** : Le nom de l'objet  
+5. **TO** : Destinataire  
 6. **app_backend** : Le rôle qui reçoit les privilèges
 
 ### Exemples Simples
@@ -381,12 +381,12 @@ REVOKE SELECT ON TABLE donnees_sensibles FROM PUBLIC;
 
 ```sql
 -- Révoquer les permissions par défaut dangereuses
-REVOKE ALL ON DATABASE mydb FROM PUBLIC;
-REVOKE CREATE ON SCHEMA public FROM PUBLIC;
+REVOKE ALL ON DATABASE mydb FROM PUBLIC;  
+REVOKE CREATE ON SCHEMA public FROM PUBLIC;  
 
 -- Puis accorder explicitement selon les besoins
-GRANT CONNECT ON DATABASE mydb TO app_backend;
-GRANT USAGE ON SCHEMA public TO app_backend;
+GRANT CONNECT ON DATABASE mydb TO app_backend;  
+GRANT USAGE ON SCHEMA public TO app_backend;  
 ```
 
 ---
@@ -452,8 +452,8 @@ CREATE TABLE ma_table (id INTEGER);
 \dt+ ma_table
 
 -- Le propriétaire peut tout faire sans GRANT explicite
-SELECT * FROM ma_table;  -- ✅ OK
-DROP TABLE ma_table;     -- ✅ OK
+SELECT * FROM ma_table;  -- ✅ OK  
+DROP TABLE ma_table;     -- ✅ OK  
 ```
 
 ### Changer le Propriétaire
@@ -524,8 +524,8 @@ PostgreSQL gère les permissions sur plusieurs types d'objets. Cette section int
 ### 1. Niveau Database
 
 Permissions sur les bases de données elles-mêmes :
-- **CONNECT** : Se connecter à la base
-- **CREATE** : Créer de nouveaux schémas
+- **CONNECT** : Se connecter à la base  
+- **CREATE** : Créer de nouveaux schémas  
 - **TEMPORARY** : Créer des tables temporaires
 
 ```sql
@@ -535,7 +535,7 @@ GRANT CONNECT ON DATABASE production TO app_user;
 ### 2. Niveau Schema
 
 Permissions sur les schémas (namespaces) :
-- **USAGE** : Accéder aux objets du schéma
+- **USAGE** : Accéder aux objets du schéma  
 - **CREATE** : Créer des objets dans le schéma
 
 ```sql
@@ -545,15 +545,15 @@ GRANT USAGE ON SCHEMA app_data TO app_user;
 ### 3. Niveau Objets
 
 Permissions sur les objets individuels :
-- **Tables** : SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER
-- **Sequences** : USAGE, SELECT, UPDATE
-- **Functions** : EXECUTE
+- **Tables** : SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER  
+- **Sequences** : USAGE, SELECT, UPDATE  
+- **Functions** : EXECUTE  
 - **Types** : USAGE
 
 ```sql
-GRANT SELECT, INSERT ON TABLE clients TO app_user;
-GRANT USAGE ON SEQUENCE clients_id_seq TO app_user;
-GRANT EXECUTE ON FUNCTION calculer_total() TO app_user;
+GRANT SELECT, INSERT ON TABLE clients TO app_user;  
+GRANT USAGE ON SEQUENCE clients_id_seq TO app_user;  
+GRANT EXECUTE ON FUNCTION calculer_total() TO app_user;  
 ```
 
 ---
@@ -580,8 +580,8 @@ CREATE TABLE nouvelle_table (id INTEGER);
 Pour automatiser l'attribution des permissions sur les **futurs objets** :
 
 ```sql
-ALTER DEFAULT PRIVILEGES IN SCHEMA public
-GRANT SELECT ON TABLES TO lecteur;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public  
+GRANT SELECT ON TABLES TO lecteur;  
 
 -- Maintenant, toute nouvelle table aura automatiquement SELECT pour lecteur
 ```
@@ -612,14 +612,14 @@ Ce sujet crucial sera détaillé dans la section **16.4.3. Default privileges**.
 
 ```sql
 -- Permissions sur une table spécifique
-SELECT grantee, privilege_type
-FROM information_schema.table_privileges
-WHERE table_name = 'clients';
+SELECT grantee, privilege_type  
+FROM information_schema.table_privileges  
+WHERE table_name = 'clients';  
 
 -- Permissions d'un rôle spécifique
-SELECT table_name, privilege_type
-FROM information_schema.table_privileges
-WHERE grantee = 'app_user';
+SELECT table_name, privilege_type  
+FROM information_schema.table_privileges  
+WHERE grantee = 'app_user';  
 ```
 
 ### Fonctions Utiles
@@ -667,8 +667,8 @@ SELECT * FROM app_data.users;
 
 **Solution** :
 ```sql
-GRANT USAGE ON SCHEMA app_data TO mon_utilisateur;
-GRANT SELECT ON TABLE app_data.users TO mon_utilisateur;
+GRANT USAGE ON SCHEMA app_data TO mon_utilisateur;  
+GRANT SELECT ON TABLE app_data.users TO mon_utilisateur;  
 ```
 
 ### Erreur 3 : "permission denied for database"
@@ -711,28 +711,28 @@ Créez des rôles groupes par fonction, pas par personne :
 
 ```sql
 -- Rôles groupes
-CREATE ROLE lecteurs;
-CREATE ROLE editeurs;
-CREATE ROLE administrateurs;
+CREATE ROLE lecteurs;  
+CREATE ROLE editeurs;  
+CREATE ROLE administrateurs;  
 
 -- Permissions sur les groupes
-GRANT SELECT ON ALL TABLES IN SCHEMA public TO lecteurs;
-GRANT SELECT, INSERT, UPDATE ON ALL TABLES IN SCHEMA public TO editeurs;
-GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO administrateurs;
+GRANT SELECT ON ALL TABLES IN SCHEMA public TO lecteurs;  
+GRANT SELECT, INSERT, UPDATE ON ALL TABLES IN SCHEMA public TO editeurs;  
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO administrateurs;  
 
 -- Utilisateurs individuels
-CREATE ROLE alice LOGIN PASSWORD 'pass';
-CREATE ROLE bob LOGIN PASSWORD 'pass';
+CREATE ROLE alice LOGIN PASSWORD 'pass';  
+CREATE ROLE bob LOGIN PASSWORD 'pass';  
 
 -- Affectation aux groupes
-GRANT lecteurs TO alice;
-GRANT editeurs TO bob;
+GRANT lecteurs TO alice;  
+GRANT editeurs TO bob;  
 ```
 
 **Avantages** :
-- 🎯 Gestion centralisée
-- 🔄 Facilité de maintenance
-- 📊 Clarté des responsabilités
+- 🎯 Gestion centralisée  
+- 🔄 Facilité de maintenance  
+- 📊 Clarté des responsabilités  
 - ⚡ Changements rapides
 
 ### 2. Approche par Environnement
@@ -741,16 +741,16 @@ Différenciez les permissions selon l'environnement :
 
 ```sql
 -- Développement : permissif
-ALTER DEFAULT PRIVILEGES IN SCHEMA public
-GRANT ALL PRIVILEGES ON TABLES TO developpeurs;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public  
+GRANT ALL PRIVILEGES ON TABLES TO developpeurs;  
 
 -- Staging : intermédiaire
-ALTER DEFAULT PRIVILEGES IN SCHEMA public
-GRANT SELECT, INSERT, UPDATE ON TABLES TO app_staging;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public  
+GRANT SELECT, INSERT, UPDATE ON TABLES TO app_staging;  
 
 -- Production : restrictif
-ALTER DEFAULT PRIVILEGES IN SCHEMA public
-GRANT SELECT, INSERT, UPDATE ON TABLES TO app_production;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public  
+GRANT SELECT, INSERT, UPDATE ON TABLES TO app_production;  
 -- DELETE nécessite une approbation séparée
 ```
 
@@ -760,16 +760,16 @@ Isolez les permissions par schéma :
 
 ```sql
 -- Schéma public : données partagées
-GRANT USAGE ON SCHEMA public TO PUBLIC;
-GRANT SELECT ON ALL TABLES IN SCHEMA public TO PUBLIC;
+GRANT USAGE ON SCHEMA public TO PUBLIC;  
+GRANT SELECT ON ALL TABLES IN SCHEMA public TO PUBLIC;  
 
 -- Schéma app_internal : données de l'application
-GRANT USAGE ON SCHEMA app_internal TO app_backend;
-GRANT SELECT, INSERT, UPDATE ON ALL TABLES IN SCHEMA app_internal TO app_backend;
+GRANT USAGE ON SCHEMA app_internal TO app_backend;  
+GRANT SELECT, INSERT, UPDATE ON ALL TABLES IN SCHEMA app_internal TO app_backend;  
 
 -- Schéma admin : données sensibles
-GRANT USAGE ON SCHEMA admin TO administrateurs;
-GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA admin TO administrateurs;
+GRANT USAGE ON SCHEMA admin TO administrateurs;  
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA admin TO administrateurs;  
 ```
 
 ---
@@ -779,25 +779,25 @@ GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA admin TO administrateurs;
 Avant de mettre une base de données en production, vérifiez :
 
 ### Niveau Database
-- [ ] CONNECT révoqué de PUBLIC
-- [ ] CONNECT accordé uniquement aux rôles nécessaires
+- [ ] CONNECT révoqué de PUBLIC  
+- [ ] CONNECT accordé uniquement aux rôles nécessaires  
 - [ ] CREATE révoqué de PUBLIC (sauf cas spécifiques)
 
 ### Niveau Schema
-- [ ] USAGE accordé uniquement aux rôles nécessaires
-- [ ] CREATE sur le schéma public révoqué de PUBLIC
+- [ ] USAGE accordé uniquement aux rôles nécessaires  
+- [ ] CREATE sur le schéma public révoqué de PUBLIC  
 - [ ] Schémas séparés pour différentes fonctions
 
 ### Niveau Objets
-- [ ] Aucune table accessible par PUBLIC (sauf données vraiment publiques)
-- [ ] Permissions granulaires (pas de ALL PRIVILEGES sauf pour admin)
-- [ ] USAGE accordé sur les séquences nécessaires
+- [ ] Aucune table accessible par PUBLIC (sauf données vraiment publiques)  
+- [ ] Permissions granulaires (pas de ALL PRIVILEGES sauf pour admin)  
+- [ ] USAGE accordé sur les séquences nécessaires  
 - [ ] EXECUTE sur fonctions révoqué de PUBLIC
 
 ### Niveau Configuration
-- [ ] Default privileges configurés pour les nouveaux objets
-- [ ] Rôles groupes créés et utilisés
-- [ ] Documentation des permissions
+- [ ] Default privileges configurés pour les nouveaux objets  
+- [ ] Rôles groupes créés et utilisés  
+- [ ] Documentation des permissions  
 - [ ] Audit régulier des accès
 
 ---
@@ -833,10 +833,10 @@ Automatise l'attribution des permissions :
 
 La gestion des autorisations avec GRANT et REVOKE est un pilier fondamental de la sécurité PostgreSQL. Elle repose sur des principes simples mais puissants :
 
-- ✅ **Principe du moindre privilège** : Donnez le minimum nécessaire
-- ✅ **Granularité** : Contrôle précis au niveau database, schéma, objet
-- ✅ **Hiérarchie** : Les permissions se cumulent à travers les niveaux
-- ✅ **Révocabilité** : Tout privilège accordé peut être retiré
+- ✅ **Principe du moindre privilège** : Donnez le minimum nécessaire  
+- ✅ **Granularité** : Contrôle précis au niveau database, schéma, objet  
+- ✅ **Hiérarchie** : Les permissions se cumulent à travers les niveaux  
+- ✅ **Révocabilité** : Tout privilège accordé peut être retiré  
 - ✅ **Auditabilité** : Vérification et traçabilité des accès
 
 Les sections suivantes vous fourniront tous les détails pratiques pour maîtriser ces concepts et les appliquer efficacement dans vos projets.

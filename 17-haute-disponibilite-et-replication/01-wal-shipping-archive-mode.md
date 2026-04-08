@@ -23,11 +23,11 @@ Dans ce chapitre, nous allons explorer en détail ce qu'est le WAL, pourquoi il 
 
 Imaginons que vous teniez un journal personnel :
 
-- **Votre journal (WAL)** : Vous y écrivez tous les événements de votre journée au fur et à mesure qu'ils se produisent
+- **Votre journal (WAL)** : Vous y écrivez tous les événements de votre journée au fur et à mesure qu'ils se produisent  
 - **Votre mémoire (fichiers de données)** : Parfois, vous oubliez des détails, mais vous pouvez toujours relire votre journal pour vous souvenir
 
 De la même manière, PostgreSQL :
-1. **Écrit d'abord dans le WAL** toutes les modifications (INSERT, UPDATE, DELETE)
+1. **Écrit d'abord dans le WAL** toutes les modifications (INSERT, UPDATE, DELETE)  
 2. **Applique ensuite ces modifications** aux fichiers de données réels (de manière asynchrone)
 
 ### 1.3. Pourquoi utiliser un WAL ?
@@ -81,21 +81,21 @@ Le WAL contient des **enregistrements** (records) qui décrivent :
 
 Exemple conceptuel :
 ```
-INSERT INTO users VALUES (123, 'Alice', 'alice@example.com')
-UPDATE users SET email='alice.new@example.com' WHERE id=123
-DELETE FROM users WHERE id=123
+INSERT INTO users VALUES (123, 'Alice', 'alice@example.com')  
+UPDATE users SET email='alice.new@example.com' WHERE id=123  
+DELETE FROM users WHERE id=123  
 ```
 
 ### 2.3. Le processus de checkpoint
 
 PostgreSQL ne peut pas garder indéfiniment le WAL en mémoire. Périodiquement, il effectue un **checkpoint** :
 
-1. **Flush** : Toutes les modifications en mémoire sont écrites sur disque
-2. **Nettoyage** : Les fichiers WAL antérieurs au checkpoint peuvent être recyclés
+1. **Flush** : Toutes les modifications en mémoire sont écrites sur disque  
+2. **Nettoyage** : Les fichiers WAL antérieurs au checkpoint peuvent être recyclés  
 3. **Marqueur** : Un enregistrement spécial indique le point de checkpoint dans le WAL
 
 **Paramètres importants :**
-- `checkpoint_timeout` : Intervalle maximum entre deux checkpoints (par défaut 5 minutes)
+- `checkpoint_timeout` : Intervalle maximum entre deux checkpoints (par défaut 5 minutes)  
 - `max_wal_size` : Taille maximum de WAL avant de déclencher un checkpoint (par défaut 1 Go)
 
 ---
@@ -170,8 +170,8 @@ L'archivage WAL se configure principalement via trois paramètres dans `postgres
 Détermine la quantité d'informations écrites dans le WAL.
 
 **Valeurs possibles :**
-- `minimal` : Minimum d'informations (pas de réplication possible)
-- `replica` : Informations suffisantes pour la réplication physique
+- `minimal` : Minimum d'informations (pas de réplication possible)  
+- `replica` : Informations suffisantes pour la réplication physique  
 - `logical` : Informations pour la réplication logique (le plus verbeux)
 
 **Configuration recommandée pour l'archivage :**
@@ -186,8 +186,8 @@ wal_level = replica
 Active ou désactive l'archivage.
 
 **Valeurs possibles :**
-- `off` : Archivage désactivé (par défaut)
-- `on` : Archivage activé
+- `off` : Archivage désactivé (par défaut)  
+- `on` : Archivage activé  
 - `always` : Archivage même en standby (PostgreSQL 9.5+)
 
 **Configuration :**
@@ -207,7 +207,7 @@ archive_command = 'command %p %f'
 ```
 
 **Variables disponibles :**
-- `%p` : Chemin complet du fichier WAL à archiver
+- `%p` : Chemin complet du fichier WAL à archiver  
 - `%f` : Nom du fichier WAL uniquement
 
 ### 4.2. Exemples de commandes d'archivage
@@ -276,9 +276,9 @@ archive_command = 'pgbackrest --stanza=my-db archive-push %p'
 - Si l'archivage échoue trop longtemps, `pg_wal/` peut se remplir et **bloquer la base**
 
 **Bonnes pratiques :**
-1. Toujours tester votre `archive_command` manuellement avant de l'activer
-2. Surveiller l'espace disque de `pg_wal/`
-3. Mettre en place des alertes sur les échecs d'archivage
+1. Toujours tester votre `archive_command` manuellement avant de l'activer  
+2. Surveiller l'espace disque de `pg_wal/`  
+3. Mettre en place des alertes sur les échecs d'archivage  
 4. Prévoir un mécanisme de nettoyage d'urgence
 
 ### 4.4. Configuration complète d'exemple
@@ -373,7 +373,7 @@ FROM pg_stat_archiver;
 ```
 
 **Interprétation :**
-- `failed_count` devrait être 0 en production
+- `failed_count` devrait être 0 en production  
 - `last_archived_time` devrait être récent (quelques minutes)
 
 #### Vérifier l'espace disque de pg_wal/
@@ -395,9 +395,9 @@ ls -l /var/lib/postgresql/14/main/pg_wal/ | grep -v "archive_status" | wc -l
 #### Symptôme 1 : pg_wal/ se remplit
 
 **Causes possibles :**
-1. La commande d'archivage échoue
-2. Le stockage de destination est plein
-3. Problème réseau (pour archivage distant)
+1. La commande d'archivage échoue  
+2. Le stockage de destination est plein  
+3. Problème réseau (pour archivage distant)  
 4. Permissions insuffisantes
 
 **Diagnostic :**
@@ -414,8 +414,8 @@ echo $?  # Doit retourner 0
 #### Symptôme 2 : Archivage lent
 
 **Causes possibles :**
-1. Bande passante réseau insuffisante
-2. Stockage de destination lent (disque, réseau)
+1. Bande passante réseau insuffisante  
+2. Stockage de destination lent (disque, réseau)  
 3. Compression CPU-intensive
 
 **Solution :**
@@ -486,8 +486,8 @@ Pour un système de production robuste, surveillez :
 #!/bin/bash
 # archive_multi.sh
 
-WAL_PATH=$1
-WAL_FILE=$2
+WAL_PATH=$1  
+WAL_FILE=$2  
 
 # Copie locale rapide
 cp "$WAL_PATH" /mnt/local/archive/"$WAL_FILE" || exit 1
@@ -567,8 +567,8 @@ Les archives WAL peuvent rapidement consommer de l'espace disque. Planifiez une 
 #!/bin/bash
 # cleanup_old_wal.sh
 
-ARCHIVE_DIR="/mnt/archive/pg_wal"
-RETENTION_DAYS=7
+ARCHIVE_DIR="/mnt/archive/pg_wal"  
+RETENTION_DAYS=7  
 
 # Supprimer les fichiers WAL plus vieux que RETENTION_DAYS
 find "$ARCHIVE_DIR" -name "0*" -type f -mtime +$RETENTION_DAYS -delete
@@ -583,9 +583,9 @@ echo "$(date): Cleaned WAL archives older than $RETENTION_DAYS days" >> /var/log
 
 L'archivage WAL n'a de valeur que si vous pouvez restaurer :
 
-1. **Testez votre procédure de restauration** au moins trimestriellement
-2. **Documentez le processus** étape par étape
-3. **Mesurez les temps** de restauration (RTO - Recovery Time Objective)
+1. **Testez votre procédure de restauration** au moins trimestriellement  
+2. **Documentez le processus** étape par étape  
+3. **Mesurez les temps** de restauration (RTO - Recovery Time Objective)  
 4. **Vérifiez l'intégrité** des archives régulièrement
 
 ### 8.5. Monitoring et alerting
@@ -629,9 +629,9 @@ df -h /var/lib/postgresql/14/main/pg_wal/
 tail -100 /var/log/postgresql/postgresql-14-main.log | grep -i archive
 
 # 3. Si nécessaire, archiver manuellement et temporairement
-su - postgres
-cd /var/lib/postgresql/14/main/pg_wal/
-for f in 0*; do
+su - postgres  
+cd /var/lib/postgresql/14/main/pg_wal/  
+for f in 0*; do  
   if [ -f "$f" ]; then
     cp "$f" /mnt/backup/emergency/ && rm "$f"
   fi
@@ -644,10 +644,10 @@ done
 
 Ce sera détaillé dans le chapitre sur PITR, mais voici le principe :
 
-1. Restaurer une sauvegarde de base (pg_basebackup)
-2. Placer les archives WAL dans le répertoire approprié
-3. Créer un fichier `recovery.signal`
-4. Configurer `restore_command` dans `postgresql.auto.conf`
+1. Restaurer une sauvegarde de base (pg_basebackup)  
+2. Placer les archives WAL dans le répertoire approprié  
+3. Créer un fichier `recovery.signal`  
+4. Configurer `restore_command` dans `postgresql.auto.conf`  
 5. Démarrer PostgreSQL qui rejouera les WAL jusqu'au point souhaité
 
 ### Scénario 3 : "L'archivage est lent et bloque la production"
@@ -660,9 +660,9 @@ SELECT * FROM pg_stat_archiver;
 Si `last_archived_time` est ancien malgré une activité élevée :
 
 **Solutions :**
-1. Utiliser un archivage local + copie asynchrone
-2. Augmenter `max_wal_size` pour espacer les checkpoints
-3. Optimiser le réseau ou le stockage de destination
+1. Utiliser un archivage local + copie asynchrone  
+2. Augmenter `max_wal_size` pour espacer les checkpoints  
+3. Optimiser le réseau ou le stockage de destination  
 4. Utiliser pgBackRest ou WAL-G (archivage parallèle)
 
 ---
@@ -677,7 +677,7 @@ PostgreSQL 18 introduit un nouveau système d'I/O asynchrone qui améliore signi
 
 **Configuration :**
 ```ini
-io_method = 'async'  # Nouvelle valeur par défaut en PG 18
+io_method = 'worker'  # Défaut PG 18 (ou 'io_uring' sur Linux 5.1+)
 ```
 
 **Gains de performance :**
@@ -735,8 +735,8 @@ Les améliorations de COPY en PostgreSQL 18 génèrent moins de WAL pour les ins
 ### Prochaines étapes
 
 Maintenant que vous comprenez l'archivage WAL, vous êtes prêt à explorer :
-- **17.2** : Réplication Physique (Streaming Replication)
-- **17.3** : Réplication Logique
+- **17.2** : Réplication Physique (Streaming Replication)  
+- **17.3** : Réplication Logique  
 - **Chapitre 16.11** : PITR (Point-In-Time Recovery) en pratique
 
 ---
@@ -744,12 +744,12 @@ Maintenant que vous comprenez l'archivage WAL, vous êtes prêt à explorer :
 ## Ressources complémentaires
 
 ### Documentation officielle
-- [PostgreSQL: Write-Ahead Logging (WAL)](https://www.postgresql.org/docs/current/wal.html)
+- [PostgreSQL: Write-Ahead Logging (WAL)](https://www.postgresql.org/docs/current/wal.html)  
 - [PostgreSQL: Continuous Archiving and Point-in-Time Recovery (PITR)](https://www.postgresql.org/docs/current/continuous-archiving.html)
 
 ### Outils recommandés
-- **pgBackRest** : Solution de backup/restore avancée avec archivage WAL optimisé
-- **WAL-G** : Outil d'archivage WAL avec support cloud natif (S3, Azure, GCS)
+- **pgBackRest** : Solution de backup/restore avancée avec archivage WAL optimisé  
+- **WAL-G** : Outil d'archivage WAL avec support cloud natif (S3, Azure, GCS)  
 - **Barman** : Backup and Recovery Manager pour PostgreSQL
 
 ### Lectures avancées

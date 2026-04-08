@@ -8,10 +8,10 @@ Bienvenue dans ce chapitre crucial consacré à l'**administration**, la **confi
 
 La sécurité d'une base de données n'est pas un luxe, c'est une **nécessité absolue**. Dans le monde d'aujourd'hui, où les cyberattaques sont quotidiennes et où les données personnelles sont protégées par des réglementations strictes (RGPD, HIPAA, PCI-DSS), une base de données mal sécurisée peut avoir des conséquences catastrophiques :
 
-- 💰 **Pertes financières** : Amendes réglementaires, pertes commerciales
-- 🔓 **Violations de données** : Vol d'informations sensibles (cartes bancaires, données médicales, secrets commerciaux)
-- ⚖️ **Conséquences légales** : Poursuites judiciaires, sanctions
-- 📉 **Réputation** : Perte de confiance des clients, image de marque dégradée
+- 💰 **Pertes financières** : Amendes réglementaires, pertes commerciales  
+- 🔓 **Violations de données** : Vol d'informations sensibles (cartes bancaires, données médicales, secrets commerciaux)  
+- ⚖️ **Conséquences légales** : Poursuites judiciaires, sanctions  
+- 📉 **Réputation** : Perte de confiance des clients, image de marque dégradée  
 - 🚫 **Interruptions de service** : Ransomwares, sabotage, corruption de données
 
 **Objectif de ce chapitre :** Vous donner les connaissances et les outils pour sécuriser, administrer et configurer PostgreSQL comme un professionnel, même si vous débutez.
@@ -28,13 +28,13 @@ Ce chapitre couvre **tous les aspects essentiels** de la sécurité et de l'admi
 
 Vous apprendrez à :
 
-- **Distinguer authentification et autorisation** : Comprendre la différence entre "qui êtes-vous ?" et "qu'avez-vous le droit de faire ?"
-- **Configurer l'authentification** : Méthodes de connexion (mot de passe, certificats, OAuth), fichier `pg_hba.conf`
-- **Migrer vers des méthodes modernes** : Abandonner MD5 (obsolète) pour SCRAM-SHA-256 (sécurisé)
-- **Gérer les utilisateurs et permissions** : Créer des rôles, groupes, appliquer le principe du moindre privilège
-- **Implémenter Row-Level Security (RLS)** : Filtrer automatiquement les données au niveau des lignes
-- **Chiffrer les connexions** : SSL/TLS pour protéger les données en transit
-- **Utiliser les nouveautés PostgreSQL 18** : Mode FIPS, TLS 1.3, OAuth 2.0
+- **Distinguer authentification et autorisation** : Comprendre la différence entre "qui êtes-vous ?" et "qu'avez-vous le droit de faire ?"  
+- **Configurer l'authentification** : Méthodes de connexion (mot de passe, certificats, OAuth), fichier `pg_hba.conf`  
+- **Migrer vers des méthodes modernes** : Abandonner MD5 (obsolète) pour SCRAM-SHA-256 (sécurisé)  
+- **Gérer les utilisateurs et permissions** : Créer des rôles, groupes, appliquer le principe du moindre privilège  
+- **Implémenter Row-Level Security (RLS)** : Filtrer automatiquement les données au niveau des lignes  
+- **Chiffrer les connexions** : SSL/TLS pour protéger les données en transit  
+- **Utiliser les nouveautés PostgreSQL 18** : Mode FIPS, TLS 1.3, OAuth 2.0  
 - **Chiffrer les données au repos** : Transparent Data Encryption (TDE) et alternatives
 
 **Pourquoi c'est important ?**
@@ -46,9 +46,9 @@ Sans sécurité appropriée, votre base de données est une porte ouverte pour l
 
 Vous apprendrez à :
 
-- **Maintenir votre base de données** : VACUUM, ANALYZE, Autovacuum
-- **Gérer les sauvegardes** : Sauvegardes logiques vs physiques, PITR, stratégies 3-2-1
-- **Activer les checksums** : Détecter automatiquement la corruption de données (nouveauté PostgreSQL 18)
+- **Maintenir votre base de données** : VACUUM, ANALYZE, Autovacuum  
+- **Gérer les sauvegardes** : Sauvegardes logiques vs physiques, PITR, stratégies 3-2-1  
+- **Activer les checksums** : Détecter automatiquement la corruption de données (nouveauté PostgreSQL 18)  
 - **Optimiser la configuration** : Tuning des paramètres critiques (`shared_buffers`, `work_mem`, etc.)
 
 **Pourquoi c'est important ?**
@@ -60,8 +60,8 @@ Une base de données non maintenue se dégrade progressivement : performances r�
 
 Vous apprendrez à :
 
-- **Mettre en place la haute disponibilité** : Réplication physique et logique
-- **Gérer le failover** : Promotion automatique en cas de panne
+- **Mettre en place la haute disponibilité** : Réplication physique et logique  
+- **Gérer le failover** : Promotion automatique en cas de panne  
 - **Architectures HA** : Patroni, Repmgr, synchrone vs asynchrone
 
 **Pourquoi c'est important ?**
@@ -99,9 +99,9 @@ L'autorisation est le processus de **contrôle des permissions** : une fois auth
 **Analogie :** Une fois entré dans l'immeuble avec votre badge, à quels étages avez-vous accès ?
 
 **Niveaux d'autorisation PostgreSQL :**
-- **Connexion** : Droit de se connecter à une base de données
-- **Objets** : Permissions sur tables, schémas, fonctions (SELECT, INSERT, UPDATE, DELETE)
-- **Lignes** : Row-Level Security (RLS) - filtrage au niveau des lignes
+- **Connexion** : Droit de se connecter à une base de données  
+- **Objets** : Permissions sur tables, schémas, fonctions (SELECT, INSERT, UPDATE, DELETE)  
+- **Lignes** : Row-Level Security (RLS) - filtrage au niveau des lignes  
 - **Colonnes** : Permissions au niveau colonne
 
 **Principe clé :** **Moindre privilège** (Least Privilege) - Ne jamais donner plus de droits que nécessaire.
@@ -339,24 +339,24 @@ Ce chapitre est organisé de manière progressive, du simple vers le complexe :
 
 ### Partie 1 : Fondamentaux de la Sécurité
 
-- **16.1** : Authentification vs Autorisation (concepts de base)
-- **16.2** : Configuration de l'authentification (`pg_hba.conf`)
-- **16.3** : Migration MD5 → SCRAM-SHA-256
-- **16.4** : Gestion des autorisations (`GRANT`/`REVOKE`)
-- **16.5** : Rôles, groupes et principe du moindre privilège
+- **16.1** : Authentification vs Autorisation (concepts de base)  
+- **16.2** : Configuration de l'authentification (`pg_hba.conf`)  
+- **16.3** : Migration MD5 → SCRAM-SHA-256  
+- **16.4** : Gestion des autorisations (`GRANT`/`REVOKE`)  
+- **16.5** : Rôles, groupes et principe du moindre privilège  
 - **16.6** : Row-Level Security (RLS)
 
 ### Partie 2 : Chiffrement
 
-- **16.7** : SSL/TLS et chiffrement des connexions
-- **16.8** : Nouveautés PostgreSQL 18 (FIPS, TLS 1.3)
+- **16.7** : SSL/TLS et chiffrement des connexions  
+- **16.8** : Nouveautés PostgreSQL 18 (FIPS, TLS 1.3)  
 - **16.9** : Chiffrement au repos (TDE)
 
 ### Partie 3 : Maintenance et Configuration
 
-- **16.10** : Maintenance vitale (VACUUM, ANALYZE)
-- **16.11** : Sauvegardes et restauration
-- **16.12** : Data Checksums (nouveauté PostgreSQL 18)
+- **16.10** : Maintenance vitale (VACUUM, ANALYZE)  
+- **16.11** : Sauvegardes et restauration  
+- **16.12** : Data Checksums (nouveauté PostgreSQL 18)  
 - **16.13** : Tuning et configuration
 
 ### Partie 4 : Haute Disponibilité (Avancé)
@@ -369,15 +369,15 @@ Ce chapitre est organisé de manière progressive, du simple vers le complexe :
 
 À la fin de ce chapitre, vous serez capable de :
 
-- ✅ **Sécuriser** une instance PostgreSQL de A à Z
-- ✅ **Configurer** l'authentification avec des méthodes modernes (SCRAM, SSL, OAuth)
-- ✅ **Gérer** les utilisateurs et permissions selon le principe du moindre privilège
-- ✅ **Chiffrer** les connexions (SSL/TLS) et les données au repos (TDE)
-- ✅ **Maintenir** PostgreSQL avec VACUUM, ANALYZE et Autovacuum
-- ✅ **Sauvegarder** et restaurer les données de manière fiable
-- ✅ **Optimiser** la configuration pour la production
-- ✅ **Mettre en place** la haute disponibilité avec réplication
-- ✅ **Éviter** les erreurs de sécurité courantes
+- ✅ **Sécuriser** une instance PostgreSQL de A à Z  
+- ✅ **Configurer** l'authentification avec des méthodes modernes (SCRAM, SSL, OAuth)  
+- ✅ **Gérer** les utilisateurs et permissions selon le principe du moindre privilège  
+- ✅ **Chiffrer** les connexions (SSL/TLS) et les données au repos (TDE)  
+- ✅ **Maintenir** PostgreSQL avec VACUUM, ANALYZE et Autovacuum  
+- ✅ **Sauvegarder** et restaurer les données de manière fiable  
+- ✅ **Optimiser** la configuration pour la production  
+- ✅ **Mettre en place** la haute disponibilité avec réplication  
+- ✅ **Éviter** les erreurs de sécurité courantes  
 - ✅ **Comprendre** les nouveautés PostgreSQL 18 (checksums, FIPS, TLS 1.3)
 
 ---
@@ -388,15 +388,15 @@ Avant de commencer ce chapitre, assurez-vous d'avoir :
 
 ### Connaissances
 
-- ✅ Bases du SQL (SELECT, INSERT, UPDATE, DELETE)
-- ✅ Concepts de tables, schémas, et bases de données
-- ✅ Utilisation basique de psql ou pgAdmin
+- ✅ Bases du SQL (SELECT, INSERT, UPDATE, DELETE)  
+- ✅ Concepts de tables, schémas, et bases de données  
+- ✅ Utilisation basique de psql ou pgAdmin  
 - ✅ Notions de Linux/Unix (ligne de commande)
 
 ### Environnement
 
-- ✅ PostgreSQL 18 installé (ou version récente)
-- ✅ Accès administrateur au système (pour configuration)
+- ✅ PostgreSQL 18 installé (ou version récente)  
+- ✅ Accès administrateur au système (pour configuration)  
 - ✅ Environnement de test (pour expérimenter sans risque)
 
 **Conseil :** Si vous n'êtes pas familier avec les bases de PostgreSQL, consultez d'abord les chapitres 1 à 5 du tutoriel.
@@ -410,9 +410,9 @@ Avant de commencer ce chapitre, assurez-vous d'avoir :
 **Recommandé pour :** Débutants, DBA juniors, ceux qui veulent une compréhension exhaustive
 
 **Approche :**
-1. Lisez les sections dans l'ordre (16.1 → 16.17)
-2. Prenez des notes sur les concepts clés
-3. Consultez les exemples et les bonnes pratiques
+1. Lisez les sections dans l'ordre (16.1 → 16.17)  
+2. Prenez des notes sur les concepts clés  
+3. Consultez les exemples et les bonnes pratiques  
 4. Révisez les checklists de configuration
 
 **Temps estimé :** 8-12 heures de lecture approfondie
@@ -422,11 +422,11 @@ Avant de commencer ce chapitre, assurez-vous d'avoir :
 **Recommandé pour :** DevOps pressés, migration vers production imminente
 
 **Sections essentielles :**
-1. 16.1 (Authentification vs Autorisation) - 30 min
-2. 16.2 (Configuration pg_hba.conf) - 45 min
-3. 16.5 (Rôles et privilèges) - 45 min
-4. 16.7 (SSL/TLS) - 1h
-5. 16.11 (Sauvegardes) - 1h
+1. 16.1 (Authentification vs Autorisation) - 30 min  
+2. 16.2 (Configuration pg_hba.conf) - 45 min  
+3. 16.5 (Rôles et privilèges) - 45 min  
+4. 16.7 (SSL/TLS) - 1h  
+5. 16.11 (Sauvegardes) - 1h  
 6. 16.13 (Configuration) - 1h
 
 **Temps estimé :** 5 heures (minimum vital)
@@ -436,11 +436,11 @@ Avant de commencer ce chapitre, assurez-vous d'avoir :
 **Recommandé pour :** Audits de conformité, revue de sécurité existante
 
 **Sections prioritaires :**
-1. 16.3 (Migration MD5 → SCRAM)
-2. 16.5 (Principe du moindre privilège)
-3. 16.6 (Row-Level Security)
-4. 16.7 (SSL/TLS)
-5. 16.8 (FIPS et TLS 1.3)
+1. 16.3 (Migration MD5 → SCRAM)  
+2. 16.5 (Principe du moindre privilège)  
+3. 16.6 (Row-Level Security)  
+4. 16.7 (SSL/TLS)  
+5. 16.8 (FIPS et TLS 1.3)  
 6. 16.9 (Chiffrement au repos)
 
 **+ Toutes les checklists de sécurité**
@@ -450,9 +450,9 @@ Avant de commencer ce chapitre, assurez-vous d'avoir :
 **Recommandé pour :** Administrateurs système, DBA confirmés
 
 **Sections clés :**
-1. 16.10 (VACUUM, ANALYZE)
-2. 16.11 (Sauvegardes)
-3. 16.12 (Data Checksums)
+1. 16.10 (VACUUM, ANALYZE)  
+2. 16.11 (Sauvegardes)  
+3. 16.12 (Data Checksums)  
 4. 16.13 (Tuning)
 
 ---
@@ -520,8 +520,8 @@ psql -h localhost -p 5433 -U postgres
 **Avant toute modification importante :**
 ```bash
 # Sauvegarder la configuration
-cp postgresql.conf postgresql.conf.backup
-cp pg_hba.conf pg_hba.conf.backup
+cp postgresql.conf postgresql.conf.backup  
+cp pg_hba.conf pg_hba.conf.backup  
 
 # Sauvegarder les données
 pg_dumpall > backup_avant_modif.sql
@@ -532,9 +532,9 @@ pg_dumpall > backup_avant_modif.sql
 **Appliquez les changements un par un, pas tous en même temps.**
 
 Exemple :
-1. Jour 1 : Activer SSL/TLS
-2. Jour 7 : Migrer vers SCRAM-SHA-256
-3. Jour 14 : Implémenter RLS
+1. Jour 1 : Activer SSL/TLS  
+2. Jour 7 : Migrer vers SCRAM-SHA-256  
+3. Jour 14 : Implémenter RLS  
 4. Jour 21 : Optimiser la configuration
 
 ### 5. Monitoring Continu
@@ -552,11 +552,11 @@ Exemple :
 Vous avez maintenant une vue d'ensemble complète de ce qui vous attend dans ce chapitre. La sécurité et l'administration d'une base de données PostgreSQL peuvent sembler intimidantes au début, mais avec les connaissances que vous allez acquérir, vous serez parfaitement équipé pour gérer PostgreSQL en production de manière professionnelle et sécurisée.
 
 **Rappelez-vous :**
-- 🎯 La sécurité est un **processus continu**, pas une tâche unique
-- 🛡️ La **défense en profondeur** est votre meilleure stratégie
-- 📚 **Apprenez des erreurs des autres** (c'est moins cher que d'apprendre des vôtres !)
-- 🧪 **Testez toujours** dans un environnement de développement d'abord
-- 📖 **Documentez tout** pour vous et vos collègues
+- 🎯 La sécurité est un **processus continu**, pas une tâche unique  
+- 🛡️ La **défense en profondeur** est votre meilleure stratégie  
+- 📚 **Apprenez des erreurs des autres** (c'est moins cher que d'apprendre des vôtres !)  
+- 🧪 **Testez toujours** dans un environnement de développement d'abord  
+- 📖 **Documentez tout** pour vous et vos collègues  
 - 🔄 **Mettez à jour régulièrement** PostgreSQL et vos connaissances
 
 ---
@@ -565,11 +565,11 @@ Vous avez maintenant une vue d'ensemble complète de ce qui vous attend dans ce 
 
 ### Symboles
 
-- ✅ **Bonne pratique** (à faire)
-- ❌ **Mauvaise pratique** (à éviter)
-- ⚠️ **Avertissement** (attention)
-- 🆕 **Nouveauté** PostgreSQL 18
-- 💡 **Conseil** pratique
+- ✅ **Bonne pratique** (à faire)  
+- ❌ **Mauvaise pratique** (à éviter)  
+- ⚠️ **Avertissement** (attention)  
+- 🆕 **Nouveauté** PostgreSQL 18  
+- 💡 **Conseil** pratique  
 - 🔧 **Configuration** requise
 
 ### Code et Commandes

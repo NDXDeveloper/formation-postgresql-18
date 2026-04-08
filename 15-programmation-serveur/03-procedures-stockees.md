@@ -19,7 +19,7 @@ Jusqu'à présent, nous avons étudié les **fonctions** dans PostgreSQL. À par
 ### Analogie simple
 
 Pensez à la différence comme celle entre :
-- **Fonction** = Une **calculatrice** : vous donnez des nombres, elle retourne un résultat
+- **Fonction** = Une **calculatrice** : vous donnez des nombres, elle retourne un résultat  
 - **Procédure** = Un **script d'automatisation** : elle fait un ensemble de tâches et termine
 
 ---
@@ -29,10 +29,10 @@ Pensez à la différence comme celle entre :
 ### 1.1. Syntaxe de base
 
 ```sql
-CREATE PROCEDURE nom_procedure(parametre1 TYPE, parametre2 TYPE, ...)
-LANGUAGE plpgsql
-AS $$
-BEGIN
+CREATE PROCEDURE nom_procedure(parametre1 TYPE, parametre2 TYPE, ...)  
+LANGUAGE plpgsql  
+AS $$  
+BEGIN  
     -- Corps de la procédure
     -- Instructions SQL, logique métier
 END;
@@ -47,10 +47,10 @@ $$;
 ### 1.2. Exemple simple : Afficher un message
 
 ```sql
-CREATE PROCEDURE afficher_message(message TEXT)
-LANGUAGE plpgsql
-AS $$
-BEGIN
+CREATE PROCEDURE afficher_message(message TEXT)  
+LANGUAGE plpgsql  
+AS $$  
+BEGIN  
     RAISE NOTICE 'Message : %', message;
 END;
 $$;
@@ -61,8 +61,8 @@ CALL afficher_message('Bonjour depuis une procédure !');
 ```
 
 **Points importants** :
-- ✅ On utilise `CALL` pour exécuter une procédure
-- ✅ Pas de `SELECT`, contrairement aux fonctions
+- ✅ On utilise `CALL` pour exécuter une procédure  
+- ✅ Pas de `SELECT`, contrairement aux fonctions  
 - ✅ Pas de valeur de retour
 
 ### 1.3. Exemple avec modification de données
@@ -72,9 +72,9 @@ CREATE PROCEDURE ajouter_client(
     nom_client TEXT,
     email_client TEXT
 )
-LANGUAGE plpgsql
-AS $$
-BEGIN
+LANGUAGE plpgsql  
+AS $$  
+BEGIN  
     INSERT INTO clients (nom, email, date_creation)
     VALUES (nom_client, email_client, NOW());
 
@@ -95,11 +95,11 @@ CALL ajouter_client('Alice Martin', 'alice@example.com');
 Avec une **fonction**, vous ne pouvez pas contrôler les transactions :
 
 ```sql
-CREATE FUNCTION traiter_commandes_fonction()
-RETURNS VOID
-LANGUAGE plpgsql
-AS $$
-BEGIN
+CREATE FUNCTION traiter_commandes_fonction()  
+RETURNS VOID  
+LANGUAGE plpgsql  
+AS $$  
+BEGIN  
     -- Traitement 1
     INSERT INTO logs VALUES ('Début traitement');
 
@@ -112,9 +112,9 @@ END;
 $$;
 
 -- Tout se passe dans UNE SEULE transaction
-BEGIN;
-SELECT traiter_commandes_fonction();
-COMMIT;  -- Un seul COMMIT pour tout
+BEGIN;  
+SELECT traiter_commandes_fonction();  
+COMMIT;  -- Un seul COMMIT pour tout  
 ```
 
 **Problème** : Si le traitement est long et touche beaucoup de données, vous bloquez des ressources pendant toute la durée.
@@ -124,10 +124,10 @@ COMMIT;  -- Un seul COMMIT pour tout
 Avec une **procédure**, vous pouvez faire des `COMMIT` et `ROLLBACK` **à l'intérieur** :
 
 ```sql
-CREATE PROCEDURE traiter_commandes_procedure()
-LANGUAGE plpgsql
-AS $$
-BEGIN
+CREATE PROCEDURE traiter_commandes_procedure()  
+LANGUAGE plpgsql  
+AS $$  
+BEGIN  
     -- Traitement 1
     INSERT INTO logs VALUES ('Début traitement');
     COMMIT;  -- ✅ Valide ce premier traitement
@@ -182,9 +182,9 @@ Imaginez que vous devez traiter 1 million de lignes :
 ```
 
 **Avantages** :
-- ✅ Libération régulière des verrous
-- ✅ Visibilité progressive des changements
-- ✅ Moins de risque de bloat (gonflement des tables)
+- ✅ Libération régulière des verrous  
+- ✅ Visibilité progressive des changements  
+- ✅ Moins de risque de bloat (gonflement des tables)  
 - ✅ Si erreur, seul le lot en cours est perdu
 
 ---
@@ -194,10 +194,10 @@ Imaginez que vous devez traiter 1 million de lignes :
 ### 3.1. COMMIT : Valider une partie du traitement
 
 ```sql
-CREATE PROCEDURE traiter_par_lots()
-LANGUAGE plpgsql
-AS $$
-DECLARE
+CREATE PROCEDURE traiter_par_lots()  
+LANGUAGE plpgsql  
+AS $$  
+DECLARE  
     compteur INTEGER := 0;
 BEGIN
     -- Traitement lot 1
@@ -224,17 +224,17 @@ CALL traiter_par_lots();
 ```
 
 **Ce qui se passe** :
-1. Insertion lot 1 → COMMIT → Données écrites sur disque
-2. Insertion lot 2 → COMMIT → Données écrites sur disque
+1. Insertion lot 1 → COMMIT → Données écrites sur disque  
+2. Insertion lot 2 → COMMIT → Données écrites sur disque  
 3. Même si une erreur survient après, les lots 1 et 2 restent en base
 
 ### 3.2. ROLLBACK : Annuler une partie du traitement
 
 ```sql
-CREATE PROCEDURE traiter_avec_validation()
-LANGUAGE plpgsql
-AS $$
-DECLARE
+CREATE PROCEDURE traiter_avec_validation()  
+LANGUAGE plpgsql  
+AS $$  
+DECLARE  
     montant_total NUMERIC;
 BEGIN
     -- Tentative de traitement
@@ -266,10 +266,10 @@ CALL traiter_avec_validation();
 Si vous ne mettez pas de `COMMIT` explicite, PostgreSQL fait un COMMIT automatique à la fin :
 
 ```sql
-CREATE PROCEDURE insertion_simple()
-LANGUAGE plpgsql
-AS $$
-BEGIN
+CREATE PROCEDURE insertion_simple()  
+LANGUAGE plpgsql  
+AS $$  
+BEGIN  
     INSERT INTO logs VALUES ('Test');
     -- Pas de COMMIT explicite
 END;
@@ -288,10 +288,10 @@ CALL insertion_simple();
 Imaginons que nous voulons archiver 100 000 commandes de plus de 2 ans, mais par lots de 1000 pour ne pas bloquer la base.
 
 ```sql
-CREATE PROCEDURE archiver_anciennes_commandes()
-LANGUAGE plpgsql
-AS $$
-DECLARE
+CREATE PROCEDURE archiver_anciennes_commandes()  
+LANGUAGE plpgsql  
+AS $$  
+DECLARE  
     nb_traitees INTEGER := 0;
     nb_total INTEGER := 0;
     lot_size INTEGER := 1000;
@@ -352,10 +352,10 @@ CALL archiver_anciennes_commandes();
 ```
 
 **Avantages de cette approche** :
-- ✅ Traitement progressif avec COMMIT réguliers
-- ✅ Libération des verrous entre chaque lot
-- ✅ Possibilité de suivre la progression
-- ✅ Possibilité d'interrompre sans tout perdre
+- ✅ Traitement progressif avec COMMIT réguliers  
+- ✅ Libération des verrous entre chaque lot  
+- ✅ Possibilité de suivre la progression  
+- ✅ Possibilité d'interrompre sans tout perdre  
 - ✅ Moins de stress sur le WAL et les buffers
 
 ---
@@ -367,10 +367,10 @@ CALL archiver_anciennes_commandes();
 Les procédures peuvent gérer les erreurs avec des blocs `EXCEPTION`, mais attention à l'interaction avec COMMIT/ROLLBACK :
 
 ```sql
-CREATE PROCEDURE traiter_avec_gestion_erreurs()
-LANGUAGE plpgsql
-AS $$
-BEGIN
+CREATE PROCEDURE traiter_avec_gestion_erreurs()  
+LANGUAGE plpgsql  
+AS $$  
+BEGIN  
     -- Bloc 1
     BEGIN
         INSERT INTO logs VALUES ('Traitement 1');
@@ -411,17 +411,17 @@ CALL traiter_avec_gestion_erreurs();
 ```
 
 **Important** :
-- ✅ Chaque bloc EXCEPTION peut faire un ROLLBACK indépendant
-- ✅ L'exécution continue après un ROLLBACK
+- ✅ Chaque bloc EXCEPTION peut faire un ROLLBACK indépendant  
+- ✅ L'exécution continue après un ROLLBACK  
 - ✅ Seul le bloc en erreur est annulé, pas toute la procédure
 
 ### 5.2. Gestion d'erreurs globale
 
 ```sql
-CREATE PROCEDURE traiter_avec_securite()
-LANGUAGE plpgsql
-AS $$
-DECLARE
+CREATE PROCEDURE traiter_avec_securite()  
+LANGUAGE plpgsql  
+AS $$  
+DECLARE  
     v_erreur TEXT;
 BEGIN
     -- Tentative de traitement
@@ -460,9 +460,9 @@ CREATE PROCEDURE calculer_statistiques(
     OUT nb_commandes INTEGER,
     OUT montant_total NUMERIC
 )
-LANGUAGE plpgsql
-AS $$
-BEGIN
+LANGUAGE plpgsql  
+AS $$  
+BEGIN  
     -- Calcul des statistiques
     SELECT COUNT(*), COALESCE(SUM(montant), 0)
     INTO nb_commandes, montant_total
@@ -475,8 +475,8 @@ END;
 $$;
 
 -- Appel avec récupération des valeurs OUT
-DO $$
-DECLARE
+DO $$  
+DECLARE  
     v_nb INTEGER;
     v_total NUMERIC;
 BEGIN
@@ -492,17 +492,17 @@ $$;
 CREATE PROCEDURE incrementer_compteur(
     INOUT compteur INTEGER
 )
-LANGUAGE plpgsql
-AS $$
-BEGIN
+LANGUAGE plpgsql  
+AS $$  
+BEGIN  
     compteur := compteur + 1;
     RAISE NOTICE 'Nouveau compteur : %', compteur;
 END;
 $$;
 
 -- Utilisation
-DO $$
-DECLARE
+DO $$  
+DECLARE  
     mon_compteur INTEGER := 10;
 BEGIN
     RAISE NOTICE 'Avant : %', mon_compteur;
@@ -544,10 +544,10 @@ CALL ma_procedure();  -- Crée ses propres transactions internes
 ### 7.2. Visibilité des changements
 
 ```sql
-CREATE PROCEDURE demo_visibilite()
-LANGUAGE plpgsql
-AS $$
-BEGIN
+CREATE PROCEDURE demo_visibilite()  
+LANGUAGE plpgsql  
+AS $$  
+BEGIN  
     -- Insertion 1
     INSERT INTO test VALUES (1);
     RAISE NOTICE 'Insertion 1 effectuée';
@@ -580,10 +580,10 @@ SELECT * FROM test;
 ### 8.1. Maintenance de base de données
 
 ```sql
-CREATE PROCEDURE nettoyer_anciennes_donnees()
-LANGUAGE plpgsql
-AS $$
-DECLARE
+CREATE PROCEDURE nettoyer_anciennes_donnees()  
+LANGUAGE plpgsql  
+AS $$  
+DECLARE  
     nb_supprimees INTEGER;
 BEGIN
     -- Nettoyer les logs de plus de 90 jours
@@ -614,10 +614,10 @@ $$;
 ### 8.2. Import de données par lots
 
 ```sql
-CREATE PROCEDURE importer_fichier_csv()
-LANGUAGE plpgsql
-AS $$
-DECLARE
+CREATE PROCEDURE importer_fichier_csv()  
+LANGUAGE plpgsql  
+AS $$  
+DECLARE  
     lot_size INTEGER := 10000;
     nb_importees INTEGER := 0;
 BEGIN
@@ -660,10 +660,10 @@ $$;
 ### 8.3. Traitements métier complexes
 
 ```sql
-CREATE PROCEDURE cloturer_mois()
-LANGUAGE plpgsql
-AS $$
-DECLARE
+CREATE PROCEDURE cloturer_mois()  
+LANGUAGE plpgsql  
+AS $$  
+DECLARE  
     mois_cloture DATE;
 BEGIN
     -- Déterminer le mois à clôturer
@@ -718,10 +718,10 @@ $$;
 
 ```sql
 -- ❌ CECI NE FONCTIONNE PAS
-CREATE PROCEDURE exemple_incorrect()
-LANGUAGE plpgsql
-AS $$
-BEGIN
+CREATE PROCEDURE exemple_incorrect()  
+LANGUAGE plpgsql  
+AS $$  
+BEGIN  
     INSERT INTO test VALUES (1);
 
 EXCEPTION
@@ -735,10 +735,10 @@ $$;
 
 ```sql
 -- ✅ CECI FONCTIONNE
-CREATE PROCEDURE exemple_correct()
-LANGUAGE plpgsql
-AS $$
-BEGIN
+CREATE PROCEDURE exemple_correct()  
+LANGUAGE plpgsql  
+AS $$  
+BEGIN  
     BEGIN
         INSERT INTO test VALUES (1);
         COMMIT;
@@ -774,11 +774,11 @@ Chaque COMMIT a un coût :
 
 **Fonction** (pas de contrôle transactionnel) :
 ```sql
-CREATE FUNCTION traiter_lot_fonction()
-RETURNS INTEGER
-LANGUAGE plpgsql
-AS $$
-DECLARE
+CREATE FUNCTION traiter_lot_fonction()  
+RETURNS INTEGER  
+LANGUAGE plpgsql  
+AS $$  
+DECLARE  
     nb_traites INTEGER := 0;
 BEGIN
     -- Tout dans une seule transaction
@@ -794,17 +794,17 @@ END;
 $$;
 
 -- Appel
-BEGIN;
-SELECT traiter_lot_fonction();  -- Tout ou rien
-COMMIT;  -- Un seul COMMIT à la fin
+BEGIN;  
+SELECT traiter_lot_fonction();  -- Tout ou rien  
+COMMIT;  -- Un seul COMMIT à la fin  
 ```
 
 **Procédure** (contrôle transactionnel) :
 ```sql
-CREATE PROCEDURE traiter_lot_procedure()
-LANGUAGE plpgsql
-AS $$
-BEGIN
+CREATE PROCEDURE traiter_lot_procedure()  
+LANGUAGE plpgsql  
+AS $$  
+BEGIN  
     -- Transaction 1
     INSERT INTO logs VALUES ('Début');
     COMMIT;  -- ✅ Validé immédiatement
@@ -831,10 +831,10 @@ CALL traiter_lot_procedure();  -- Contrôle fin des transactions
 
 ```sql
 -- ✅ BON : Procédure avec COMMIT réguliers pour gros volume
-CREATE PROCEDURE traiter_gros_volume()
-LANGUAGE plpgsql
-AS $$
-BEGIN
+CREATE PROCEDURE traiter_gros_volume()  
+LANGUAGE plpgsql  
+AS $$  
+BEGIN  
     LOOP
         -- Traiter un lot
         COMMIT;
@@ -847,10 +847,10 @@ $$;
 ### ✅ Pratique #2 : Logger la progression
 
 ```sql
-CREATE PROCEDURE traitement_avec_logs()
-LANGUAGE plpgsql
-AS $$
-DECLARE
+CREATE PROCEDURE traitement_avec_logs()  
+LANGUAGE plpgsql  
+AS $$  
+DECLARE  
     etape TEXT;
 BEGIN
     etape := 'Étape 1';
@@ -873,10 +873,10 @@ $$;
 ### ✅ Pratique #3 : Gérer les erreurs par bloc
 
 ```sql
-CREATE PROCEDURE traitement_resilient()
-LANGUAGE plpgsql
-AS $$
-BEGIN
+CREATE PROCEDURE traitement_resilient()  
+LANGUAGE plpgsql  
+AS $$  
+BEGIN  
     -- Chaque étape dans son propre bloc avec gestion d'erreur
     BEGIN
         -- Étape 1
@@ -902,10 +902,10 @@ $$;
 ### ✅ Pratique #4 : Documenter les transactions
 
 ```sql
-CREATE PROCEDURE ma_procedure()
-LANGUAGE plpgsql
-AS $$
-BEGIN
+CREATE PROCEDURE ma_procedure()  
+LANGUAGE plpgsql  
+AS $$  
+BEGIN  
     -- Transaction 1 : Préparation des données
     -- COMMIT car les données préparées doivent être visibles
     -- pour les étapes suivantes même en cas d'erreur ultérieure
@@ -940,10 +940,10 @@ Chaque phase est indépendante et persistante.';
 
 ```sql
 -- ❌ MAUVAIS : RETURN ne valide pas la transaction !
-CREATE PROCEDURE erreur_return()
-LANGUAGE plpgsql
-AS $$
-BEGIN
+CREATE PROCEDURE erreur_return()  
+LANGUAGE plpgsql  
+AS $$  
+BEGIN  
     INSERT INTO test VALUES (1);
     RETURN;  -- Sort de la procédure mais ne valide pas !
 END;
@@ -951,10 +951,10 @@ $$;
 -- Les données sont validées automatiquement à la fin
 
 -- ✅ CORRECT : Utiliser COMMIT explicite si nécessaire
-CREATE PROCEDURE correct_commit()
-LANGUAGE plpgsql
-AS $$
-BEGIN
+CREATE PROCEDURE correct_commit()  
+LANGUAGE plpgsql  
+AS $$  
+BEGIN  
     INSERT INTO test VALUES (1);
     COMMIT;  -- Validation explicite
 END;
@@ -965,10 +965,10 @@ $$;
 
 ```sql
 -- ❌ MAUVAIS : Pas de gestion d'erreur
-CREATE PROCEDURE sans_gestion_erreur()
-LANGUAGE plpgsql
-AS $$
-BEGIN
+CREATE PROCEDURE sans_gestion_erreur()  
+LANGUAGE plpgsql  
+AS $$  
+BEGIN  
     -- Si une erreur survient, toute la procédure échoue
     INSERT INTO table1 VALUES (1);
     COMMIT;
@@ -978,10 +978,10 @@ END;
 $$;
 
 -- ✅ CORRECT : Gérer les erreurs
-CREATE PROCEDURE avec_gestion_erreur()
-LANGUAGE plpgsql
-AS $$
-BEGIN
+CREATE PROCEDURE avec_gestion_erreur()  
+LANGUAGE plpgsql  
+AS $$  
+BEGIN  
     BEGIN
         INSERT INTO table1 VALUES (1);
         COMMIT;
@@ -1005,10 +1005,10 @@ $$;
 
 ```sql
 -- ❌ MAUVAIS : COMMIT à chaque ligne (très lent)
-CREATE PROCEDURE trop_de_commit()
-LANGUAGE plpgsql
-AS $$
-DECLARE
+CREATE PROCEDURE trop_de_commit()  
+LANGUAGE plpgsql  
+AS $$  
+DECLARE  
     r RECORD;
 BEGIN
     FOR r IN SELECT * FROM grande_table LOOP
@@ -1019,10 +1019,10 @@ END;
 $$;
 
 -- ✅ CORRECT : COMMIT par lots
-CREATE PROCEDURE commit_par_lots()
-LANGUAGE plpgsql
-AS $$
-DECLARE
+CREATE PROCEDURE commit_par_lots()  
+LANGUAGE plpgsql  
+AS $$  
+DECLARE  
     r RECORD;
     compteur INTEGER := 0;
 BEGIN
@@ -1046,19 +1046,19 @@ $$;
 
 ### Utilisez une PROCÉDURE quand :
 
-- ✅ Vous avez besoin de **COMMIT/ROLLBACK** internes
-- ✅ Vous traitez de **gros volumes** de données (batch processing)
-- ✅ Vous voulez **libérer les verrous** progressivement
-- ✅ Vous orchestrez des **traitements métier complexes** multi-étapes
-- ✅ Vous faites de la **maintenance** de base de données
+- ✅ Vous avez besoin de **COMMIT/ROLLBACK** internes  
+- ✅ Vous traitez de **gros volumes** de données (batch processing)  
+- ✅ Vous voulez **libérer les verrous** progressivement  
+- ✅ Vous orchestrez des **traitements métier complexes** multi-étapes  
+- ✅ Vous faites de la **maintenance** de base de données  
 - ✅ Vous n'avez **pas besoin de retourner une valeur**
 
 ### Utilisez une FONCTION quand :
 
-- ✅ Vous devez **retourner une valeur** (calcul, transformation)
-- ✅ Vous voulez l'appeler dans un **SELECT**
-- ✅ Vous avez besoin d'**atomicité** (tout ou rien)
-- ✅ Vous créez des **index fonctionnels**
+- ✅ Vous devez **retourner une valeur** (calcul, transformation)  
+- ✅ Vous voulez l'appeler dans un **SELECT**  
+- ✅ Vous avez besoin d'**atomicité** (tout ou rien)  
+- ✅ Vous créez des **index fonctionnels**  
 - ✅ Le traitement est **rapide** et ne nécessite pas de COMMIT intermédiaires
 
 ---
@@ -1097,10 +1097,10 @@ $$;
 ### Exemple 1 : Migration de données historiques
 
 ```sql
-CREATE PROCEDURE migrer_donnees_historiques(annee INTEGER)
-LANGUAGE plpgsql
-AS $$
-DECLARE
+CREATE PROCEDURE migrer_donnees_historiques(annee INTEGER)  
+LANGUAGE plpgsql  
+AS $$  
+DECLARE  
     nb_migrees INTEGER := 0;
     total_migrees INTEGER := 0;
     lot_size INTEGER := 5000;
@@ -1150,10 +1150,10 @@ CALL migrer_donnees_historiques(2020);
 ### Exemple 2 : Réconciliation bancaire automatique
 
 ```sql
-CREATE PROCEDURE reconcilier_transactions()
-LANGUAGE plpgsql
-AS $$
-DECLARE
+CREATE PROCEDURE reconcilier_transactions()  
+LANGUAGE plpgsql  
+AS $$  
+DECLARE  
     nb_reconciliees INTEGER;
 BEGIN
     -- Étape 1 : Marquer les correspondances exactes
@@ -1198,20 +1198,20 @@ $$;
 
 Les **procédures stockées** sont un outil puissant de PostgreSQL pour :
 
-1. **Gérer des transactions complexes** avec COMMIT/ROLLBACK internes
-2. **Traiter de gros volumes** de données par lots sans bloquer la base
-3. **Orchestrer des processus métier** multi-étapes avec validation progressive
+1. **Gérer des transactions complexes** avec COMMIT/ROLLBACK internes  
+2. **Traiter de gros volumes** de données par lots sans bloquer la base  
+3. **Orchestrer des processus métier** multi-étapes avec validation progressive  
 4. **Maintenir la base de données** avec des opérations de nettoyage et archivage
 
 **Points clés à retenir** :
-- ✅ Les procédures permettent COMMIT/ROLLBACK internes (contrairement aux fonctions)
-- ✅ Utilisez CALL pour exécuter une procédure
-- ✅ Les procédures ne retournent pas de valeur (sauf paramètres OUT/INOUT)
-- ✅ Validez régulièrement par lots pour libérer les verrous
+- ✅ Les procédures permettent COMMIT/ROLLBACK internes (contrairement aux fonctions)  
+- ✅ Utilisez CALL pour exécuter une procédure  
+- ✅ Les procédures ne retournent pas de valeur (sauf paramètres OUT/INOUT)  
+- ✅ Validez régulièrement par lots pour libérer les verrous  
 - ✅ Gérez les erreurs avec des blocs EXCEPTION imbriqués
 
 **Règle de décision** :
-> **Besoin de COMMIT/ROLLBACK internes ou traitement par lots → PROCÉDURE**
+> **Besoin de COMMIT/ROLLBACK internes ou traitement par lots → PROCÉDURE**  
 > **Besoin de retourner une valeur ou utilisation dans SELECT → FONCTION**
 
 ---

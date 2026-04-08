@@ -12,9 +12,9 @@ Lorsque vous écrivez du code PL/pgSQL, des erreurs peuvent survenir :
 - Et bien d'autres...
 
 Sans gestion d'erreurs, votre fonction ou procédure s'arrête brutalement et toute la transaction est annulée. Avec la **gestion des exceptions**, vous pouvez :
-- ✅ Capturer les erreurs
-- ✅ Réagir de manière appropriée
-- ✅ Continuer l'exécution
+- ✅ Capturer les erreurs  
+- ✅ Réagir de manière appropriée  
+- ✅ Continuer l'exécution  
 - ✅ Fournir des messages d'erreur clairs
 
 ### Analogie simple
@@ -47,11 +47,11 @@ END;
 
 Sans gestion d'erreur :
 ```sql
-CREATE OR REPLACE FUNCTION diviser_sans_protection(a NUMERIC, b NUMERIC)
-RETURNS NUMERIC
-LANGUAGE plpgsql
-AS $$
-BEGIN
+CREATE OR REPLACE FUNCTION diviser_sans_protection(a NUMERIC, b NUMERIC)  
+RETURNS NUMERIC  
+LANGUAGE plpgsql  
+AS $$  
+BEGIN  
     RETURN a / b;
 END;
 $$;
@@ -64,11 +64,11 @@ SELECT diviser_sans_protection(10, 0);
 
 Avec gestion d'erreur :
 ```sql
-CREATE OR REPLACE FUNCTION diviser_avec_protection(a NUMERIC, b NUMERIC)
-RETURNS NUMERIC
-LANGUAGE plpgsql
-AS $$
-BEGIN
+CREATE OR REPLACE FUNCTION diviser_avec_protection(a NUMERIC, b NUMERIC)  
+RETURNS NUMERIC  
+LANGUAGE plpgsql  
+AS $$  
+BEGIN  
     RETURN a / b;
 EXCEPTION
     WHEN division_by_zero THEN
@@ -84,10 +84,10 @@ SELECT diviser_avec_protection(10, 0);
 ```
 
 **Ce qui se passe** :
-1. Le code dans `BEGIN` s'exécute
-2. L'erreur `division_by_zero` se produit
-3. PostgreSQL saute au bloc `EXCEPTION`
-4. Le code sous `WHEN division_by_zero` s'exécute
+1. Le code dans `BEGIN` s'exécute  
+2. L'erreur `division_by_zero` se produit  
+3. PostgreSQL saute au bloc `EXCEPTION`  
+4. Le code sous `WHEN division_by_zero` s'exécute  
 5. La fonction retourne `NULL` au lieu de crasher
 
 ---
@@ -136,11 +136,11 @@ PostgreSQL définit de nombreux types d'exceptions. Voici les plus courantes :
 ### 3.1. Gérer les conversions de type
 
 ```sql
-CREATE OR REPLACE FUNCTION convertir_en_entier(texte TEXT)
-RETURNS INTEGER
-LANGUAGE plpgsql
-AS $$
-DECLARE
+CREATE OR REPLACE FUNCTION convertir_en_entier(texte TEXT)  
+RETURNS INTEGER  
+LANGUAGE plpgsql  
+AS $$  
+DECLARE  
     resultat INTEGER;
 BEGIN
     -- Tentative de conversion
@@ -154,9 +154,9 @@ END;
 $$;
 
 -- Tests
-SELECT convertir_en_entier('123');    -- ✅ Retourne 123
-SELECT convertir_en_entier('abc');    -- ✅ Retourne NULL avec message
-SELECT convertir_en_entier('12.5');   -- ✅ Retourne NULL avec message
+SELECT convertir_en_entier('123');    -- ✅ Retourne 123  
+SELECT convertir_en_entier('abc');    -- ✅ Retourne NULL avec message  
+SELECT convertir_en_entier('12.5');   -- ✅ Retourne NULL avec message  
 ```
 
 ### 3.2. Gérer les violations de contraintes
@@ -168,11 +168,11 @@ CREATE TABLE utilisateurs (
     email TEXT UNIQUE NOT NULL
 );
 
-CREATE OR REPLACE FUNCTION ajouter_utilisateur(email_utilisateur TEXT)
-RETURNS TEXT
-LANGUAGE plpgsql
-AS $$
-BEGIN
+CREATE OR REPLACE FUNCTION ajouter_utilisateur(email_utilisateur TEXT)  
+RETURNS TEXT  
+LANGUAGE plpgsql  
+AS $$  
+BEGIN  
     INSERT INTO utilisateurs (email) VALUES (email_utilisateur);
     RETURN 'Utilisateur ajouté avec succès';
 EXCEPTION
@@ -201,11 +201,11 @@ SELECT ajouter_utilisateur(NULL);
 ### 3.3. Gérer les données manquantes
 
 ```sql
-CREATE OR REPLACE FUNCTION obtenir_nom_client(client_id INTEGER)
-RETURNS TEXT
-LANGUAGE plpgsql
-AS $$
-DECLARE
+CREATE OR REPLACE FUNCTION obtenir_nom_client(client_id INTEGER)  
+RETURNS TEXT  
+LANGUAGE plpgsql  
+AS $$  
+DECLARE  
     nom_client TEXT;
 BEGIN
     -- SELECT INTO génère no_data_found si aucune ligne
@@ -238,11 +238,11 @@ PostgreSQL fournit des variables spéciales pour obtenir des informations sur l'
 `SQLERRM` contient le message d'erreur complet.
 
 ```sql
-CREATE OR REPLACE FUNCTION demo_sqlerrm()
-RETURNS VOID
-LANGUAGE plpgsql
-AS $$
-BEGIN
+CREATE OR REPLACE FUNCTION demo_sqlerrm()  
+RETURNS VOID  
+LANGUAGE plpgsql  
+AS $$  
+BEGIN  
     -- Code qui va générer une erreur
     PERFORM 1 / 0;
 EXCEPTION
@@ -258,11 +258,11 @@ $$;
 `SQLSTATE` contient le code d'erreur PostgreSQL (5 caractères).
 
 ```sql
-CREATE OR REPLACE FUNCTION demo_sqlstate()
-RETURNS VOID
-LANGUAGE plpgsql
-AS $$
-BEGIN
+CREATE OR REPLACE FUNCTION demo_sqlstate()  
+RETURNS VOID  
+LANGUAGE plpgsql  
+AS $$  
+BEGIN  
     PERFORM 1 / 0;
 EXCEPTION
     WHEN OTHERS THEN
@@ -278,11 +278,11 @@ $$;
 Pour obtenir encore plus d'informations :
 
 ```sql
-CREATE OR REPLACE FUNCTION demo_diagnostics()
-RETURNS VOID
-LANGUAGE plpgsql
-AS $$
-DECLARE
+CREATE OR REPLACE FUNCTION demo_diagnostics()  
+RETURNS VOID  
+LANGUAGE plpgsql  
+AS $$  
+DECLARE  
     v_sqlstate TEXT;
     v_message TEXT;
     v_context TEXT;
@@ -310,13 +310,13 @@ SELECT demo_diagnostics();
 ```
 
 **Variables disponibles** :
-- `RETURNED_SQLSTATE` : Code d'erreur
-- `MESSAGE_TEXT` : Message d'erreur
-- `PG_EXCEPTION_CONTEXT` : Contexte d'exécution
-- `PG_EXCEPTION_DETAIL` : Détails supplémentaires
-- `PG_EXCEPTION_HINT` : Conseil pour résoudre l'erreur
-- `COLUMN_NAME` : Nom de la colonne concernée
-- `CONSTRAINT_NAME` : Nom de la contrainte violée
+- `RETURNED_SQLSTATE` : Code d'erreur  
+- `MESSAGE_TEXT` : Message d'erreur  
+- `PG_EXCEPTION_CONTEXT` : Contexte d'exécution  
+- `PG_EXCEPTION_DETAIL` : Détails supplémentaires  
+- `PG_EXCEPTION_HINT` : Conseil pour résoudre l'erreur  
+- `COLUMN_NAME` : Nom de la colonne concernée  
+- `CONSTRAINT_NAME` : Nom de la contrainte violée  
 - `TABLE_NAME` : Nom de la table concernée
 
 ---
@@ -326,11 +326,11 @@ SELECT demo_diagnostics();
 Vous pouvez gérer différentes exceptions de manière spécifique :
 
 ```sql
-CREATE OR REPLACE FUNCTION operation_complexe(valeur TEXT)
-RETURNS TEXT
-LANGUAGE plpgsql
-AS $$
-DECLARE
+CREATE OR REPLACE FUNCTION operation_complexe(valeur TEXT)  
+RETURNS TEXT  
+LANGUAGE plpgsql  
+AS $$  
+DECLARE  
     resultat INTEGER;
 BEGIN
     -- Tenter la conversion
@@ -357,9 +357,9 @@ END;
 $$;
 
 -- Tests
-SELECT operation_complexe('15');    -- ✅ Succès : 3
-SELECT operation_complexe('abc');   -- ✅ "Erreur : La valeur n'est pas un nombre"
-SELECT operation_complexe('10');    -- ✅ "Erreur : Division par zéro (valeur = 10)"
+SELECT operation_complexe('15');    -- ✅ Succès : 3  
+SELECT operation_complexe('abc');   -- ✅ "Erreur : La valeur n'est pas un nombre"  
+SELECT operation_complexe('10');    -- ✅ "Erreur : Division par zéro (valeur = 10)"  
 ```
 
 ---
@@ -369,11 +369,11 @@ SELECT operation_complexe('10');    -- ✅ "Erreur : Division par zéro (valeur 
 Vous pouvez avoir des blocs `BEGIN...EXCEPTION...END` imbriqués :
 
 ```sql
-CREATE OR REPLACE FUNCTION traitement_multi_etapes()
-RETURNS TEXT
-LANGUAGE plpgsql
-AS $$
-DECLARE
+CREATE OR REPLACE FUNCTION traitement_multi_etapes()  
+RETURNS TEXT  
+LANGUAGE plpgsql  
+AS $$  
+DECLARE  
     etape1_ok BOOLEAN := FALSE;
     etape2_ok BOOLEAN := FALSE;
 BEGIN
@@ -417,21 +417,21 @@ RAISE niveau 'message';
 ```
 
 **Niveaux disponibles** (du moins au plus grave) :
-- `DEBUG` : Information de debug (invisible par défaut)
-- `LOG` : Log dans le fichier de logs
-- `INFO` : Information
-- `NOTICE` : Notification (visible par défaut)
-- `WARNING` : Avertissement
+- `DEBUG` : Information de debug (invisible par défaut)  
+- `LOG` : Log dans le fichier de logs  
+- `INFO` : Information  
+- `NOTICE` : Notification (visible par défaut)  
+- `WARNING` : Avertissement  
 - `EXCEPTION` : Erreur qui arrête l'exécution
 
 ### 7.2. Exemples de RAISE
 
 ```sql
-CREATE OR REPLACE FUNCTION demo_raise()
-RETURNS VOID
-LANGUAGE plpgsql
-AS $$
-BEGIN
+CREATE OR REPLACE FUNCTION demo_raise()  
+RETURNS VOID  
+LANGUAGE plpgsql  
+AS $$  
+BEGIN  
     RAISE DEBUG 'Message de debug';
     RAISE LOG 'Message de log';
     RAISE INFO 'Message d''information';
@@ -452,11 +452,11 @@ SELECT demo_raise();
 ### 7.3. RAISE avec variables
 
 ```sql
-CREATE OR REPLACE FUNCTION valider_age(age INTEGER)
-RETURNS TEXT
-LANGUAGE plpgsql
-AS $$
-BEGIN
+CREATE OR REPLACE FUNCTION valider_age(age INTEGER)  
+RETURNS TEXT  
+LANGUAGE plpgsql  
+AS $$  
+BEGIN  
     IF age < 0 THEN
         RAISE EXCEPTION 'Âge invalide : %. L''âge doit être positif.', age;
     END IF;
@@ -470,9 +470,9 @@ END;
 $$;
 
 -- Tests
-SELECT valider_age(25);   -- ✅ "Âge valide"
-SELECT valider_age(15);   -- ⚠️ "Âge valide" avec WARNING
-SELECT valider_age(-5);   -- ❌ EXCEPTION levée
+SELECT valider_age(25);   -- ✅ "Âge valide"  
+SELECT valider_age(15);   -- ⚠️ "Âge valide" avec WARNING  
+SELECT valider_age(-5);   -- ❌ EXCEPTION levée  
 ```
 
 ### 7.4. RAISE EXCEPTION personnalisée
@@ -480,11 +480,11 @@ SELECT valider_age(-5);   -- ❌ EXCEPTION levée
 Vous pouvez spécifier le code SQLSTATE :
 
 ```sql
-CREATE OR REPLACE FUNCTION verifier_stock(produit_id INTEGER, quantite INTEGER)
-RETURNS VOID
-LANGUAGE plpgsql
-AS $$
-DECLARE
+CREATE OR REPLACE FUNCTION verifier_stock(produit_id INTEGER, quantite INTEGER)  
+RETURNS VOID  
+LANGUAGE plpgsql  
+AS $$  
+DECLARE  
     stock_actuel INTEGER;
 BEGIN
     SELECT stock INTO stock_actuel FROM produits WHERE id = produit_id;
@@ -510,10 +510,10 @@ CREATE OR REPLACE FUNCTION transfert_argent(
     compte_dest INTEGER,
     montant NUMERIC
 )
-RETURNS TEXT
-LANGUAGE plpgsql
-AS $$
-DECLARE
+RETURNS TEXT  
+LANGUAGE plpgsql  
+AS $$  
+DECLARE  
     solde_source NUMERIC;
 BEGIN
     -- Vérifier le solde
@@ -549,11 +549,11 @@ $$;
 ### 8.2. Retry logic (réessayer en cas d'erreur)
 
 ```sql
-CREATE OR REPLACE FUNCTION inserer_avec_retry(valeur TEXT)
-RETURNS TEXT
-LANGUAGE plpgsql
-AS $$
-DECLARE
+CREATE OR REPLACE FUNCTION inserer_avec_retry(valeur TEXT)  
+RETURNS TEXT  
+LANGUAGE plpgsql  
+AS $$  
+DECLARE  
     tentatives INTEGER := 0;
     max_tentatives INTEGER := 3;
     success BOOLEAN := FALSE;
@@ -597,10 +597,10 @@ CREATE OR REPLACE FUNCTION creer_commande(
     produit_id INTEGER,
     quantite INTEGER
 )
-RETURNS INTEGER
-LANGUAGE plpgsql
-AS $$
-DECLARE
+RETURNS INTEGER  
+LANGUAGE plpgsql  
+AS $$  
+DECLARE  
     commande_id INTEGER;
     client_actif BOOLEAN;
     stock_disponible INTEGER;
@@ -668,11 +668,11 @@ $$;
 Quand une exception est capturée, la **sous-transaction** est automatiquement annulée :
 
 ```sql
-CREATE OR REPLACE FUNCTION demo_rollback()
-RETURNS TEXT
-LANGUAGE plpgsql
-AS $$
-BEGIN
+CREATE OR REPLACE FUNCTION demo_rollback()  
+RETURNS TEXT  
+LANGUAGE plpgsql  
+AS $$  
+BEGIN  
     INSERT INTO test VALUES (1, 'Avant erreur');
 
     -- Ce bloc est une sous-transaction
@@ -747,11 +747,11 @@ END;
 ### ✅ Pratique #2 : Toujours logger les erreurs
 
 ```sql
-CREATE OR REPLACE FUNCTION operation_critique()
-RETURNS VOID
-LANGUAGE plpgsql
-AS $$
-DECLARE
+CREATE OR REPLACE FUNCTION operation_critique()  
+RETURNS VOID  
+LANGUAGE plpgsql  
+AS $$  
+DECLARE  
     v_erreur TEXT;
     v_context TEXT;
 BEGIN
@@ -819,11 +819,11 @@ END;
 ### ✅ Pratique #5 : Utiliser ASSERT pour les validations
 
 ```sql
-CREATE OR REPLACE FUNCTION traiter_donnees(valeur INTEGER)
-RETURNS TEXT
-LANGUAGE plpgsql
-AS $$
-BEGIN
+CREATE OR REPLACE FUNCTION traiter_donnees(valeur INTEGER)  
+RETURNS TEXT  
+LANGUAGE plpgsql  
+AS $$  
+BEGIN  
     -- Assertion pour valider les préconditions
     ASSERT valeur > 0, 'La valeur doit être positive';
     ASSERT valeur < 1000, 'La valeur doit être inférieure à 1000';
@@ -848,11 +848,11 @@ SELECT traiter_donnees(-5);
 
 ```sql
 -- ❌ PROBLÈME : Performance
-CREATE OR REPLACE FUNCTION mauvaise_pratique()
-RETURNS VOID
-LANGUAGE plpgsql
-AS $$
-DECLARE
+CREATE OR REPLACE FUNCTION mauvaise_pratique()  
+RETURNS VOID  
+LANGUAGE plpgsql  
+AS $$  
+DECLARE  
     i INTEGER;
 BEGIN
     FOR i IN 1..10000 LOOP
@@ -868,11 +868,11 @@ END;
 $$;
 
 -- ✅ SOLUTION : Éviter les blocs EXCEPTION inutiles
-CREATE OR REPLACE FUNCTION bonne_pratique()
-RETURNS VOID
-LANGUAGE plpgsql
-AS $$
-BEGIN
+CREATE OR REPLACE FUNCTION bonne_pratique()  
+RETURNS VOID  
+LANGUAGE plpgsql  
+AS $$  
+BEGIN  
     -- Une seule transaction pour toutes les insertions
     INSERT INTO test SELECT generate_series(1, 10000);
 EXCEPTION
@@ -886,11 +886,11 @@ $$;
 
 ```sql
 -- ❌ PROBLÈME : Ressources non libérées
-CREATE OR REPLACE FUNCTION mauvaise_gestion()
-RETURNS TEXT
-LANGUAGE plpgsql
-AS $$
-DECLARE
+CREATE OR REPLACE FUNCTION mauvaise_gestion()  
+RETURNS TEXT  
+LANGUAGE plpgsql  
+AS $$  
+DECLARE  
     verrou_acquis BOOLEAN := FALSE;
 BEGIN
     -- Acquérir un verrou
@@ -912,11 +912,11 @@ END;
 $$;
 
 -- ✅ SOLUTION : Cleanup dans EXCEPTION
-CREATE OR REPLACE FUNCTION bonne_gestion()
-RETURNS TEXT
-LANGUAGE plpgsql
-AS $$
-BEGIN
+CREATE OR REPLACE FUNCTION bonne_gestion()  
+RETURNS TEXT  
+LANGUAGE plpgsql  
+AS $$  
+BEGIN  
     PERFORM pg_advisory_lock(12345);
 
     PERFORM risque_erreur();
@@ -961,11 +961,11 @@ END;
 ### 12.1. Stack trace complet
 
 ```sql
-CREATE OR REPLACE FUNCTION debug_exception()
-RETURNS VOID
-LANGUAGE plpgsql
-AS $$
-DECLARE
+CREATE OR REPLACE FUNCTION debug_exception()  
+RETURNS VOID  
+LANGUAGE plpgsql  
+AS $$  
+DECLARE  
     v_state TEXT;
     v_msg TEXT;
     v_detail TEXT;
@@ -1012,11 +1012,11 @@ CREATE TABLE exception_debug (
     context TEXT
 );
 
-CREATE OR REPLACE FUNCTION log_exception_debug(func_name TEXT)
-RETURNS VOID
-LANGUAGE plpgsql
-AS $$
-DECLARE
+CREATE OR REPLACE FUNCTION log_exception_debug(func_name TEXT)  
+RETURNS VOID  
+LANGUAGE plpgsql  
+AS $$  
+DECLARE  
     v_state TEXT;
     v_msg TEXT;
     v_detail TEXT;
@@ -1039,11 +1039,11 @@ END;
 $$;
 
 -- Utilisation
-CREATE OR REPLACE FUNCTION ma_fonction()
-RETURNS VOID
-LANGUAGE plpgsql
-AS $$
-BEGIN
+CREATE OR REPLACE FUNCTION ma_fonction()  
+RETURNS VOID  
+LANGUAGE plpgsql  
+AS $$  
+BEGIN  
     -- Code
 EXCEPTION
     WHEN OTHERS THEN
@@ -1062,11 +1062,11 @@ $$;
 PostgreSQL réserve les codes commençant par `[0-9A-E]`. Vous pouvez utiliser `[F-Z]` :
 
 ```sql
-CREATE OR REPLACE FUNCTION valider_commande(montant NUMERIC)
-RETURNS TEXT
-LANGUAGE plpgsql
-AS $$
-BEGIN
+CREATE OR REPLACE FUNCTION valider_commande(montant NUMERIC)  
+RETURNS TEXT  
+LANGUAGE plpgsql  
+AS $$  
+BEGIN  
     IF montant < 0 THEN
         RAISE EXCEPTION 'Montant négatif interdit'
             USING ERRCODE = 'P0001';  -- Code personnalisé
@@ -1083,11 +1083,11 @@ END;
 $$;
 
 -- Capturer l'exception personnalisée
-CREATE OR REPLACE FUNCTION tester_commande(montant NUMERIC)
-RETURNS TEXT
-LANGUAGE plpgsql
-AS $$
-BEGIN
+CREATE OR REPLACE FUNCTION tester_commande(montant NUMERIC)  
+RETURNS TEXT  
+LANGUAGE plpgsql  
+AS $$  
+BEGIN  
     RETURN valider_commande(montant);
 EXCEPTION
     WHEN SQLSTATE 'P0001' THEN
@@ -1145,15 +1145,15 @@ $$;
 
 Avant de finaliser votre fonction/procédure avec gestion d'exceptions :
 
-- [ ] J'ai identifié les erreurs possibles
-- [ ] Je capture les exceptions spécifiques (pas seulement OTHERS)
-- [ ] Je log les erreurs dans une table ou avec RAISE NOTICE
-- [ ] Mes messages d'erreur sont clairs et actionnables
-- [ ] J'ai ajouté des HINT pour aider l'utilisateur
-- [ ] Je libère les ressources (verrous, fichiers) même en cas d'erreur
-- [ ] Je ne masque pas silencieusement les erreurs importantes
-- [ ] J'évite les blocs EXCEPTION dans les boucles (performance)
-- [ ] J'ai testé tous les chemins d'erreur possibles
+- [ ] J'ai identifié les erreurs possibles  
+- [ ] Je capture les exceptions spécifiques (pas seulement OTHERS)  
+- [ ] Je log les erreurs dans une table ou avec RAISE NOTICE  
+- [ ] Mes messages d'erreur sont clairs et actionnables  
+- [ ] J'ai ajouté des HINT pour aider l'utilisateur  
+- [ ] Je libère les ressources (verrous, fichiers) même en cas d'erreur  
+- [ ] Je ne masque pas silencieusement les erreurs importantes  
+- [ ] J'évite les blocs EXCEPTION dans les boucles (performance)  
+- [ ] J'ai testé tous les chemins d'erreur possibles  
 - [ ] J'ai documenté les exceptions que ma fonction peut lever
 
 ---
@@ -1162,18 +1162,18 @@ Avant de finaliser votre fonction/procédure avec gestion d'exceptions :
 
 La **gestion des exceptions** en PL/pgSQL vous permet de :
 
-1. **Capturer** les erreurs au lieu de crasher
-2. **Réagir** de manière appropriée (log, retry, message)
-3. **Continuer** l'exécution après une erreur
+1. **Capturer** les erreurs au lieu de crasher  
+2. **Réagir** de manière appropriée (log, retry, message)  
+3. **Continuer** l'exécution après une erreur  
 4. **Fournir** des messages d'erreur clairs aux utilisateurs
 
 **Points clés à retenir** :
-- ✅ Structure `BEGIN...EXCEPTION...END` pour capturer les erreurs
-- ✅ Exceptions spécifiques (`division_by_zero`, `unique_violation`, etc.)
-- ✅ `WHEN OTHERS` pour capturer tout le reste
-- ✅ Variables `SQLERRM` et `SQLSTATE` pour les détails
-- ✅ `RAISE` pour lever des exceptions personnalisées
-- ✅ Blocs imbriqués pour isoler les erreurs
+- ✅ Structure `BEGIN...EXCEPTION...END` pour capturer les erreurs  
+- ✅ Exceptions spécifiques (`division_by_zero`, `unique_violation`, etc.)  
+- ✅ `WHEN OTHERS` pour capturer tout le reste  
+- ✅ Variables `SQLERRM` et `SQLSTATE` pour les détails  
+- ✅ `RAISE` pour lever des exceptions personnalisées  
+- ✅ Blocs imbriqués pour isoler les erreurs  
 - ✅ Attention à la performance : éviter EXCEPTION dans les boucles
 
 **Règle d'or** :

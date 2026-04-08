@@ -28,50 +28,50 @@ Les sauvegardes protègent contre de multiples menaces :
 
 #### 1. Pannes Matérielles 💾
 ```
-Disque dur défaillant
-Contrôleur RAID en panne
-Serveur qui ne démarre plus
-Incendie dans le datacenter
+Disque dur défaillant  
+Contrôleur RAID en panne  
+Serveur qui ne démarre plus  
+Incendie dans le datacenter  
 ```
 
 **Fréquence** : Plus courante qu'on ne le pense (MTBF des disques)
 
 #### 2. Erreurs Humaines 👤
 ```
-DELETE sans WHERE
-UPDATE avec mauvaise condition
-DROP TABLE par erreur
-Migration SQL mal testée
+DELETE sans WHERE  
+UPDATE avec mauvaise condition  
+DROP TABLE par erreur  
+Migration SQL mal testée  
 ```
 
 **Fréquence** : Cause n°1 de perte de données (40% des incidents)
 
 #### 3. Corruptions Logicielles 🐛
 ```
-Bug dans PostgreSQL (rare mais possible)
-Corruption mémoire
-Problème système de fichiers
-Crash durant une écriture
+Bug dans PostgreSQL (rare mais possible)  
+Corruption mémoire  
+Problème système de fichiers  
+Crash durant une écriture  
 ```
 
 **Fréquence** : Rare mais impactante
 
 #### 4. Attaques Malveillantes 🦠
 ```
-Ransomware chiffrant les données
-SQL Injection avec DROP TABLE
-Sabotage d'un employé mécontent
-Intrusion réseau
+Ransomware chiffrant les données  
+SQL Injection avec DROP TABLE  
+Sabotage d'un employé mécontent  
+Intrusion réseau  
 ```
 
 **Fréquence** : En augmentation constante (+300% en 5 ans)
 
 #### 5. Catastrophes Naturelles 🌊
 ```
-Inondation
-Incendie
-Tremblement de terre
-Panne électrique prolongée
+Inondation  
+Incendie  
+Tremblement de terre  
+Panne électrique prolongée  
 ```
 
 **Fréquence** : Faible mais impact total
@@ -133,9 +133,9 @@ RPO = 0 seconde (aucune perte)
 
 Pour une boutique en ligne :
 ```
-Transactions moyennes par minute : 10
-Valeur moyenne d'une transaction : 50€
-RPO de 1 heure = 10 × 60 × 50€ = 30,000€ de perte potentielle
+Transactions moyennes par minute : 10  
+Valeur moyenne d'une transaction : 50€  
+RPO de 1 heure = 10 × 60 × 50€ = 30,000€ de perte potentielle  
 ```
 
 **Impact sur la stratégie** :
@@ -223,16 +223,16 @@ PostgreSQL offre plusieurs approches de sauvegarde, chacune avec ses avantages e
 **Outils** : `pg_dump`, `pg_dumpall`
 
 **Avantages** :
-- ✅ Portabilité maximale (entre versions, OS, architectures)
-- ✅ Granularité fine (une table, un schéma, une base)
-- ✅ Lisible et éditable (format SQL)
-- ✅ Flexibilité de restauration
+- ✅ Portabilité maximale (entre versions, OS, architectures)  
+- ✅ Granularité fine (une table, un schéma, une base)  
+- ✅ Lisible et éditable (format SQL)  
+- ✅ Flexibilité de restauration  
 - ✅ Idéal pour migrations et clonage
 
 **Inconvénients** :
-- ❌ Plus lent pour grandes bases de données
-- ❌ Restauration lente (rejeu des commandes SQL)
-- ❌ Pas de PITR natif
+- ❌ Plus lent pour grandes bases de données  
+- ❌ Restauration lente (rejeu des commandes SQL)  
+- ❌ Pas de PITR natif  
 - ❌ Cohérence limitée entre bases (pg_dumpall)
 
 **Cas d'usage typiques** :
@@ -251,8 +251,8 @@ CREATE TABLE clients (
     email VARCHAR(255)
 );
 
-INSERT INTO clients VALUES (1, 'Dupont', 'dupont@example.com');
-INSERT INTO clients VALUES (2, 'Martin', 'martin@example.com');
+INSERT INTO clients VALUES (1, 'Dupont', 'dupont@example.com');  
+INSERT INTO clients VALUES (2, 'Martin', 'martin@example.com');  
 -- ... etc
 ```
 
@@ -263,17 +263,17 @@ INSERT INTO clients VALUES (2, 'Martin', 'martin@example.com');
 **Outils** : `pg_basebackup`, snapshots, copies filesystem
 
 **Avantages** :
-- ✅ Très rapide pour grandes bases de données
-- ✅ Restauration rapide (copie de fichiers)
-- ✅ Base pour PITR
-- ✅ Efficace pour bases volumineuses (To)
+- ✅ Très rapide pour grandes bases de données  
+- ✅ Restauration rapide (copie de fichiers)  
+- ✅ Base pour PITR  
+- ✅ Efficace pour bases volumineuses (To)  
 - ✅ Cohérence garantie du cluster entier
 
 **Inconvénients** :
-- ❌ Dépendance à la version majeure PostgreSQL
-- ❌ Dépendance à l'architecture (x86_64, ARM)
-- ❌ Pas de restauration partielle (tout ou rien)
-- ❌ Moins portable
+- ❌ Dépendance à la version majeure PostgreSQL  
+- ❌ Dépendance à l'architecture (x86_64, ARM)  
+- ❌ Pas de restauration partielle (tout ou rien)  
+- ❌ Moins portable  
 - ❌ Fichiers non lisibles directement
 
 **Cas d'usage typiques** :
@@ -302,16 +302,16 @@ Ce qui est copié :
 **Mécanisme** : `archive_command` copie automatiquement les fichiers WAL
 
 **Avantages** :
-- ✅ Point-In-Time Recovery (PITR)
-- ✅ RPO très faible (secondes)
-- ✅ Complète les sauvegardes physiques
-- ✅ Récupération granulaire dans le temps
+- ✅ Point-In-Time Recovery (PITR)  
+- ✅ RPO très faible (secondes)  
+- ✅ Complète les sauvegardes physiques  
+- ✅ Récupération granulaire dans le temps  
 - ✅ Protection contre erreurs logiques
 
 **Inconvénients** :
-- ❌ Nécessite sauvegarde de base (pg_basebackup)
-- ❌ Gestion de l'espace disque
-- ❌ Configuration plus complexe
+- ❌ Nécessite sauvegarde de base (pg_basebackup)  
+- ❌ Gestion de l'espace disque  
+- ❌ Configuration plus complexe  
 - ❌ Restauration peut être longue
 
 **Cas d'usage typiques** :
@@ -339,20 +339,20 @@ Base Backup         Incident            Point de restauration désiré
 **Concept** : Copie en temps réel vers un autre serveur PostgreSQL
 
 **Types** :
-- **Streaming Replication** : Réplication physique
+- **Streaming Replication** : Réplication physique  
 - **Logical Replication** : Réplication sélective
 
 **Avantages** :
-- ✅ Haute disponibilité (HA)
-- ✅ Failover rapide (secondes)
-- ✅ RPO très faible (< 1 seconde)
-- ✅ Possibilité de lecture sur standby
+- ✅ Haute disponibilité (HA)  
+- ✅ Failover rapide (secondes)  
+- ✅ RPO très faible (< 1 seconde)  
+- ✅ Possibilité de lecture sur standby  
 - ✅ Protection géographique
 
 **Inconvénients** :
-- ❌ Coût (serveur supplémentaire)
-- ❌ Complexité de configuration
-- ❌ Pas de protection contre erreurs logiques
+- ❌ Coût (serveur supplémentaire)  
+- ❌ Complexité de configuration  
+- ❌ Pas de protection contre erreurs logiques  
 - ❌ Nécessite compléments (backups traditionnels)
 
 **Cas d'usage typiques** :
@@ -399,29 +399,29 @@ Base Backup         Incident            Point de restauration désiré
 #### Critère 2 : Criticité Business
 
 ```
-Blog personnel               → pg_dump quotidien
-Application interne PME      → pg_dump + WAL archiving
-Site e-commerce              → pg_basebackup + WAL + Réplication asynchrone
-Application bancaire         → pg_basebackup + WAL + Réplication synchrone
-Service vie/mort (urgences)  → Multi-site + Réplication + Automatisation complète
+Blog personnel               → pg_dump quotidien  
+Application interne PME      → pg_dump + WAL archiving  
+Site e-commerce              → pg_basebackup + WAL + Réplication asynchrone  
+Application bancaire         → pg_basebackup + WAL + Réplication synchrone  
+Service vie/mort (urgences)  → Multi-site + Réplication + Automatisation complète  
 ```
 
 #### Critère 3 : Budget
 
 ```
-Budget minimal        → pg_dump + stockage local
-Budget moyen         → pg_dump + cloud storage
-Budget confortable   → pg_basebackup + WAL + cloud
-Budget élevé         → Tout : backups multiples + réplication + multi-site
+Budget minimal        → pg_dump + stockage local  
+Budget moyen         → pg_dump + cloud storage  
+Budget confortable   → pg_basebackup + WAL + cloud  
+Budget élevé         → Tout : backups multiples + réplication + multi-site  
 ```
 
 #### Critère 4 : Compétences Équipe
 
 ```
-Débutant             → Commencer par pg_dump simple
-Intermédiaire        → pg_basebackup + WAL basique
-Avancé               → Architecture complète avec automatisation
-Expert               → Solutions custom + outils tiers (Barman, pgBackRest)
+Débutant             → Commencer par pg_dump simple  
+Intermédiaire        → pg_basebackup + WAL basique  
+Avancé               → Architecture complète avec automatisation  
+Expert               → Solutions custom + outils tiers (Barman, pgBackRest)  
 ```
 
 ---
@@ -440,10 +440,10 @@ Sauvegardes quotidiennes avec pg_dump
 + Stockage local sécurisé
 + Test de restauration mensuel
 
-Coût : Minimal
-Protection : Pannes matérielles, erreurs récentes
-RPO : 24 heures
-RTO : 2-4 heures
+Coût : Minimal  
+Protection : Pannes matérielles, erreurs récentes  
+RPO : 24 heures  
+RTO : 2-4 heures  
 ```
 
 **Pour qui** : Petites structures, applications non critiques
@@ -457,10 +457,10 @@ Sauvegardes quotidiennes avec pg_basebackup
 + Stockage local + cloud
 + Test de restauration hebdomadaire
 
-Coût : Modéré
-Protection : + PITR, erreurs récentes récupérables
-RPO : 5-15 minutes
-RTO : 30 minutes - 2 heures
+Coût : Modéré  
+Protection : + PITR, erreurs récentes récupérables  
+RPO : 5-15 minutes  
+RTO : 30 minutes - 2 heures  
 ```
 
 **Pour qui** : PME, applications business importantes
@@ -476,10 +476,10 @@ Sauvegardes quotidiennes avec pg_basebackup
 + Tests automatisés
 + Monitoring avancé
 
-Coût : Élevé
-Protection : Complète (HA + DR + PITR)
-RPO : < 1 minute
-RTO : < 15 minutes
+Coût : Élevé  
+Protection : Complète (HA + DR + PITR)  
+RPO : < 1 minute  
+RTO : < 15 minutes  
 ```
 
 **Pour qui** : Entreprises, applications critiques
@@ -497,10 +497,10 @@ Architecture multi-site
 + Monitoring temps réel
 + Documentation runbooks
 
-Coût : Très élevé
-Protection : Maximale (99.99%+ uptime)
-RPO : 0 (aucune perte)
-RTO : < 1 minute (automatique)
+Coût : Très élevé  
+Protection : Maximale (99.99%+ uptime)  
+RPO : 0 (aucune perte)  
+RTO : < 1 minute (automatique)  
 ```
 
 **Pour qui** : Banques, hôpitaux, services critiques
@@ -640,30 +640,30 @@ Avant de mettre en place votre stratégie de sauvegarde, répondez à ces questi
 
 #### 1. Criticité
 
-- [ ] Quel est l'impact business d'une indisponibilité de 1 heure ? 1 jour ?
-- [ ] Quelle quantité de données pouvons-nous nous permettre de perdre ?
-- [ ] Y a-t-il des contraintes légales/réglementaires (RGPD, HIPAA, PCI-DSS) ?
+- [ ] Quel est l'impact business d'une indisponibilité de 1 heure ? 1 jour ?  
+- [ ] Quelle quantité de données pouvons-nous nous permettre de perdre ?  
+- [ ] Y a-t-il des contraintes légales/réglementaires (RGPD, HIPAA, PCI-DSS) ?  
 - [ ] Quel est notre SLA vis-à-vis des clients ?
 
 #### 2. Ressources
 
-- [ ] Quel est notre budget annuel pour les sauvegardes ?
-- [ ] Combien d'espace de stockage avons-nous disponible ?
-- [ ] Quel est le niveau de compétence de l'équipe ?
+- [ ] Quel est notre budget annuel pour les sauvegardes ?  
+- [ ] Combien d'espace de stockage avons-nous disponible ?  
+- [ ] Quel est le niveau de compétence de l'équipe ?  
 - [ ] Avons-nous du temps pour maintenir une solution complexe ?
 
 #### 3. Données
 
-- [ ] Quelle est la taille actuelle de notre base de données ?
-- [ ] Quel est le taux de croissance (par mois/an) ?
-- [ ] Quelle est la fréquence de modification des données ?
+- [ ] Quelle est la taille actuelle de notre base de données ?  
+- [ ] Quel est le taux de croissance (par mois/an) ?  
+- [ ] Quelle est la fréquence de modification des données ?  
 - [ ] Y a-t-il des pics d'activité (heures, jours) ?
 
 #### 4. Infrastructure
 
-- [ ] Où sont nos serveurs (on-premise, cloud, hybride) ?
-- [ ] Avons-nous accès à plusieurs sites/datacenters ?
-- [ ] Quelle est la bande passante réseau disponible ?
+- [ ] Où sont nos serveurs (on-premise, cloud, hybride) ?  
+- [ ] Avons-nous accès à plusieurs sites/datacenters ?  
+- [ ] Quelle est la bande passante réseau disponible ?  
 - [ ] Avons-nous déjà des solutions de stockage (NAS, SAN, cloud) ?
 
 ### Matrice de Décision
@@ -785,23 +785,23 @@ Annuel :
 Ce chapitre 16.11 est organisé pour vous guider progressivement à travers tous les aspects des sauvegardes PostgreSQL :
 
 ### 16.11.1. Sauvegardes Logiques (pg_dump, pg_dumpall)
-- **Ce que vous apprendrez** : Comment utiliser pg_dump et pg_dumpall
-- **Niveau** : Débutant à Intermédiaire
+- **Ce que vous apprendrez** : Comment utiliser pg_dump et pg_dumpall  
+- **Niveau** : Débutant à Intermédiaire  
 - **Cas d'usage** : Sauvegardes flexibles, migrations, clonage
 
 ### 16.11.2. Sauvegardes Physiques (pg_basebackup)
-- **Ce que vous apprendrez** : Sauvegardes complètes rapides
-- **Niveau** : Intermédiaire
+- **Ce que vous apprendrez** : Sauvegardes complètes rapides  
+- **Niveau** : Intermédiaire  
 - **Cas d'usage** : Production, grandes bases, HA
 
 ### 16.11.3. Point-In-Time Recovery (PITR) et WAL Archiving
-- **Ce que vous apprendrez** : Récupération à un instant précis
-- **Niveau** : Avancé
+- **Ce que vous apprendrez** : Récupération à un instant précis  
+- **Niveau** : Avancé  
 - **Cas d'usage** : Protection contre erreurs logiques, audit
 
 ### 16.11.4. Stratégies de Sauvegarde 3-2-1
-- **Ce que vous apprendrez** : Orchestration complète
-- **Niveau** : Avancé
+- **Ce que vous apprendrez** : Orchestration complète  
+- **Niveau** : Avancé  
 - **Cas d'usage** : Architecture production robuste
 
 ---
@@ -832,20 +832,20 @@ Avant de plonger dans les détails techniques, gardez en tête ces principes :
 
 ### 📊 Métriques à Connaître
 
-- **RTO** : Temps maximal d'indisponibilité acceptable
-- **RPO** : Quantité maximale de données perdues acceptable
-- **Fréquence** : À quelle cadence sauvegarder
-- **Rétention** : Combien de temps garder les sauvegardes
+- **RTO** : Temps maximal d'indisponibilité acceptable  
+- **RPO** : Quantité maximale de données perdues acceptable  
+- **Fréquence** : À quelle cadence sauvegarder  
+- **Rétention** : Combien de temps garder les sauvegardes  
 - **Coût** : Budget total (stockage + temps + ressources)
 
 ### ✅ Checklist Minimale
 
 Avant de continuer, assurez-vous d'avoir :
 
-- [ ] Compris l'importance des sauvegardes
-- [ ] Identifié vos objectifs RTO/RPO
-- [ ] Évalué votre budget et ressources
-- [ ] Compris les différentes approches (logique vs physique vs WAL)
+- [ ] Compris l'importance des sauvegardes  
+- [ ] Identifié vos objectifs RTO/RPO  
+- [ ] Évalué votre budget et ressources  
+- [ ] Compris les différentes approches (logique vs physique vs WAL)  
 - [ ] Réfléchi à votre stratégie globale
 
 ---

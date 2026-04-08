@@ -83,9 +83,9 @@ La disponibilité se mesure généralement en pourcentage, souvent exprimé en n
 
 Imaginez un magasin physique qui ferme de manière imprévisible :
 ```
-Lundi 10h : Fermé 2 heures (panne électrique)
-Mercredi 14h : Fermé 4 heures (problème informatique)
-Samedi 16h : Fermé toute l'après-midi (jour de plus forte affluence)
+Lundi 10h : Fermé 2 heures (panne électrique)  
+Mercredi 14h : Fermé 4 heures (problème informatique)  
+Samedi 16h : Fermé toute l'après-midi (jour de plus forte affluence)  
 
 Résultat :
 → Les clients vont chez le concurrent
@@ -191,11 +191,11 @@ Selon une étude de Google (2007) sur des millions de disques :
 
 **Risques physiques :**
 
-1. **Incendie** dans le datacenter
-2. **Inondation** (datacenter sous-sol)
-3. **Tremblement de terre**
-4. **Ouragan / Tempête**
-5. **Coupure électrique généralisée**
+1. **Incendie** dans le datacenter  
+2. **Inondation** (datacenter sous-sol)  
+3. **Tremblement de terre**  
+4. **Ouragan / Tempête**  
+5. **Coupure électrique généralisée**  
 6. **Attentat / Sabotage**
 
 **Exemple réel :**
@@ -208,9 +208,9 @@ En 2021, un incendie chez OVH (hébergeur français) a détruit complètement 4 
 
 Même les opérations prévues causent de l'indisponibilité :
 
-- **Mise à jour de PostgreSQL** : Redémarrage requis (5-30 minutes)
-- **Changement de configuration** : Redémarrage parfois nécessaire
-- **Migration de serveur** : Plusieurs heures de downtime
+- **Mise à jour de PostgreSQL** : Redémarrage requis (5-30 minutes)  
+- **Changement de configuration** : Redémarrage parfois nécessaire  
+- **Migration de serveur** : Plusieurs heures de downtime  
 - **Extension du stockage** : Arrêt du service
 
 ---
@@ -235,9 +235,9 @@ Pour évaluer et gérer la HA, on utilise des métriques standardisées :
 
 **Implications techniques :**
 
-- **RTO = 24h** : Backup quotidien + restauration manuelle suffit
-- **RTO = 1h** : Hot standby + monitoring + procédure de failover
-- **RTO = 15 min** : Réplication synchrone + failover automatisé (Patroni)
+- **RTO = 24h** : Backup quotidien + restauration manuelle suffit  
+- **RTO = 1h** : Hot standby + monitoring + procédure de failover  
+- **RTO = 15 min** : Réplication synchrone + failover automatisé (Patroni)  
 - **RTO = 30s** : Multi-master ou réplication quasi-synchrone + détection automatique
 
 ### 3.2. RPO (Recovery Point Objective)
@@ -256,9 +256,9 @@ Pour évaluer et gérer la HA, on utilise des métriques standardisées :
 
 **Implications techniques :**
 
-- **RPO = 24h** : Backup quotidien nocturne
-- **RPO = 1h** : Archivage WAL toutes les heures
-- **RPO = 5 min** : Réplication asynchrone + WAL shipping continu
+- **RPO = 24h** : Backup quotidien nocturne  
+- **RPO = 1h** : Archivage WAL toutes les heures  
+- **RPO = 5 min** : Réplication asynchrone + WAL shipping continu  
 - **RPO = 0** : Réplication synchrone (sacrifice de performance)
 
 ### 3.3. MTBF (Mean Time Between Failures)
@@ -297,9 +297,9 @@ Si un serveur tombe en panne 4 fois par an :
 ```
 Disponibilité = MTBF / (MTBF + MTTR)
 
-Exemple :
-MTBF = 90 jours = 2160 heures
-MTTR = 2 heures
+Exemple :  
+MTBF = 90 jours = 2160 heures  
+MTTR = 2 heures  
 
 Disponibilité = 2160 / (2160 + 2) = 99,9%
 ```
@@ -351,14 +351,14 @@ PostgreSQL offre plusieurs approches pour atteindre la haute disponibilité, cha
 - Restauration possible à n'importe quel point dans le temps
 
 **Avantages :**
-- ✅ Protection contre les erreurs humaines
-- ✅ Protection contre la corruption de données
-- ✅ Conformité réglementaire (audit trail)
+- ✅ Protection contre les erreurs humaines  
+- ✅ Protection contre la corruption de données  
+- ✅ Conformité réglementaire (audit trail)  
 - ✅ Coût faible
 
 **Inconvénients :**
-- ❌ RTO élevé (plusieurs heures pour restaurer)
-- ❌ Nécessite une procédure manuelle
+- ❌ RTO élevé (plusieurs heures pour restaurer)  
+- ❌ Nécessite une procédure manuelle  
 - ❌ Ne protège pas contre les pannes en temps réel
 
 **Cas d'usage :**
@@ -402,14 +402,14 @@ PostgreSQL offre plusieurs approches pour atteindre la haute disponibilité, cha
    - Performance impactée (latence réseau)
 
 **Avantages :**
-- ✅ RTO faible (quelques minutes avec failover manuel)
-- ✅ RPO faible (secondes en async, 0 en sync)
-- ✅ Standbys utilisables en lecture (load balancing)
+- ✅ RTO faible (quelques minutes avec failover manuel)  
+- ✅ RPO faible (secondes en async, 0 en sync)  
+- ✅ Standbys utilisables en lecture (load balancing)  
 - ✅ Protection contre pannes matérielles et catastrophes
 
 **Inconvénients :**
-- ❌ Ne protège PAS contre les erreurs humaines (répliquées instantanément)
-- ❌ Architecture identique requise (version, CPU)
+- ❌ Ne protège PAS contre les erreurs humaines (répliquées instantanément)  
+- ❌ Architecture identique requise (version, CPU)  
 - ❌ Complexité de configuration
 
 **Cas d'usage :**
@@ -445,15 +445,15 @@ PostgreSQL offre plusieurs approches pour atteindre la haute disponibilité, cha
 ```
 
 **Avantages :**
-- ✅ Réplication sélective (tables spécifiques)
-- ✅ Versions PostgreSQL différentes
-- ✅ Transformations possibles (ETL-like)
+- ✅ Réplication sélective (tables spécifiques)  
+- ✅ Versions PostgreSQL différentes  
+- ✅ Transformations possibles (ETL-like)  
 - ✅ Architectures hétérogènes
 
 **Inconvénients :**
-- ❌ Overhead supérieur (décodage + encodage)
-- ❌ Ne réplique pas le DDL automatiquement
-- ❌ Gestion des conflits plus complexe
+- ❌ Overhead supérieur (décodage + encodage)  
+- ❌ Ne réplique pas le DDL automatiquement  
+- ❌ Gestion des conflits plus complexe  
 - ❌ Ne réplique pas les SEQUENCES ni LARGE OBJECTS
 
 **Cas d'usage :**
@@ -504,14 +504,14 @@ Applications (1000 clients)
    - Très agressif, rarement utilisé
 
 **Avantages :**
-- ✅ Améliore dramatiquement la capacité de charge
-- ✅ Protège contre la saturation de connexions
-- ✅ Réduit la consommation mémoire
+- ✅ Améliore dramatiquement la capacité de charge  
+- ✅ Protège contre la saturation de connexions  
+- ✅ Réduit la consommation mémoire  
 - ✅ Transparence pour l'application
 
 **Inconvénients :**
-- ❌ Point de défaillance unique (si pas redondé)
-- ❌ Complexité ajoutée dans l'architecture
+- ❌ Point de défaillance unique (si pas redondé)  
+- ❌ Complexité ajoutée dans l'architecture  
 - ❌ Debugging plus difficile
 
 **Cas d'usage :**
@@ -560,15 +560,15 @@ Applications (1000 clients)
 ```
 
 **Avantages :**
-- ✅ RTO minimal (30 secondes - 2 minutes)
-- ✅ Aucune intervention humaine requise
-- ✅ Détection automatique des pannes
+- ✅ RTO minimal (30 secondes - 2 minutes)  
+- ✅ Aucune intervention humaine requise  
+- ✅ Détection automatique des pannes  
 - ✅ Reconfiguration automatique du cluster
 
 **Inconvénients :**
-- ❌ Complexité très élevée
-- ❌ Nécessite une expertise spécifique
-- ❌ Infrastructure additionnelle (consensus service)
+- ❌ Complexité très élevée  
+- ❌ Nécessite une expertise spécifique  
+- ❌ Infrastructure additionnelle (consensus service)  
 - ❌ Coût élevé (équipe, matériel)
 
 **Cas d'usage :**
@@ -805,27 +805,27 @@ Les concepts de ce chapitre s'appliquent à partir de **PostgreSQL 10** (introdu
 Avant d'implémenter une stratégie HA en production :
 
 **Infrastructure :**
-- [ ] Serveurs redondants disponibles
-- [ ] Réseau stable et surveillé
-- [ ] Stockage avec redondance (RAID, SAN)
+- [ ] Serveurs redondants disponibles  
+- [ ] Réseau stable et surveillé  
+- [ ] Stockage avec redondance (RAID, SAN)  
 - [ ] Monitoring en place (Prometheus, Grafana, etc.)
 
 **PostgreSQL :**
-- [ ] Version supportée (ideally LTS)
-- [ ] Configuration optimisée
-- [ ] Backups testés et fonctionnels
+- [ ] Version supportée (ideally LTS)  
+- [ ] Configuration optimisée  
+- [ ] Backups testés et fonctionnels  
 - [ ] Procédure de restauration documentée
 
 **Équipe :**
-- [ ] Compétences PostgreSQL et Linux
-- [ ] Astreintes organisées (24/7 pour HA critique)
-- [ ] Formation sur les outils (Patroni, Repmgr)
+- [ ] Compétences PostgreSQL et Linux  
+- [ ] Astreintes organisées (24/7 pour HA critique)  
+- [ ] Formation sur les outils (Patroni, Repmgr)  
 - [ ] Runbooks écrits et validés
 
 **Processus :**
-- [ ] Tests de basculement planifiés
-- [ ] Métriques RTO/RPO définies
-- [ ] SLA contractualisés (si applicable)
+- [ ] Tests de basculement planifiés  
+- [ ] Métriques RTO/RPO définies  
+- [ ] SLA contractualisés (si applicable)  
 - [ ] Post-mortem après chaque incident
 
 ---

@@ -42,12 +42,12 @@ PostgreSQL propose deux types de réplication : **physique** et **logique**. Il 
 - Réplication **bit-à-bit** : le standby est une copie identique du primary
 
 **Caractéristiques :**
-- ✅ **Réplication complète** : Toute la base de données (toutes les bases, tous les schémas, toutes les tables)
-- ✅ **Performances élevées** : Overhead minimal, très rapide
-- ✅ **Simplicité** : Configuration relativement simple
-- ✅ **Fidélité absolue** : Garantie d'identité parfaite entre primary et standby
-- ⚠️ **Tout ou rien** : Impossible de répliquer uniquement certaines tables ou bases
-- ⚠️ **Version identique requise** : Primary et standby doivent être sur la même version majeure de PostgreSQL
+- ✅ **Réplication complète** : Toute la base de données (toutes les bases, tous les schémas, toutes les tables)  
+- ✅ **Performances élevées** : Overhead minimal, très rapide  
+- ✅ **Simplicité** : Configuration relativement simple  
+- ✅ **Fidélité absolue** : Garantie d'identité parfaite entre primary et standby  
+- ⚠️ **Tout ou rien** : Impossible de répliquer uniquement certaines tables ou bases  
+- ⚠️ **Version identique requise** : Primary et standby doivent être sur la même version majeure de PostgreSQL  
 - ⚠️ **Architecture identique** : Même OS, même architecture CPU (x86_64, ARM, etc.)
 
 **Cas d'usage typiques :**
@@ -66,12 +66,12 @@ PostgreSQL propose deux types de réplication : **physique** et **logique**. Il 
 - Le standby applique ces opérations comme des requêtes SQL normales
 
 **Caractéristiques :**
-- ✅ **Réplication sélective** : Possibilité de répliquer uniquement certaines tables ou bases
-- ✅ **Cross-version** : Peut répliquer entre différentes versions majeures de PostgreSQL
-- ✅ **Transformations** : Possibilité de transformer les données pendant la réplication
-- ✅ **Bi-directionnelle** : Possibilité de réplication dans les deux sens (avec précautions)
-- ⚠️ **Performances moindres** : Overhead plus important que la réplication physique
-- ⚠️ **Complexité** : Configuration plus complexe
+- ✅ **Réplication sélective** : Possibilité de répliquer uniquement certaines tables ou bases  
+- ✅ **Cross-version** : Peut répliquer entre différentes versions majeures de PostgreSQL  
+- ✅ **Transformations** : Possibilité de transformer les données pendant la réplication  
+- ✅ **Bi-directionnelle** : Possibilité de réplication dans les deux sens (avec précautions)  
+- ⚠️ **Performances moindres** : Overhead plus important que la réplication physique  
+- ⚠️ **Complexité** : Configuration plus complexe  
 - ⚠️ **Limitations** : Ne réplique pas les DDL (CREATE, ALTER, DROP), séquences, large objects, etc.
 
 **Cas d'usage typiques :**
@@ -96,7 +96,7 @@ PostgreSQL propose deux types de réplication : **physique** et **logique**. Il 
 | **Cas d'usage principal** | HA, DR, Read Replicas | Migrations, Réplication sélective |
 
 **Recommandation générale :**
-- **Utilisez la réplication physique** pour la haute disponibilité, la reprise après sinistre, et les read replicas (95% des cas d'usage)
+- **Utilisez la réplication physique** pour la haute disponibilité, la reprise après sinistre, et les read replicas (95% des cas d'usage)  
 - **Utilisez la réplication logique** pour les migrations de version majeure, la réplication sélective, ou les architectures distribuées complexes
 
 ---
@@ -112,14 +112,14 @@ Avant de plonger dans la configuration, il est essentiel de comprendre les conce
 **Définition :** Le serveur primary est le serveur **maître** qui accepte les opérations d'écriture (INSERT, UPDATE, DELETE).
 
 **Caractéristiques :**
-- ✅ Accepte les lectures (SELECT) et les écritures (INSERT, UPDATE, DELETE)
-- ✅ Génère les WAL (Write-Ahead Logs)
-- ✅ Envoie les WAL aux serveurs standby en temps réel
+- ✅ Accepte les lectures (SELECT) et les écritures (INSERT, UPDATE, DELETE)  
+- ✅ Génère les WAL (Write-Ahead Logs)  
+- ✅ Envoie les WAL aux serveurs standby en temps réel  
 - ✅ Source de vérité : c'est la version "officielle" de la base de données
 
 **Processus impliqués :**
-- **WAL Writer** : Écrit les WAL sur disque
-- **WAL Sender** : Envoie les WAL aux standbys (un processus par standby connecté)
+- **WAL Writer** : Écrit les WAL sur disque  
+- **WAL Sender** : Envoie les WAL aux standbys (un processus par standby connecté)  
 - **Checkpointer** : Synchronise périodiquement les données en mémoire avec le disque
 
 #### Standby (Serveur Secondaire)
@@ -127,14 +127,14 @@ Avant de plonger dans la configuration, il est essentiel de comprendre les conce
 **Définition :** Le serveur standby est un serveur **esclave** qui maintient une copie à jour de la base de données en rejouant les WAL reçus du primary.
 
 **Caractéristiques :**
-- ✅ Accepte les lectures (SELECT) en mode **Hot Standby**
-- ❌ Refuse les écritures (read-only)
-- ✅ Reçoit et rejoue les WAL du primary
+- ✅ Accepte les lectures (SELECT) en mode **Hot Standby**  
+- ❌ Refuse les écritures (read-only)  
+- ✅ Reçoit et rejoue les WAL du primary  
 - ✅ Peut devenir primary en cas de promotion (failover)
 
 **Processus impliqués :**
-- **WAL Receiver** : Reçoit les WAL du primary via la connexion réseau
-- **Startup Process** : Rejoue les WAL pour mettre à jour la base de données
+- **WAL Receiver** : Reçoit les WAL du primary via la connexion réseau  
+- **Startup Process** : Rejoue les WAL pour mettre à jour la base de données  
 - **WAL Sender** (en cascade) : Si configuré, peut envoyer les WAL à d'autres standbys
 
 **Modes de standby :**
@@ -156,15 +156,15 @@ Avant de plonger dans la configuration, il est essentiel de comprendre les conce
 Les **WAL** (Write-Ahead Logs) sont des fichiers journaux qui enregistrent **toutes les modifications** apportées à la base de données **avant** qu'elles ne soient effectivement écrites dans les fichiers de données.
 
 **Principe du Write-Ahead Logging :**
-1. Une transaction modifie des données (INSERT, UPDATE, DELETE)
-2. PostgreSQL écrit **d'abord** ces modifications dans les WAL (en mémoire, puis sur disque)
-3. La transaction est validée (COMMIT)
+1. Une transaction modifie des données (INSERT, UPDATE, DELETE)  
+2. PostgreSQL écrit **d'abord** ces modifications dans les WAL (en mémoire, puis sur disque)  
+3. La transaction est validée (COMMIT)  
 4. **Plus tard**, lors d'un checkpoint, PostgreSQL écrit les modifications des WAL dans les fichiers de données
 
 **Pourquoi cette approche ?**
-- ✅ **Atomicité** : Garantit qu'une transaction est soit complètement validée, soit complètement annulée
-- ✅ **Durabilité** : Les données validées ne sont jamais perdues (même en cas de crash)
-- ✅ **Performance** : Écriture séquentielle des WAL (très rapide) vs écriture aléatoire dans les fichiers de données (plus lent)
+- ✅ **Atomicité** : Garantit qu'une transaction est soit complètement validée, soit complètement annulée  
+- ✅ **Durabilité** : Les données validées ne sont jamais perdues (même en cas de crash)  
+- ✅ **Performance** : Écriture séquentielle des WAL (très rapide) vs écriture aléatoire dans les fichiers de données (plus lent)  
 - ✅ **Récupération** : Permet de récupérer la base de données après un crash en rejouant les WAL
 
 #### Structure des WAL
@@ -185,10 +185,10 @@ Les **WAL** (Write-Ahead Logs) sont des fichiers journaux qui enregistrent **tou
 - Opérations DDL (CREATE TABLE, ALTER, etc.)
 
 **Cycle de vie :**
-1. **Création** : Un segment WAL est créé quand nécessaire
-2. **Écriture** : Les transactions écrivent leurs modifications
-3. **Archivage** (optionnel) : Le segment est copié vers un emplacement de sauvegarde
-4. **Réplication** : Le segment est envoyé aux standbys
+1. **Création** : Un segment WAL est créé quand nécessaire  
+2. **Écriture** : Les transactions écrivent leurs modifications  
+3. **Archivage** (optionnel) : Le segment est copié vers un emplacement de sauvegarde  
+4. **Réplication** : Le segment est envoyé aux standbys  
 5. **Recyclage** : Après un checkpoint, le segment peut être recyclé (renommé et réutilisé)
 
 #### WAL et Réplication
@@ -267,10 +267,10 @@ Primary                                    Standby
 
 #### Avantages du Streaming
 
-- ⚡ **Latence minimale** : Les modifications sont transmises en millisecondes
-- 🔄 **Temps réel** : Le standby est quasiment synchronisé avec le primary
-- 🔌 **Simple** : Utilise une connexion réseau standard (TCP/IP)
-- 📊 **Monitoring** : Vues système pour surveiller l'état de réplication
+- ⚡ **Latence minimale** : Les modifications sont transmises en millisecondes  
+- 🔄 **Temps réel** : Le standby est quasiment synchronisé avec le primary  
+- 🔌 **Simple** : Utilise une connexion réseau standard (TCP/IP)  
+- 📊 **Monitoring** : Vues système pour surveiller l'état de réplication  
 - 🛡️ **Résilient** : Gère automatiquement les reconnexions en cas de perte réseau
 
 ### 4. Hot Standby
@@ -329,8 +329,8 @@ Un **replication slot** (emplacement de réplication) est un mécanisme qui gara
 
 **Sans slot de réplication :**
 ```
-Primary génère WAL → WAL archivés → WAL recyclés après checkpoint
-Si standby déconnecté > durée de rétention → WAL perdus → Standby ne peut plus se reconnecter
+Primary génère WAL → WAL archivés → WAL recyclés après checkpoint  
+Si standby déconnecté > durée de rétention → WAL perdus → Standby ne peut plus se reconnecter  
 ```
 
 **Avec slot de réplication :**
@@ -386,8 +386,8 @@ Un choix fondamental lors de la configuration de la réplication est le **mode d
 - Le primary n'attend **pas** la confirmation du standby
 
 **Avantages :**
-- ⚡ Performances maximales (latence minimale)
-- 🔌 Résilient : le primary continue si le standby tombe
+- ⚡ Performances maximales (latence minimale)  
+- 🔌 Résilient : le primary continue si le standby tombe  
 - 🌍 Adapté aux réplications géographiquement distantes
 
 **Inconvénient :**
@@ -401,11 +401,11 @@ Un choix fondamental lors de la configuration de la réplication est le **mode d
 - Garantie de **zero data loss**
 
 **Avantages :**
-- ✅ Aucune perte de données
+- ✅ Aucune perte de données  
 - ✅ Cohérence forte entre primary et standby
 
 **Inconvénients :**
-- 🐌 Latence augmentée (chaque transaction attend le réseau)
+- 🐌 Latence augmentée (chaque transaction attend le réseau)  
 - ⚠️ Dépendance au standby : si le standby tombe, le primary peut bloquer
 
 **Note :** Les modes synchrone et asynchrone sont détaillés dans le chapitre 17.2.2.
@@ -443,14 +443,14 @@ Primary (Datacenter A)
 ```
 
 **Processus de failover :**
-1. Le primary tombe en panne (panne matérielle, crash, etc.)
-2. Le standby est **promu** en nouveau primary (promotion)
-3. Les applications sont redirigées vers le nouveau primary
+1. Le primary tombe en panne (panne matérielle, crash, etc.)  
+2. Le standby est **promu** en nouveau primary (promotion)  
+3. Les applications sont redirigées vers le nouveau primary  
 4. RTO (Recovery Time Objective) : Quelques secondes à quelques minutes
 
 **Avantages :**
-- ✅ Continuité de service
-- ✅ Automatisable (avec Patroni, repmgr, etc.)
+- ✅ Continuité de service  
+- ✅ Automatisable (avec Patroni, repmgr, etc.)  
 - ✅ Aucune perte de données (si réplication synchrone)
 
 ### 2. Répartition de Charge en Lecture (Read Replicas)
@@ -476,8 +476,8 @@ Primary (Écritures)
 - Tableaux de bord et reporting
 
 **Avantages :**
-- ✅ Scalabilité : Ajouter des standbys pour augmenter la capacité de lecture
-- ✅ Isolation : Les requêtes lourdes sur les standbys n'impactent pas le primary
+- ✅ Scalabilité : Ajouter des standbys pour augmenter la capacité de lecture  
+- ✅ Isolation : Les requêtes lourdes sur les standbys n'impactent pas le primary  
 - ✅ Performance : Le primary est dédié aux écritures
 
 ### 3. Disaster Recovery (DR)
@@ -496,13 +496,13 @@ Primary (Paris)
 - RPO (Recovery Point Objective) : Quelques secondes à quelques minutes (selon le lag)
 
 **Processus de DR :**
-1. Catastrophe au datacenter principal
-2. Promotion du standby DR en primary
-3. Redirection des applications vers le nouveau primary
+1. Catastrophe au datacenter principal  
+2. Promotion du standby DR en primary  
+3. Redirection des applications vers le nouveau primary  
 4. Reconstruction du datacenter principal en parallèle
 
 **Avantages :**
-- ✅ Protection contre les catastrophes régionales
+- ✅ Protection contre les catastrophes régionales  
 - ✅ Conformité réglementaire (exigences de géo-réplication)
 
 ### 4. Backup à Chaud (Hot Backup)
@@ -521,7 +521,7 @@ Primary (Production)
 - Aucun verrou, aucune charge supplémentaire sur le primary
 
 **Avantages :**
-- ✅ Sauvegardes sans impact sur la production
+- ✅ Sauvegardes sans impact sur la production  
 - ✅ Possibilité de sauvegardes fréquentes (ex: toutes les heures)
 
 ### 5. Environnements de Test et Développement
@@ -538,8 +538,8 @@ Primary (Production)
 ```
 
 **Avantages :**
-- ✅ Données de production en dev/test (après anonymisation)
-- ✅ Isolation : Les environnements non-production ne surchargent pas le primary
+- ✅ Données de production en dev/test (après anonymisation)  
+- ✅ Isolation : Les environnements non-production ne surchargent pas le primary  
 - ✅ Facilité de rafraîchissement : Recréer un standby est simple
 
 ---
@@ -561,7 +561,7 @@ Avant de configurer la réplication physique, assurez-vous que votre infrastruct
 - Exemple : Si le primary génère 50 MB/s de WAL, prévoir au moins 60 MB/s de bande passante
 
 **Latence :**
-- **Réplication asynchrone** : Tolérance élevée (< 100ms acceptable)
+- **Réplication asynchrone** : Tolérance élevée (< 100ms acceptable)  
 - **Réplication synchrone** : Latence faible requise (< 10ms recommandé)
 - Mesurer la latence : `ping <standby_ip>`
 
@@ -602,7 +602,7 @@ Avant de configurer la réplication physique, assurez-vous que votre infrastruct
 - Pour cross-version : utiliser la réplication logique
 
 **Configuration minimale :**
-- `wal_level = replica` (sur le primary)
+- `wal_level = replica` (sur le primary)  
 - `max_wal_senders > 0` (sur le primary)
 - Utilisateur avec privilège `REPLICATION`
 
@@ -736,9 +736,9 @@ Configurer la réplication physique implique plusieurs étapes sur les serveurs 
    - Utilisateur dédié avec privilège `REPLICATION`
    - Exemple : `CREATE ROLE replicator WITH REPLICATION LOGIN PASSWORD '***'`
 
-2. **Configurer `postgresql.conf`**
-   - `wal_level = replica`
-   - `max_wal_senders = 5` (ou plus selon le nombre de standbys)
+2. **Configurer `postgresql.conf`**  
+   - `wal_level = replica`  
+   - `max_wal_senders = 5` (ou plus selon le nombre de standbys)  
    - `wal_keep_size = 1GB` (ou utiliser des slots de réplication)
    - Optionnel : `synchronous_standby_names` (pour réplication synchrone)
 
@@ -746,7 +746,7 @@ Configurer la réplication physique implique plusieurs étapes sur les serveurs 
    - Autoriser les connexions de réplication depuis les standbys
    - Exemple : `host replication replicator 192.168.1.20/32 scram-sha-256`
 
-4. **Créer des slots de réplication** (recommandé)
+4. **Créer des slots de réplication** (recommandé)  
    - `SELECT pg_create_physical_replication_slot('standby_slot_1');`
 
 5. **Redémarrer PostgreSQL**
@@ -758,9 +758,9 @@ Configurer la réplication physique implique plusieurs étapes sur les serveurs 
    - Utiliser `pg_basebackup` pour copier la base de données du primary
    - Exemple : `pg_basebackup -h <primary_ip> -D /var/lib/postgresql/18/main -U replicator -P -v -R -X stream`
 
-2. **Configurer `postgresql.conf`**
-   - `hot_standby = on` (pour accepter les lectures)
-   - `primary_conninfo = 'host=<primary_ip> user=replicator password=***'`
+2. **Configurer `postgresql.conf`**  
+   - `hot_standby = on` (pour accepter les lectures)  
+   - `primary_conninfo = 'host=<primary_ip> user=replicator password=***'`  
    - `primary_slot_name = 'standby_slot_1'` (si slot utilisé)
 
 3. **Vérifier le fichier `standby.signal`**
@@ -772,8 +772,8 @@ Configurer la réplication physique implique plusieurs étapes sur les serveurs 
 
 ### Vérification
 
-- **Sur le primary :** `SELECT * FROM pg_stat_replication;` (voir le standby connecté)
-- **Sur le standby :** `SELECT pg_is_in_recovery();` (doit retourner `true`)
+- **Sur le primary :** `SELECT * FROM pg_stat_replication;` (voir le standby connecté)  
+- **Sur le standby :** `SELECT pg_is_in_recovery();` (doit retourner `true`)  
 - **Test de bout en bout :** Insérer des données sur le primary, vérifier qu'elles apparaissent sur le standby
 
 ---
@@ -787,13 +787,13 @@ PostgreSQL 18 (sortie en septembre 2025) apporte plusieurs améliorations signif
 **Description :** PostgreSQL 18 introduit un nouveau sous-système d'I/O asynchrone qui améliore significativement les performances de lecture/écriture des WAL.
 
 **Avantages pour la réplication :**
-- ⚡ Réduction du lag de réplication de 20-30%
-- ⚡ Meilleure utilisation des disques NVMe
+- ⚡ Réduction du lag de réplication de 20-30%  
+- ⚡ Meilleure utilisation des disques NVMe  
 - ⚡ Jusqu'à 3× plus rapide sur certaines charges de travail
 
 **Configuration :**
 ```ini
-io_method = async  # 'sync' (ancien comportement) ou 'async' (nouveau)
+io_method = 'worker'  # Défaut PG 18 : 'sync', 'worker' ou 'io_uring'
 ```
 
 ### 2. Améliorations de COPY et Marqueur CSV
@@ -1003,34 +1003,34 @@ PostgreSQL et son écosystème fournissent plusieurs outils pour faciliter la ge
 
 ### Documentation Officielle
 
-- **PostgreSQL 18 Documentation :** [https://www.postgresql.org/docs/18/](https://www.postgresql.org/docs/18/)
-- **High Availability, Load Balancing, and Replication :** [https://www.postgresql.org/docs/18/high-availability.html](https://www.postgresql.org/docs/18/high-availability.html)
+- **PostgreSQL 18 Documentation :** [https://www.postgresql.org/docs/18/](https://www.postgresql.org/docs/18/)  
+- **High Availability, Load Balancing, and Replication :** [https://www.postgresql.org/docs/18/high-availability.html](https://www.postgresql.org/docs/18/high-availability.html)  
 - **Warm Standby and Streaming Replication :** [https://www.postgresql.org/docs/18/warm-standby.html](https://www.postgresql.org/docs/18/warm-standby.html)
 
 ### Livres Recommandés
 
-- **"PostgreSQL: Up and Running"** par Regina Obe et Leo Hsu
-- **"Mastering PostgreSQL 13"** par Hans-Jürgen Schönig (principes valables pour v18)
+- **"PostgreSQL: Up and Running"** par Regina Obe et Leo Hsu  
+- **"Mastering PostgreSQL 13"** par Hans-Jürgen Schönig (principes valables pour v18)  
 - **"The Art of PostgreSQL"** par Dimitri Fontaine
 
 ### Blogs et Sites Techniques
 
-- **2ndQuadrant Blog :** [https://www.2ndquadrant.com/en/blog/](https://www.2ndquadrant.com/en/blog/)
-- **Percona Blog :** [https://www.percona.com/blog/](https://www.percona.com/blog/)
-- **Crunchy Data Blog :** [https://www.crunchydata.com/blog](https://www.crunchydata.com/blog)
+- **2ndQuadrant Blog :** [https://www.2ndquadrant.com/en/blog/](https://www.2ndquadrant.com/en/blog/)  
+- **Percona Blog :** [https://www.percona.com/blog/](https://www.percona.com/blog/)  
+- **Crunchy Data Blog :** [https://www.crunchydata.com/blog](https://www.crunchydata.com/blog)  
 - **PostgreSQL Wiki :** [https://wiki.postgresql.org/](https://wiki.postgresql.org/)
 
 ### Communautés
 
-- **pgsql-general :** Liste de diffusion officielle PostgreSQL
-- **Reddit r/PostgreSQL :** [https://www.reddit.com/r/PostgreSQL/](https://www.reddit.com/r/PostgreSQL/)
-- **PostgreSQL Discord :** Communauté active pour discussions en temps réel
+- **pgsql-general :** Liste de diffusion officielle PostgreSQL  
+- **Reddit r/PostgreSQL :** [https://www.reddit.com/r/PostgreSQL/](https://www.reddit.com/r/PostgreSQL/)  
+- **PostgreSQL Discord :** Communauté active pour discussions en temps réel  
 - **Stack Overflow :** Tag `postgresql` pour questions techniques
 
 ### Conférences
 
-- **PGConf :** Conférence annuelle mondiale PostgreSQL
-- **PostgreSQL Sessions :** Événements réguliers en France et Europe
+- **PGConf :** Conférence annuelle mondiale PostgreSQL  
+- **PostgreSQL Sessions :** Événements réguliers en France et Europe  
 - **FOSDEM :** Track PostgreSQL/Database chaque année à Bruxelles
 
 ---
@@ -1039,17 +1039,17 @@ PostgreSQL et son écosystème fournissent plusieurs outils pour faciliter la ge
 
 La réplication physique (Streaming Replication) est un pilier fondamental de toute infrastructure PostgreSQL de production. Elle offre :
 
-- ✅ **Haute disponibilité** : Continuité de service en cas de panne
-- ✅ **Scalabilité** : Read replicas pour répartir les charges de lecture
-- ✅ **Disaster Recovery** : Protection géographique des données
-- ✅ **Flexibilité** : Multiples architectures possibles (synchrone, asynchrone, cascade)
-- ✅ **Performance** : Overhead minimal, latence en millisecondes
+- ✅ **Haute disponibilité** : Continuité de service en cas de panne  
+- ✅ **Scalabilité** : Read replicas pour répartir les charges de lecture  
+- ✅ **Disaster Recovery** : Protection géographique des données  
+- ✅ **Flexibilité** : Multiples architectures possibles (synchrone, asynchrone, cascade)  
+- ✅ **Performance** : Overhead minimal, latence en millisecondes  
 - ✅ **Simplicité** : Configuration relativement accessible
 
 **Les chapitres suivants détailleront :**
 
-- **17.2.1. Configuration Primary/Standby** : Guide pas à pas pour configurer votre première réplication
-- **17.2.2. Synchronous vs Asynchronous** : Choisir le bon mode de synchronisation selon vos besoins
+- **17.2.1. Configuration Primary/Standby** : Guide pas à pas pour configurer votre première réplication  
+- **17.2.2. Synchronous vs Asynchronous** : Choisir le bon mode de synchronisation selon vos besoins  
 - **17.2.3. Cascading Replication** : Construire des architectures multi-niveaux scalables
 
 Avec PostgreSQL 18 et ses améliorations significatives (I/O asynchrone, checksums par défaut, OAuth), la réplication physique est plus performante et sécurisée que jamais. Maîtriser cette technologie est essentiel pour tout développeur ou administrateur PostgreSQL travaillant sur des systèmes de production critiques.

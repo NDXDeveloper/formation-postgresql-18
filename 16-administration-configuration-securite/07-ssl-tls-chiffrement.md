@@ -45,13 +45,13 @@ Alice → "a8f$2#kL9@mP0..." (chiffré) → Bob
 ```
 
 C'est comme envoyer une lettre :
-- **Sans SSL/TLS** : Carte postale (tout le monde peut lire)
+- **Sans SSL/TLS** : Carte postale (tout le monde peut lire)  
 - **Avec SSL/TLS** : Enveloppe scellée dans un coffre-fort (seul le destinataire peut ouvrir)
 
 ### SSL vs TLS : Quelle Différence ?
 
 **Histoire :**
-- **SSL** : Protocole original (années 1990)
+- **SSL** : Protocole original (années 1990)  
 - **TLS** : Version améliorée et plus sécurisée de SSL (1999+)
 
 **Aujourd'hui :**
@@ -61,8 +61,8 @@ C'est comme envoyer une lettre :
 ⚠️ **Important** : Même si on dit souvent "SSL", on parle en réalité de **TLS**. PostgreSQL supporte TLS, pas SSL.
 
 **Versions TLS :**
-- ❌ **TLS 1.0 et 1.1** : Dépréciés, non sécurisés
-- ✅ **TLS 1.2** : Standard actuel, sécurisé
+- ❌ **TLS 1.0 et 1.1** : Dépréciés, non sécurisés  
+- ✅ **TLS 1.2** : Standard actuel, sécurisé  
 - ✅ **TLS 1.3** : Version la plus récente, plus rapide et plus sûre (PostgreSQL 18+)
 
 ---
@@ -76,8 +76,8 @@ C'est comme envoyer une lettre :
 **Scénario :**
 ```sql
 -- Connexion sans SSL
-psql -h database.example.com -U alice -d production
-Password: MonMotDePasse123
+psql -h database.example.com -U alice -d production  
+Password: MonMotDePasse123  
 
 -- ⚠️ Le mot de passe transite EN CLAIR sur le réseau
 -- Un attaquant avec Wireshark peut le capturer en 5 secondes
@@ -90,8 +90,8 @@ Password: MonMotDePasse123
 **Scénario :**
 ```sql
 -- Requête pour récupérer des données confidentielles
-SELECT nom, prenom, salaire, numero_secu
-FROM employes;
+SELECT nom, prenom, salaire, numero_secu  
+FROM employes;  
 
 -- ⚠️ Toutes ces données transitent EN CLAIR
 -- Un attaquant peut capturer :
@@ -126,9 +126,9 @@ SELECT * FROM users WHERE id = 1; DROP TABLE users;--
 ### Où les Attaques Peuvent-elles Avoir Lieu ?
 
 **Réseaux vulnérables :**
-- ❌ **Wi-Fi publics** (café, aéroport, hôtel)
-- ❌ **Réseaux partagés** (coworking, université)
-- ❌ **Internet ouvert** (connexion depuis l'extérieur)
+- ❌ **Wi-Fi publics** (café, aéroport, hôtel)  
+- ❌ **Réseaux partagés** (coworking, université)  
+- ❌ **Internet ouvert** (connexion depuis l'extérieur)  
 - ⚠️ **Réseaux d'entreprise** (si compromis)
 
 **Même les "réseaux internes" peuvent être vulnérables :**
@@ -189,8 +189,8 @@ Données originales : "SELECT * FROM users"
 
 **Exemple :**
 ```
-Message : "SELECT * FROM users"
-Sceau   : "abc123def456"  (calculé sur le message)
+Message : "SELECT * FROM users"  
+Sceau   : "abc123def456"  (calculé sur le message)  
 
 → Transmission sur le réseau
 
@@ -256,10 +256,10 @@ Client → ✅ Vérifie le certificat
 Un **certificat SSL/TLS** est comme une **carte d'identité numérique** pour un serveur. Il prouve que le serveur est bien celui qu'il prétend être.
 
 **Contenu d'un certificat :**
-- **Nom du serveur** (ex: database.example.com)
-- **Clé publique** (pour le chiffrement)
-- **Signature numérique** (prouve l'authenticité)
-- **Émetteur** (qui a signé ce certificat)
+- **Nom du serveur** (ex: database.example.com)  
+- **Clé publique** (pour le chiffrement)  
+- **Signature numérique** (prouve l'authenticité)  
+- **Émetteur** (qui a signé ce certificat)  
 - **Dates de validité** (début et fin)
 
 ### Types de Certificats
@@ -269,12 +269,12 @@ Un **certificat SSL/TLS** est comme une **carte d'identité numérique** pour un
 **Définition :** Certificat créé et signé par vous-même, pas par une autorité externe.
 
 **Avantages :**
-- ✅ Gratuit
-- ✅ Facile à créer
+- ✅ Gratuit  
+- ✅ Facile à créer  
 - ✅ Parfait pour développement et réseaux internes
 
 **Inconvénients :**
-- ❌ Pas reconnu par défaut (avertissements de sécurité)
+- ❌ Pas reconnu par défaut (avertissements de sécurité)  
 - ❌ Aucune garantie pour les tiers
 
 **Quand l'utiliser :**
@@ -302,12 +302,12 @@ openssl req -new -x509 -days 365 -nodes \
 - Comodo
 
 **Avantages :**
-- ✅ Reconnu universellement
-- ✅ Aucun avertissement de sécurité
+- ✅ Reconnu universellement  
+- ✅ Aucun avertissement de sécurité  
 - ✅ Preuve d'identité vérifiée
 
 **Inconvénients :**
-- ⚠️ Peut être payant (sauf Let's Encrypt)
+- ⚠️ Peut être payant (sauf Let's Encrypt)  
 - ⚠️ Processus de validation requis
 
 **Quand l'utiliser :**
@@ -351,8 +351,8 @@ openssl req -new -x509 -key server.key -out server.crt -days 365 \
   -subj "/C=FR/ST=Normandy/L=Rouen/O=MyCompany/CN=postgres.mycompany.com"
 
 # Définir les permissions (IMPORTANT)
-chmod 600 server.key
-chown postgres:postgres server.key server.crt
+chmod 600 server.key  
+chown postgres:postgres server.key server.crt  
 ```
 
 **Option B : Certificat Let's Encrypt (production)**
@@ -372,12 +372,12 @@ certbot certonly --standalone -d database.example.com
 
 ```bash
 # Copier les certificats dans le répertoire de données PostgreSQL
-cp server.crt /var/lib/postgresql/18/main/
-cp server.key /var/lib/postgresql/18/main/
+cp server.crt /var/lib/postgresql/18/main/  
+cp server.key /var/lib/postgresql/18/main/  
 
 # Permissions strictes (PostgreSQL refusera de démarrer si trop permissif)
-chmod 600 /var/lib/postgresql/18/main/server.key
-chown postgres:postgres /var/lib/postgresql/18/main/server.*
+chmod 600 /var/lib/postgresql/18/main/server.key  
+chown postgres:postgres /var/lib/postgresql/18/main/server.*  
 ```
 
 #### Étape 3 : Configurer `postgresql.conf`
@@ -401,8 +401,8 @@ ssl_key_file = 'server.key'
 # ssl_crl_file = 'root.crl'
 
 # Versions TLS autorisées (sécurité renforcée)
-ssl_min_protocol_version = 'TLSv1.2'  # Minimum TLS 1.2
-ssl_max_protocol_version = 'TLSv1.3'  # Maximum TLS 1.3 (PostgreSQL 18+)
+ssl_min_protocol_version = 'TLSv1.2'  # Minimum TLS 1.2  
+ssl_max_protocol_version = 'TLSv1.3'  # Maximum TLS 1.3 (PostgreSQL 18+)  
 
 # Nouveauté PostgreSQL 18 : Configuration TLS 1.3
 ssl_tls13_ciphers = 'TLS_AES_256_GCM_SHA384:TLS_AES_128_GCM_SHA256'
@@ -447,8 +447,8 @@ hostssl all       all       0.0.0.0/0        scram-sha-256
 ```
 
 **Différence host vs hostssl :**
-- `host` : Autorise les connexions avec OU sans SSL
-- `hostssl` : **Exige** une connexion SSL (refuse si pas SSL)
+- `host` : Autorise les connexions avec OU sans SSL  
+- `hostssl` : **Exige** une connexion SSL (refuse si pas SSL)  
 - `hostnossl` : Autorise UNIQUEMENT les connexions sans SSL (⚠️ dangereux)
 
 #### Étape 5 : Redémarrer PostgreSQL
@@ -471,8 +471,8 @@ sudo -u postgres psql -c "SHOW ssl;"
 psql "host=database.example.com port=5432 dbname=mydb user=alice sslmode=require"
 
 # Ou avec variables d'environnement
-export PGSSLMODE=require
-psql -h database.example.com -U alice -d mydb
+export PGSSLMODE=require  
+psql -h database.example.com -U alice -d mydb  
 
 # Vérifier que la connexion utilise SSL
 psql -h database.example.com -U alice -d mydb -c "SELECT ssl_is_used();"
@@ -557,7 +557,7 @@ psql "host=db.example.com dbname=mydb user=alice sslmode=disable"
 ```
 
 **Comportement :**
-- ❌ Aucun chiffrement
+- ❌ Aucun chiffrement  
 - ❌ Données en clair sur le réseau
 
 **Quand l'utiliser :**
@@ -589,8 +589,8 @@ psql "host=db.example.com dbname=mydb user=alice sslmode=require"
 ```
 
 **Comportement :**
-- ✅ Exige une connexion SSL
-- ✅ Refuse si le serveur ne supporte pas SSL
+- ✅ Exige une connexion SSL  
+- ✅ Refuse si le serveur ne supporte pas SSL  
 - ⚠️ N'vérifie PAS le certificat du serveur
 
 **Problème :**
@@ -608,8 +608,8 @@ psql "host=db.example.com dbname=mydb user=alice sslmode=verify-ca sslrootcert=/
 ```
 
 **Comportement :**
-- ✅ Exige une connexion SSL
-- ✅ Vérifie que le certificat est signé par une CA de confiance
+- ✅ Exige une connexion SSL  
+- ✅ Vérifie que le certificat est signé par une CA de confiance  
 - ⚠️ N'vérifie PAS que le nom du serveur correspond
 
 **Protection :**
@@ -627,8 +627,8 @@ psql "host=db.example.com dbname=mydb user=alice sslmode=verify-full sslrootcert
 ```
 
 **Comportement :**
-- ✅ Exige une connexion SSL
-- ✅ Vérifie que le certificat est signé par une CA de confiance
+- ✅ Exige une connexion SSL  
+- ✅ Vérifie que le certificat est signé par une CA de confiance  
 - ✅ Vérifie que le nom du serveur correspond au certificat
 
 **Protection maximale :**
@@ -694,25 +694,25 @@ ssl_ciphers = 'FIPS'
 # postgresql.conf (PostgreSQL 18+)
 
 # Activer TLS 1.3 uniquement
-ssl_min_protocol_version = 'TLSv1.3'
-ssl_max_protocol_version = 'TLSv1.3'
+ssl_min_protocol_version = 'TLSv1.3'  
+ssl_max_protocol_version = 'TLSv1.3'  
 
 # Algorithmes de chiffrement TLS 1.3
 ssl_tls13_ciphers = 'TLS_AES_256_GCM_SHA384:TLS_AES_128_GCM_SHA256:TLS_CHACHA20_POLY1305_SHA256'
 ```
 
 **Avantages de TLS 1.3 :**
-- ✅ **Plus rapide** : Handshake plus court (1-RTT)
-- ✅ **Plus sûr** : Algorithmes faibles supprimés
-- ✅ **Confidentialité** : Forward secrecy par défaut
+- ✅ **Plus rapide** : Handshake plus court (1-RTT)  
+- ✅ **Plus sûr** : Algorithmes faibles supprimés  
+- ✅ **Confidentialité** : Forward secrecy par défaut  
 - ✅ **Simplicité** : Configuration plus simple
 
 **Algorithmes TLS 1.3 recommandés :**
 ```
 # Ordre de préférence (du plus fort au plus rapide)
-TLS_AES_256_GCM_SHA384        # AES 256-bit (le plus fort)
-TLS_AES_128_GCM_SHA256        # AES 128-bit (bon compromis)
-TLS_CHACHA20_POLY1305_SHA256  # ChaCha20 (rapide sur mobile)
+TLS_AES_256_GCM_SHA384        # AES 256-bit (le plus fort)  
+TLS_AES_128_GCM_SHA256        # AES 128-bit (bon compromis)  
+TLS_CHACHA20_POLY1305_SHA256  # ChaCha20 (rapide sur mobile)  
 ```
 
 ### 3. Authentification Mutuelle Améliorée (mTLS)
@@ -743,9 +743,9 @@ SHOW ssl;
 -- Résultat attendu : on
 
 -- Voir les paramètres SSL
-SHOW ssl_cert_file;
-SHOW ssl_key_file;
-SHOW ssl_min_protocol_version;
+SHOW ssl_cert_file;  
+SHOW ssl_key_file;  
+SHOW ssl_min_protocol_version;  
 ```
 
 **Côté client (connexion active) :**
@@ -784,8 +784,8 @@ echo | openssl s_client -connect database.example.com:5432 -starttls postgres 2>
 **Activer les logs SSL :**
 ```
 # postgresql.conf
-log_connections = on
-log_disconnections = on
+log_connections = on  
+log_disconnections = on  
 
 # Logs détaillés (développement uniquement)
 log_statement = 'all'
@@ -793,8 +793,8 @@ log_statement = 'all'
 
 **Exemple de logs :**
 ```
-LOG:  connection received: host=192.168.1.100 port=54321
-LOG:  connection authorized: user=alice database=mydb SSL enabled (protocol=TLSv1.3, cipher=TLS_AES_256_GCM_SHA384, bits=256)
+LOG:  connection received: host=192.168.1.100 port=54321  
+LOG:  connection authorized: user=alice database=mydb SSL enabled (protocol=TLSv1.3, cipher=TLS_AES_256_GCM_SHA384, bits=256)  
 ```
 
 ---
@@ -805,8 +805,8 @@ LOG:  connection authorized: user=alice database=mydb SSL enabled (protocol=TLSv
 
 **Message :**
 ```
-psql: error: connection to server failed:
-server does not support SSL, but SSL was required
+psql: error: connection to server failed:  
+server does not support SSL, but SSL was required  
 ```
 
 **Causes :**
@@ -826,8 +826,8 @@ hostssl  all  all  0.0.0.0/0  scram-sha-256
 
 **Message :**
 ```
-FATAL: could not load server certificate file "server.crt": Permission denied
-FATAL: private key file "server.key" has group or world access
+FATAL: could not load server certificate file "server.crt": Permission denied  
+FATAL: private key file "server.key" has group or world access  
 ```
 
 **Cause :**
@@ -836,8 +836,8 @@ FATAL: private key file "server.key" has group or world access
 **Solution :**
 ```bash
 # Permissions strictes requises
-chmod 600 server.key
-chown postgres:postgres server.key
+chmod 600 server.key  
+chown postgres:postgres server.key  
 
 # Vérifier
 ls -la server.key
@@ -848,8 +848,8 @@ ls -la server.key
 
 **Message :**
 ```
-psql: error: connection failed:
-SSL error: certificate verify failed
+psql: error: connection failed:  
+SSL error: certificate verify failed  
 ```
 
 **Cause :**
@@ -916,8 +916,8 @@ psql "host=database.example.com sslmode=verify-full ..."
 # Créer un fichier de configuration OpenSSL
 cat > san.cnf <<EOF
 [req]
-distinguished_name = req_distinguished_name
-req_extensions = v3_req
+distinguished_name = req_distinguished_name  
+req_extensions = v3_req  
 
 [req_distinguished_name]
 CN = database.example.com
@@ -926,10 +926,10 @@ CN = database.example.com
 subjectAltName = @alt_names
 
 [alt_names]
-DNS.1 = database.example.com
-DNS.2 = db.local
-IP.1 = 192.168.1.50
-EOF
+DNS.1 = database.example.com  
+DNS.2 = db.local  
+IP.1 = 192.168.1.50  
+EOF  
 
 # Générer le certificat avec SAN
 openssl req -new -x509 -days 365 -nodes \
@@ -946,8 +946,8 @@ openssl req -new -x509 -days 365 -nodes \
 
 ```
 # postgresql.conf
-ssl_min_protocol_version = 'TLSv1.2'  # Minimum
-ssl_max_protocol_version = 'TLSv1.3'  # Maximum (PostgreSQL 18+)
+ssl_min_protocol_version = 'TLSv1.2'  # Minimum  
+ssl_max_protocol_version = 'TLSv1.3'  # Maximum (PostgreSQL 18+)  
 ```
 
 ❌ **Ne jamais autoriser :**
@@ -1000,8 +1000,8 @@ conn = psycopg.connect(
 ### 5. Renouveler les Certificats Régulièrement
 
 **Cycle de vie recommandé :**
-- **Let's Encrypt** : Renouvellement automatique tous les 90 jours
-- **Certificats d'entreprise** : Renouvellement annuel
+- **Let's Encrypt** : Renouvellement automatique tous les 90 jours  
+- **Certificats d'entreprise** : Renouvellement annuel  
 - **Certificats auto-signés** : Renouvellement tous les 6-12 mois
 
 **Automation avec Let's Encrypt :**
@@ -1021,15 +1021,15 @@ SELECT
   ssl,
   version AS tls_version,
   cipher
-FROM pg_stat_ssl
-JOIN pg_stat_activity USING (pid)
-WHERE ssl = true;
+FROM pg_stat_ssl  
+JOIN pg_stat_activity USING (pid)  
+WHERE ssl = true;  
 
 -- Alerter si connexions non-SSL détectées
-SELECT COUNT(*) AS non_ssl_connections
-FROM pg_stat_activity
-WHERE client_addr IS NOT NULL
-AND pid NOT IN (SELECT pid FROM pg_stat_ssl WHERE ssl = true);
+SELECT COUNT(*) AS non_ssl_connections  
+FROM pg_stat_activity  
+WHERE client_addr IS NOT NULL  
+AND pid NOT IN (SELECT pid FROM pg_stat_ssl WHERE ssl = true);  
 ```
 
 ### 7. Documentation et Procédures
@@ -1045,13 +1045,13 @@ AND pid NOT IN (SELECT pid FROM pg_stat_ssl WHERE ssl = true);
 
 ## 🧠 Points Clés à Retenir
 
-1. **SSL/TLS chiffre les communications** entre client et serveur PostgreSQL
-2. **Trois piliers** : Confidentialité (chiffrement) + Intégrité (détection modification) + Authentification (vérification identité)
-3. **TLS 1.2+ uniquement** : Désactiver TLS 1.0, 1.1 et tous les SSL
-4. **PostgreSQL 18** apporte TLS 1.3, mode FIPS, et configuration avancée
-5. **Modes SSL** : `verify-full` est le plus sûr pour la production
-6. **Certificats** : Auto-signés (dev) vs Signés CA (production)
-7. **Configuration double** : Serveur (`postgresql.conf` + certificats) + Client (`sslmode`)
+1. **SSL/TLS chiffre les communications** entre client et serveur PostgreSQL  
+2. **Trois piliers** : Confidentialité (chiffrement) + Intégrité (détection modification) + Authentification (vérification identité)  
+3. **TLS 1.2+ uniquement** : Désactiver TLS 1.0, 1.1 et tous les SSL  
+4. **PostgreSQL 18** apporte TLS 1.3, mode FIPS, et configuration avancée  
+5. **Modes SSL** : `verify-full` est le plus sûr pour la production  
+6. **Certificats** : Auto-signés (dev) vs Signés CA (production)  
+7. **Configuration double** : Serveur (`postgresql.conf` + certificats) + Client (`sslmode`)  
 8. **Forcer SSL** : Utiliser `hostssl` dans `pg_hba.conf`
 
 ---
@@ -1106,8 +1106,8 @@ AND pid NOT IN (SELECT pid FROM pg_stat_ssl WHERE ssl = true);
 
 Dans les sections suivantes du tutoriel :
 
-- **16.2** : Configuration de l'authentification (`pg_hba.conf`)
-- **16.8** : Nouveautés PostgreSQL 18 - OAuth 2.0
+- **16.2** : Configuration de l'authentification (`pg_hba.conf`)  
+- **16.8** : Nouveautés PostgreSQL 18 - OAuth 2.0  
 - **16.9** : Chiffrement au repos (Transparent Data Encryption - TDE)
 
 ### Concepts Avancés
@@ -1129,10 +1129,10 @@ Dans les sections suivantes du tutoriel :
 
 ## 📚 Ressources Complémentaires
 
-- **Documentation PostgreSQL** : [SSL Support](https://www.postgresql.org/docs/current/ssl-tcp.html)
-- **Documentation PostgreSQL** : [Secure TCP/IP Connections](https://www.postgresql.org/docs/current/runtime-config-connection.html#RUNTIME-CONFIG-CONNECTION-SSL)
-- **Let's Encrypt** : [Certbot Documentation](https://certbot.eff.org/)
-- **Mozilla SSL Configuration Generator** : [ssl-config.mozilla.org](https://ssl-config.mozilla.org/)
+- **Documentation PostgreSQL** : [SSL Support](https://www.postgresql.org/docs/current/ssl-tcp.html)  
+- **Documentation PostgreSQL** : [Secure TCP/IP Connections](https://www.postgresql.org/docs/current/runtime-config-connection.html#RUNTIME-CONFIG-CONNECTION-SSL)  
+- **Let's Encrypt** : [Certbot Documentation](https://certbot.eff.org/)  
+- **Mozilla SSL Configuration Generator** : [ssl-config.mozilla.org](https://ssl-config.mozilla.org/)  
 - **SSL Labs** : [Tester la configuration SSL/TLS](https://www.ssllabs.com/ssltest/)
 
 ---

@@ -54,9 +54,9 @@ L'authentification dans PostgreSQL est contrôlée par un fichier de configurati
 
 ### Ce que pg_hba.conf Contrôle
 
-1. **Qui** peut se connecter (utilisateur PostgreSQL)
-2. **D'où** ils peuvent se connecter (adresse IP, réseau)
-3. **À quoi** ils peuvent accéder (base de données spécifique)
+1. **Qui** peut se connecter (utilisateur PostgreSQL)  
+2. **D'où** ils peuvent se connecter (adresse IP, réseau)  
+3. **À quoi** ils peuvent accéder (base de données spécifique)  
 4. **Comment** ils doivent s'authentifier (méthode)
 
 **Sans pg_hba.conf**, PostgreSQL ne peut pas déterminer si une connexion doit être acceptée ou refusée.
@@ -100,7 +100,7 @@ find / -name pg_hba.conf 2>/dev/null
 ### Permissions du Fichier
 
 Le fichier pg_hba.conf doit être :
-- **Lisible** par l'utilisateur système qui exécute PostgreSQL (généralement `postgres`)
+- **Lisible** par l'utilisateur système qui exécute PostgreSQL (généralement `postgres`)  
 - **Non modifiable** par les utilisateurs non autorisés
 
 ```bash
@@ -240,8 +240,8 @@ Définit **d'où** la connexion peut provenir. **Non utilisé pour `local`**.
 **Exemples :**
 ```conf
 # Localhost uniquement
-host    all   all   127.0.0.1/32          scram-sha-256
-host    all   all   ::1/128               scram-sha-256
+host    all   all   127.0.0.1/32          scram-sha-256  
+host    all   all   ::1/128               scram-sha-256  
 
 # Réseau local
 host    all   all   192.168.1.0/24        scram-sha-256
@@ -434,8 +434,8 @@ host    all   all   ::1/128        scram-sha-256
 # ──────────────────────────────────────────────────────────
 
 # Réplication depuis les standby servers
-host    replication   replicator   10.0.2.10/32   scram-sha-256
-host    replication   replicator   10.0.2.11/32   scram-sha-256
+host    replication   replicator   10.0.2.10/32   scram-sha-256  
+host    replication   replicator   10.0.2.11/32   scram-sha-256  
 
 # ──────────────────────────────────────────────────────────
 # 4. CONNEXIONS RÉSEAU INTERNE (Réseau d'entreprise)
@@ -469,8 +469,8 @@ hostssl all   +external_users   0.0.0.0/0   scram-sha-256
 # ──────────────────────────────────────────────────────────
 
 # Tout le reste est refusé explicitement
-host    all   all   0.0.0.0/0   reject
-host    all   all   ::/0        reject
+host    all   all   0.0.0.0/0   reject  
+host    all   all   ::/0        reject  
 ```
 
 ---
@@ -565,17 +565,17 @@ SELECT pg_postmaster_start_time(), pg_conf_load_time();
 #!/bin/bash
 # test_pg_hba.sh - Tester différentes connexions
 
-echo "=== Test 1 : Connexion locale (peer) ==="
-psql -U postgres -c "SELECT current_user;"
+echo "=== Test 1 : Connexion locale (peer) ==="  
+psql -U postgres -c "SELECT current_user;"  
 
-echo "=== Test 2 : Connexion TCP localhost (SCRAM) ==="
-PGPASSWORD=mypassword psql -h 127.0.0.1 -U myuser -d mydb -c "SELECT current_user;"
+echo "=== Test 2 : Connexion TCP localhost (SCRAM) ==="  
+PGPASSWORD=mypassword psql -h 127.0.0.1 -U myuser -d mydb -c "SELECT current_user;"  
 
-echo "=== Test 3 : Connexion réseau (SCRAM) ==="
-PGPASSWORD=mypassword psql -h 192.168.1.10 -U appuser -d production -c "SELECT current_user;"
+echo "=== Test 3 : Connexion réseau (SCRAM) ==="  
+PGPASSWORD=mypassword psql -h 192.168.1.10 -U appuser -d production -c "SELECT current_user;"  
 
-echo "=== Test 4 : Connexion SSL (SCRAM) ==="
-PGPASSWORD=mypassword psql "host=pg.company.com user=alice dbname=mydb sslmode=require" -c "SELECT current_user;"
+echo "=== Test 4 : Connexion SSL (SCRAM) ==="  
+PGPASSWORD=mypassword psql "host=pg.company.com user=alice dbname=mydb sslmode=require" -c "SELECT current_user;"  
 ```
 
 ### Interpréter les Erreurs
@@ -631,13 +631,13 @@ hostssl production   app_user   10.0.4.100/32   scram-sha-256
 
 ```conf
 # ✅ Correct : Spécifique → Général
-host    all   +admins      10.0.1.0/24   cert
-host    all   +developers  10.0.2.0/24   scram-sha-256
-host    all   all          0.0.0.0/0     reject
+host    all   +admins      10.0.1.0/24   cert  
+host    all   +developers  10.0.2.0/24   scram-sha-256  
+host    all   all          0.0.0.0/0     reject  
 
 # ❌ Incorrect : Général en premier rend le reste inutile
-host    all   all          0.0.0.0/0     scram-sha-256
-host    all   +admins      10.0.1.0/24   cert  # Jamais atteint !
+host    all   all          0.0.0.0/0     scram-sha-256  
+host    all   +admins      10.0.1.0/24   cert  # Jamais atteint !  
 ```
 
 ### 3. Toujours Utiliser SSL pour les Connexions Réseau ✅
@@ -657,17 +657,17 @@ host    all   all   0.0.0.0/0   scram-sha-256
 host    all   all   0.0.0.0/0   scram-sha-256
 
 # ✅ Limité aux réseaux connus
-host    all   all   10.0.0.0/8         scram-sha-256  # Réseau interne
-hostssl all   all   192.168.100.0/24   scram-sha-256  # VPN
+host    all   all   10.0.0.0/8         scram-sha-256  # Réseau interne  
+hostssl all   all   192.168.100.0/24   scram-sha-256  # VPN  
 ```
 
 ### 5. Utiliser des Groupes/Rôles ✅
 
 ```conf
 # ❌ Répétitif
-host    all   alice    10.0.1.0/24   scram-sha-256
-host    all   bob      10.0.1.0/24   scram-sha-256
-host    all   charlie  10.0.1.0/24   scram-sha-256
+host    all   alice    10.0.1.0/24   scram-sha-256  
+host    all   bob      10.0.1.0/24   scram-sha-256  
+host    all   charlie  10.0.1.0/24   scram-sha-256  
 
 # ✅ Groupe
 host    all   +developers   10.0.1.0/24   scram-sha-256
@@ -687,8 +687,8 @@ GRANT developers TO alice, bob, charlie;
 # ... règles normales ...
 
 # Catch-all : rejeter tout le reste
-host    all   all   0.0.0.0/0   reject
-host    all   all   ::/0        reject
+host    all   all   0.0.0.0/0   reject  
+host    all   all   ::/0        reject  
 ```
 
 ### 7. Commenter Abondamment ✅
@@ -706,14 +706,14 @@ host    production   app_user   10.0.4.0/24   scram-sha-256
 
 ```bash
 # Initialiser un repo Git
-cd /var/lib/postgresql/data
-git init
-git add pg_hba.conf postgresql.conf
-git commit -m "Initial configuration"
+cd /var/lib/postgresql/data  
+git init  
+git add pg_hba.conf postgresql.conf  
+git commit -m "Initial configuration"  
 
 # Après chaque modification
-git add pg_hba.conf
-git commit -m "Allow developers from 10.0.3.0/24"
+git add pg_hba.conf  
+git commit -m "Allow developers from 10.0.3.0/24"  
 
 # Voir l'historique
 git log pg_hba.conf
@@ -727,9 +727,9 @@ git log pg_hba.conf
 
 ```conf
 # Confiance totale en local (développement uniquement)
-local   all   all   trust
-host    all   all   127.0.0.1/32   trust
-host    all   all   ::1/128        trust
+local   all   all   trust  
+host    all   all   127.0.0.1/32   trust  
+host    all   all   ::1/128        trust  
 
 # Rejeter tout le reste
 host    all   all   0.0.0.0/0   reject
@@ -770,8 +770,8 @@ hostssl production   app_user   10.0.4.100/32   scram-sha-256
 host    all   monitoring_user   10.0.5.50/32   scram-sha-256
 
 # Rejeter TOUT le reste (important!)
-host    all   all   0.0.0.0/0   reject
-host    all   all   ::/0        reject
+host    all   all   0.0.0.0/0   reject  
+host    all   all   ::/0        reject  
 ```
 
 ---
@@ -784,8 +784,8 @@ host    all   all   ::/0        reject
 # postgresql.conf
 
 # Logger toutes les tentatives de connexion
-log_connections = on
-log_disconnections = on
+log_connections = on  
+log_disconnections = on  
 
 # Logger les échecs d'authentification
 log_failed_connections = on  # PostgreSQL 18+
@@ -810,10 +810,10 @@ log_min_messages = info
 ```
 
 **Analyse :**
-- **User** : bob
-- **Database** : production
-- **IP** : 203.0.113.50
-- **SSL** : Non
+- **User** : bob  
+- **Database** : production  
+- **IP** : 203.0.113.50  
+- **SSL** : Non  
 - **Problème** : Aucune règle pg_hba.conf ne correspond
 
 **Solution :** Ajouter une règle ou vérifier que l'utilisateur se connecte avec SSL.
@@ -836,8 +836,8 @@ SELECT * FROM pg_hba_file_rules;
 
 ```sql
 -- Trouver quelle règle s'applique à une connexion
-SELECT * FROM pg_hba_file_rules
-WHERE 'mydb' = ANY(database)
+SELECT * FROM pg_hba_file_rules  
+WHERE 'mydb' = ANY(database)  
   AND 'alice' = ANY(user_name);
 ```
 
@@ -871,8 +871,8 @@ host    tenant_b_db   tenant_b_user   10.2.0.0/16   scram-sha-256
 host    tenant_c_db   tenant_c_user   10.3.0.0/16   scram-sha-256
 
 # Interdire les cross-tenants
-host    tenant_a_db   tenant_b_user   0.0.0.0/0     reject
-host    tenant_b_db   tenant_a_user   0.0.0.0/0     reject
+host    tenant_a_db   tenant_b_user   0.0.0.0/0     reject  
+host    tenant_b_db   tenant_a_user   0.0.0.0/0     reject  
 ```
 
 ### 3. Maintenance Windows
@@ -895,17 +895,17 @@ host    all   all            0.0.0.0/0       reject
 
 ### Avant la Mise en Production
 
-- [ ] **SSL activé** pour toutes les connexions réseau (`hostssl`)
-- [ ] **Pas de `trust`** sauf en local pour postgres
-- [ ] **Pas de `password` ou `md5`** (utiliser `scram-sha-256`)
-- [ ] **Adresses IP restreintes** (pas de `0.0.0.0/0` sans SSL)
-- [ ] **Règle de rejet finale** (`reject` en catch-all)
-- [ ] **Admin `postgres` accessible uniquement en local**
-- [ ] **Comptes applicatifs avec IP dédiées**
-- [ ] **Logs d'authentification activés**
-- [ ] **Fichier versionné** (Git)
-- [ ] **Sauvegarde de l'ancien fichier** avant modification
-- [ ] **Tests de connexion** effectués
+- [ ] **SSL activé** pour toutes les connexions réseau (`hostssl`)  
+- [ ] **Pas de `trust`** sauf en local pour postgres  
+- [ ] **Pas de `password` ou `md5`** (utiliser `scram-sha-256`)  
+- [ ] **Adresses IP restreintes** (pas de `0.0.0.0/0` sans SSL)  
+- [ ] **Règle de rejet finale** (`reject` en catch-all)  
+- [ ] **Admin `postgres` accessible uniquement en local**  
+- [ ] **Comptes applicatifs avec IP dédiées**  
+- [ ] **Logs d'authentification activés**  
+- [ ] **Fichier versionné** (Git)  
+- [ ] **Sauvegarde de l'ancien fichier** avant modification  
+- [ ] **Tests de connexion** effectués  
 - [ ] **Documentation à jour** (commentaires dans le fichier)
 
 ### Audit Périodique (Trimestriel)
@@ -917,20 +917,20 @@ host    all   all            0.0.0.0/0       reject
 echo "=== Audit pg_hba.conf ==="
 
 # 1. Chercher les méthodes faibles
-echo "❌ Méthodes faibles trouvées :"
-grep -E "trust|password|md5" /var/lib/postgresql/data/pg_hba.conf
+echo "❌ Méthodes faibles trouvées :"  
+grep -E "trust|password|md5" /var/lib/postgresql/data/pg_hba.conf  
 
 # 2. Chercher les règles trop permissives
-echo "⚠️  Règles 0.0.0.0/0 trouvées :"
-grep "0.0.0.0/0" /var/lib/postgresql/data/pg_hba.conf
+echo "⚠️  Règles 0.0.0.0/0 trouvées :"  
+grep "0.0.0.0/0" /var/lib/postgresql/data/pg_hba.conf  
 
 # 3. Vérifier les connexions sans SSL
-echo "⚠️  Connexions host (non-SSL) trouvées :"
-grep "^host " /var/lib/postgresql/data/pg_hba.conf | grep -v "127.0.0.1"
+echo "⚠️  Connexions host (non-SSL) trouvées :"  
+grep "^host " /var/lib/postgresql/data/pg_hba.conf | grep -v "127.0.0.1"  
 
 # 4. Compter les règles
-echo "📊 Nombre total de règles :"
-grep -v "^#" /var/lib/postgresql/data/pg_hba.conf | grep -v "^$" | wc -l
+echo "📊 Nombre total de règles :"  
+grep -v "^#" /var/lib/postgresql/data/pg_hba.conf | grep -v "^$" | wc -l  
 
 echo "=== Fin de l'audit ==="
 ```
@@ -941,13 +941,13 @@ echo "=== Fin de l'audit ==="
 
 ### Documentation Officielle
 
-- **PostgreSQL Authentication** : https://www.postgresql.org/docs/18/auth-pg-hba-conf.html
+- **PostgreSQL Authentication** : https://www.postgresql.org/docs/18/auth-pg-hba-conf.html  
 - **Client Authentication** : https://www.postgresql.org/docs/18/client-authentication.html
 
 ### Outils
 
-- **pgAdmin** : Interface graphique avec éditeur pg_hba.conf intégré
-- **pg_hba_file_rules** : Vue système (PG 18+) pour inspecter les règles
+- **pgAdmin** : Interface graphique avec éditeur pg_hba.conf intégré  
+- **pg_hba_file_rules** : Vue système (PG 18+) pour inspecter les règles  
 - **pg_hba.conf generator** : Outils en ligne pour générer des configurations
 
 ### Exemples de Configurations
@@ -963,17 +963,17 @@ Disponibles dans :
 
 Le fichier **pg_hba.conf** est la pierre angulaire de la sécurité de PostgreSQL. Une configuration correcte est essentielle pour :
 
-1. **Protéger vos données** contre les accès non autorisés
-2. **Permettre les connexions légitimes** sans friction
-3. **Auditer et tracer** les accès à la base de données
+1. **Protéger vos données** contre les accès non autorisés  
+2. **Permettre les connexions légitimes** sans friction  
+3. **Auditer et tracer** les accès à la base de données  
 4. **Se conformer** aux standards de sécurité (PCI-DSS, GDPR, etc.)
 
 **Points clés à retenir :**
 
-- 📝 **Structure** : TYPE - DATABASE - USER - ADDRESS - METHOD
-- 🔢 **Ordre** : Premier match gagne (règles spécifiques avant générales)
-- 🔄 **Rechargement** : `pg_reload_conf()` sans redémarrage
-- 🔒 **Sécurité** : SSL + SCRAM-SHA-256 en production
+- 📝 **Structure** : TYPE - DATABASE - USER - ADDRESS - METHOD  
+- 🔢 **Ordre** : Premier match gagne (règles spécifiques avant générales)  
+- 🔄 **Rechargement** : `pg_reload_conf()` sans redémarrage  
+- 🔒 **Sécurité** : SSL + SCRAM-SHA-256 en production  
 - 🚫 **Rejection** : Toujours terminer par une règle de rejet
 
 Dans les sections suivantes, nous explorerons en détail chaque **méthode d'authentification** (SCRAM, certificats, LDAP, OAuth) ainsi que les **nouveautés de PostgreSQL 18** qui renforcent encore davantage la sécurité de l'authentification.
