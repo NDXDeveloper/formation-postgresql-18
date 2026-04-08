@@ -23,19 +23,19 @@ Toutes ces fonctionnalités nécessitent de manipuler des **données géographiq
 
 **PostGIS** est une **extension open-source** de PostgreSQL qui ajoute le support des **données géographiques et géométriques**. Elle permet de :
 
-- **Stocker** des objets géographiques (points, lignes, polygones)
-- **Interroger** ces objets avec SQL (recherches spatiales)
-- **Analyser** les relations spatiales (distance, intersection, contenance)
-- **Transformer** et manipuler les géométries
+- **Stocker** des objets géographiques (points, lignes, polygones)  
+- **Interroger** ces objets avec SQL (recherches spatiales)  
+- **Analyser** les relations spatiales (distance, intersection, contenance)  
+- **Transformer** et manipuler les géométries  
 - **Indexer** efficacement les données spatiales pour des performances optimales
 
 ### PostGIS en Quelques Chiffres
 
-- 🌍 **Leader mondial** des bases de données spatiales open-source
-- 📅 **Première version** : 2001 (plus de 20 ans d'existence)
-- 🔧 **400+ fonctions** spatiales
-- 🏆 **Standards OGC** : Implémente les standards de l'Open Geospatial Consortium
-- 🚀 **Utilisé par** : Uber, Airbnb, CartoDB, OpenStreetMap, organisations gouvernementales
+- 🌍 **Leader mondial** des bases de données spatiales open-source  
+- 📅 **Première version** : 2001 (plus de 20 ans d'existence)  
+- 🔧 **400+ fonctions** spatiales  
+- 🏆 **Standards OGC** : Implémente les standards de l'Open Geospatial Consortium  
+- 🚀 **Utilisé par** : Uber, Airbnb, CartoDB, OpenStreetMap, organisations gouvernementales  
 - 💰 **Économies** : Alternative gratuite à Oracle Spatial (~$50,000/processeur) et SQL Server Spatial
 
 ### Une Extension, Pas un Logiciel Séparé
@@ -53,9 +53,9 @@ PostgreSQL (base de données)
 ```
 
 **Avantages de cette architecture** :
-- ✅ Toute la puissance de PostgreSQL (transactions, MVCC, réplication)
-- ✅ Langage SQL familier (pas de nouveau langage à apprendre)
-- ✅ Intégration native avec vos données métier
+- ✅ Toute la puissance de PostgreSQL (transactions, MVCC, réplication)  
+- ✅ Langage SQL familier (pas de nouveau langage à apprendre)  
+- ✅ Intégration native avec vos données métier  
 - ✅ Écosystème PostgreSQL (outils, drivers, extensions)
 
 ---
@@ -83,9 +83,9 @@ PostgreSQL (base de données)
 #### 1. Conformité aux Standards
 
 PostGIS implémente intégralement les standards de l'**OGC** (Open Geospatial Consortium) :
-- **Simple Features for SQL** : Types et opérations de base
-- **SQL/MM** : Extensions géométriques avancées
-- **WKT/WKB** : Formats d'échange standardisés
+- **Simple Features for SQL** : Types et opérations de base  
+- **SQL/MM** : Extensions géométriques avancées  
+- **WKT/WKB** : Formats d'échange standardisés  
 - **GeoJSON, KML, GML** : Formats web et cartographiques
 
 **Bénéfice** : Interopérabilité totale avec les outils SIG (QGIS, ArcGIS, MapInfo, etc.).
@@ -93,43 +93,43 @@ PostGIS implémente intégralement les standards de l'**OGC** (Open Geospatial C
 #### 2. Richesse Fonctionnelle
 
 PostGIS couvre tous les besoins d'analyse spatiale :
-- **Géométrie 2D et 3D** (jusqu'à 4D avec mesure)
-- **Géographie sphérique** (calculs précis sur la Terre)
-- **Raster** (images géoréférencées)
-- **Topologie** (réseaux, graphes)
-- **Routing** (calcul d'itinéraires avec pgRouting)
+- **Géométrie 2D et 3D** (jusqu'à 4D avec mesure)  
+- **Géographie sphérique** (calculs précis sur la Terre)  
+- **Raster** (images géoréférencées)  
+- **Topologie** (réseaux, graphes)  
+- **Routing** (calcul d'itinéraires avec pgRouting)  
 - **3D** (modèles de bâtiments, LIDAR)
 
 #### 3. Performance Exceptionnelle
 
-- **Index spatiaux** : GiST, SP-GiST, BRIN pour des requêtes ultra-rapides
-- **Optimisation du planificateur** : PostgreSQL optimise automatiquement les requêtes spatiales
-- **Parallélisation** : Support natif du parallélisme PostgreSQL
+- **Index spatiaux** : GiST, SP-GiST, BRIN pour des requêtes ultra-rapides  
+- **Optimisation du planificateur** : PostgreSQL optimise automatiquement les requêtes spatiales  
+- **Parallélisation** : Support natif du parallélisme PostgreSQL  
 - **Géométries TOAST** : Compression automatique des grandes géométries
 
 **Exemple** : Recherche de proximité sur 10 millions de points → < 10ms avec index spatial.
 
 #### 4. Écosystème et Communauté
 
-- **Extensions complémentaires** :
-  - **pgRouting** : Calcul d'itinéraires (Dijkstra, A*, TSP)
-  - **pgrouting** : Analyse de réseaux
-  - **PostGIS Raster** : Traitement d'images géospatiales
+- **Extensions complémentaires** :  
+  - **pgRouting** : Calcul d'itinéraires (Dijkstra, A*, TSP)  
+  - **pgrouting** : Analyse de réseaux  
+  - **PostGIS Raster** : Traitement d'images géospatiales  
   - **PostGIS Topology** : Gestion topologique
 
-- **Outils d'intégration** :
-  - **QGIS** : Logiciel SIG desktop qui s'interface parfaitement avec PostGIS
-  - **GeoServer** : Serveur cartographique web (WMS, WFS)
-  - **MapServer** : Publication de cartes web
+- **Outils d'intégration** :  
+  - **QGIS** : Logiciel SIG desktop qui s'interface parfaitement avec PostGIS  
+  - **GeoServer** : Serveur cartographique web (WMS, WFS)  
+  - **MapServer** : Publication de cartes web  
   - **Leaflet/Mapbox** : Bibliothèques JavaScript pour cartes interactives
 
 #### 5. Évolution Continue
 
 PostGIS suit les évolutions de PostgreSQL et ajoute régulièrement de nouvelles fonctionnalités :
-- **PostGIS 1.0** (2005) : Fondations
-- **PostGIS 2.0** (2012) : Type geography, 3D, raster
-- **PostGIS 3.0** (2019) : Performance, JSON, clustering
-- **PostGIS 3.4** (2023) : Support des courbes, améliorations 3D
+- **PostGIS 1.0** (2005) : Fondations  
+- **PostGIS 2.0** (2012) : Type geography, 3D, raster  
+- **PostGIS 3.0** (2019) : Performance, JSON, clustering  
+- **PostGIS 3.4** (2023) : Support des courbes, améliorations 3D  
 - **PostGIS 3.5** (2024+) : Optimisations, nouvelles projections
 
 ---
@@ -154,8 +154,8 @@ Une **donnée spatiale** (ou géographique) est une donnée qui possède une **c
 #### 1. Données Vectorielles
 
 Représentation par des **formes géométriques** :
-- **Point** : Position précise (restaurant, capteur, adresse)
-- **Ligne** : Chemin ou frontière (route, rivière, câble)
+- **Point** : Position précise (restaurant, capteur, adresse)  
+- **Ligne** : Chemin ou frontière (route, rivière, câble)  
 - **Polygone** : Surface délimitée (parcelle, lac, zone administrative)
 
 **Avantages** :
@@ -269,9 +269,9 @@ SELECT ST_Distance(
 
 ```sql
 -- Lister les extensions disponibles
-SELECT name, default_version, comment
-FROM pg_available_extensions
-WHERE name LIKE 'postgis%';
+SELECT name, default_version, comment  
+FROM pg_available_extensions  
+WHERE name LIKE 'postgis%';  
 ```
 
 **Résultat attendu** :
@@ -293,8 +293,8 @@ WHERE name LIKE 'postgis%';
 CREATE EXTENSION postgis;
 
 -- Optionnel : Activer les extensions complémentaires
-CREATE EXTENSION postgis_topology;  -- Topologie
-CREATE EXTENSION postgis_raster;    -- Raster
+CREATE EXTENSION postgis_topology;  -- Topologie  
+CREATE EXTENSION postgis_raster;    -- Raster  
 ```
 
 ### Vérifier l'Installation
@@ -314,11 +314,11 @@ SELECT PostGIS_Full_Version();
 
 Lorsque vous exécutez `CREATE EXTENSION postgis`, PostgreSQL :
 
-1. **Crée le schéma** `public` s'il n'existe pas
-2. **Ajoute les types de données** : `geometry`, `geography`, `box2d`, `box3d`
-3. **Installe 400+ fonctions** : `ST_Distance`, `ST_Intersects`, etc.
-4. **Crée les opérateurs** : `&&`, `<->`, etc.
-5. **Configure les index** : Support GiST, SP-GiST pour les données spatiales
+1. **Crée le schéma** `public` s'il n'existe pas  
+2. **Ajoute les types de données** : `geometry`, `geography`, `box2d`, `box3d`  
+3. **Installe 400+ fonctions** : `ST_Distance`, `ST_Intersects`, etc.  
+4. **Crée les opérateurs** : `&&`, `<->`, etc.  
+5. **Configure les index** : Support GiST, SP-GiST pour les données spatiales  
 6. **Ajoute les tables système** : `spatial_ref_sys` (catalogue des SRID)
 
 ```sql
@@ -330,9 +330,9 @@ Lorsque vous exécutez `CREATE EXTENSION postgis`, PostgreSQL :
 \df ST_*
 
 -- Voir les SRID disponibles
-SELECT srid, auth_name, auth_srid, srtext
-FROM spatial_ref_sys
-WHERE srid IN (4326, 3857, 2154);
+SELECT srid, auth_name, auth_srid, srtext  
+FROM spatial_ref_sys  
+WHERE srid IN (4326, 3857, 2154);  
 ```
 
 ---
@@ -355,11 +355,11 @@ Fonctionnalités :
 -- Trouver les 5 chauffeurs les plus proches
 SELECT driver_id, nom,
        ST_Distance(position::geography, client_position::geography) AS distance_m
-FROM drivers
-WHERE disponible = true
+FROM drivers  
+WHERE disponible = true  
   AND ST_DWithin(position::geography, client_position::geography, 5000)
-ORDER BY position <-> client_position
-LIMIT 5;
+ORDER BY position <-> client_position  
+LIMIT 5;  
 ```
 
 ### 2. Immobilier et Location
@@ -374,9 +374,9 @@ Fonctionnalités :
 
 ```sql
 -- Logements à moins de 500m du métro
-SELECT l.titre, l.prix, ST_Distance(l.position::geography, m.position::geography) AS distance_metro
-FROM logements l
-CROSS JOIN LATERAL (
+SELECT l.titre, l.prix, ST_Distance(l.position::geography, m.position::geography) AS distance_metro  
+FROM logements l  
+CROSS JOIN LATERAL (  
     SELECT position FROM stations_metro
     ORDER BY position <-> l.position
     LIMIT 1
@@ -398,9 +398,9 @@ Fonctionnalités :
 -- Parcelles affectées par un nouveau projet d'urbanisme
 SELECT p.reference, p.proprietaire,
        ST_Area(ST_Intersection(p.geometrie, projet.zone)) AS surface_impactee_m2
-FROM parcelles p
-JOIN projets_urbains projet ON ST_Intersects(p.geometrie, projet.zone)
-WHERE projet.nom = 'Nouveau quartier Éco-Nord';
+FROM parcelles p  
+JOIN projets_urbains projet ON ST_Intersects(p.geometrie, projet.zone)  
+WHERE projet.nom = 'Nouveau quartier Éco-Nord';  
 ```
 
 ### 4. Logistique et Transport
@@ -415,9 +415,9 @@ Fonctionnalités :
 
 ```sql
 -- Colis dans la zone de livraison du camion
-SELECT c.numero_colis, c.adresse
-FROM colis c
-JOIN camions t ON ST_Contains(
+SELECT c.numero_colis, c.adresse  
+FROM colis c  
+JOIN camions t ON ST_Contains(  
     ST_Buffer(t.position::geography, t.rayon_livraison_m),
     c.adresse_position::geography
 )
@@ -443,9 +443,9 @@ SELECT
         foret_precedente,
         foret_actuelle
     )::geography) / 10000 AS perte_hectares
-FROM evolution_foret
-WHERE parc_id = 'PARC-AMAZONIE-01'
-ORDER BY annee;
+FROM evolution_foret  
+WHERE parc_id = 'PARC-AMAZONIE-01'  
+ORDER BY annee;  
 ```
 
 ### 6. Télécommunications
@@ -468,8 +468,8 @@ WITH zones_couvertes AS (
 SELECT
     commune.nom,
     ST_Area(ST_Difference(commune.geometrie, zc.couverture)::geography) / 1000000 AS zone_blanche_km2
-FROM communes commune, zones_couvertes zc
-WHERE ST_Area(ST_Difference(commune.geometrie, zc.couverture)) > 0;
+FROM communes commune, zones_couvertes zc  
+WHERE ST_Area(ST_Difference(commune.geometrie, zc.couverture)) > 0;  
 ```
 
 ### 7. Analyse de Données et Business Intelligence
@@ -501,8 +501,8 @@ FROM (
     FROM clients c
     CROSS JOIN (SELECT position FROM magasins WHERE id = 'MAG-001') m
 ) t
-GROUP BY zone
-ORDER BY zone;
+GROUP BY zone  
+ORDER BY zone;  
 ```
 
 ---
@@ -557,27 +557,27 @@ PostGIS s'appuie sur plusieurs bibliothèques open-source de référence :
 
 #### GEOS (Geometry Engine, Open Source)
 
-- **Rôle** : Opérations géométriques (intersection, union, buffer, etc.)
-- **Origine** : Portage C++ de JTS (Java Topology Suite)
-- **Version recommandée** : 3.11+
+- **Rôle** : Opérations géométriques (intersection, union, buffer, etc.)  
+- **Origine** : Portage C++ de JTS (Java Topology Suite)  
+- **Version recommandée** : 3.11+  
 - **Fonctions** : ST_Intersection, ST_Union, ST_Buffer, ST_Contains, etc.
 
 #### PROJ
 
-- **Rôle** : Transformations de coordonnées et projections cartographiques
-- **Version recommandée** : 9.0+
-- **Fonctions** : ST_Transform, ST_SetSRID
+- **Rôle** : Transformations de coordonnées et projections cartographiques  
+- **Version recommandée** : 9.0+  
+- **Fonctions** : ST_Transform, ST_SetSRID  
 - **Base de données** : 6000+ systèmes de coordonnées
 
 #### GDAL (Geospatial Data Abstraction Library)
 
-- **Rôle** : Lecture/écriture de formats raster et vectoriels
-- **Formats supportés** : 200+ (GeoTIFF, Shapefile, GeoJSON, KML, etc.)
+- **Rôle** : Lecture/écriture de formats raster et vectoriels  
+- **Formats supportés** : 200+ (GeoTIFF, Shapefile, GeoJSON, KML, etc.)  
 - **Utilisé par** : PostGIS Raster, import/export
 
 #### JSON-C
 
-- **Rôle** : Parsing et génération JSON/GeoJSON
+- **Rôle** : Parsing et génération JSON/GeoJSON  
 - **Fonctions** : ST_AsGeoJSON, ST_GeomFromGeoJSON
 
 ### Tables Système PostGIS
@@ -632,9 +632,9 @@ SELECT * FROM geometry_columns;
 
 #### ❌ Quand NE PAS Utiliser PostGIS ?
 
-- **Données purement raster volumineuses** : Mieux vaut un serveur de tuiles dédié
-- **Calculs 3D complexes** : Des outils spécialisés peuvent être plus adaptés
-- **Rendu cartographique temps réel** : Serveur cartographique (GeoServer) en complément
+- **Données purement raster volumineuses** : Mieux vaut un serveur de tuiles dédié  
+- **Calculs 3D complexes** : Des outils spécialisés peuvent être plus adaptés  
+- **Rendu cartographique temps réel** : Serveur cartographique (GeoServer) en complément  
 - **Big Data spatial extrême** : Envisager des solutions distribuées (GeoMesa, Apache Sedona)
 
 ### Bonnes Pratiques Générales
@@ -659,9 +659,9 @@ CREATE TABLE restaurants (
 
 ```sql
 -- Index spatial obligatoire pour la performance
-CREATE INDEX idx_restaurants_position
-ON restaurants
-USING GIST(position);
+CREATE INDEX idx_restaurants_position  
+ON restaurants  
+USING GIST(position);  
 ```
 
 #### 3. Utiliser geography pour les Mesures Précises
@@ -679,13 +679,13 @@ FROM ...;
 
 ```sql
 -- Vérifier la validité avant insertion
-SELECT ST_IsValid(geometrie), ST_IsValidReason(geometrie)
-FROM ma_table;
+SELECT ST_IsValid(geometrie), ST_IsValidReason(geometrie)  
+FROM ma_table;  
 
 -- Réparer si nécessaire
-UPDATE ma_table
-SET geometrie = ST_MakeValid(geometrie)
-WHERE NOT ST_IsValid(geometrie);
+UPDATE ma_table  
+SET geometrie = ST_MakeValid(geometrie)  
+WHERE NOT ST_IsValid(geometrie);  
 ```
 
 #### 5. Nommer Clairement les Colonnes
@@ -726,21 +726,21 @@ CREATE TABLE restaurants (
 );
 
 -- Créer l'index spatial
-CREATE INDEX idx_restaurants_position
-ON restaurants
-USING GIST(position);
+CREATE INDEX idx_restaurants_position  
+ON restaurants  
+USING GIST(position);  
 
 -- Ajouter une contrainte de validation
-ALTER TABLE restaurants
-ADD CONSTRAINT position_valide CHECK (ST_IsValid(position));
+ALTER TABLE restaurants  
+ADD CONSTRAINT position_valide CHECK (ST_IsValid(position));  
 ```
 
 ### Insérer des Données Spatiales
 
 ```sql
 -- Méthode 1 : ST_MakePoint
-INSERT INTO restaurants (nom, adresse, type_cuisine, note_moyenne, position)
-VALUES (
+INSERT INTO restaurants (nom, adresse, type_cuisine, note_moyenne, position)  
+VALUES (  
     'Le Bon Café',
     '12 rue de Rivoli, Paris',
     'Français',
@@ -749,8 +749,8 @@ VALUES (
 );
 
 -- Méthode 2 : ST_GeomFromText (format WKT)
-INSERT INTO restaurants (nom, adresse, type_cuisine, note_moyenne, position)
-VALUES (
+INSERT INTO restaurants (nom, adresse, type_cuisine, note_moyenne, position)  
+VALUES (  
     'Pizza Express',
     '45 avenue des Champs-Élysées, Paris',
     'Italien',
@@ -771,11 +771,11 @@ SELECT
     r.type_cuisine,
     r.note_moyenne,
     ROUND(ST_Distance(r.position::geography, mp.pos)::numeric, 0) AS distance_metres
-FROM restaurants r, ma_position mp
-WHERE ST_DWithin(r.position::geography, mp.pos, 1000)
+FROM restaurants r, ma_position mp  
+WHERE ST_DWithin(r.position::geography, mp.pos, 1000)  
   AND r.actif = true
-ORDER BY distance_metres
-LIMIT 10;
+ORDER BY distance_metres  
+LIMIT 10;  
 ```
 
 **Résultat attendu** :
@@ -793,10 +793,10 @@ LIMIT 10;
 Bien que PostGIS stocke les données, vous aurez besoin d'outils pour les visualiser :
 
 **Options recommandées** :
-1. **QGIS** (Desktop) : Logiciel SIG open-source qui se connecte à PostgreSQL/PostGIS
-2. **PgAdmin** (Web/Desktop) : Affichage basique des géométries
-3. **DBeaver** (Desktop) : Client SQL avec support spatial
-4. **Leaflet/Mapbox** (Web) : Bibliothèques JavaScript pour applications web
+1. **QGIS** (Desktop) : Logiciel SIG open-source qui se connecte à PostgreSQL/PostGIS  
+2. **PgAdmin** (Web/Desktop) : Affichage basique des géométries  
+3. **DBeaver** (Desktop) : Client SQL avec support spatial  
+4. **Leaflet/Mapbox** (Web) : Bibliothèques JavaScript pour applications web  
 5. **Kepler.gl** (Web) : Outil de visualisation géospatiale puissant
 
 ---
@@ -805,28 +805,28 @@ Bien que PostGIS stocke les données, vous aurez besoin d'outils pour les visual
 
 ### Documentation Officielle
 
-- **Site officiel** : https://postgis.net/
-- **Documentation** : https://postgis.net/docs/
-- **Workshop** : https://postgis.net/workshops/postgis-intro/
+- **Site officiel** : https://postgis.net/  
+- **Documentation** : https://postgis.net/docs/  
+- **Workshop** : https://postgis.net/workshops/postgis-intro/  
 - **FAQ** : https://postgis.net/docs/PostGIS_FAQ.html
 
 ### Livres Recommandés
 
-- **"PostGIS in Action"** (3rd Edition) - Regina Obe, Leo Hsu
-- **"PostGIS Cookbook"** - Paolo Corti, Stephen Vincent Mather
+- **"PostGIS in Action"** (3rd Edition) - Regina Obe, Leo Hsu  
+- **"PostGIS Cookbook"** - Paolo Corti, Stephen Vincent Mather  
 - **"Learning PostgreSQL with PostGIS"** - Julieta Lopez
 
 ### Communautés
 
-- **Mailing list** : pgsql-postgis@lists.osgeo.org
-- **Discord OSGeo** : Canaux PostGIS et PostgreSQL
-- **Stack Overflow** : Tag `postgis`
+- **Mailing list** : pgsql-postgis@lists.osgeo.org  
+- **Discord OSGeo** : Canaux PostGIS et PostgreSQL  
+- **Stack Overflow** : Tag `postgis`  
 - **GIS Stack Exchange** : https://gis.stackexchange.com/
 
 ### Tutoriels en Ligne
 
-- **Boundless PostGIS Workshop** : Tutoriel complet gratuit
-- **Carto Academy** : Cours et tutoriels
+- **Boundless PostGIS Workshop** : Tutoriel complet gratuit  
+- **Carto Academy** : Cours et tutoriels  
 - **Paul Ramsey's Blog** : Contributeur principal PostGIS
 
 ---
@@ -853,7 +853,7 @@ Vous découvrirez :
 ### 18.2.3. Fonctions Spatiales
 
 Vous maîtriserez :
-- **ST_Distance** : Calculer des distances
+- **ST_Distance** : Calculer des distances  
 - **ST_Intersects** : Détecter des intersections
 - Et des dizaines d'autres fonctions essentielles
 
@@ -874,8 +874,8 @@ PostGIS est bien plus qu'une simple extension : c'est un écosystème complet qu
    - Plus riche fonctionnellement que MySQL et MongoDB
    - Conformité complète aux standards OGC
 
-3. **Deux types principaux**
-   - `geometry` : Plan 2D, rapide
+3. **Deux types principaux**  
+   - `geometry` : Plan 2D, rapide  
    - `geography` : Sphérique, précis en mètres
 
 4. **Importance du SRID**

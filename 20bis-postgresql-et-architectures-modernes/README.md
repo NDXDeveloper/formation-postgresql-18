@@ -347,9 +347,9 @@ Nous vous conseillons de suivre les sections dans l'ordre :
 
 Chaque section est conçue pour être :
 
-- **Autonome** : Peut être lue indépendamment si nécessaire
-- **Progressive** : Du concept à l'implémentation
-- **Concrète** : Exemples de code SQL et configurations réelles
+- **Autonome** : Peut être lue indépendamment si nécessaire  
+- **Progressive** : Du concept à l'implémentation  
+- **Concrète** : Exemples de code SQL et configurations réelles  
 - **Illustrée** : Schémas pour visualiser les architectures
 
 ---
@@ -364,17 +364,17 @@ Avant de vous lancer, un avertissement important :
 
 Les patterns présentés dans ce chapitre sont puissants mais ajoutent de la complexité. Ils sont justifiés quand :
 
-- ✅ Votre équipe grandit et a besoin d'autonomie
-- ✅ Votre système doit scaler indépendamment par composant
-- ✅ L'audit et la traçabilité sont des exigences réglementaires
-- ✅ Vous intégrez de nombreux systèmes externes
+- ✅ Votre équipe grandit et a besoin d'autonomie  
+- ✅ Votre système doit scaler indépendamment par composant  
+- ✅ L'audit et la traçabilité sont des exigences réglementaires  
+- ✅ Vous intégrez de nombreux systèmes externes  
 - ✅ Vous avez les ressources pour opérer une architecture distribuée
 
 Ils peuvent être excessifs quand :
 
-- ❌ Une petite équipe travaille sur un produit simple
-- ❌ Un monolithe bien structuré suffit à vos besoins
-- ❌ Le time-to-market est votre priorité absolue
+- ❌ Une petite équipe travaille sur un produit simple  
+- ❌ Un monolithe bien structuré suffit à vos besoins  
+- ❌ Le time-to-market est votre priorité absolue  
 - ❌ Vous n'avez pas l'expertise pour opérer des systèmes distribués
 
 ### Le Conseil d'Or
@@ -409,9 +409,9 @@ Commencez simple. Un monolithe modulaire avec PostgreSQL peut aller très loin. 
 
 Ce chapitre bonus vous emmène au-delà de PostgreSQL en tant que simple base de données. Vous allez découvrir comment PostgreSQL s'intègre dans les architectures logicielles modernes :
 
-- **Microservices** : Organiser les données dans un système distribué
-- **Event Sourcing** : Stocker l'historique complet sous forme d'événements
-- **CQRS** : Séparer et optimiser lectures et écritures
+- **Microservices** : Organiser les données dans un système distribué  
+- **Event Sourcing** : Stocker l'historique complet sous forme d'événements  
+- **CQRS** : Séparer et optimiser lectures et écritures  
 - **CDC** : Capturer et diffuser les changements en temps réel
 
 Ces connaissances vous permettront de concevoir des systèmes scalables, résilients et évolutifs, tout en tirant parti de la robustesse et de la flexibilité de PostgreSQL.
@@ -422,12 +422,12 @@ Prêt à explorer les architectures modernes ? Commençons par les microservices
 
 ## Points Clés à Retenir
 
-- **PostgreSQL** s'adapte remarquablement aux architectures modernes
-- **Microservices** posent des défis de cohérence et d'organisation des données
-- **Event Sourcing** capture l'historique complet des changements
-- **CQRS** sépare les modèles de lecture et d'écriture
-- **CDC** synchronise les données vers des systèmes externes
-- **Complexité** : Ces patterns ne sont pas toujours nécessaires
+- **PostgreSQL** s'adapte remarquablement aux architectures modernes  
+- **Microservices** posent des défis de cohérence et d'organisation des données  
+- **Event Sourcing** capture l'historique complet des changements  
+- **CQRS** sépare les modèles de lecture et d'écriture  
+- **CDC** synchronise les données vers des systèmes externes  
+- **Complexité** : Ces patterns ne sont pas toujours nécessaires  
 - **Progression** : Commencez simple, évoluez quand le besoin se fait sentir
 
 ---

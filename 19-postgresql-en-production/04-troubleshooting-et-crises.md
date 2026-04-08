@@ -8,16 +8,16 @@ Si vous deviez ne retenir qu'une seule section de cette formation complète sur 
 
 Pourquoi ? Parce que **tous les systèmes finissent par rencontrer des problèmes**. Peu importe la qualité de votre architecture, la robustesse de votre code ou la performance de votre matériel, un jour ou l'autre, vous serez confronté à une situation critique :
 
-- 🔥 Votre application est soudainement très lente
-- 💥 Les utilisateurs ne peuvent plus se connecter
-- 📉 Les requêtes prennent 100 fois plus de temps que d'habitude
-- 🚨 Votre base de données refuse toute nouvelle transaction
+- 🔥 Votre application est soudainement très lente  
+- 💥 Les utilisateurs ne peuvent plus se connecter  
+- 📉 Les requêtes prennent 100 fois plus de temps que d'habitude  
+- 🚨 Votre base de données refuse toute nouvelle transaction  
 - ⚠️ Des données semblent avoir disparu ou sont corrompues
 
 **Dans ces moments-là**, la différence entre un simple incident mineur et une catastrophe majeure dépend de :
-1. Votre capacité à **diagnostiquer rapidement** le problème
-2. Votre connaissance des **outils** à votre disposition
-3. Votre maîtrise des **techniques de résolution**
+1. Votre capacité à **diagnostiquer rapidement** le problème  
+2. Votre connaissance des **outils** à votre disposition  
+3. Votre maîtrise des **techniques de résolution**  
 4. Votre **calme** et votre méthodologie
 
 ---
@@ -27,9 +27,9 @@ Pourquoi ? Parce que **tous les systèmes finissent par rencontrer des problème
 ### Définition simple
 
 Le **troubleshooting** (ou dépannage) est l'art de :
-1. **Identifier** qu'un problème existe
-2. **Diagnostiquer** la cause racine
-3. **Résoudre** le problème
+1. **Identifier** qu'un problème existe  
+2. **Diagnostiquer** la cause racine  
+3. **Résoudre** le problème  
 4. **Prévenir** sa réapparition
 
 **Analogie médicale** : C'est comme être médecin pour votre base de données :
@@ -67,40 +67,40 @@ Il existe deux contextes différents :
 Cette section couvre les 6 types de problèmes les plus courants que vous rencontrerez en production :
 
 ### 1. 🔒 Verrous et blocages (Locks)
-**Symptôme** : Requêtes qui "pendent", timeouts, application figée
-**Cause** : Transactions qui se bloquent mutuellement
-**Impact** : Lenteur voire blocage complet
-**Gravité** : ⚠️⚠️ Moyen à Élevé
+**Symptôme** : Requêtes qui "pendent", timeouts, application figée  
+**Cause** : Transactions qui se bloquent mutuellement  
+**Impact** : Lenteur voire blocage complet  
+**Gravité** : ⚠️⚠️ Moyen à Élevé  
 
 ### 2. 💻 Saturation des ressources (CPU, RAM, I/O)
-**Symptôme** : Lenteur généralisée, serveur qui rame
-**Cause** : Ressources matérielles saturées
-**Impact** : Performance dégradée pour tous
-**Gravité** : ⚠️⚠️⚠️ Élevé
+**Symptôme** : Lenteur généralisée, serveur qui rame  
+**Cause** : Ressources matérielles saturées  
+**Impact** : Performance dégradée pour tous  
+**Gravité** : ⚠️⚠️⚠️ Élevé  
 
 ### 3. ♻️ Transaction Wraparound (XID exhaustion)
-**Symptôme** : Warnings dans les logs, puis arrêt complet
-**Cause** : Épuisement des identifiants de transaction
-**Impact** : Base de données en lecture seule forcée
-**Gravité** : ⚠️⚠️⚠️⚠️ Critique
+**Symptôme** : Warnings dans les logs, puis arrêt complet  
+**Cause** : Épuisement des identifiants de transaction  
+**Impact** : Base de données en lecture seule forcée  
+**Gravité** : ⚠️⚠️⚠️⚠️ Critique  
 
 ### 4. 💔 Corruption de données
-**Symptôme** : Erreurs de checksum, données invalides
-**Cause** : Défaillance matérielle ou bug
-**Impact** : Perte de données possible
-**Gravité** : ⚠️⚠️⚠️⚠️⚠️ Catastrophique
+**Symptôme** : Erreurs de checksum, données invalides  
+**Cause** : Défaillance matérielle ou bug  
+**Impact** : Perte de données possible  
+**Gravité** : ⚠️⚠️⚠️⚠️⚠️ Catastrophique  
 
 ### 5. 🐌 Requêtes lentes (Slow Queries)
-**Symptôme** : Certaines opérations prennent beaucoup de temps
-**Cause** : Requêtes mal optimisées, index manquants
-**Impact** : Expérience utilisateur dégradée
-**Gravité** : ⚠️ Faible à Moyen
+**Symptôme** : Certaines opérations prennent beaucoup de temps  
+**Cause** : Requêtes mal optimisées, index manquants  
+**Impact** : Expérience utilisateur dégradée  
+**Gravité** : ⚠️ Faible à Moyen  
 
 ### 6. 🌊 Tempêtes de connexions (Connection Storms)
-**Symptôme** : "Too many clients", connexions refusées
-**Cause** : Trop de connexions simultanées
-**Impact** : Application inaccessible
-**Gravité** : ⚠️⚠️⚠️ Élevé
+**Symptôme** : "Too many clients", connexions refusées  
+**Cause** : Trop de connexions simultanées  
+**Impact** : Application inaccessible  
+**Gravité** : ⚠️⚠️⚠️ Élevé  
 
 ---
 
@@ -125,27 +125,27 @@ Questions à se poser :
 
 ```sql
 -- Vue d'ensemble des connexions actives
-SELECT count(*), state
-FROM pg_stat_activity
-GROUP BY state;
+SELECT count(*), state  
+FROM pg_stat_activity  
+GROUP BY state;  
 
 -- Requêtes actives longues
-SELECT pid, now() - query_start as duration, query
-FROM pg_stat_activity
-WHERE state = 'active'
-ORDER BY duration DESC
-LIMIT 5;
+SELECT pid, now() - query_start as duration, query  
+FROM pg_stat_activity  
+WHERE state = 'active'  
+ORDER BY duration DESC  
+LIMIT 5;  
 
 -- Charge système
-SHOW max_connections;
-SELECT count(*) FROM pg_stat_activity;
+SHOW max_connections;  
+SELECT count(*) FROM pg_stat_activity;  
 ```
 
 ```bash
 # CPU, RAM, I/O
-top
-htop
-iostat -x 1 5
+top  
+htop  
+iostat -x 1 5  
 ```
 
 ### Étape 2 : DIAGNOSTIQUER (5-15 minutes)
@@ -158,25 +158,25 @@ iostat -x 1 5
 
 1. **Consultation des logs** :
 ```bash
-sudo tail -f /var/log/postgresql/postgresql-*.log
-sudo grep -i "error\|fatal\|panic" /var/log/postgresql/postgresql-*.log | tail -20
+sudo tail -f /var/log/postgresql/postgresql-*.log  
+sudo grep -i "error\|fatal\|panic" /var/log/postgresql/postgresql-*.log | tail -20  
 ```
 
 2. **Analyse des statistiques** :
 ```sql
 -- Avec pg_stat_statements
-SELECT query, calls, total_exec_time, mean_exec_time
-FROM pg_stat_statements
-ORDER BY total_exec_time DESC
-LIMIT 5;
+SELECT query, calls, total_exec_time, mean_exec_time  
+FROM pg_stat_statements  
+ORDER BY total_exec_time DESC  
+LIMIT 5;  
 ```
 
 3. **Vérification des verrous** :
 ```sql
 -- Processus bloqués
-SELECT pid, pg_blocking_pids(pid), query
-FROM pg_stat_activity
-WHERE cardinality(pg_blocking_pids(pid)) > 0;
+SELECT pid, pg_blocking_pids(pid), query  
+FROM pg_stat_activity  
+WHERE cardinality(pg_blocking_pids(pid)) > 0;  
 ```
 
 4. **Surveillance des ressources** :
@@ -208,9 +208,9 @@ FROM pg_statio_user_tables;
 SELECT pg_terminate_backend(12345);  -- PID de la requête
 
 -- Tuer toutes les connexions idle > 10 minutes
-SELECT pg_terminate_backend(pid)
-FROM pg_stat_activity
-WHERE state = 'idle'
+SELECT pg_terminate_backend(pid)  
+FROM pg_stat_activity  
+WHERE state = 'idle'  
   AND now() - state_change > interval '10 minutes';
 ```
 
@@ -271,8 +271,8 @@ SELECT count(*) FROM orders WHERE created_at > now() - interval '1 day';
 14:58 - Service complètement rétabli
 
 ## Cause racine
-Nouvelle feature déployée avec requête SELECT * FROM orders
-sans index sur colonne de filtrage.
+Nouvelle feature déployée avec requête SELECT * FROM orders  
+sans index sur colonne de filtrage.  
 
 ## Solution appliquée
 - Court terme : Tué la requête problématique
@@ -316,15 +316,15 @@ SELECT * FROM pg_stat_database;
 
 ```bash
 # Monitoring système
-top               # Vue d'ensemble CPU/RAM
-htop              # Version améliorée de top
-iostat -x 1 5     # I/O disque
-vmstat 1 5        # Mémoire virtuelle
-dstat             # Statistiques complètes
+top               # Vue d'ensemble CPU/RAM  
+htop              # Version améliorée de top  
+iostat -x 1 5     # I/O disque  
+vmstat 1 5        # Mémoire virtuelle  
+dstat             # Statistiques complètes  
 
 # Logs
-tail -f /var/log/postgresql/postgresql-*.log
-journalctl -u postgresql -f
+tail -f /var/log/postgresql/postgresql-*.log  
+journalctl -u postgresql -f  
 
 # Processus PostgreSQL
 ps aux | grep postgres
@@ -367,7 +367,7 @@ CREATE EXTENSION pg_buffercache;
    - Le stress empêche de réfléchir clairement
    - Respire profondément, lis méthodiquement
 
-2. **Tu mesureras avant d'agir**
+2. **Tu mesureras avant d'agir**  
    - "Je pense que..." n'est pas une mesure
    - Collecte des données avant toute action
 
@@ -422,19 +422,19 @@ Quand vous êtes face à une crise, affichez cette checklist à votre écran :
 
 ### Les erreurs classiques à éviter
 
-❌ **"Je suis sûr que c'est ça, je vais directement appliquer la solution"**
+❌ **"Je suis sûr que c'est ça, je vais directement appliquer la solution"**  
 → ✅ Diagnostiquer d'abord, même si vous pensez savoir
 
-❌ **"Je vais redémarrer PostgreSQL, ça règle souvent les problèmes"**
+❌ **"Je vais redémarrer PostgreSQL, ça règle souvent les problèmes"**  
 → ✅ Le redémarrage efface les symptômes mais pas la cause
 
-❌ **"Je n'ai pas le temps de noter ce que je fais"**
+❌ **"Je n'ai pas le temps de noter ce que je fais"**  
 → ✅ 30 secondes de documentation peuvent sauver 30 minutes plus tard
 
-❌ **"Je vais changer plusieurs paramètres en même temps pour aller vite"**
+❌ **"Je vais changer plusieurs paramètres en même temps pour aller vite"**  
 → ✅ Une modification à la fois, sinon vous ne saurez pas ce qui a marché
 
-❌ **"C'est bon, ça marche maintenant, pas besoin de comprendre pourquoi"**
+❌ **"C'est bon, ça marche maintenant, pas besoin de comprendre pourquoi"**  
 → ✅ Sans comprendre la cause, le problème reviendra
 
 ---
@@ -484,33 +484,33 @@ Cette section est organisée par type de problème, du plus fréquent au plus ra
 SELECT count(*), state FROM pg_stat_activity GROUP BY state;
 
 -- 2. Requêtes longues
-SELECT pid, now()-query_start as duration, state, query
-FROM pg_stat_activity
-WHERE state = 'active'
-ORDER BY duration DESC LIMIT 5;
+SELECT pid, now()-query_start as duration, state, query  
+FROM pg_stat_activity  
+WHERE state = 'active'  
+ORDER BY duration DESC LIMIT 5;  
 
 -- 3. Blocages
-SELECT pid, pg_blocking_pids(pid) as blocked_by
-FROM pg_stat_activity
-WHERE cardinality(pg_blocking_pids(pid)) > 0;
+SELECT pid, pg_blocking_pids(pid) as blocked_by  
+FROM pg_stat_activity  
+WHERE cardinality(pg_blocking_pids(pid)) > 0;  
 
 -- 4. Connexions par base
-SELECT datname, count(*)
-FROM pg_stat_activity
-GROUP BY datname;
+SELECT datname, count(*)  
+FROM pg_stat_activity  
+GROUP BY datname;  
 ```
 
 ### Commandes d'urgence
 
 ```sql
 -- Tuer une requête
-SELECT pg_cancel_backend(PID);     -- Annuler gentiment
-SELECT pg_terminate_backend(PID);  -- Forcer l'arrêt
+SELECT pg_cancel_backend(PID);     -- Annuler gentiment  
+SELECT pg_terminate_backend(PID);  -- Forcer l'arrêt  
 
 -- Tuer toutes les connexions idle
-SELECT pg_terminate_backend(pid)
-FROM pg_stat_activity
-WHERE state = 'idle'
+SELECT pg_terminate_backend(pid)  
+FROM pg_stat_activity  
+WHERE state = 'idle'  
   AND now() - state_change > interval '10 minutes';
 
 -- Voir l'utilisation de la mémoire
@@ -534,33 +534,33 @@ Avant qu'un incident ne survienne, assurez-vous d'avoir :
 
 #### Infrastructure
 
-- [ ] Monitoring configuré (Grafana/Prometheus ou équivalent)
-- [ ] Alertes configurées (CPU, RAM, connexions, slow queries)
-- [ ] Sauvegardes testées régulièrement
-- [ ] Plan de disaster recovery documenté
-- [ ] PgBouncer ou connection pooling en place
+- [ ] Monitoring configuré (Grafana/Prometheus ou équivalent)  
+- [ ] Alertes configurées (CPU, RAM, connexions, slow queries)  
+- [ ] Sauvegardes testées régulièrement  
+- [ ] Plan de disaster recovery documenté  
+- [ ] PgBouncer ou connection pooling en place  
 - [ ] pg_stat_statements activé
 
 #### Documentation
 
-- [ ] Accès aux serveurs documentés (qui a les clés SSH ?)
-- [ ] Commandes de base documentées (cheat sheet)
-- [ ] Liste des contacts d'urgence (qui appeler à 3h du matin ?)
-- [ ] Runbooks pour incidents courants
+- [ ] Accès aux serveurs documentés (qui a les clés SSH ?)  
+- [ ] Commandes de base documentées (cheat sheet)  
+- [ ] Liste des contacts d'urgence (qui appeler à 3h du matin ?)  
+- [ ] Runbooks pour incidents courants  
 - [ ] Architecture système documentée
 
 #### Compétences
 
-- [ ] Équipe formée aux bases de PostgreSQL
-- [ ] Au moins 2 personnes maîtrisent le troubleshooting
-- [ ] Exercices de simulation d'incidents (game days)
+- [ ] Équipe formée aux bases de PostgreSQL  
+- [ ] Au moins 2 personnes maîtrisent le troubleshooting  
+- [ ] Exercices de simulation d'incidents (game days)  
 - [ ] Post-mortems documentés des incidents passés
 
 #### Tests
 
-- [ ] Tests de charge réguliers (pgbench)
-- [ ] Tests de failover (si réplication)
-- [ ] Tests de restauration de backup
+- [ ] Tests de charge réguliers (pgbench)  
+- [ ] Tests de failover (si réplication)  
+- [ ] Tests de restauration de backup  
 - [ ] Tests d'évacuation (procédure dégradée)
 
 ---
@@ -581,7 +581,7 @@ Votre site e-commerce tourne normalement. Soudain :
 <details>
 <summary>Réponse recommandée</summary>
 
-1. **Respirer** (3 secondes)
+1. **Respirer** (3 secondes)  
 2. **Observer** avant d'agir :
    - Se connecter à la base de données
    - Lancer `SELECT count(*), state FROM pg_stat_activity GROUP BY state;`
@@ -590,7 +590,7 @@ Votre site e-commerce tourne normalement. Soudain :
    - De verrous (beaucoup de requêtes en attente)
    - De ressources (CPU à 100% ?)
    - De requête lente (une requête domine le temps d'exécution)
-4. **Communiquer** : Prévenir l'équipe que vous êtes sur le problème
+4. **Communiquer** : Prévenir l'équipe que vous êtes sur le problème  
 5. **Agir** selon ce que vous avez trouvé
 
 **Ne JAMAIS faire** : Redémarrer immédiatement PostgreSQL (vous perdez les symptômes).
@@ -605,13 +605,13 @@ Votre téléphone vibre. Alerte Slack : "PostgreSQL CRITICAL - Connections > 95%
 <details>
 <summary>Réponse recommandée</summary>
 
-1. **Se réveiller complètement** (30 secondes de vraie conscience)
-2. **Vérifier** que c'est une vraie alerte, pas un faux positif
-3. **Voir** l'état actuel : connexions réelles vs max_connections
-4. **Identifier** si système est encore responsive
-5. **Si responsive** : Investiguer calmement
-6. **Si non responsive** : Action de stabilisation (tuer connexions idle)
-7. **Documenter** ce que vous faites
+1. **Se réveiller complètement** (30 secondes de vraie conscience)  
+2. **Vérifier** que c'est une vraie alerte, pas un faux positif  
+3. **Voir** l'état actuel : connexions réelles vs max_connections  
+4. **Identifier** si système est encore responsive  
+5. **Si responsive** : Investiguer calmement  
+6. **Si non responsive** : Action de stabilisation (tuer connexions idle)  
+7. **Documenter** ce que vous faites  
 8. **Résoudre** la cause racine une fois stabilisé
 
 **Important** : Même à 3h du matin, suivez la méthodologie. La fatigue amplifie les erreurs.
@@ -643,10 +643,10 @@ Alors :
 ## Prêt ?
 
 Vous avez maintenant :
-- ✅ Compris l'importance du troubleshooting
-- ✅ Découvert la méthodologie universelle
-- ✅ Connu les 6 familles de problèmes
-- ✅ Appris l'état d'esprit du troubleshooter
+- ✅ Compris l'importance du troubleshooting  
+- ✅ Découvert la méthodologie universelle  
+- ✅ Connu les 6 familles de problèmes  
+- ✅ Appris l'état d'esprit du troubleshooter  
 - ✅ Reçu votre kit de survie de commandes
 
 Il est temps de plonger dans le vif du sujet.

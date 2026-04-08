@@ -11,9 +11,9 @@ Dans le monde moderne des données, les entreprises utilisent rarement une seule
 - Des données analytiques dans **PostgreSQL**
 
 Traditionnellement, pour consolider ces données, vous deviez :
-1. Exporter les données depuis chaque source
-2. Transformer les formats (ETL)
-3. Importer dans une base centrale
+1. Exporter les données depuis chaque source  
+2. Transformer les formats (ETL)  
+3. Importer dans une base centrale  
 4. Gérer la synchronisation
 
 **Les Foreign Data Wrappers (FDW)** offrent une alternative révolutionnaire : transformer PostgreSQL en **hub de données** capable d'interroger directement toutes ces sources comme si elles étaient des tables locales, sans duplication.
@@ -120,8 +120,8 @@ CREATE FOREIGN TABLE clients_distants (
     nom TEXT,
     email TEXT
 )
-SERVER serveur_distant
-OPTIONS (
+SERVER serveur_distant  
+OPTIONS (  
     schema_name 'public',
     table_name 'customers'
 );
@@ -166,8 +166,8 @@ Les Foreign Data Wrappers implémentent le standard **SQL/MED** (Management of E
 - L'interface standardisée entre le SGBD et les sources externes
 
 **Avantages de la standardisation** :
-- ✅ Approche cohérente entre différents SGBD
-- ✅ Portabilité des concepts (même si l'implémentation diffère)
+- ✅ Approche cohérente entre différents SGBD  
+- ✅ Portabilité des concepts (même si l'implémentation diffère)  
 - ✅ Écosystème riche de FDW développés par la communauté
 
 ### Implémentation PostgreSQL
@@ -208,8 +208,8 @@ CREATE FOREIGN TABLE ventes_csv (
     produit TEXT,
     montant NUMERIC
 )
-SERVER serveur_fichiers
-OPTIONS (
+SERVER serveur_fichiers  
+OPTIONS (  
     filename '/data/ventes.csv',
     format 'csv',
     header 'true'
@@ -272,9 +272,9 @@ OPTIONS (
 SELECT
     u.nom,
     COUNT(c.commande_id) AS nb_commandes
-FROM users_postgres u
-INNER JOIN commandes_mongo c ON u.id = c.user_id
-GROUP BY u.nom;
+FROM users_postgres u  
+INNER JOIN commandes_mongo c ON u.id = c.user_id  
+GROUP BY u.nom;  
 ```
 
 #### redis_fdw
@@ -308,8 +308,8 @@ CREATE FOREIGN TABLE github_repos (
     stars INTEGER,
     language TEXT
 )
-SERVER github_api
-OPTIONS (endpoint 'https://api.github.com/repos');
+SERVER github_api  
+OPTIONS (endpoint 'https://api.github.com/repos');  
 ```
 
 #### www_fdw
@@ -384,9 +384,9 @@ OPTIONS (endpoint 'https://api.github.com/repos');
 ```
 
 **Avantages** :
-- ✅ Point d'entrée unique pour toutes les données
-- ✅ Requêtes SQL standard sur toutes les sources
-- ✅ Pas de duplication de données
+- ✅ Point d'entrée unique pour toutes les données  
+- ✅ Requêtes SQL standard sur toutes les sources  
+- ✅ Pas de duplication de données  
 - ✅ Données toujours à jour (temps réel)
 
 **Exemple de requête consolidée** :
@@ -398,11 +398,11 @@ SELECT
     p.nom_produit,             -- MySQL
     cmd.montant,               -- PostgreSQL local
     l.date_livraison           -- Fichier CSV
-FROM clients_oracle c
-INNER JOIN commandes_locales cmd ON c.id = cmd.client_id
-INNER JOIN produits_mysql p ON cmd.produit_id = p.id
-LEFT JOIN livraisons_csv l ON cmd.id = l.commande_id
-WHERE cmd.date_commande >= '2024-01-01';
+FROM clients_oracle c  
+INNER JOIN commandes_locales cmd ON c.id = cmd.client_id  
+INNER JOIN produits_mysql p ON cmd.produit_id = p.id  
+LEFT JOIN livraisons_csv l ON cmd.id = l.commande_id  
+WHERE cmd.date_commande >= '2024-01-01';  
 ```
 
 ### 2. Migration Progressive de Bases de Données
@@ -435,9 +435,9 @@ Application → PostgreSQL (100% des données)
 ```
 
 **Avantages** :
-- ✅ Migration sans interruption de service
-- ✅ Retour arrière possible à tout moment
-- ✅ Tests en conditions réelles
+- ✅ Migration sans interruption de service  
+- ✅ Retour arrière possible à tout moment  
+- ✅ Tests en conditions réelles  
 - ✅ Apprentissage progressif
 
 ### 3. Data Warehouse et Reporting
@@ -463,21 +463,21 @@ Application → PostgreSQL (100% des données)
 ```
 
 **Stratégie** :
-1. Connexion via FDW pour accès temps réel
-2. Vues matérialisées pour cache des agrégations
+1. Connexion via FDW pour accès temps réel  
+2. Vues matérialisées pour cache des agrégations  
 3. Rafraîchissement planifié (quotidien, horaire)
 
 ```sql
 -- Vue matérialisée consolidée
-CREATE MATERIALIZED VIEW ventes_consolidees AS
-SELECT
+CREATE MATERIALIZED VIEW ventes_consolidees AS  
+SELECT  
     date_trunc('day', v.date_vente) AS jour,
     p.categorie,
     SUM(v.montant) AS ca,
     COUNT(*) AS nb_ventes
-FROM ventes_mysql v
-INNER JOIN produits_locaux p ON v.produit_id = p.id
-GROUP BY jour, p.categorie;
+FROM ventes_mysql v  
+INNER JOIN produits_locaux p ON v.produit_id = p.id  
+GROUP BY jour, p.categorie;  
 
 -- Index pour performance
 CREATE INDEX idx_ventes_cons_jour ON ventes_consolidees(jour);
@@ -546,20 +546,20 @@ CREATE FOREIGN TABLE clients_shard1 (
     nom TEXT,
     -- ...
 )
-SERVER serveur1
-OPTIONS (schema_name 'public', table_name 'clients');
+SERVER serveur1  
+OPTIONS (schema_name 'public', table_name 'clients');  
 
 CREATE FOREIGN TABLE clients_shard2 (
     -- même structure
 )
-SERVER serveur2
-OPTIONS (schema_name 'public', table_name 'clients');
+SERVER serveur2  
+OPTIONS (schema_name 'public', table_name 'clients');  
 
 -- Créer une vue unifiée
-CREATE VIEW clients AS
-SELECT * FROM clients_shard1
-UNION ALL
-SELECT * FROM clients_shard2;
+CREATE VIEW clients AS  
+SELECT * FROM clients_shard1  
+UNION ALL  
+SELECT * FROM clients_shard2;  
 
 -- L'application interroge simplement 'clients'
 SELECT * FROM clients WHERE nom = 'Dupont';
@@ -576,8 +576,8 @@ CREATE FOREIGN TABLE commandes_partenaire_aujourdhui (
     montant NUMERIC,
     date_commande DATE
 )
-SERVER serveur_fichiers
-OPTIONS (
+SERVER serveur_fichiers  
+OPTIONS (  
     filename '/imports/commandes_2025-11-23.csv',
     format 'csv',
     header 'true'
@@ -591,9 +591,9 @@ SELECT
 FROM commandes_partenaire_aujourdhui;
 
 -- Import si validation OK
-INSERT INTO commandes_locales
-SELECT * FROM commandes_partenaire_aujourdhui
-WHERE montant IS NOT NULL AND montant > 0;
+INSERT INTO commandes_locales  
+SELECT * FROM commandes_partenaire_aujourdhui  
+WHERE montant IS NOT NULL AND montant > 0;  
 ```
 
 ---
@@ -661,10 +661,10 @@ WHERE montant IS NOT NULL AND montant > 0;
 
 **Exemple de risque** :
 ```sql
-BEGIN;
-UPDATE table_locale SET statut = 'validé';
-UPDATE table_distante SET stock = stock - 1;
-COMMIT;
+BEGIN;  
+UPDATE table_locale SET statut = 'validé';  
+UPDATE table_distante SET stock = stock - 1;  
+COMMIT;  
 -- Si le COMMIT échoue, une des deux opérations pourrait être validée, l'autre non
 ```
 
@@ -785,9 +785,9 @@ ALTER TABLE clients_distants ADD COLUMN telephone TEXT;
 
 ```sql
 -- Sur la source distante
-CREATE USER fdw_readonly WITH PASSWORD 'mot_de_passe_fort';
-GRANT CONNECT ON DATABASE prod TO fdw_readonly;
-GRANT SELECT ON ALL TABLES IN SCHEMA public TO fdw_readonly;
+CREATE USER fdw_readonly WITH PASSWORD 'mot_de_passe_fort';  
+GRANT CONNECT ON DATABASE prod TO fdw_readonly;  
+GRANT SELECT ON ALL TABLES IN SCHEMA public TO fdw_readonly;  
 ```
 
 ✅ **Chiffrement** : Utiliser SSL/TLS pour les connexions

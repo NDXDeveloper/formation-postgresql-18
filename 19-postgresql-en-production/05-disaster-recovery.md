@@ -45,19 +45,19 @@ Un désastre n'est pas forcément un événement catastrophique comme un incendi
 
 #### 1. Désastres naturels 🌪️
 
-- **Incendies** : Exemple célèbre - OVH Strasbourg (mars 2021), 3,6 millions de sites affectés
-- **Inondations** : Datacenters en sous-sol particulièrement vulnérables
-- **Tremblements de terre** : Risque dans certaines régions (Japon, Californie, Italie)
-- **Ouragans, tornades** : Dommages aux infrastructures électriques et réseau
+- **Incendies** : Exemple célèbre - OVH Strasbourg (mars 2021), 3,6 millions de sites affectés  
+- **Inondations** : Datacenters en sous-sol particulièrement vulnérables  
+- **Tremblements de terre** : Risque dans certaines régions (Japon, Californie, Italie)  
+- **Ouragans, tornades** : Dommages aux infrastructures électriques et réseau  
 - **Pannes électriques prolongées** : Texas (février 2021), plusieurs jours sans électricité
 
 **Impact typique :** Perte totale du datacenter, indisponibilité de plusieurs jours à semaines.
 
 #### 2. Erreurs humaines 👤
 
-- **Suppression accidentelle** : `DROP DATABASE production;` au lieu de `DROP DATABASE test;`
-- **Mauvaise migration** : Script SQL qui corrompt les données
-- **Mauvaise configuration** : Modification de postgresql.conf qui empêche le démarrage
+- **Suppression accidentelle** : `DROP DATABASE production;` au lieu de `DROP DATABASE test;`  
+- **Mauvaise migration** : Script SQL qui corrompt les données  
+- **Mauvaise configuration** : Modification de postgresql.conf qui empêche le démarrage  
 - **Oubli de backup** : Les sauvegardes n'ont pas été vérifiées depuis des mois
 
 **Statistique :** 30-40% des incidents de production sont dus à l'erreur humaine (source : ITIC).
@@ -77,10 +77,10 @@ DELETE FROM orders WHERE created_at < '2024-01-01';
 
 #### 3. Pannes matérielles 🖥️
 
-- **Défaillance disque** : SSD/HDD qui lâchent sans préavis
-- **Corruption mémoire** : RAM défectueuse qui corrompt les données
-- **Panne alimentation** : Sans onduleur, corruption des données en cours d'écriture
-- **Surchauffe** : Climatisation défaillante → arrêt d'urgence des serveurs
+- **Défaillance disque** : SSD/HDD qui lâchent sans préavis  
+- **Corruption mémoire** : RAM défectueuse qui corrompt les données  
+- **Panne alimentation** : Sans onduleur, corruption des données en cours d'écriture  
+- **Surchauffe** : Climatisation défaillante → arrêt d'urgence des serveurs  
 - **Défaillance contrôleur RAID** : Perte de plusieurs disques simultanément
 
 **Durée de vie moyenne :**
@@ -92,10 +92,10 @@ DELETE FROM orders WHERE created_at < '2024-01-01';
 
 #### 4. Cyberattaques 🦹
 
-- **Ransomware** : Chiffrement de toutes vos données avec demande de rançon
-- **Attaque DDoS** : Saturation du serveur, impossibilité d'accès
-- **Injection SQL** : Destruction ou vol de données
-- **Accès non autorisé** : Ancien employé mécontent qui supprime des données
+- **Ransomware** : Chiffrement de toutes vos données avec demande de rançon  
+- **Attaque DDoS** : Saturation du serveur, impossibilité d'accès  
+- **Injection SQL** : Destruction ou vol de données  
+- **Accès non autorisé** : Ancien employé mécontent qui supprime des données  
 - **Crypto-mining** : Serveur compromis utilisé pour miner de la crypto
 
 **Exemple de ransomware :**
@@ -117,16 +117,16 @@ DELETE FROM orders WHERE created_at < '2024-01-01';
 
 #### 5. Désastres logiciels 🐛
 
-- **Bug dans PostgreSQL** : Rare mais possible (corruption de données)
-- **Bug dans l'application** : Boucle infinie qui corrompt les données
-- **Migration ratée** : Upgrade de PostgreSQL 17 → 18 qui échoue
+- **Bug dans PostgreSQL** : Rare mais possible (corruption de données)  
+- **Bug dans l'application** : Boucle infinie qui corrompt les données  
+- **Migration ratée** : Upgrade de PostgreSQL 17 → 18 qui échoue  
 - **Incompatibilité** : Extension qui cause des crashs répétés
 
 #### 6. Désastres juridiques et politiques ⚖️
 
-- **Saisie de serveurs** : Dans le cadre d'une enquête
-- **Fermeture administrative** : Non-conformité RGPD
-- **Événements géopolitiques** : Guerre, instabilité politique dans le pays hébergeur
+- **Saisie de serveurs** : Dans le cadre d'une enquête  
+- **Fermeture administrative** : Non-conformité RGPD  
+- **Événements géopolitiques** : Guerre, instabilité politique dans le pays hébergeur  
 - **Faillite de l'hébergeur** : Datacenter fermé du jour au lendemain
 
 ---
@@ -202,8 +202,8 @@ Types de backup PostgreSQL :
 ```
 
 **Types de réplication :**
-- **Streaming Replication** : Réplication en temps quasi-réel (< 1 seconde)
-- **Logical Replication** : Réplication sélective (certaines tables)
+- **Streaming Replication** : Réplication en temps quasi-réel (< 1 seconde)  
+- **Logical Replication** : Réplication sélective (certaines tables)  
 - **Physical Replication** : Copie bit à bit du serveur
 
 ### 3. Monitoring et Alerting
@@ -243,9 +243,9 @@ Un bon plan DR inclut des **runbooks** (procédures documentées) détaillés po
 ```markdown
 RUNBOOK : Restauration complète après sinistre
 
-Scénario : Serveur PostgreSQL production détruit
-RTO cible : 2 heures
-RPO cible : 15 minutes
+Scénario : Serveur PostgreSQL production détruit  
+RTO cible : 2 heures  
+RPO cible : 15 minutes  
 
 ═══════════════════════════════════════════════════════
 
@@ -297,8 +297,8 @@ CONTACTS URGENCE :
 > **Règle d'or :** Une procédure DR non testée n'est pas une procédure DR, c'est une théorie.
 
 **Fréquence recommandée des tests :**
-- **Tests de backup** : Hebdomadaire (automatisé)
-- **Tests de restauration** : Mensuel ou trimestriel
+- **Tests de backup** : Hebdomadaire (automatisé)  
+- **Tests de restauration** : Mensuel ou trimestriel  
 - **Disaster Recovery Drill complet** : Semestriel ou annuel
 
 ### 6. Documentation et Formation
@@ -377,9 +377,9 @@ COPIE BONUS : Réplication
 #### Petite structure (1-10 personnes)
 
 ```
-Base de données : < 100 GB
-RTO acceptable : 4-8 heures
-RPO acceptable : 1-4 heures
+Base de données : < 100 GB  
+RTO acceptable : 4-8 heures  
+RPO acceptable : 1-4 heures  
 
 COÛTS :
 • Backup S3 (100 GB) : 3€/mois
@@ -392,9 +392,9 @@ TOTAL : ~250€/mois (~3000€/an)
 #### Entreprise moyenne (50-200 personnes)
 
 ```
-Base de données : 500 GB - 2 TB
-RTO acceptable : 1-2 heures
-RPO acceptable : 15 minutes
+Base de données : 500 GB - 2 TB  
+RTO acceptable : 1-2 heures  
+RPO acceptable : 15 minutes  
 
 COÛTS :
 • Backup S3 (2 TB + archives) : 80€/mois
@@ -409,9 +409,9 @@ TOTAL : ~1830€/mois (~22 000€/an)
 #### Grande entreprise (500+ personnes)
 
 ```
-Base de données : 5+ TB
-RTO acceptable : 15-30 minutes
-RPO acceptable : 0-5 minutes
+Base de données : 5+ TB  
+RTO acceptable : 15-30 minutes  
+RPO acceptable : 0-5 minutes  
 
 COÛTS :
 • Backup multi-région (10 TB) : 400€/mois
@@ -449,8 +449,8 @@ Sous-total : 100 000€
 TOTAL DES PERTES : 185 000€
 ═══════════════════════════════════════
 
-Coût annuel d'un bon plan DR : 22 000€
-ROI : Rentabilisé dès la première panne évitée
+Coût annuel d'un bon plan DR : 22 000€  
+ROI : Rentabilisé dès la première panne évitée  
 ```
 
 **Conclusion :** Ne PAS investir dans le DR coûte **beaucoup plus cher** que d'investir dedans.
@@ -590,9 +590,9 @@ Cette introduction au Disaster Recovery vous a présenté les concepts fondament
 
 Chaque section s'appuie sur la précédente :
 
-1. **D'abord**, vous définissez vos objectifs (RTO/RPO)
-2. **Ensuite**, vous mettez en place les procédures
-3. **Puis**, vous testez régulièrement
+1. **D'abord**, vous définissez vos objectifs (RTO/RPO)  
+2. **Ensuite**, vous mettez en place les procédures  
+3. **Puis**, vous testez régulièrement  
 4. **Enfin**, vous étendez géographiquement si nécessaire
 
 ---
@@ -603,58 +603,58 @@ Chaque section s'appuie sur la précédente :
 
 ### ✅ Backups
 
-- [ ] Vous avez des backups automatisés
-- [ ] Les backups sont testés régulièrement (au moins trimestriellement)
-- [ ] Vous appliquez la règle 3-2-1
-- [ ] Les backups sont stockés hors site (différent datacenter)
-- [ ] Vous archivez les WAL pour Point-in-Time Recovery
-- [ ] Vous savez combien de temps prend une restauration
+- [ ] Vous avez des backups automatisés  
+- [ ] Les backups sont testés régulièrement (au moins trimestriellement)  
+- [ ] Vous appliquez la règle 3-2-1  
+- [ ] Les backups sont stockés hors site (différent datacenter)  
+- [ ] Vous archivez les WAL pour Point-in-Time Recovery  
+- [ ] Vous savez combien de temps prend une restauration  
 - [ ] Vous avez documenté la procédure de restauration
 
 ### ✅ Réplication
 
-- [ ] Vous avez au moins 1 serveur standby
-- [ ] La réplication est monitorée
-- [ ] Le lag de réplication est < 10 secondes
-- [ ] Vous avez testé un failover manuel
+- [ ] Vous avez au moins 1 serveur standby  
+- [ ] La réplication est monitorée  
+- [ ] Le lag de réplication est < 10 secondes  
+- [ ] Vous avez testé un failover manuel  
 - [ ] Vous connaissez le temps nécessaire pour un failover
 
 ### ✅ Monitoring et Alertes
 
-- [ ] Vous êtes alerté si PostgreSQL tombe
-- [ ] Vous êtes alerté si les backups échouent
-- [ ] Vous êtes alerté si la réplication prend du retard
-- [ ] Vous avez un système d'astreinte (on-call)
+- [ ] Vous êtes alerté si PostgreSQL tombe  
+- [ ] Vous êtes alerté si les backups échouent  
+- [ ] Vous êtes alerté si la réplication prend du retard  
+- [ ] Vous avez un système d'astreinte (on-call)  
 - [ ] Les alertes sont envoyées sur plusieurs canaux
 
 ### ✅ Documentation et Procédures
 
-- [ ] Vous avez des runbooks écrits pour chaque scénario
-- [ ] Les runbooks sont à jour (< 6 mois)
-- [ ] Toute l'équipe sait où trouver les runbooks
-- [ ] Les contacts d'urgence sont documentés
+- [ ] Vous avez des runbooks écrits pour chaque scénario  
+- [ ] Les runbooks sont à jour (< 6 mois)  
+- [ ] Toute l'équipe sait où trouver les runbooks  
+- [ ] Les contacts d'urgence sont documentés  
 - [ ] Les accès d'urgence sont documentés et testés
 
 ### ✅ Tests et Formation
 
-- [ ] Vous testez les restaurations au moins trimestriellement
-- [ ] Toute l'équipe technique a été formée aux procédures DR
-- [ ] Vous faites des post-mortems après chaque incident
+- [ ] Vous testez les restaurations au moins trimestriellement  
+- [ ] Toute l'équipe technique a été formée aux procédures DR  
+- [ ] Vous faites des post-mortems après chaque incident  
 - [ ] Vous avez fait au moins 1 disaster recovery drill complet
 
 ### ✅ Objectifs et Conformité
 
-- [ ] Vous avez défini votre RTO (Recovery Time Objective)
-- [ ] Vous avez défini votre RPO (Recovery Point Objective)
-- [ ] Vos objectifs sont validés par la direction
-- [ ] Vous respectez vos objectifs (mesuré lors des tests)
+- [ ] Vous avez défini votre RTO (Recovery Time Objective)  
+- [ ] Vous avez défini votre RPO (Recovery Point Objective)  
+- [ ] Vos objectifs sont validés par la direction  
+- [ ] Vous respectez vos objectifs (mesuré lors des tests)  
 - [ ] Vous êtes conforme aux obligations légales (RGPD, etc.)
 
 ### Scoring
 
-- **12-15 ✅** : Excellent ! Vous avez un bon plan DR
-- **8-11 ✅** : Bien, mais des améliorations sont nécessaires
-- **4-7 ✅** : Attention ! Votre organisation est à risque
+- **12-15 ✅** : Excellent ! Vous avez un bon plan DR  
+- **8-11 ✅** : Bien, mais des améliorations sont nécessaires  
+- **4-7 ✅** : Attention ! Votre organisation est à risque  
 - **0-3 ✅** : 🚨 Critique ! Vous êtes en danger, agissez immédiatement
 
 ---
@@ -665,9 +665,9 @@ Le Disaster Recovery n'est pas une option, c'est une **nécessité absolue** pou
 
 **Les questions que vous devez vous poser :**
 
-1. **Si notre base de données disparaît ce soir, que se passe-t-il demain matin ?**
-2. **Combien de données pouvons-nous nous permettre de perdre ?**
-3. **Combien de temps pouvons-nous rester hors ligne ?**
+1. **Si notre base de données disparaît ce soir, que se passe-t-il demain matin ?**  
+2. **Combien de données pouvons-nous nous permettre de perdre ?**  
+3. **Combien de temps pouvons-nous rester hors ligne ?**  
 4. **Notre équipe sait-elle exactement quoi faire en cas de crise ?**
 
 Si vous n'avez pas de réponses claires et rassurantes à ces questions, **c'est maintenant qu'il faut agir**.
@@ -708,8 +708,8 @@ Vous y découvrirez comment calculer :
 
 ---
 
-> **Citation pour finir :**
-> *"Hope is not a strategy."* — Proverbe DevOps
+> **Citation pour finir :**  
+> *"Hope is not a strategy."* — Proverbe DevOps  
 > (L'espoir n'est pas une stratégie. Ayez un vrai plan DR.)
 
 ⏭️ [RTO et RPO : Définir les objectifs](/19-postgresql-en-production/05.1-rto-rpo-objectifs.md)

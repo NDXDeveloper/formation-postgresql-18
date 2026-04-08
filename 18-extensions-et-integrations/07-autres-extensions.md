@@ -12,11 +12,11 @@ Dans cette section, nous allons explorer **cinq extensions essentielles** qui é
 
 Une **extension** est un module logiciel qui s'intègre à PostgreSQL pour ajouter de nouvelles fonctionnalités. Elle peut fournir :
 
-- **De nouveaux types de données** : JSON, géométrie, vecteurs, etc.
-- **De nouvelles fonctions** : Manipulation de texte, calculs statistiques, etc.
-- **De nouveaux opérateurs** : Recherche spatiale, full-text search, etc.
-- **De nouveaux index** : GIN, GiST, BRIN, etc.
-- **De nouveaux outils d'administration** : Planification, monitoring, maintenance
+- **De nouveaux types de données** : JSON, géométrie, vecteurs, etc.  
+- **De nouvelles fonctions** : Manipulation de texte, calculs statistiques, etc.  
+- **De nouveaux opérateurs** : Recherche spatiale, full-text search, etc.  
+- **De nouveaux index** : GIN, GiST, BRIN, etc.  
+- **De nouveaux outils d'administration** : Planification, monitoring, maintenance  
 - **Des intégrations externes** : Connexion à d'autres bases de données (FDW)
 
 **Exemple simple** :
@@ -40,9 +40,9 @@ CREATE TABLE locations (
 );
 
 -- Nouvelles capacités
-SELECT name
-FROM locations
-WHERE ST_DWithin(location, ST_MakePoint(-73.935242, 40.730610), 1000);
+SELECT name  
+FROM locations  
+WHERE ST_DWithin(location, ST_MakePoint(-73.935242, 40.730610), 1000);  
 -- "Trouver tous les lieux dans un rayon de 1 km d'un point"
 ```
 
@@ -54,10 +54,10 @@ PostgreSQL adopte une approche **modulaire** :
 
 **Avantages** :
 
-- ✅ **Flexibilité** : Installer uniquement ce dont vous avez besoin
-- ✅ **Stabilité** : Le cœur reste simple et fiable
-- ✅ **Innovation** : La communauté peut développer librement de nouvelles extensions
-- ✅ **Maintenance** : Les extensions évoluent indépendamment du cœur
+- ✅ **Flexibilité** : Installer uniquement ce dont vous avez besoin  
+- ✅ **Stabilité** : Le cœur reste simple et fiable  
+- ✅ **Innovation** : La communauté peut développer librement de nouvelles extensions  
+- ✅ **Maintenance** : Les extensions évoluent indépendamment du cœur  
 - ✅ **Performance** : Pas de fonctionnalités inutilisées qui ralentissent le système
 
 **Comparaison avec d'autres SGBD** :
@@ -77,9 +77,9 @@ Cette section se concentre sur **cinq extensions essentielles** pour l'administr
 
 ### 18.7.1. pg_cron : Planification de Tâches
 
-**Catégorie** : Automatisation
-**Maturité** : Production-ready
-**Importance** : ⭐⭐⭐⭐⭐ Critique
+**Catégorie** : Automatisation  
+**Maturité** : Production-ready  
+**Importance** : ⭐⭐⭐⭐⭐ Critique  
 
 **Qu'est-ce que c'est ?**
 
@@ -121,9 +121,9 @@ Avec pg_cron :
 
 ### 18.7.2. pg_partman : Gestion Automatisée de Partitions
 
-**Catégorie** : Maintenance & Performance
-**Maturité** : Production-ready
-**Importance** : ⭐⭐⭐⭐ Très important
+**Catégorie** : Maintenance & Performance  
+**Maturité** : Production-ready  
+**Importance** : ⭐⭐⭐⭐ Très important  
 
 **Qu'est-ce que c'est ?**
 
@@ -166,9 +166,9 @@ pg_partman automatise tout ce processus, permettant de gérer des tables de plus
 
 ### 18.7.3. pg_stat_kcache : Métriques Système
 
-**Catégorie** : Monitoring & Performance
-**Maturité** : Production-ready
-**Importance** : ⭐⭐⭐⭐ Très important
+**Catégorie** : Monitoring & Performance  
+**Maturité** : Production-ready  
+**Importance** : ⭐⭐⭐⭐ Très important  
 
 **Qu'est-ce que c'est ?**
 
@@ -190,10 +190,10 @@ SELECT
     user_time + system_time as total_cpu_seconds,
     reads,  -- Lectures disque
     writes  -- Écritures disque
-FROM pg_stat_statements pss
-JOIN pg_stat_kcache psk USING (queryid)
-ORDER BY (user_time + system_time) DESC
-LIMIT 10;
+FROM pg_stat_statements pss  
+JOIN pg_stat_kcache psk USING (queryid)  
+ORDER BY (user_time + system_time) DESC  
+LIMIT 10;  
 ```
 
 **Pourquoi c'est important** :
@@ -211,9 +211,9 @@ Cette information est **cruciale** pour optimiser efficacement.
 
 ### 18.7.4. HypoPG : Indexation Hypothétique
 
-**Catégorie** : Optimisation
-**Maturité** : Production-ready
-**Importance** : ⭐⭐⭐⭐ Très important
+**Catégorie** : Optimisation  
+**Maturité** : Production-ready  
+**Importance** : ⭐⭐⭐⭐ Très important  
 
 **Qu'est-ce que c'est ?**
 
@@ -233,8 +233,8 @@ HypoPG permet de créer des **index virtuels** (hypothétiques) pour tester leur
 SELECT hypopg_create_index('CREATE INDEX ON orders(customer_id, order_date)');
 
 -- Voir si le planificateur l'utiliserait
-EXPLAIN SELECT * FROM orders
-WHERE customer_id = 12345 AND order_date >= '2024-01-01';
+EXPLAIN SELECT * FROM orders  
+WHERE customer_id = 12345 AND order_date >= '2024-01-01';  
 
 -- Si l'index améliore le plan : Le créer réellement
 -- Si l'index n'est pas utilisé : Ne pas le créer (gain de temps et d'espace !)
@@ -254,9 +254,9 @@ HypoPG permet de **valider avant de créer**, économisant temps, espace et risq
 
 ### 18.7.5. pg_repack : Réorganisation Sans Verrous
 
-**Catégorie** : Maintenance
-**Maturité** : Production-ready
-**Importance** : ⭐⭐⭐⭐⭐ Critique
+**Catégorie** : Maintenance  
+**Maturité** : Production-ready  
+**Importance** : ⭐⭐⭐⭐⭐ Critique  
 
 **Qu'est-ce que c'est ?**
 
@@ -303,9 +303,9 @@ Les extensions PostgreSQL se classent en plusieurs catégories :
 Ajoutent de nouveaux types de données spécialisés.
 
 **Exemples** :
-- **PostGIS** : Types géométriques (Point, Polygon, LineString)
-- **hstore** : Paires clé-valeur (type NoSQL dans PostgreSQL)
-- **uuid-ossp** : Génération d'UUID
+- **PostGIS** : Types géométriques (Point, Polygon, LineString)  
+- **hstore** : Paires clé-valeur (type NoSQL dans PostgreSQL)  
+- **uuid-ossp** : Génération d'UUID  
 - **pgvector** : Vecteurs pour IA/ML
 
 #### 2. Extensions d'Indexation
@@ -313,8 +313,8 @@ Ajoutent de nouveaux types de données spécialisés.
 Fournissent de nouveaux types d'index pour cas d'usage spécifiques.
 
 **Exemples** :
-- **pg_trgm** : Index trigramme pour recherche floue
-- **bloom** : Index Bloom filter (espace réduit)
+- **pg_trgm** : Index trigramme pour recherche floue  
+- **bloom** : Index Bloom filter (espace réduit)  
 - **rum** : Index pour full-text search avancé
 
 #### 3. Extensions d'Administration
@@ -322,8 +322,8 @@ Fournissent de nouveaux types d'index pour cas d'usage spécifiques.
 Facilitent la gestion et la maintenance.
 
 **Exemples** :
-- **pg_cron** : Planification de tâches
-- **pg_partman** : Gestion de partitions
+- **pg_cron** : Planification de tâches  
+- **pg_partman** : Gestion de partitions  
 - **pg_repack** : Réorganisation sans verrous
 
 #### 4. Extensions de Monitoring
@@ -331,8 +331,8 @@ Facilitent la gestion et la maintenance.
 Collectent des métriques et facilitent l'observabilité.
 
 **Exemples** :
-- **pg_stat_statements** : Statistiques de requêtes
-- **pg_stat_kcache** : Métriques système
+- **pg_stat_statements** : Statistiques de requêtes  
+- **pg_stat_kcache** : Métriques système  
 - **auto_explain** : Logging automatique des plans
 
 #### 5. Extensions d'Optimisation
@@ -340,8 +340,8 @@ Collectent des métriques et facilitent l'observabilité.
 Aident à améliorer les performances.
 
 **Exemples** :
-- **HypoPG** : Index hypothétiques
-- **pg_hint_plan** : Forcer des plans d'exécution
+- **HypoPG** : Index hypothétiques  
+- **pg_hint_plan** : Forcer des plans d'exécution  
 - **pgstattuple** : Analyse du bloat
 
 #### 6. Extensions d'Intégration
@@ -349,8 +349,8 @@ Aident à améliorer les performances.
 Connectent PostgreSQL à des systèmes externes.
 
 **Exemples** :
-- **postgres_fdw** : Connexion à d'autres bases PostgreSQL
-- **file_fdw** : Lecture de fichiers CSV/TSV
+- **postgres_fdw** : Connexion à d'autres bases PostgreSQL  
+- **file_fdw** : Lecture de fichiers CSV/TSV  
 - **oracle_fdw, mysql_fdw** : Connexion à d'autres SGBD
 
 ### Cycle de Vie d'une Extension
@@ -364,18 +364,18 @@ Avant de pouvoir utiliser une extension, elle doit être **installée sur le ser
 ```bash
 # Via le gestionnaire de packages système (recommandé)
 # Debian/Ubuntu
-sudo apt-get install postgresql-18-cron
-sudo apt-get install postgresql-18-partman
+sudo apt-get install postgresql-18-cron  
+sudo apt-get install postgresql-18-partman  
 
 # RHEL/CentOS
-sudo yum install pg_repack18
-sudo yum install hypopg18
+sudo yum install pg_repack18  
+sudo yum install hypopg18  
 
 # Compilation depuis les sources
-git clone https://github.com/extension/repo.git
-cd repo
-make
-sudo make install
+git clone https://github.com/extension/repo.git  
+cd repo  
+make  
+sudo make install  
 ```
 
 **Important** : L'installation du package rend l'extension **disponible**, mais ne l'active pas encore.
@@ -389,9 +389,9 @@ Une fois installée sur le serveur, l'extension doit être **créée** dans chaq
 \c production
 
 -- Créer l'extension
-CREATE EXTENSION pg_cron;
-CREATE EXTENSION pg_partman;
-CREATE EXTENSION hypopg;
+CREATE EXTENSION pg_cron;  
+CREATE EXTENSION pg_partman;  
+CREATE EXTENSION hypopg;  
 ```
 
 **Vérification** :
@@ -450,8 +450,8 @@ DROP EXTENSION pg_cron CASCADE;
 
 Avant d'installer une extension, vérifiez :
 
-- ✅ **Version de PostgreSQL** : L'extension supporte-t-elle votre version de PostgreSQL ?
-- ✅ **Système d'exploitation** : L'extension fonctionne-t-elle sur votre OS ?
+- ✅ **Version de PostgreSQL** : L'extension supporte-t-elle votre version de PostgreSQL ?  
+- ✅ **Système d'exploitation** : L'extension fonctionne-t-elle sur votre OS ?  
 - ✅ **Dépendances** : Y a-t-il des bibliothèques système requises ?
 
 **Exemple** : pg_stat_kcache nécessite Linux (ne fonctionne pas sur Windows).
@@ -507,8 +507,8 @@ Les extensions reçoivent des correctifs de bugs et nouvelles fonctionnalités.
 
 Certaines extensions ont un **coût** :
 
-- **pg_stat_statements** : ~1-2% d'overhead CPU
-- **pg_stat_kcache** : ~2-5% d'overhead CPU
+- **pg_stat_statements** : ~1-2% d'overhead CPU  
+- **pg_stat_kcache** : ~2-5% d'overhead CPU  
 - **Triggers de pg_partman** : Légère latence sur INSERT/UPDATE/DELETE
 
 ✅ **Mesurer** l'impact avant et après l'installation.
@@ -519,8 +519,8 @@ Les extensions créent des objets (fonctions, tables, types). Gérer les permiss
 
 ```sql
 -- Accorder l'usage d'une extension à un rôle
-GRANT USAGE ON SCHEMA partman TO app_user;
-GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA partman TO app_user;
+GRANT USAGE ON SCHEMA partman TO app_user;  
+GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA partman TO app_user;  
 
 -- Révoquer si nécessaire
 REVOKE EXECUTE ON ALL FUNCTIONS IN SCHEMA partman FROM app_user;
@@ -547,16 +547,16 @@ Créer des métriques pour surveiller l'utilisation des extensions :
 
 ```sql
 -- Créer une vue de monitoring
-CREATE VIEW monitoring.extension_usage AS
-SELECT
+CREATE VIEW monitoring.extension_usage AS  
+SELECT  
     e.extname as extension_name,
     e.extversion,
     n.nspname as schema_name,
     COUNT(DISTINCT p.proname) as function_count
-FROM pg_extension e
-JOIN pg_namespace n ON n.oid = e.extnamespace
-LEFT JOIN pg_proc p ON p.pronamespace = n.oid
-GROUP BY e.extname, e.extversion, n.nspname;
+FROM pg_extension e  
+JOIN pg_namespace n ON n.oid = e.extnamespace  
+LEFT JOIN pg_proc p ON p.pronamespace = n.oid  
+GROUP BY e.extname, e.extversion, n.nspname;  
 ```
 
 ---
@@ -583,12 +583,12 @@ Si possible, accorder uniquement les permissions nécessaires :
 CREATE ROLE extension_manager;
 
 -- Accorder les permissions minimales
-GRANT CREATE ON DATABASE production TO extension_manager;
-GRANT ALL ON SCHEMA public TO extension_manager;
+GRANT CREATE ON DATABASE production TO extension_manager;  
+GRANT ALL ON SCHEMA public TO extension_manager;  
 
 -- L'utilisateur extension_manager peut maintenant créer des extensions
-SET ROLE extension_manager;
-CREATE EXTENSION hypopg;
+SET ROLE extension_manager;  
+CREATE EXTENSION hypopg;  
 ```
 
 ### Extensions Tierces : Risques et Précautions
@@ -603,10 +603,10 @@ Les extensions tierces (non fournies par PostgreSQL) peuvent présenter des risq
 
 ✅ **Précautions** :
 
-1. **Vérifier la réputation** : Utiliser des extensions populaires et maintenues
-2. **Lire le code source** : Si possible, auditer le code (pour extensions critiques)
-3. **Tester exhaustivement** : En développement puis staging
-4. **Surveiller les CVE** : Vulnérabilités de sécurité publiées
+1. **Vérifier la réputation** : Utiliser des extensions populaires et maintenues  
+2. **Lire le code source** : Si possible, auditer le code (pour extensions critiques)  
+3. **Tester exhaustivement** : En développement puis staging  
+4. **Surveiller les CVE** : Vulnérabilités de sécurité publiées  
 5. **Avoir un plan de rollback** : Pouvoir désinstaller l'extension rapidement
 
 **Extensions recommandées** (haute confiance) :
@@ -626,8 +626,8 @@ Dans une architecture Primary/Standby :
 
 ```bash
 # Sur le Primary
-sudo apt-get install postgresql-18-cron
-psql -d production -c "CREATE EXTENSION pg_cron;"
+sudo apt-get install postgresql-18-cron  
+psql -d production -c "CREATE EXTENSION pg_cron;"  
 
 # Sur chaque Standby
 sudo apt-get install postgresql-18-cron
@@ -648,8 +648,8 @@ sudo apt-get install postgresql-18-cron
 
 ```sql
 -- Créer un wrapper qui vérifie le rôle
-CREATE FUNCTION schedule_job_if_primary() RETURNS void AS $$
-BEGIN
+CREATE FUNCTION schedule_job_if_primary() RETURNS void AS $$  
+BEGIN  
     IF NOT pg_is_in_recovery() THEN
         PERFORM cron.schedule('job_name', '0 * * * *', 'SELECT cleanup()');
     END IF;
@@ -669,7 +669,7 @@ $$ LANGUAGE plpgsql;
    - Répertoire centralisé d'extensions
    - Téléchargements et documentation
 
-2. **PostgreSQL Contrib** : Extensions officielles incluses avec PostgreSQL
+2. **PostgreSQL Contrib** : Extensions officielles incluses avec PostgreSQL  
    - `pg_stat_statements`, `pgcrypto`, `hstore`, etc.
 
 3. **GitHub** : Rechercher "postgresql extension"
@@ -677,27 +677,27 @@ $$ LANGUAGE plpgsql;
 
 **Évaluer une extension** :
 
-✅ **Critères de qualité** :
-- ⭐ Stars GitHub (popularité)
-- 🔄 Dernière mise à jour récente (< 6 mois)
-- 📝 Documentation complète
-- 🧪 Tests automatisés (CI/CD)
-- 👥 Communauté active (issues résolues)
+✅ **Critères de qualité** :  
+- ⭐ Stars GitHub (popularité)  
+- 🔄 Dernière mise à jour récente (< 6 mois)  
+- 📝 Documentation complète  
+- 🧪 Tests automatisés (CI/CD)  
+- 👥 Communauté active (issues résolues)  
 - 📦 Disponibilité dans les dépôts système (apt, yum)
 
 ### Contribuer et Support
 
 **Communauté PostgreSQL** :
 
-- **Mailing Lists** : pgsql-general@postgresql.org
-- **Reddit** : r/PostgreSQL
-- **Slack/Discord** : Communautés PostgreSQL actives
+- **Mailing Lists** : pgsql-general@postgresql.org  
+- **Reddit** : r/PostgreSQL  
+- **Slack/Discord** : Communautés PostgreSQL actives  
 - **Stack Overflow** : Tag [postgresql]
 
 **Support commercial** :
 
-- **Crunchy Data** : Support PostgreSQL et extensions
-- **EDB (EnterpriseDB)** : Support et extensions propriétaires
+- **Crunchy Data** : Support PostgreSQL et extensions  
+- **EDB (EnterpriseDB)** : Support et extensions propriétaires  
 - **2ndQuadrant** : Consulting et développement d'extensions
 
 ---
@@ -723,21 +723,21 @@ Les cinq prochaines sections de ce chapitre (18.7.1 à 18.7.5) vont détailler c
 
 Chaque extension sera couverte selon le plan suivant :
 
-1. **Introduction** : Problème résolu et cas d'usage
-2. **Architecture** : Fonctionnement interne
-3. **Installation** : Étapes pratiques
-4. **Utilisation de base** : Commandes essentielles
-5. **Cas d'usage détaillés** : Scénarios réels
-6. **Bonnes pratiques** : Recommandations d'experts
-7. **Dépannage** : Problèmes courants et solutions
+1. **Introduction** : Problème résolu et cas d'usage  
+2. **Architecture** : Fonctionnement interne  
+3. **Installation** : Étapes pratiques  
+4. **Utilisation de base** : Commandes essentielles  
+5. **Cas d'usage détaillés** : Scénarios réels  
+6. **Bonnes pratiques** : Recommandations d'experts  
+7. **Dépannage** : Problèmes courants et solutions  
 8. **Intégration** : Avec l'écosystème PostgreSQL
 
 ### Approche Pédagogique
 
-- 📚 **Progression** : Du simple au complexe
-- 🎯 **Pratique** : Exemples concrets et réalistes
-- 💡 **Explication** : Concepts clairs pour débutants
-- ⚠️ **Alertes** : Pièges courants et limitations
+- 📚 **Progression** : Du simple au complexe  
+- 🎯 **Pratique** : Exemples concrets et réalistes  
+- 💡 **Explication** : Concepts clairs pour débutants  
+- ⚠️ **Alertes** : Pièges courants et limitations  
 - ✅ **Validation** : Vérifications et tests
 
 ---
@@ -748,10 +748,10 @@ Les **extensions PostgreSQL** transforment PostgreSQL d'un SGBD relationnel en u
 
 ### Points Clés
 
-- ✅ **Modularité** : Installer uniquement ce dont vous avez besoin
-- ✅ **Extensibilité** : Ajouter des fonctionnalités sans modifier le cœur
-- ✅ **Communauté** : Écosystème riche et actif
-- ✅ **Production-ready** : Extensions éprouvées en production mondiale
+- ✅ **Modularité** : Installer uniquement ce dont vous avez besoin  
+- ✅ **Extensibilité** : Ajouter des fonctionnalités sans modifier le cœur  
+- ✅ **Communauté** : Écosystème riche et actif  
+- ✅ **Production-ready** : Extensions éprouvées en production mondiale  
 - ✅ **Open-source** : Transparence et gratuité
 
 ### Les 5 Extensions de cette Section
@@ -768,10 +768,10 @@ Les **extensions PostgreSQL** transforment PostgreSQL d'un SGBD relationnel en u
 
 Ces extensions ont été sélectionnées car elles sont :
 
-1. **Essentielles** : Résolvent des problèmes courants en production
-2. **Matures** : Éprouvées et stables
-3. **Complémentaires** : Couvrent différents aspects (automatisation, monitoring, optimisation, maintenance)
-4. **Production-ready** : Utilisées par des milliers d'organisations
+1. **Essentielles** : Résolvent des problèmes courants en production  
+2. **Matures** : Éprouvées et stables  
+3. **Complémentaires** : Couvrent différents aspects (automatisation, monitoring, optimisation, maintenance)  
+4. **Production-ready** : Utilisées par des milliers d'organisations  
 5. **Open-source** : Gratuites et auditables
 
 ### Philosophie d'Utilisation

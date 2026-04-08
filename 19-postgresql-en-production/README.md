@@ -9,7 +9,7 @@ Déployer PostgreSQL en production est un **moment critique** qui marque la tran
 **Analogie :**
 
 Imaginez la différence entre :
-- **Développement** : Cuisiner un plat pour vous-même à la maison
+- **Développement** : Cuisiner un plat pour vous-même à la maison  
 - **Production** : Gérer un restaurant qui sert 500 couverts par jour
 
 Les enjeux changent radicalement :
@@ -94,16 +94,16 @@ Fiabilité = Capacité à maintenir le service malgré :
 ```
 
 **Moyens :**
-- **Réplication** : Primary + Standbys (PostgreSQL streaming replication)
-- **Backups** : Sauvegardes automatisées, testées régulièrement
-- **Redondance** : Serveurs, disques (RAID), réseau, alimentations
-- **PITR** : Point-In-Time Recovery (WAL archiving)
+- **Réplication** : Primary + Standbys (PostgreSQL streaming replication)  
+- **Backups** : Sauvegardes automatisées, testées régulièrement  
+- **Redondance** : Serveurs, disques (RAID), réseau, alimentations  
+- **PITR** : Point-In-Time Recovery (WAL archiving)  
 - **Monitoring** : Détection proactive des anomalies
 
 **Métriques clés :**
-- **MTBF** (Mean Time Between Failures) : Temps moyen entre pannes
-- **MTTR** (Mean Time To Recover) : Temps moyen de récupération
-- **RTO** (Recovery Time Objective) : Durée maximale de panne acceptable
+- **MTBF** (Mean Time Between Failures) : Temps moyen entre pannes  
+- **MTTR** (Mean Time To Recover) : Temps moyen de récupération  
+- **RTO** (Recovery Time Objective) : Durée maximale de panne acceptable  
 - **RPO** (Recovery Point Objective) : Perte de données maximale acceptable
 
 **Exemple :**
@@ -143,8 +143,8 @@ Objectifs typiques :
 ├─ Analytics : < 5 secondes
 └─ Trading haute fréquence : < 1ms
 
-p95 = 95% des requêtes sous le seuil
-p99 = 99% des requêtes sous le seuil
+p95 = 95% des requêtes sous le seuil  
+p99 = 99% des requêtes sous le seuil  
 ```
 
 **Throughput (Débit)**
@@ -157,16 +157,16 @@ Capacité :
 ```
 
 **Facteurs d'optimisation :**
-- **Hardware** : CPU, RAM, I/O (NVMe > SSD > HDD)
-- **Configuration** : shared_buffers, work_mem, max_connections
-- **Schéma** : Normalisation, index, partitionnement
-- **Requêtes** : Optimisation SQL, EXPLAIN ANALYZE
-- **Connection pooling** : PgBouncer pour gérer connexions
+- **Hardware** : CPU, RAM, I/O (NVMe > SSD > HDD)  
+- **Configuration** : shared_buffers, work_mem, max_connections  
+- **Schéma** : Normalisation, index, partitionnement  
+- **Requêtes** : Optimisation SQL, EXPLAIN ANALYZE  
+- **Connection pooling** : PgBouncer pour gérer connexions  
 - **Caching** : Redis/Memcached pour réduire charge DB
 
 **PostgreSQL 18 spécifique :**
-- **I/O asynchrone** : Jusqu'à 3× plus rapide sur NVMe
-- **Skip Scan** : Optimisation index multi-colonnes
+- **I/O asynchrone** : Jusqu'à 3× plus rapide sur NVMe  
+- **Skip Scan** : Optimisation index multi-colonnes  
 - **OR-clauses** : Transformation en ANY pour meilleures performances
 
 ---
@@ -863,27 +863,27 @@ Ce chapitre 19 "PostgreSQL en Production" est structuré en **plusieurs sections
 ### Parcours de Lecture Recommandé
 
 **Pour un Débutant :**
-1. Lire cette introduction (comprendre enjeux)
-2. 19.1 Stratégies de déploiement (choisir approche)
-3. 19.6 Checklist (valider setup)
+1. Lire cette introduction (comprendre enjeux)  
+2. 19.1 Stratégies de déploiement (choisir approche)  
+3. 19.6 Checklist (valider setup)  
 4. Revenir sections spécifiques selon besoins
 
 **Pour un DevOps :**
-1. 19.1 Stratégies (architecture)
-2. 19.2 Cloud (si applicable)
-3. 19.4 Troubleshooting (résolution incidents)
+1. 19.1 Stratégies (architecture)  
+2. 19.2 Cloud (si applicable)  
+3. 19.4 Troubleshooting (résolution incidents)  
 4. 19.5 DR (haute disponibilité)
 
 **Pour un DBA :**
-1. 19.3 Migrations (upgrades)
-2. 19.4 Troubleshooting (performance)
-3. 19.1.1 Bare Metal (tuning avancé)
+1. 19.3 Migrations (upgrades)  
+2. 19.4 Troubleshooting (performance)  
+3. 19.1.1 Bare Metal (tuning avancé)  
 4. 19.5 DR (PITR, backups)
 
 **Pour une Migration :**
-1. Cette introduction (contexte)
-2. 19.1 (comprendre options cibles)
-3. 19.3 Migrations (procédures)
+1. Cette introduction (contexte)  
+2. 19.1 (comprendre options cibles)  
+3. 19.3 Migrations (procédures)  
 4. 19.4 Troubleshooting (anticiper problèmes)
 
 ---
@@ -901,9 +901,9 @@ Impact Production :
 ├─ Latence réduite
 └─ Throughput augmenté
 
-Configuration :
-io_method = 'async'
-io_async_workers = 16
+Configuration :  
+io_method = 'worker'  # ou 'io_uring' sur Linux  
+io_async_workers = 16  
 ```
 
 ### 2. Améliorations pg_upgrade (Migrations)
@@ -954,8 +954,8 @@ Gestion automatique améliorée :
 ├─ Moins d'interventions manuelles
 └─ Performances maintenues automatiquement
 
-Configuration :
-autovacuum_vacuum_max_threshold = 10000000
+Configuration :  
+autovacuum_vacuum_max_threshold = 10000000  
 ```
 
 ### 6. Colonnes Virtuelles (Évolutivité)
@@ -967,8 +967,8 @@ Facilite évolutions schéma :
 ├─ Stockage optimisé
 └─ Performances préservées
 
-Exemple :
-ALTER TABLE users ADD COLUMN full_name TEXT
+Exemple :  
+ALTER TABLE users ADD COLUMN full_name TEXT  
   GENERATED ALWAYS AS (first_name || ' ' || last_name) VIRTUAL;
 ```
 
@@ -1060,13 +1060,13 @@ Temps Récupération :
 
 PostgreSQL en production n'est pas simplement une question d'installation. C'est un **écosystème complet** qui nécessite :
 
-- ✅ **Architecture robuste** : Choix infrastructure, HA, redondance
-- ✅ **Configuration optimale** : Tuning selon charge
-- ✅ **Sécurité rigoureuse** : Authentification, chiffrement, audit
-- ✅ **Monitoring proactif** : Métriques, alertes, logs
-- ✅ **Procédures éprouvées** : Backup, restore, failover, incident
-- ✅ **Documentation complète** : Runbooks, architecture, contacts
-- ✅ **Équipe formée** : Expertise PostgreSQL, DevOps, disponibilité
+- ✅ **Architecture robuste** : Choix infrastructure, HA, redondance  
+- ✅ **Configuration optimale** : Tuning selon charge  
+- ✅ **Sécurité rigoureuse** : Authentification, chiffrement, audit  
+- ✅ **Monitoring proactif** : Métriques, alertes, logs  
+- ✅ **Procédures éprouvées** : Backup, restore, failover, incident  
+- ✅ **Documentation complète** : Runbooks, architecture, contacts  
+- ✅ **Équipe formée** : Expertise PostgreSQL, DevOps, disponibilité  
 - ✅ **Amélioration continue** : Post-mortems, optimisations
 
 **PostgreSQL 18 apporte des améliorations significatives** pour la production :

@@ -200,7 +200,7 @@ PostgreSQL 18 apporte des améliorations significatives qui justifient la migrat
 
 ```sql
 -- UUIDv7 natif (avec timestamp intégré)
-SELECT gen_random_uuid_v7();
+SELECT uuidv7();
 -- b3d9f3e0-7a2c-7890-8000-1234567890ab
 -- ↑ Contient un timestamp, trié chronologiquement
 
@@ -214,9 +214,9 @@ CREATE TABLE products (
 );
 
 -- Contraintes temporelles
-ALTER TABLE employees
-ADD CONSTRAINT valid_employment_period
-CHECK (end_date IS NULL OR end_date > start_date);
+ALTER TABLE employees  
+ADD CONSTRAINT valid_employment_period  
+CHECK (end_date IS NULL OR end_date > start_date);  
 ```
 
 #### 3. Améliorations de sécurité
@@ -249,8 +249,8 @@ CHECK (end_date IS NULL OR end_date > start_date);
 CREATE INDEX idx_orders ON orders(status, created_at);
 
 -- Requête optimisée en PG 18
-SELECT * FROM orders
-WHERE created_at > '2024-01-01'
+SELECT * FROM orders  
+WHERE created_at > '2024-01-01'  
 -- PG 18 "saute" les valeurs de status inutiles
 
 -- Auto-élimination des self-joins inutiles
@@ -417,15 +417,15 @@ WHERE created_at > '2024-01-01'
 ```
 
 **Avantages** :
-- ✅ Simple à comprendre et à mettre en œuvre
-- ✅ Réorganise les données (élimine le bloat)
-- ✅ Permet de filtrer ou modifier pendant l'import
+- ✅ Simple à comprendre et à mettre en œuvre  
+- ✅ Réorganise les données (élimine le bloat)  
+- ✅ Permet de filtrer ou modifier pendant l'import  
 - ✅ Indépendant des versions (fonctionne toujours)
 
 **Inconvénients** :
-- ❌ Très lent sur grosses bases (jours pour plusieurs To)
-- ❌ Downtime important
-- ❌ Nécessite 2× l'espace disque
+- ❌ Très lent sur grosses bases (jours pour plusieurs To)  
+- ❌ Downtime important  
+- ❌ Nécessite 2× l'espace disque  
 - ❌ Perte des statistiques (ANALYZE requis après)
 
 **Quand l'utiliser** :
@@ -464,16 +464,16 @@ WHERE created_at > '2024-01-01'
 ```
 
 **Avantages** :
-- ✅ Rapide (minutes à quelques heures)
-- ✅ Downtime réduit
-- ✅ Statistiques préservées (PG 18)
-- ✅ Option --swap pour rollback facile (PG 18)
+- ✅ Rapide (minutes à quelques heures)  
+- ✅ Downtime réduit  
+- ✅ Statistiques préservées (PG 18)  
+- ✅ Option --swap pour rollback facile (PG 18)  
 - ✅ Parallélisation avec --jobs (PG 18)
 
 **Inconvénients** :
-- ❌ Ne réorganise pas les données (bloat conservé)
-- ❌ Nécessite espace disque supplémentaire (~50%)
-- ❌ Plus complexe que dump/restore
+- ❌ Ne réorganise pas les données (bloat conservé)  
+- ❌ Nécessite espace disque supplémentaire (~50%)  
+- ❌ Plus complexe que dump/restore  
 - ❌ Teste la migration à l'aveugle (sauf --check)
 
 **Quand l'utiliser** :
@@ -512,15 +512,15 @@ WHERE created_at > '2024-01-01'
 ```
 
 **Avantages** :
-- ✅ Downtime minimal (5-30 minutes)
-- ✅ Tests possibles avant bascule
-- ✅ Rollback instantané
+- ✅ Downtime minimal (5-30 minutes)  
+- ✅ Tests possibles avant bascule  
+- ✅ Rollback instantané  
 - ✅ Idéal pour systèmes critiques
 
 **Inconvénients** :
-- ❌ Complexe à mettre en œuvre
-- ❌ Nécessite 2 serveurs en parallèle
-- ❌ Coût infrastructure élevé
+- ❌ Complexe à mettre en œuvre  
+- ❌ Nécessite 2 serveurs en parallèle  
+- ❌ Coût infrastructure élevé  
 - ❌ Limitations (séquences, DDL, etc.)
 
 **Quand l'utiliser** :
@@ -639,38 +639,38 @@ SELECT version();
 SELECT
     pg_database.datname,
     pg_size_pretty(pg_database_size(pg_database.datname)) AS size
-FROM pg_database
-ORDER BY pg_database_size(pg_database.datname) DESC;
+FROM pg_database  
+ORDER BY pg_database_size(pg_database.datname) DESC;  
 
 -- 3. Nombre d'objets
 SELECT
     'Tables' AS object_type,
     count(*) AS count
-FROM pg_tables
-WHERE schemaname NOT IN ('pg_catalog', 'information_schema')
-UNION ALL
-SELECT 'Index', count(*) FROM pg_indexes
-WHERE schemaname NOT IN ('pg_catalog', 'information_schema')
-UNION ALL
-SELECT 'Sequences', count(*) FROM pg_sequences
-UNION ALL
-SELECT 'Functions', count(*) FROM pg_proc
-WHERE pronamespace::regnamespace::text NOT IN ('pg_catalog', 'information_schema');
+FROM pg_tables  
+WHERE schemaname NOT IN ('pg_catalog', 'information_schema')  
+UNION ALL  
+SELECT 'Index', count(*) FROM pg_indexes  
+WHERE schemaname NOT IN ('pg_catalog', 'information_schema')  
+UNION ALL  
+SELECT 'Sequences', count(*) FROM pg_sequences  
+UNION ALL  
+SELECT 'Functions', count(*) FROM pg_proc  
+WHERE pronamespace::regnamespace::text NOT IN ('pg_catalog', 'information_schema');  
 
 -- 4. Extensions installées
 SELECT
     extname AS extension,
     extversion AS version
-FROM pg_extension
-ORDER BY extname;
+FROM pg_extension  
+ORDER BY extname;  
 
 -- 5. Configuration importante
 SELECT
     name,
     setting,
     unit
-FROM pg_settings
-WHERE name IN (
+FROM pg_settings  
+WHERE name IN (  
     'max_connections',
     'shared_buffers',
     'work_mem',
@@ -696,36 +696,36 @@ FROM pg_stat_activity;
 #!/bin/bash
 # pre_migration_backup.sh
 
-DATE=$(date +%Y%m%d_%H%M%S)
-BACKUP_DIR="/backup/pre_migration_pg18_${DATE}"
+DATE=$(date +%Y%m%d_%H%M%S)  
+BACKUP_DIR="/backup/pre_migration_pg18_${DATE}"  
 
-echo "🔄 Sauvegarde pré-migration vers PostgreSQL 18"
-echo "Destination : $BACKUP_DIR"
+echo "🔄 Sauvegarde pré-migration vers PostgreSQL 18"  
+echo "Destination : $BACKUP_DIR"  
 
 # 1. Sauvegarde physique complète (pg_basebackup)
-echo "📦 Sauvegarde physique en cours..."
-pg_basebackup -D "$BACKUP_DIR/physical" -Fp -Xs -P -v
+echo "📦 Sauvegarde physique en cours..."  
+pg_basebackup -D "$BACKUP_DIR/physical" -Fp -Xs -P -v  
 
 # 2. Sauvegarde logique (pg_dumpall)
-echo "📄 Sauvegarde logique en cours..."
-pg_dumpall > "$BACKUP_DIR/logical/dumpall_${DATE}.sql"
+echo "📄 Sauvegarde logique en cours..."  
+pg_dumpall > "$BACKUP_DIR/logical/dumpall_${DATE}.sql"  
 
 # 3. Sauvegarde configuration
-echo "⚙️  Sauvegarde configuration..."
-mkdir -p "$BACKUP_DIR/config"
-cp /etc/postgresql/17/main/postgresql.conf "$BACKUP_DIR/config/"
-cp /etc/postgresql/17/main/pg_hba.conf "$BACKUP_DIR/config/"
+echo "⚙️  Sauvegarde configuration..."  
+mkdir -p "$BACKUP_DIR/config"  
+cp /etc/postgresql/17/main/postgresql.conf "$BACKUP_DIR/config/"  
+cp /etc/postgresql/17/main/pg_hba.conf "$BACKUP_DIR/config/"  
 
 # 4. Documentation état
-echo "📊 Documentation état système..."
-psql -f state_assessment.sql > "$BACKUP_DIR/state_before_migration.txt"
+echo "📊 Documentation état système..."  
+psql -f state_assessment.sql > "$BACKUP_DIR/state_before_migration.txt"  
 
 # 5. Vérification intégrité
-echo "✅ Vérification intégrité sauvegarde..."
-du -sh "$BACKUP_DIR"
+echo "✅ Vérification intégrité sauvegarde..."  
+du -sh "$BACKUP_DIR"  
 
-echo "✅ Sauvegarde terminée : $BACKUP_DIR"
-echo "⚠️  Conserver cette sauvegarde jusqu'à validation complète de la migration"
+echo "✅ Sauvegarde terminée : $BACKUP_DIR"  
+echo "⚠️  Conserver cette sauvegarde jusqu'à validation complète de la migration"  
 ```
 
 ## Les nouveautés PostgreSQL 18 pour les migrations
@@ -894,10 +894,10 @@ Cette section 19.3 est organisée en plusieurs sous-sections détaillées :
 
 Les sections suivantes détaillent chaque aspect de la migration :
 
-1. **Lisez 19.3.1** : Comprenez la préservation des statistiques (gain majeur PG 18)
-2. **Lisez 19.3.2** : Maîtrisez l'option --swap (sécurité et rollback)
-3. **Lisez 19.3.3** : Optimisez avec --jobs (rapidité des vérifications)
-4. **Lisez 19.3.4** : Explorez Blue/Green (downtime minimal)
+1. **Lisez 19.3.1** : Comprenez la préservation des statistiques (gain majeur PG 18)  
+2. **Lisez 19.3.2** : Maîtrisez l'option --swap (sécurité et rollback)  
+3. **Lisez 19.3.3** : Optimisez avec --jobs (rapidité des vérifications)  
+4. **Lisez 19.3.4** : Explorez Blue/Green (downtime minimal)  
 5. **Lisez 19.3.5** : Appliquez les méthodologies de test (succès garanti)
 
 ---

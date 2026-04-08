@@ -28,9 +28,9 @@ Imaginez que vous développez une API REST qui reçoit **100 requêtes par secon
 ### La solution : Une gestion intelligente
 
 Avec une gestion appropriée des connexions :
-- ✅ **Performance** : Réutilisation des connexions existantes
-- ✅ **Stabilité** : Pas de saturation de PostgreSQL
-- ✅ **Scalabilité** : Supporter des milliers de requêtes simultanées
+- ✅ **Performance** : Réutilisation des connexions existantes  
+- ✅ **Stabilité** : Pas de saturation de PostgreSQL  
+- ✅ **Scalabilité** : Supporter des milliers de requêtes simultanées  
 - ✅ **Économie** : Moins de ressources consommées (RAM, CPU)
 
 ---
@@ -80,10 +80,10 @@ Créer une connexion n'est **pas gratuit** :
 | **Réseau** | Négociation SSL, authentification |
 
 **Analogie** : Créer une connexion, c'est comme passer un appel téléphonique :
-- **Numérotation** → Initiation
-- **Sonnerie** → Authentification
-- **"Allô ?"** → Établissement
-- **Conversation** → Utilisation
+- **Numérotation** → Initiation  
+- **Sonnerie** → Authentification  
+- **"Allô ?"** → Établissement  
+- **Conversation** → Utilisation  
 - **"Au revoir"** → Fermeture
 
 Si vous devez dire 100 mots, vous ne raccrochez pas après chaque mot pour rappeler ! Vous gardez la ligne ouverte.
@@ -107,18 +107,18 @@ def get_user(user_id):
     return user
 
 # Chaque appel = nouvelle connexion !
-user1 = get_user(1)  # Connexion 1 créée puis fermée
-user2 = get_user(2)  # Connexion 2 créée puis fermée
-user3 = get_user(3)  # Connexion 3 créée puis fermée
+user1 = get_user(1)  # Connexion 1 créée puis fermée  
+user2 = get_user(2)  # Connexion 2 créée puis fermée  
+user3 = get_user(3)  # Connexion 3 créée puis fermée  
 ```
 
 **Avantages** :
-- ✅ Code simple à comprendre
+- ✅ Code simple à comprendre  
 - ✅ Pas de risque de fuite de connexion
 
 **Inconvénients** :
-- ❌ **Performance catastrophique** (overhead de 10-100 ms par requête)
-- ❌ **Surcharge serveur** (création/destruction constante)
+- ❌ **Performance catastrophique** (overhead de 10-100 ms par requête)  
+- ❌ **Surcharge serveur** (création/destruction constante)  
 - ❌ **Non scalable** (saturera rapidement `max_connections`)
 
 **Verdict** : ❌ **À ÉVITER ABSOLUMENT en production**
@@ -137,18 +137,18 @@ def get_user(user_id):
     return cursor.fetchone()
 
 # Même connexion réutilisée
-user1 = get_user(1)  # Utilise conn
-user2 = get_user(2)  # Utilise conn
-user3 = get_user(3)  # Utilise conn
+user1 = get_user(1)  # Utilise conn  
+user2 = get_user(2)  # Utilise conn  
+user3 = get_user(3)  # Utilise conn  
 ```
 
 **Avantages** :
-- ✅ Pas d'overhead de création
+- ✅ Pas d'overhead de création  
 - ✅ Performance améliorée
 
 **Inconvénients** :
-- ❌ **Une seule connexion** = pas de parallélisme
-- ❌ **Thread-unsafe** (problèmes en multi-threading)
+- ❌ **Une seule connexion** = pas de parallélisme  
+- ❌ **Thread-unsafe** (problèmes en multi-threading)  
 - ❌ **Single point of failure** (si connexion coupée, tout s'arrête)
 
 **Verdict** : ⚠️ **OK uniquement pour scripts simples mono-thread**
@@ -176,20 +176,20 @@ def get_user(user_id):
     # Connexion automatiquement rendue au pool
 
 # Les 3 appels utilisent des connexions du pool
-user1 = get_user(1)  # Emprunte connexion A du pool
-user2 = get_user(2)  # Emprunte connexion B du pool
-user3 = get_user(3)  # Emprunte connexion C du pool
+user1 = get_user(1)  # Emprunte connexion A du pool  
+user2 = get_user(2)  # Emprunte connexion B du pool  
+user3 = get_user(3)  # Emprunte connexion C du pool  
 # Toutes les connexions retournent au pool après usage
 ```
 
 **Avantages** :
-- ✅ **Haute performance** (réutilisation)
-- ✅ **Scalabilité** (plusieurs connexions en parallèle)
-- ✅ **Thread-safe** (conçu pour concurrence)
+- ✅ **Haute performance** (réutilisation)  
+- ✅ **Scalabilité** (plusieurs connexions en parallèle)  
+- ✅ **Thread-safe** (conçu pour concurrence)  
 - ✅ **Économie de ressources** (nombre contrôlé de connexions)
 
 **Inconvénients** :
-- ⚠️ Configuration à ajuster (taille du pool)
+- ⚠️ Configuration à ajuster (taille du pool)  
 - ⚠️ Complexité légèrement accrue
 
 **Verdict** : ✅ **APPROCHE RECOMMANDÉE pour toute application en production**
@@ -225,19 +225,19 @@ Il existe **deux niveaux** où implémenter le pooling :
 ```
 
 **Bibliothèques populaires** :
-- **Python** : psycopg3 (pool intégré), SQLAlchemy
-- **Node.js** : node-postgres (pg)
-- **Java** : HikariCP, c3p0
-- **Go** : pgx/pgxpool
+- **Python** : psycopg3 (pool intégré), SQLAlchemy  
+- **Node.js** : node-postgres (pg)  
+- **Java** : HikariCP, c3p0  
+- **Go** : pgx/pgxpool  
 - **.NET** : Npgsql (pool intégré)
 
 **Avantages** :
-- ✅ Simple à mettre en place
-- ✅ Latence minimale (connexions locales)
+- ✅ Simple à mettre en place  
+- ✅ Latence minimale (connexions locales)  
 - ✅ Pas d'infrastructure supplémentaire
 
 **Limites** :
-- ⚠️ Chaque instance a son pool → Multiplication des connexions
+- ⚠️ Chaque instance a son pool → Multiplication des connexions  
 - ⚠️ Difficile à gérer globalement en microservices
 
 **Détails** : → Section 20.2.1
@@ -271,12 +271,12 @@ Il existe **deux niveaux** où implémenter le pooling :
 ```
 
 **Avantages** :
-- ✅ **Mutualisation** : 1000 clients → 20 connexions PostgreSQL
-- ✅ **Centralisation** : Un seul point de configuration
+- ✅ **Mutualisation** : 1000 clients → 20 connexions PostgreSQL  
+- ✅ **Centralisation** : Un seul point de configuration  
 - ✅ **Scalabilité maximale** : Supporte des milliers de clients
 
 **Limites** :
-- ⚠️ Infrastructure supplémentaire à déployer
+- ⚠️ Infrastructure supplémentaire à déployer  
 - ⚠️ Point de défaillance unique (nécessite HA)
 
 **Détails** : → Section 20.2.2
@@ -311,8 +311,8 @@ Combiner les deux niveaux pour le meilleur des deux mondes :
 ```
 
 **Avantages** :
-- ✅ Latence minimale (pool applicatif local)
-- ✅ Scalabilité maximale (PgBouncer global)
+- ✅ Latence minimale (pool applicatif local)  
+- ✅ Scalabilité maximale (PgBouncer global)  
 - ✅ Résilience (double niveau de protection)
 
 ---
@@ -326,17 +326,17 @@ Une connexion est empruntée au pool mais **jamais rendue**.
 
 **Symptôme** :
 ```
-Pool starts: 20 connexions disponibles
-After 1 hour: 0 connexions disponibles → Application bloquée !
+Pool starts: 20 connexions disponibles  
+After 1 hour: 0 connexions disponibles → Application bloquée !  
 ```
 
 **Cause typique** :
 ```python
 # CODE PROBLÉMATIQUE
-conn = pool.connection()
-cursor = conn.cursor()
-cursor.execute("SELECT ...")
-return cursor.fetchone()
+conn = pool.connection()  
+cursor = conn.cursor()  
+cursor.execute("SELECT ...")  
+return cursor.fetchone()  
 # OUBLI : ne jamais fermer conn → Fuite !
 ```
 
@@ -350,8 +350,8 @@ return cursor.fetchone()
 Délais d'attente dépassés lors de l'obtention ou l'utilisation d'une connexion.
 
 **Types** :
-- **Connection timeout** : Impossible de se connecter au serveur
-- **Pool timeout** : Pool saturé, pas de connexion disponible
+- **Connection timeout** : Impossible de se connecter au serveur  
+- **Pool timeout** : Pool saturé, pas de connexion disponible  
 - **Statement timeout** : Requête trop lente
 
 **Symptôme** :
@@ -441,10 +441,10 @@ Une connexion PostgreSQL peut être dans différents états :
 
 **Voir les états** :
 ```sql
-SELECT state, count(*)
-FROM pg_stat_activity
-WHERE datname = current_database()
-GROUP BY state;
+SELECT state, count(*)  
+FROM pg_stat_activity  
+WHERE datname = current_database()  
+GROUP BY state;  
 ```
 
 ### 3. Transactions et connexions
@@ -483,8 +483,8 @@ def worker(user_id):
         return cursor.fetchone()
 
 # 10 threads en parallèle
-threads = [Thread(target=worker, args=(i,)) for i in range(10)]
-for t in threads:
+threads = [Thread(target=worker, args=(i,)) for i in range(10)]  
+for t in threads:  
     t.start()
 ```
 
@@ -643,18 +643,18 @@ Avant de commencer les sections détaillées, voici une configuration minimale p
 
 ```conf
 # Connexions
-max_connections = 100                           # Par défaut, souvent suffisant
-shared_buffers = 256MB                          # Ajuster selon RAM
-work_mem = 4MB                                  # Par opération
+max_connections = 100                           # Par défaut, souvent suffisant  
+shared_buffers = 256MB                          # Ajuster selon RAM  
+work_mem = 4MB                                  # Par opération  
 
 # Logs (pour debugging)
-log_connections = on
-log_disconnections = on
-log_line_prefix = '%t [%p] %u@%d '
+log_connections = on  
+log_disconnections = on  
+log_line_prefix = '%t [%p] %u@%d '  
 
 # Timeouts de sécurité
-idle_in_transaction_session_timeout = 300000    # 5 minutes
-statement_timeout = 60000                       # 1 minute (ajuster selon besoin)
+idle_in_transaction_session_timeout = 300000    # 5 minutes  
+statement_timeout = 60000                       # 1 minute (ajuster selon besoin)  
 ```
 
 ### Application - Python (exemple minimal)
@@ -688,8 +688,8 @@ def get_data(query):
 SELECT count(*) as total,
        count(*) FILTER (WHERE state = 'active') as active,
        count(*) FILTER (WHERE state = 'idle') as idle
-FROM pg_stat_activity
-WHERE datname = current_database();
+FROM pg_stat_activity  
+WHERE datname = current_database();  
 
 -- Voir l'utilisation de max_connections
 SELECT
@@ -705,26 +705,26 @@ FROM pg_stat_activity;
 
 ### Documentation officielle
 
-- [PostgreSQL Connection Strings](https://www.postgresql.org/docs/current/libpq-connect.html)
+- [PostgreSQL Connection Strings](https://www.postgresql.org/docs/current/libpq-connect.html)  
 - [PostgreSQL Runtime Config - Connections](https://www.postgresql.org/docs/current/runtime-config-connection.html)
 
 ### Drivers et bibliothèques
 
-- **Python** : [psycopg3](https://www.psycopg.org/psycopg3/) | [SQLAlchemy](https://www.sqlalchemy.org/)
-- **Node.js** : [node-postgres](https://node-postgres.com/)
-- **Java** : [HikariCP](https://github.com/brettwooldridge/HikariCP)
-- **Go** : [pgx](https://github.com/jackc/pgx)
+- **Python** : [psycopg3](https://www.psycopg.org/psycopg3/) | [SQLAlchemy](https://www.sqlalchemy.org/)  
+- **Node.js** : [node-postgres](https://node-postgres.com/)  
+- **Java** : [HikariCP](https://github.com/brettwooldridge/HikariCP)  
+- **Go** : [pgx](https://github.com/jackc/pgx)  
 - **.NET** : [Npgsql](https://www.npgsql.org/)
 
 ### Outils externes
 
-- **PgBouncer** : [https://www.pgbouncer.org/](https://www.pgbouncer.org/)
-- **pgBadger** : [https://pgbadger.darold.net/](https://pgbadger.darold.net/)
+- **PgBouncer** : [https://www.pgbouncer.org/](https://www.pgbouncer.org/)  
+- **pgBadger** : [https://pgbadger.darold.net/](https://pgbadger.darold.net/)  
 - **pg_stat_statements** : Extension PostgreSQL pour statistiques de requêtes
 
 ### Articles recommandés
 
-- [HikariCP - About Pool Sizing](https://github.com/brettwooldridge/HikariCP/wiki/About-Pool-Sizing) (applicable à tous les langages)
+- [HikariCP - About Pool Sizing](https://github.com/brettwooldridge/HikariCP/wiki/About-Pool-Sizing) (applicable à tous les langages)  
 - [PostgreSQL Connection Pooling](https://www.postgresql.org/docs/current/pgbouncer.html)
 
 ---
@@ -733,24 +733,24 @@ FROM pg_stat_activity;
 
 ### ✨ Concepts fondamentaux
 
-1. **Une connexion = ressource coûteuse** (temps, CPU, mémoire)
-2. **Connection pooling = réutilisation** de connexions existantes
-3. **Deux niveaux de pooling** : application (local) et externe (PgBouncer)
+1. **Une connexion = ressource coûteuse** (temps, CPU, mémoire)  
+2. **Connection pooling = réutilisation** de connexions existantes  
+3. **Deux niveaux de pooling** : application (local) et externe (PgBouncer)  
 4. **Configuration critique** : `pool_size` et `max_connections` doivent être cohérents
 
 ### 🎯 Règles d'or
 
-1. **Toujours utiliser un connection pool** en production
-2. **Toujours fermer/rendre les connexions** (with, try-finally, etc.)
-3. **Monitorer en continu** l'utilisation du pool
+1. **Toujours utiliser un connection pool** en production  
+2. **Toujours fermer/rendre les connexions** (with, try-finally, etc.)  
+3. **Monitorer en continu** l'utilisation du pool  
 4. **Dimensionner selon la charge** réelle, pas des estimations
 
 ### ⚠️ Erreurs à éviter
 
-1. ❌ Créer une connexion par requête
-2. ❌ Oublier de fermer les connexions (leaks)
-3. ❌ Pool trop grand (surcharge PostgreSQL)
-4. ❌ Pool trop petit (timeouts)
+1. ❌ Créer une connexion par requête  
+2. ❌ Oublier de fermer les connexions (leaks)  
+3. ❌ Pool trop grand (surcharge PostgreSQL)  
+4. ❌ Pool trop petit (timeouts)  
 5. ❌ Ignorer les métriques de monitoring
 
 ---

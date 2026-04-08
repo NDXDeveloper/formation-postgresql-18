@@ -15,8 +15,8 @@ Ce chapitre est **essentiel** pour tout développeur ou DevOps travaillant avec 
 ### Le paradoxe du dernier kilomètre
 
 Vous pouvez avoir :
-- ✅ Une base de données PostgreSQL parfaitement configurée
-- ✅ Des requêtes SQL optimisées avec les bons index
+- ✅ Une base de données PostgreSQL parfaitement configurée  
+- ✅ Des requêtes SQL optimisées avec les bons index  
 - ✅ Un serveur puissant avec beaucoup de RAM
 
 **Mais** si votre application gère mal les connexions ou utilise des anti-patterns, **tout s'effondre**.
@@ -46,10 +46,10 @@ Cause racine : Oubli d'un simple conn.close() dans le code
 ### Les bénéfices des bonnes pratiques
 
 Avec une connexion bien gérée et de bonnes pratiques :
-- 🚀 **Performance** : 10-100× plus rapide (réutilisation des connexions)
-- 💪 **Stabilité** : Pas de crash mystérieux
-- 📈 **Scalabilité** : Supporter 10× plus d'utilisateurs avec les mêmes ressources
-- 💰 **Économie** : Moins de serveurs nécessaires
+- 🚀 **Performance** : 10-100× plus rapide (réutilisation des connexions)  
+- 💪 **Stabilité** : Pas de crash mystérieux  
+- 📈 **Scalabilité** : Supporter 10× plus d'utilisateurs avec les mêmes ressources  
+- 💰 **Économie** : Moins de serveurs nécessaires  
 - 😌 **Sérénité** : Moins de problèmes en production
 
 ---
@@ -97,9 +97,9 @@ Avec une connexion bien gérée et de bonnes pratiques :
 ### Prérequis
 
 **Connaissances minimales requises** :
-- ✅ Bases de programmation dans au moins un langage
-- ✅ Compréhension basique de SQL (SELECT, INSERT, UPDATE, DELETE)
-- ✅ Notions de bases de données relationnelles
+- ✅ Bases de programmation dans au moins un langage  
+- ✅ Compréhension basique de SQL (SELECT, INSERT, UPDATE, DELETE)  
+- ✅ Notions de bases de données relationnelles  
 - ✅ Compréhension du modèle client-serveur
 
 **Recommandé (mais pas obligatoire)** :
@@ -157,10 +157,10 @@ Ce chapitre est organisé en **5 sections principales**, progressant du choix du
 **Objectif** : Choisir et configurer le driver PostgreSQL approprié pour votre langage.
 
 **Contenu** :
-- **20.1.1. Python** : psycopg3 (et psycopg2 legacy)
-- **20.1.2. Node.js** : node-postgres (pg), Prisma
-- **20.1.3. Java** : JDBC, HikariCP, R2DBC
-- **20.1.4. Go** : pgx, GORM
+- **20.1.1. Python** : psycopg3 (et psycopg2 legacy)  
+- **20.1.2. Node.js** : node-postgres (pg), Prisma  
+- **20.1.3. Java** : JDBC, HikariCP, R2DBC  
+- **20.1.4. Go** : pgx, GORM  
 - **20.1.5. .NET** : Npgsql, Entity Framework Core
 
 **Ce que vous apprendrez** :
@@ -379,7 +379,7 @@ AVEC pooling :
 ### 2. Patterns et Anti-patterns
 
 **Définition** :
-- **Pattern** : Solution éprouvée à un problème récurrent (✅ à faire)
+- **Pattern** : Solution éprouvée à un problème récurrent (✅ à faire)  
 - **Anti-pattern** : Solution tentante mais problématique (❌ à éviter)
 
 **Exemples** :
@@ -400,8 +400,8 @@ AVEC pooling :
 **Pourquoi c'est crucial** : On ne peut pas optimiser ce qu'on ne mesure pas.
 
 **Les trois piliers** :
-1. **Logs** : Événements discrets (connexion ouverte, erreur, etc.)
-2. **Métriques** : Valeurs numériques dans le temps (connexions actives, latence)
+1. **Logs** : Événements discrets (connexion ouverte, erreur, etc.)  
+2. **Métriques** : Valeurs numériques dans le temps (connexions actives, latence)  
 3. **Traces** : Parcours d'une requête dans le système
 
 **Où on le retrouve** : Toutes les sections, particulièrement 20.2 et 20.4
@@ -411,9 +411,9 @@ AVEC pooling :
 **Définition** : Capacité d'un système à continuer de fonctionner face aux pannes.
 
 **Stratégies** :
-- **Retry** : Réessayer en cas d'échec temporaire
-- **Circuit Breaker** : Arrêter d'essayer si trop d'échecs
-- **Timeout** : Limiter le temps d'attente
+- **Retry** : Réessayer en cas d'échec temporaire  
+- **Circuit Breaker** : Arrêter d'essayer si trop d'échecs  
+- **Timeout** : Limiter le temps d'attente  
 - **Fallback** : Solution de repli si échec
 
 **Où on le retrouve** : Sections 20.2.4, 20.4, 20bis
@@ -533,10 +533,10 @@ Durée totale : 3-4 jours de formation
 
 **4. Progresser par itérations**
 ```
-Itération 1 : Faire fonctionner (connexion basique)
-Itération 2 : Optimiser (pooling)
-Itération 3 : Industrialiser (patterns, migrations)
-Itération 4 : Scaler (PgBouncer, architectures avancées)
+Itération 1 : Faire fonctionner (connexion basique)  
+Itération 2 : Optimiser (pooling)  
+Itération 3 : Industrialiser (patterns, migrations)  
+Itération 4 : Scaler (PgBouncer, architectures avancées)  
 ```
 
 #### ❌ À éviter
@@ -659,10 +659,10 @@ pool = ConnectionPool(max_size=1000)  # Trop grand ?
 
 Le chapitre fournit des exemples dans **5 langages principaux** :
 
-1. **Python** 🐍 - psycopg3, SQLAlchemy
-2. **Node.js** 🟢 - node-postgres, Prisma
-3. **Java** ☕ - JDBC, HikariCP
-4. **Go** 🔵 - pgx, GORM
+1. **Python** 🐍 - psycopg3, SQLAlchemy  
+2. **Node.js** 🟢 - node-postgres, Prisma  
+3. **Java** ☕ - JDBC, HikariCP  
+4. **Go** 🔵 - pgx, GORM  
 5. **.NET** 🔷 - Npgsql, Entity Framework Core
 
 **Note** : Vous n'avez pas besoin de connaître tous ces langages. Concentrez-vous sur celui que vous utilisez, les concepts sont transposables.
@@ -724,9 +724,9 @@ Application avec microservices distribués :
 **Principe** : Tout ce qui est enseigné doit fonctionner en production réelle.
 
 **Garanties** :
-- ✅ Exemples testés en conditions réelles
-- ✅ Configurations basées sur l'expérience terrain
-- ✅ Solutions de troubleshooting éprouvées
+- ✅ Exemples testés en conditions réelles  
+- ✅ Configurations basées sur l'expérience terrain  
+- ✅ Solutions de troubleshooting éprouvées  
 - ✅ Trade-offs expliqués honnêtement
 
 ### 5. Apprentissage progressif
@@ -735,10 +735,10 @@ Application avec microservices distribués :
 
 **Structure** :
 ```
-Niveau 1 : Comprendre (pourquoi c'est important)
-Niveau 2 : Implémenter (comment faire)
-Niveau 3 : Optimiser (comment améliorer)
-Niveau 4 : Diagnostiquer (comment résoudre les problèmes)
+Niveau 1 : Comprendre (pourquoi c'est important)  
+Niveau 2 : Implémenter (comment faire)  
+Niveau 3 : Optimiser (comment améliorer)  
+Niveau 4 : Diagnostiquer (comment résoudre les problèmes)  
 ```
 
 ---
@@ -798,33 +798,33 @@ psql -U postgres -d mydb
 
 ### Documentation officielle
 
-- [PostgreSQL Documentation](https://www.postgresql.org/docs/current/)
-- [PostgreSQL JDBC Driver](https://jdbc.postgresql.org/)
-- [psycopg3](https://www.psycopg.org/psycopg3/)
-- [node-postgres](https://node-postgres.com/)
-- [Npgsql (.NET)](https://www.npgsql.org/)
+- [PostgreSQL Documentation](https://www.postgresql.org/docs/current/)  
+- [PostgreSQL JDBC Driver](https://jdbc.postgresql.org/)  
+- [psycopg3](https://www.psycopg.org/psycopg3/)  
+- [node-postgres](https://node-postgres.com/)  
+- [Npgsql (.NET)](https://www.npgsql.org/)  
 - [pgx (Go)](https://github.com/jackc/pgx)
 
 ### Livres recommandés
 
-- **PostgreSQL: Up and Running** par Regina Obe & Leo Hsu
-- **The Art of PostgreSQL** par Dimitri Fontaine
-- **Mastering PostgreSQL** par Hans-Jürgen Schönig
+- **PostgreSQL: Up and Running** par Regina Obe & Leo Hsu  
+- **The Art of PostgreSQL** par Dimitri Fontaine  
+- **Mastering PostgreSQL** par Hans-Jürgen Schönig  
 - **Database Reliability Engineering** par Laine Campbell & Charity Majors
 
 ### Communautés
 
-- **Mailing lists** : pgsql-general, pgsql-performance
-- **Reddit** : r/PostgreSQL
-- **Discord** : PostgreSQL Community
+- **Mailing lists** : pgsql-general, pgsql-performance  
+- **Reddit** : r/PostgreSQL  
+- **Discord** : PostgreSQL Community  
 - **Stack Overflow** : Tag [postgresql]
 
 ### Blogs et sites
 
-- [PostgreSQL Weekly](https://postgresweekly.com/)
-- [Percona Blog](https://www.percona.com/blog/)
-- [2ndQuadrant Blog](https://www.2ndquadrant.com/en/blog/)
-- [CrunchyData Blog](https://www.crunchydata.com/blog)
+- [PostgreSQL Weekly](https://postgresweekly.com/)  
+- [Percona Blog](https://www.percona.com/blog/)  
+- [2ndQuadrant Blog](https://www.2ndquadrant.com/en/blog/)  
+- [CrunchyData Blog](https://www.crunchydata.com/blog)  
 - [Cybertec Blog](https://www.cybertec-postgresql.com/en/blog/)
 
 ---
@@ -879,19 +879,19 @@ Pour commencer rapidement, voici une configuration minimale :
 
 ```conf
 # Configuration pour développement/apprentissage
-max_connections = 50
-shared_buffers = 256MB
-work_mem = 4MB
+max_connections = 50  
+shared_buffers = 256MB  
+work_mem = 4MB  
 
 # Logs utiles pour debugging
-log_connections = on
-log_disconnections = on
-log_duration = on
-log_line_prefix = '%t [%p] %u@%d '
+log_connections = on  
+log_disconnections = on  
+log_duration = on  
+log_line_prefix = '%t [%p] %u@%d '  
 
 # Timeouts de sécurité
-idle_in_transaction_session_timeout = 300000  # 5 minutes
-statement_timeout = 60000                     # 1 minute
+idle_in_transaction_session_timeout = 300000  # 5 minutes  
+statement_timeout = 60000                     # 1 minute  
 ```
 
 ### Base de données de test
@@ -946,31 +946,31 @@ SELECT current_user, current_database();
 Après avoir complété ce chapitre, vous serez capable de :
 
 #### Niveau Fondamental
-- ✅ Choisir le driver PostgreSQL approprié pour votre langage
-- ✅ Établir une connexion et exécuter des requêtes basiques
-- ✅ Implémenter un connection pooling efficace
+- ✅ Choisir le driver PostgreSQL approprié pour votre langage  
+- ✅ Établir une connexion et exécuter des requêtes basiques  
+- ✅ Implémenter un connection pooling efficace  
 - ✅ Éviter les erreurs courantes (leaks, timeouts)
 
 #### Niveau Intermédiaire
-- ✅ Configurer PgBouncer pour la scalabilité
-- ✅ Dimensionner correctement les pools de connexions
-- ✅ Détecter et corriger les anti-patterns (N+1 queries)
-- ✅ Utiliser efficacement un ORM
+- ✅ Configurer PgBouncer pour la scalabilité  
+- ✅ Dimensionner correctement les pools de connexions  
+- ✅ Détecter et corriger les anti-patterns (N+1 queries)  
+- ✅ Utiliser efficacement un ORM  
 - ✅ Mettre en place des migrations de base de données
 
 #### Niveau Avancé
-- ✅ Architecturer des microservices avec PostgreSQL
-- ✅ Implémenter Event Sourcing et CQRS
-- ✅ Déployer PostgreSQL en serverless
-- ✅ Orchestrer PostgreSQL avec Kubernetes
+- ✅ Architecturer des microservices avec PostgreSQL  
+- ✅ Implémenter Event Sourcing et CQRS  
+- ✅ Déployer PostgreSQL en serverless  
+- ✅ Orchestrer PostgreSQL avec Kubernetes  
 - ✅ Diagnostiquer et résoudre des problèmes complexes en production
 
 ### Compétences transversales
 
-- 🎯 **Pensée systémique** : Comprendre les interactions entre composants
-- 📊 **Data-driven decision making** : Baser les décisions sur les métriques
-- 🔍 **Troubleshooting** : Diagnostiquer méthodiquement les problèmes
-- 🏗️ **Architecture** : Concevoir des systèmes scalables et maintenables
+- 🎯 **Pensée systémique** : Comprendre les interactions entre composants  
+- 📊 **Data-driven decision making** : Baser les décisions sur les métriques  
+- 🔍 **Troubleshooting** : Diagnostiquer méthodiquement les problèmes  
+- 🏗️ **Architecture** : Concevoir des systèmes scalables et maintenables  
 - 📚 **Documentation** : Documenter les choix et configurations
 
 ---
@@ -978,9 +978,9 @@ Après avoir complété ce chapitre, vous serez capable de :
 ## Prêt à commencer ?
 
 Vous avez maintenant une vue d'ensemble complète de ce chapitre. Vous comprenez :
-- ✅ Pourquoi la gestion des connexions est cruciale
-- ✅ Ce que vous allez apprendre dans chaque section
-- ✅ Comment organiser votre apprentissage
+- ✅ Pourquoi la gestion des connexions est cruciale  
+- ✅ Ce que vous allez apprendre dans chaque section  
+- ✅ Comment organiser votre apprentissage  
 - ✅ Les outils et prérequis nécessaires
 
 ### Prochaines étapes
@@ -1006,9 +1006,9 @@ Choisissez votre point d'entrée selon votre profil :
 La gestion des connexions et les bonnes pratiques applicatives sont souvent **négligées** dans les formations PostgreSQL, pourtant elles sont **cruciales** en production.
 
 Les concepts de ce chapitre ont été construits à partir de :
-- 🏢 Expériences réelles en entreprise
-- 🐛 Bugs rencontrés et résolus en production
-- 📈 Optimisations mesurées et validées
+- 🏢 Expériences réelles en entreprise  
+- 🐛 Bugs rencontrés et résolus en production  
+- 📈 Optimisations mesurées et validées  
 - 💡 Best practices de la communauté PostgreSQL
 
 **Notre promesse** : À la fin de ce chapitre, vous aurez les connaissances pour :

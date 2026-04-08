@@ -61,11 +61,11 @@ L'infrastructure a considérablement évolué au fil des décennies :
 
 En termes simples, Kubernetes :
 
-- **Déploie** vos applications conteneurisées
-- **Scale** automatiquement selon la charge
-- **Répare** les applications défaillantes (self-healing)
-- **Équilibre** le trafic entre les instances
-- **Gère** la configuration et les secrets
+- **Déploie** vos applications conteneurisées  
+- **Scale** automatiquement selon la charge  
+- **Répare** les applications défaillantes (self-healing)  
+- **Équilibre** le trafic entre les instances  
+- **Gère** la configuration et les secrets  
 - **Abstrait** l'infrastructure sous-jacente
 
 ### Les Avantages de Kubernetes
@@ -543,8 +543,8 @@ Nous explorerons la ressource fondamentale pour les applications stateful :
 
 Nous comparerons les trois principaux Operators PostgreSQL :
 
-- **Zalando Postgres Operator** : simplicité et maturité
-- **CloudNativePG** : architecture Kubernetes-native
+- **Zalando Postgres Operator** : simplicité et maturité  
+- **CloudNativePG** : architecture Kubernetes-native  
 - **Crunchy PGO** : fonctionnalités enterprise
 - Critères de choix et cas d'usage
 
@@ -576,8 +576,8 @@ Nous aborderons l'exploitation en production :
 
 Pour tirer le meilleur parti de ce chapitre, vous devriez avoir :
 
-- **Bases PostgreSQL** : Installation, configuration, requêtes SQL
-- **Concepts Docker** : Images, conteneurs, volumes
+- **Bases PostgreSQL** : Installation, configuration, requêtes SQL  
+- **Concepts Docker** : Images, conteneurs, volumes  
 - **Notions Kubernetes de base** : Pods, Deployments, Services
 
 ### Connaissances Utiles (mais pas obligatoires)
@@ -591,11 +591,11 @@ Pour tirer le meilleur parti de ce chapitre, vous devriez avoir :
 
 À la fin de ce chapitre, vous serez capable de :
 
-1. **Comprendre** pourquoi et quand utiliser PostgreSQL sur Kubernetes
-2. **Déployer** un cluster PostgreSQL haute disponibilité
-3. **Choisir** l'Operator adapté à vos besoins
-4. **Configurer** les backups automatisés
-5. **Monitorer** et diagnostiquer les problèmes
+1. **Comprendre** pourquoi et quand utiliser PostgreSQL sur Kubernetes  
+2. **Déployer** un cluster PostgreSQL haute disponibilité  
+3. **Choisir** l'Operator adapté à vos besoins  
+4. **Configurer** les backups automatisés  
+5. **Monitorer** et diagnostiquer les problèmes  
 6. **Sécuriser** les communications avec un Service Mesh
 
 ---
@@ -619,9 +619,9 @@ k3d cluster create postgres-lab
 
 ### Option 2 : Cluster Cloud (Production-like)
 
-- **AWS EKS** : Amazon Elastic Kubernetes Service
-- **GKE** : Google Kubernetes Engine
-- **AKS** : Azure Kubernetes Service
+- **AWS EKS** : Amazon Elastic Kubernetes Service  
+- **GKE** : Google Kubernetes Engine  
+- **AKS** : Azure Kubernetes Service  
 - **DigitalOcean Kubernetes**
 
 ### Outils Essentiels
@@ -652,9 +652,9 @@ Déployer PostgreSQL sur Kubernetes peut sembler intimidant au premier abord. Il
 
 ```yaml
 # Exemple avec CloudNativePG : un cluster HA en 15 lignes
-apiVersion: postgresql.cnpg.io/v1
-kind: Cluster
-metadata:
+apiVersion: postgresql.cnpg.io/v1  
+kind: Cluster  
+metadata:  
   name: my-postgres
 spec:
   instances: 3
@@ -674,15 +674,15 @@ Les sections suivantes vous guideront pas à pas, du plus fondamental au plus av
 PostgreSQL sur Kubernetes n'est plus une expérimentation risquée, c'est une pratique établie et éprouvée en production par des organisations du monde entier.
 
 Les avantages sont significatifs :
-- **Uniformité** : une plateforme pour tout
-- **Automatisation** : failover, backups, scaling
-- **Portabilité** : même déploiement partout
+- **Uniformité** : une plateforme pour tout  
+- **Automatisation** : failover, backups, scaling  
+- **Portabilité** : même déploiement partout  
 - **Infrastructure as Code** : reproductibilité totale
 
 Les défis existent mais sont résolus par l'écosystème :
-- **StatefulSets** pour l'identité et la persistance
-- **Operators** pour l'automatisation du cycle de vie
-- **Services** pour le réseau
+- **StatefulSets** pour l'identité et la persistance  
+- **Operators** pour l'automatisation du cycle de vie  
+- **Services** pour le réseau  
 - **Outils** pour les backups et le monitoring
 
 Les sections suivantes vous donneront toutes les connaissances nécessaires pour déployer et opérer PostgreSQL sur Kubernetes avec confiance.
@@ -693,7 +693,7 @@ Les sections suivantes vous donneront toutes les connaissances nécessaires pour
 
 ### Documentation Officielle
 
-- [Kubernetes Documentation](https://kubernetes.io/docs/)
+- [Kubernetes Documentation](https://kubernetes.io/docs/)  
 - [PostgreSQL Documentation](https://www.postgresql.org/docs/)
 
 ### Tutoriels d'Introduction

@@ -43,13 +43,13 @@ Un **driver** (ou adaptateur, ou connecteur) est une bibliothèque logicielle qu
 
 Le driver assure plusieurs fonctions essentielles :
 
-1. **Établissement de connexion** : Ouvrir et maintenir des connexions réseau avec PostgreSQL
-2. **Authentification** : Gérer les credentials et les mécanismes de sécurité (SCRAM-SHA-256, SSL, etc.)
-3. **Envoi de requêtes** : Transmettre les commandes SQL à PostgreSQL
-4. **Réception de résultats** : Récupérer et parser les données retournées par PostgreSQL
-5. **Gestion des transactions** : Implémenter BEGIN, COMMIT, ROLLBACK
-6. **Conversion de types** : Mapper les types PostgreSQL vers les types du langage (ex: JSONB → dict Python)
-7. **Gestion des erreurs** : Capturer et traduire les erreurs PostgreSQL
+1. **Établissement de connexion** : Ouvrir et maintenir des connexions réseau avec PostgreSQL  
+2. **Authentification** : Gérer les credentials et les mécanismes de sécurité (SCRAM-SHA-256, SSL, etc.)  
+3. **Envoi de requêtes** : Transmettre les commandes SQL à PostgreSQL  
+4. **Réception de résultats** : Récupérer et parser les données retournées par PostgreSQL  
+5. **Gestion des transactions** : Implémenter BEGIN, COMMIT, ROLLBACK  
+6. **Conversion de types** : Mapper les types PostgreSQL vers les types du langage (ex: JSONB → dict Python)  
+7. **Gestion des erreurs** : Capturer et traduire les erreurs PostgreSQL  
 8. **Pool de connexions** : Optimiser la réutilisation des connexions (pour certains drivers)
 
 ---
@@ -63,12 +63,12 @@ Lorsque vous développez avec PostgreSQL, vous avez généralement deux approche
 **Définition :** Bibliothèques qui fournissent un accès direct à PostgreSQL en utilisant du **SQL brut**.
 
 **Caractéristiques :**
-- ✅ **Contrôle total** : Vous écrivez exactement le SQL que vous voulez
-- ✅ **Performance maximale** : Pas d'overhead, communication directe
-- ✅ **Flexibilité** : Toutes les fonctionnalités PostgreSQL sont accessibles
-- ✅ **Légers** : Peu de dépendances, bundles de petite taille
-- ❌ **Plus verbeux** : Plus de code boilerplate
-- ❌ **SQL requis** : Nécessite une bonne connaissance de SQL
+- ✅ **Contrôle total** : Vous écrivez exactement le SQL que vous voulez  
+- ✅ **Performance maximale** : Pas d'overhead, communication directe  
+- ✅ **Flexibilité** : Toutes les fonctionnalités PostgreSQL sont accessibles  
+- ✅ **Légers** : Peu de dépendances, bundles de petite taille  
+- ❌ **Plus verbeux** : Plus de code boilerplate  
+- ❌ **SQL requis** : Nécessite une bonne connaissance de SQL  
 - ❌ **Mapping manuel** : Vous devez transformer les résultats en objets
 
 **Exemples :**
@@ -90,13 +90,13 @@ Lorsque vous développez avec PostgreSQL, vous avez généralement deux approche
 **Définition :** Couche d'abstraction qui permet de manipuler des **objets** (classes, structs) au lieu d'écrire du SQL.
 
 **Caractéristiques :**
-- ✅ **Productivité** : Moins de code boilerplate
-- ✅ **Abstraction** : Vous manipulez des objets, pas du SQL
-- ✅ **Type-safety** : Vérification des types à la compilation
-- ✅ **Migrations** : Gestion automatisée du schéma (Code-First)
-- ✅ **Relations** : Gestion automatique des jointures et relations
-- ❌ **Overhead** : Performance légèrement inférieure (10-50%)
-- ❌ **Courbe d'apprentissage** : Syntaxe ORM à apprendre
+- ✅ **Productivité** : Moins de code boilerplate  
+- ✅ **Abstraction** : Vous manipulez des objets, pas du SQL  
+- ✅ **Type-safety** : Vérification des types à la compilation  
+- ✅ **Migrations** : Gestion automatisée du schéma (Code-First)  
+- ✅ **Relations** : Gestion automatique des jointures et relations  
+- ❌ **Overhead** : Performance légèrement inférieure (10-50%)  
+- ❌ **Courbe d'apprentissage** : Syntaxe ORM à apprendre  
 - ❌ **Abstraction qui fuit** : Parfois nécessaire de revenir au SQL brut
 
 **Exemples :**
@@ -229,9 +229,9 @@ Voici un panorama des drivers et ORM les plus populaires dans les principaux éc
 - L'application doit-elle scaler horizontalement ?
 
 **Recommandations :**
-- **Performance critique** (>10k req/s) : Driver natif (psycopg3, pgx, Npgsql)
-- **Performance standard** (<10k req/s) : ORM acceptable (Prisma, EF Core, GORM)
-- **Microservices** : Driver natif léger
+- **Performance critique** (>10k req/s) : Driver natif (psycopg3, pgx, Npgsql)  
+- **Performance standard** (<10k req/s) : ORM acceptable (Prisma, EF Core, GORM)  
+- **Microservices** : Driver natif léger  
 - **Applications réactives** : Drivers async (asyncpg, R2DBC)
 
 ### 2. Productivité et Maintenabilité
@@ -242,9 +242,9 @@ Voici un panorama des drivers et ORM les plus populaires dans les principaux éc
 - Le schéma évolue-t-il fréquemment ?
 
 **Recommandations :**
-- **Équipe junior en SQL** : ORM (Prisma, EF Core)
-- **Prototypage rapide** : ORM avec migrations (Django ORM, EF Core)
-- **Schéma stable** : Driver natif acceptable
+- **Équipe junior en SQL** : ORM (Prisma, EF Core)  
+- **Prototypage rapide** : ORM avec migrations (Django ORM, EF Core)  
+- **Schéma stable** : Driver natif acceptable  
 - **Application legacy** : Rester sur le stack existant
 
 ### 3. Complexité des Requêtes
@@ -255,9 +255,9 @@ Voici un panorama des drivers et ORM les plus populaires dans les principaux éc
 - Avez-vous besoin d'optimisations SQL fines ?
 
 **Recommandations :**
-- **SQL simple** (CRUD) : ORM parfait
-- **SQL modérément complexe** : ORM + raw SQL occasionnel
-- **SQL très complexe** : Driver natif
+- **SQL simple** (CRUD) : ORM parfait  
+- **SQL modérément complexe** : ORM + raw SQL occasionnel  
+- **SQL très complexe** : Driver natif  
 - **Analyse de données** : Driver natif (pandas, SQL brut)
 
 ### 4. Écosystème et Intégration
@@ -268,10 +268,10 @@ Voici un panorama des drivers et ORM les plus populaires dans les principaux éc
 - L'équipe a-t-elle déjà de l'expérience avec certains outils ?
 
 **Recommandations :**
-- **Django** : Django ORM (natif)
-- **Spring Boot** : JPA/Hibernate (standard)
-- **ASP.NET Core** : Entity Framework Core (standard)
-- **Express.js** : Prisma (moderne) ou pg (léger)
+- **Django** : Django ORM (natif)  
+- **Spring Boot** : JPA/Hibernate (standard)  
+- **ASP.NET Core** : Entity Framework Core (standard)  
+- **Express.js** : Prisma (moderne) ou pg (léger)  
 - **Pas de framework** : Driver natif pour flexibilité
 
 ### 5. Type-Safety et Tooling
@@ -282,9 +282,9 @@ Voici un panorama des drivers et ORM les plus populaires dans les principaux éc
 - Voulez-vous détecter les erreurs à la compilation ?
 
 **Recommandations :**
-- **TypeScript** : Prisma (générateur de types), TypeORM
-- **C# / .NET** : Entity Framework Core (LINQ fortement typé)
-- **Java** : Hibernate, jOOQ
+- **TypeScript** : Prisma (générateur de types), TypeORM  
+- **C# / .NET** : Entity Framework Core (LINQ fortement typé)  
+- **Java** : Hibernate, jOOQ  
 - **Go** : sqlc (génération de code), GORM (reflection)
 
 ---
@@ -299,8 +299,8 @@ Quel que soit le driver choisi, voici les fonctionnalités essentielles à reche
 Créer une connexion PostgreSQL coûte ~50-200ms. Un pool réutilise les connexions existantes.
 
 **Ce qui est bon :**
-- ✅ Pool intégré avec configuration flexible
-- ✅ Gestion automatique des connexions zombies
+- ✅ Pool intégré avec configuration flexible  
+- ✅ Gestion automatique des connexions zombies  
 - ✅ Métriques et monitoring
 
 **Exemples :**
@@ -316,8 +316,8 @@ Créer une connexion PostgreSQL coûte ~50-200ms. Un pool réutilise les connexi
 Protection contre les **injections SQL**, l'une des vulnérabilités les plus dangereuses.
 
 **Ce qui est bon :**
-- ✅ Paramètres positionnels (`$1`, `$2`) ou nommés (`@email`)
-- ✅ Échappement automatique
+- ✅ Paramètres positionnels (`$1`, `$2`) ou nommés (`@email`)  
+- ✅ Échappement automatique  
 - ✅ Préparation des statements (performance)
 
 **Mauvais exemple (JAMAIS FAIRE) :**
@@ -329,8 +329,8 @@ query = f"SELECT * FROM users WHERE email = '{email}'"
 **Bon exemple :**
 ```python
 # ✅ SÉCURISÉ - Paramètres échappés
-query = "SELECT * FROM users WHERE email = %s"
-cursor.execute(query, (email,))
+query = "SELECT * FROM users WHERE email = %s"  
+cursor.execute(query, (email,))  
 ```
 
 ### 3. Support des Types PostgreSQL
@@ -342,32 +342,32 @@ cursor.execute(query, (email,))
 - Types géométriques : POINT, LINE (avec PostGIS)
 
 **Ce qui est bon :**
-- ✅ Conversion automatique vers les types natifs du langage
-- ✅ Support de JSONB (essentiel en 2025)
+- ✅ Conversion automatique vers les types natifs du langage  
+- ✅ Support de JSONB (essentiel en 2025)  
 - ✅ Support des arrays PostgreSQL
 
 ### 4. Gestion des Transactions
 
 **Ce qui est bon :**
-- ✅ API claire pour BEGIN, COMMIT, ROLLBACK
-- ✅ Support des SAVEPOINT
-- ✅ Gestion automatique (try/catch avec rollback)
+- ✅ API claire pour BEGIN, COMMIT, ROLLBACK  
+- ✅ Support des SAVEPOINT  
+- ✅ Gestion automatique (try/catch avec rollback)  
 - ✅ Niveaux d'isolation configurables
 
 ### 5. Performance et Optimisations
 
 **Ce qui est bon :**
-- ✅ Prepared statements (réutilisation de plans d'exécution)
-- ✅ Batch operations (insertion/update multiple)
-- ✅ Async/Await pour I/O non-bloquant
+- ✅ Prepared statements (réutilisation de plans d'exécution)  
+- ✅ Batch operations (insertion/update multiple)  
+- ✅ Async/Await pour I/O non-bloquant  
 - ✅ Streaming de résultats (cursors serveur)
 
 ### 6. Gestion des Erreurs
 
 **Ce qui est bon :**
-- ✅ Exceptions spécifiques pour chaque type d'erreur PostgreSQL
-- ✅ Codes SQLSTATE accessibles
-- ✅ Messages d'erreur clairs et détaillés
+- ✅ Exceptions spécifiques pour chaque type d'erreur PostgreSQL  
+- ✅ Codes SQLSTATE accessibles  
+- ✅ Messages d'erreur clairs et détaillés  
 - ✅ Retry logic pour erreurs transitoires
 
 ---
@@ -428,35 +428,35 @@ Quel que soit le driver ou l'ORM choisi, voici les bonnes pratiques à suivre :
 
 ### 1. Sécurité
 
-- ✅ **Toujours** utiliser des requêtes paramétrées
-- ✅ **Jamais** de concaténation de strings pour du SQL
-- ✅ Utiliser SSL/TLS pour les connexions en production
-- ✅ Principle of Least Privilege : droits minimums nécessaires
+- ✅ **Toujours** utiliser des requêtes paramétrées  
+- ✅ **Jamais** de concaténation de strings pour du SQL  
+- ✅ Utiliser SSL/TLS pour les connexions en production  
+- ✅ Principle of Least Privilege : droits minimums nécessaires  
 - ✅ Ne **jamais** logger les mots de passe ou données sensibles
 
 ### 2. Performance
 
-- ✅ Utiliser un **pool de connexions** en production
-- ✅ Créer des **index** sur les colonnes fréquemment filtrées
-- ✅ Utiliser **EXPLAIN ANALYZE** pour optimiser les requêtes lentes
-- ✅ Batch les insertions multiples au lieu d'une par une
-- ✅ Utiliser **prepared statements** pour les requêtes répétées
+- ✅ Utiliser un **pool de connexions** en production  
+- ✅ Créer des **index** sur les colonnes fréquemment filtrées  
+- ✅ Utiliser **EXPLAIN ANALYZE** pour optimiser les requêtes lentes  
+- ✅ Batch les insertions multiples au lieu d'une par une  
+- ✅ Utiliser **prepared statements** pour les requêtes répétées  
 - ✅ Limiter le nombre de colonnes récupérées (`SELECT id, nom` au lieu de `SELECT *`)
 
 ### 3. Résilience
 
-- ✅ Implémenter des **timeouts** de connexion
-- ✅ Gérer les **retry** pour les erreurs transitoires
-- ✅ Logger les erreurs avec contexte suffisant
-- ✅ Monitorer les métriques (latence, erreurs, pool saturation)
+- ✅ Implémenter des **timeouts** de connexion  
+- ✅ Gérer les **retry** pour les erreurs transitoires  
+- ✅ Logger les erreurs avec contexte suffisant  
+- ✅ Monitorer les métriques (latence, erreurs, pool saturation)  
 - ✅ Implémenter des **circuit breakers** pour haute disponibilité
 
 ### 4. Maintenabilité
 
-- ✅ Versionner les **migrations** de schéma
-- ✅ Tester les requêtes critiques (tests d'intégration)
-- ✅ Documenter les requêtes complexes
-- ✅ Utiliser des noms de variables/fonctions explicites
+- ✅ Versionner les **migrations** de schéma  
+- ✅ Tester les requêtes critiques (tests d'intégration)  
+- ✅ Documenter les requêtes complexes  
+- ✅ Utiliser des noms de variables/fonctions explicites  
 - ✅ Séparer la logique métier de la logique de persistance
 
 ---
@@ -476,9 +476,9 @@ Quel que soit le driver ou l'ORM choisi, voici les bonnes pratiques à suivre :
 
 ### Outils de Monitoring Populaires
 
-- **Application Performance Monitoring (APM)** : Datadog, New Relic, Dynatrace
-- **Logs** : ELK Stack, Splunk, Grafana Loki
-- **Métriques** : Prometheus + Grafana
+- **Application Performance Monitoring (APM)** : Datadog, New Relic, Dynatrace  
+- **Logs** : ELK Stack, Splunk, Grafana Loki  
+- **Métriques** : Prometheus + Grafana  
 - **Alerting** : PagerDuty, Opsgenie
 
 ---
@@ -487,21 +487,21 @@ Quel que soit le driver ou l'ORM choisi, voici les bonnes pratiques à suivre :
 
 ### Documentation Officielle
 
-- **PostgreSQL JDBC Driver** : https://jdbc.postgresql.org/
-- **Npgsql (.NET)** : https://www.npgsql.org/
-- **node-postgres** : https://node-postgres.com/
-- **psycopg3** : https://www.psycopg.org/psycopg3/
+- **PostgreSQL JDBC Driver** : https://jdbc.postgresql.org/  
+- **Npgsql (.NET)** : https://www.npgsql.org/  
+- **node-postgres** : https://node-postgres.com/  
+- **psycopg3** : https://www.psycopg.org/psycopg3/  
 - **pgx (Go)** : https://github.com/jackc/pgx
 
 ### Comparateurs et Benchmarks
 
-- **Database Driver Benchmarks** : https://github.com/mrjoes/sockjs-bench
+- **Database Driver Benchmarks** : https://github.com/mrjoes/sockjs-bench  
 - **ORM Benchmarks** : Rechercher "[langage] ORM benchmark" sur GitHub
 
 ### Communautés
 
-- **PostgreSQL Mailing Lists** : https://www.postgresql.org/list/
-- **Reddit r/PostgreSQL** : https://reddit.com/r/PostgreSQL
+- **PostgreSQL Mailing Lists** : https://www.postgresql.org/list/  
+- **Reddit r/PostgreSQL** : https://reddit.com/r/PostgreSQL  
 - **Stack Overflow** : Tag `postgresql` + votre langage
 
 ---

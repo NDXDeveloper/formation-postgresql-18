@@ -27,8 +27,8 @@ Le terme "anti-corruption" vient du **Domain-Driven Design (DDD)** d'Eric Evans.
 L'interaction entre votre application et PostgreSQL est l'un des **points critiques** de performance et de qualité. Un code qui fonctionne parfaitement avec 10 lignes peut s'effondrer avec 10,000 lignes.
 
 **Symptômes typiques :**
-- ✅ **En développement** : "Ça marche super bien !"
-- ⚠️ **En staging** : "C'est un peu lent..."
+- ✅ **En développement** : "Ça marche super bien !"  
+- ⚠️ **En staging** : "C'est un peu lent..."  
 - ❌ **En production** : "Le site est down !" 😱
 
 ### Les Coûts de la Corruption
@@ -107,9 +107,9 @@ users = User.objects.annotate(
 **Trop de SQL brut :**
 ```python
 # SQL brut pour un simple CRUD
-cursor.execute("SELECT * FROM users WHERE id = %s", [user_id])
-row = cursor.fetchone()
-user = {'id': row[0], 'name': row[1], 'email': row[2]}
+cursor.execute("SELECT * FROM users WHERE id = %s", [user_id])  
+row = cursor.fetchone()  
+user = {'id': row[0], 'name': row[1], 'email': row[2]}  
 # Code verbeux et peu maintenable
 ```
 
@@ -168,8 +168,8 @@ for row in csv_reader:
 **La bonne approche :**
 ```python
 # Bulk insert
-users = [User(name=row['name'], email=row['email']) for row in csv_reader]
-User.objects.bulk_create(users, batch_size=10000)
+users = [User(name=row['name'], email=row['email']) for row in csv_reader]  
+User.objects.bulk_create(users, batch_size=10000)  
 # Temps : 10-20 secondes !
 ```
 
@@ -190,18 +190,18 @@ Bulk operations et batching
 ### Symptômes d'Alerte
 
 **Performance :**
-- [ ] Temps de réponse > 1 seconde pour des pages simples
-- [ ] Croissance linéaire du temps avec le nombre de lignes
+- [ ] Temps de réponse > 1 seconde pour des pages simples  
+- [ ] Croissance linéaire du temps avec le nombre de lignes  
 - [ ] CPU ou I/O élevé sur le serveur PostgreSQL
 
 **Logs et Monitoring :**
-- [ ] Nombreuses requêtes SQL identiques dans les logs
-- [ ] Queries exécutées des milliers de fois par minute
+- [ ] Nombreuses requêtes SQL identiques dans les logs  
+- [ ] Queries exécutées des milliers de fois par minute  
 - [ ] Patterns répétitifs dans pg_stat_statements
 
 **Expérience Développeur :**
-- [ ] "Ça marchait en dev mais pas en prod"
-- [ ] Besoin constant d'augmenter les ressources
+- [ ] "Ça marchait en dev mais pas en prod"  
+- [ ] Besoin constant d'augmenter les ressources  
 - [ ] Workarounds et caches pour masquer la lenteur
 
 ### Outils de Détection
@@ -244,8 +244,8 @@ Bulk operations et batching
 
 ```python
 # Toujours profiler d'abord
-from django.test.utils import override_settings
-from django.db import connection, reset_queries
+from django.test.utils import override_settings  
+from django.db import connection, reset_queries  
 
 @override_settings(DEBUG=True)
 def test_query_count():
@@ -287,9 +287,9 @@ def test_article_list_no_n_plus_one():
 
 **Questions à poser en code review :**
 
-- [ ] Y a-t-il une boucle qui accède à des relations ?
-- [ ] Le nombre de requêtes augmente-t-il avec le volume ?
-- [ ] Les relations sont-elles chargées avec eager loading ?
+- [ ] Y a-t-il une boucle qui accède à des relations ?  
+- [ ] Le nombre de requêtes augmente-t-il avec le volume ?  
+- [ ] Les relations sont-elles chargées avec eager loading ?  
 - [ ] Les opérations en masse utilisent-elles bulk operations ?
 
 ### 5. Documentation des Choix
@@ -321,9 +321,9 @@ def get_user_statistics(user_id):
 
 **Utiliser les outils de profiling pour identifier les problèmes.**
 
-1. Activer le logging SQL
-2. Exécuter la fonctionnalité lente
-3. Analyser les patterns dans les logs
+1. Activer le logging SQL  
+2. Exécuter la fonctionnalité lente  
+3. Analyser les patterns dans les logs  
 4. Identifier le type de corruption
 
 ### Étape 2 : Mesurer
@@ -439,27 +439,27 @@ class ArticleRepository:
 Avant de déployer en production :
 
 ### Performance
-- [ ] Profiling effectué avec données réalistes (> 1,000 lignes)
-- [ ] Nombre de requêtes vérifié pour chaque endpoint
-- [ ] Pas de N+1 détecté dans les listes
+- [ ] Profiling effectué avec données réalistes (> 1,000 lignes)  
+- [ ] Nombre de requêtes vérifié pour chaque endpoint  
+- [ ] Pas de N+1 détecté dans les listes  
 - [ ] Bulk operations pour opérations en masse
 
 ### Code Quality
-- [ ] Stratégies de chargement explicites (lazy vs eager)
-- [ ] SQL brut documenté et justifié
-- [ ] Pas de requêtes dans les boucles
+- [ ] Stratégies de chargement explicites (lazy vs eager)  
+- [ ] SQL brut documenté et justifié  
+- [ ] Pas de requêtes dans les boucles  
 - [ ] Repository pattern pour encapsuler l'accès données
 
 ### Tests
-- [ ] Tests de performance automatisés
-- [ ] Tests vérifiant le nombre de requêtes
-- [ ] Tests de charge effectués
+- [ ] Tests de performance automatisés  
+- [ ] Tests vérifiant le nombre de requêtes  
+- [ ] Tests de charge effectués  
 - [ ] Benchmarks documentés
 
 ### Monitoring
-- [ ] pg_stat_statements activé
-- [ ] Logs SQL en développement
-- [ ] APM configuré en production
+- [ ] pg_stat_statements activé  
+- [ ] Logs SQL en développement  
+- [ ] APM configuré en production  
 - [ ] Alertes sur slow queries
 
 ---
@@ -492,10 +492,10 @@ Avant de déployer en production :
 - Mise en place des outils
 
 **Retour :**
-- ✅ 10× amélioration des performances
-- ✅ 70% de réduction des coûts serveur
-- ✅ Meilleure expérience utilisateur
-- ✅ Code plus maintenable
+- ✅ 10× amélioration des performances  
+- ✅ 70% de réduction des coûts serveur  
+- ✅ Meilleure expérience utilisateur  
+- ✅ Code plus maintenable  
 - ✅ Scaling possible sans augmenter les coûts
 
 ---

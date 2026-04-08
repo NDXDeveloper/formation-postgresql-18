@@ -14,8 +14,8 @@ C'est exactement ce que permet **pgvector**, l'extension PostgreSQL qui transfor
 
 **Bibliothèque classique (recherche traditionnelle)** :
 ```
-Vous : "Je cherche un livre sur les 'dauphins'"
-Bibliothécaire : *Cherche le mot "dauphin" dans les titres*
+Vous : "Je cherche un livre sur les 'dauphins'"  
+Bibliothécaire : *Cherche le mot "dauphin" dans les titres*  
                  "Voici 'Les Dauphins de l'Atlantique'"
 
 ❌ Manque : "Cétacés marins", "Intelligence animale",
@@ -24,8 +24,8 @@ Bibliothécaire : *Cherche le mot "dauphin" dans les titres*
 
 **Bibliothèque magique (recherche vectorielle)** :
 ```
-Vous : "Je cherche un livre sur les dauphins"
-Bibliothécaire magique : *Comprend le CONCEPT*
+Vous : "Je cherche un livre sur les dauphins"  
+Bibliothécaire magique : *Comprend le CONCEPT*  
                          "Voici des livres sur :"
                          - Les dauphins (correspondance exacte)
                          - Les cétacés (même famille)
@@ -73,15 +73,15 @@ Application moderne :
 
 **Solutions historiques** :
 
-1. **Bases vectorielles dédiées** (Pinecone, Weaviate, Milvus)
-   - ✅ Optimisées pour vecteurs
-   - ❌ Nouvelle infrastructure à gérer
+1. **Bases vectorielles dédiées** (Pinecone, Weaviate, Milvus)  
+   - ✅ Optimisées pour vecteurs  
+   - ❌ Nouvelle infrastructure à gérer  
    - ❌ Synchronisation données PostgreSQL ↔ Base vectorielle
 
-2. **Fichiers locaux / S3**
-   - ✅ Simple pour prototypage
-   - ❌ Pas de requêtes SQL
-   - ❌ Pas de transactions
+2. **Fichiers locaux / S3**  
+   - ✅ Simple pour prototypage  
+   - ❌ Pas de requêtes SQL  
+   - ❌ Pas de transactions  
    - ❌ Performances médiocres
 
 **La révolution pgvector** : Et si vos vecteurs vivaient directement dans PostgreSQL ?
@@ -104,11 +104,11 @@ Application moderne avec pgvector :
 - Des opérateurs pour calculer la similarité entre vecteurs
 - Des index spécialisés pour recherches ultra-rapides
 
-**Développé par** : Ankane (Andrew Kane)
-**Première version** : 2021
-**Licence** : Open-source (PostgreSQL License)
-**GitHub** : https://github.com/pgvector/pgvector
-**Stars** : 10K+ (très populaire !)
+**Développé par** : Ankane (Andrew Kane)  
+**Première version** : 2021  
+**Licence** : Open-source (PostgreSQL License)  
+**GitHub** : https://github.com/pgvector/pgvector  
+**Stars** : 10K+ (très populaire !)  
 
 ### Architecture conceptuelle
 
@@ -152,9 +152,9 @@ Application moderne avec pgvector :
 
 ✅ **Intégration SQL native** :
 ```sql
-SELECT * FROM products
-ORDER BY embedding <=> '[0.1, 0.2, 0.3]'::vector
-LIMIT 10;
+SELECT * FROM products  
+ORDER BY embedding <=> '[0.1, 0.2, 0.3]'::vector  
+LIMIT 10;  
 ```
 
 ✅ **Performance** : Recherche parmi millions de vecteurs en millisecondes
@@ -184,8 +184,8 @@ Objet réel → Modèle d'IA → Vecteur de nombres
 Les codes proches → Quartiers proches géographiquement
 
 **Embedding sémantique** :
-- "chat" → [0.5, 0.3, 0.1, ...]
-- "chaton" → [0.51, 0.29, 0.12, ...] ← Proche !
+- "chat" → [0.5, 0.3, 0.1, ...]  
+- "chaton" → [0.51, 0.29, 0.12, ...] ← Proche !  
 - "voiture" → [0.1, 0.8, 0.9, ...] ← Éloigné
 
 Les vecteurs proches → Concepts proches sémantiquement !
@@ -203,12 +203,12 @@ embedding = get_embedding(texte)
 #    1536 dimensions (nombres)
 
 # Textes similaires auront des embeddings proches !
-texte1 = "PostgreSQL est une excellente base de données"
-texte2 = "PostgreSQL est un SGBD performant"
-texte3 = "J'aime les pizzas"
+texte1 = "PostgreSQL est une excellente base de données"  
+texte2 = "PostgreSQL est un SGBD performant"  
+texte3 = "J'aime les pizzas"  
 
-distance(texte1, texte2) = 0.05  # Très proches !
-distance(texte1, texte3) = 0.89  # Très éloignés
+distance(texte1, texte2) = 0.05  # Très proches !  
+distance(texte1, texte3) = 0.89  # Très éloignés  
 ```
 
 #### Embedding d'image
@@ -236,8 +236,8 @@ produit = {
 }
 
 # Combiner texte pour embedding
-texte_produit = f"{produit['nom']} {produit['description']}"
-embedding = get_embedding(texte_produit)
+texte_produit = f"{produit['nom']} {produit['description']}"  
+embedding = get_embedding(texte_produit)  
 
 # Produits similaires → embeddings proches
 # "Laptop HP", "MacBook Pro" → proches
@@ -270,9 +270,9 @@ Les modèles multilingues alignent les langues !
 #### 4. Relations sémantiques
 
 ```
-Opérations vectorielles :
-king - man + woman ≈ queen
-Paris - France + Italy ≈ Rome
+Opérations vectorielles :  
+king - man + woman ≈ queen  
+Paris - France + Italy ≈ Rome  
 
 (Approximativement, pas exact)
 ```
@@ -289,8 +289,8 @@ Paris - France + Italy ≈ Rome
 | **Google** | textembedding-gecko | 768 | $0.025 / 1M tokens |
 | **Voyage AI** | voyage-2 | 1024 | $0.12 / 1M tokens |
 
-**Avantages** : Qualité élevée, simple à utiliser
-**Inconvénients** : Coût, dépendance externe, données envoyées à des tiers
+**Avantages** : Qualité élevée, simple à utiliser  
+**Inconvénients** : Coût, dépendance externe, données envoyées à des tiers  
 
 #### Modèles open-source (local)
 
@@ -302,14 +302,14 @@ Paris - France + Italy ≈ Rome
 | **E5-large-v2** | 1024 | ⭐⭐⭐⭐ | Multilingue |
 | **Instructor** | 768 | ⭐⭐⭐⭐ | Avec instructions |
 
-**Avantages** : Gratuit, privé, pas de limite d'usage
-**Inconvénients** : Nécessite infrastructure (GPU/CPU), maintenance
+**Avantages** : Gratuit, privé, pas de limite d'usage  
+**Inconvénients** : Nécessite infrastructure (GPU/CPU), maintenance  
 
 #### Modèles spécialisés
 
-- **Images** : ResNet, VGG, CLIP, Inception
-- **Audio** : Wav2Vec, Whisper
-- **Code** : CodeBERT, GraphCodeBERT
+- **Images** : ResNet, VGG, CLIP, Inception  
+- **Audio** : Wav2Vec, Whisper  
+- **Code** : CodeBERT, GraphCodeBERT  
 - **Multimodal** : CLIP (texte + images), DALL-E
 
 ---
@@ -330,9 +330,9 @@ SELECT * FROM users WHERE age = 25 AND ville = 'Paris';
 
 **Recherche vectorielle** :
 ```sql
-SELECT * FROM users
-ORDER BY preferences_vector <=> mon_profil_vector
-LIMIT 10;
+SELECT * FROM users  
+ORDER BY preferences_vector <=> mon_profil_vector  
+LIMIT 10;  
 -- Similarité (gradient de 0 à 1), les "plus proches"
 ```
 
@@ -345,10 +345,10 @@ C'est comme chercher des amis avec des goûts similaires aux vôtres, pas des cl
 ```
 Documents → Embeddings
 
-Doc 1 : "Python programming"     → [0.1, 0.8, 0.3, ...]
-Doc 2 : "Python snake species"   → [0.7, 0.2, 0.1, ...]
-Doc 3 : "Java programming"       → [0.12, 0.79, 0.31, ...]
-Doc 4 : "Chocolate cake recipe"  → [0.5, 0.1, 0.9, ...]
+Doc 1 : "Python programming"     → [0.1, 0.8, 0.3, ...]  
+Doc 2 : "Python snake species"   → [0.7, 0.2, 0.1, ...]  
+Doc 3 : "Java programming"       → [0.12, 0.79, 0.31, ...]  
+Doc 4 : "Chocolate cake recipe"  → [0.5, 0.1, 0.9, ...]  
 ```
 
 #### Étape 2 : Stockage dans PostgreSQL
@@ -373,10 +373,10 @@ Requête : "Learn coding in Python"
     ↓
 Embedding : [0.11, 0.81, 0.29, ...]
     ↓
-Recherche :
-SELECT * FROM documents
-ORDER BY embedding <=> '[0.11, 0.81, 0.29, ...]'::vector
-LIMIT 3;
+Recherche :  
+SELECT * FROM documents  
+ORDER BY embedding <=> '[0.11, 0.81, 0.29, ...]'::vector  
+LIMIT 3;  
     ↓
 Résultats :
 1. "Python programming"      (distance: 0.02) ← Très proche !
@@ -406,8 +406,8 @@ Résultats :
           |
 
 ★ = Documents dans l'espace vectoriel
-Requête = "Learn Python coding"
-Distance = Proximité dans l'espace
+Requête = "Learn Python coding"  
+Distance = Proximité dans l'espace  
 ```
 
 **En réalité** : Espace à 384, 768, 1536 ou 3072 dimensions (impossible à visualiser) !
@@ -437,12 +437,12 @@ CREATE TABLE produits (
 SELECT
     nom, prix, stock,
     embedding <=> '[...]'::vector AS similarite
-FROM produits
-WHERE categorie = 'Électronique'  -- Filtre classique
+FROM produits  
+WHERE categorie = 'Électronique'  -- Filtre classique  
   AND prix < 1000                  -- Filtre classique
   AND stock > 0                    -- Filtre classique
-ORDER BY embedding <=> '[...]'::vector  -- Recherche vectorielle
-LIMIT 10;
+ORDER BY embedding <=> '[...]'::vector  -- Recherche vectorielle  
+LIMIT 10;  
 ```
 
 **Vs base vectorielle séparée** : Synchronisation cauchemardesque !
@@ -453,12 +453,12 @@ LIMIT 10;
 BEGIN;
 
 -- Insérer produit
-INSERT INTO produits (nom, description, prix, embedding)
-VALUES ('Nouveau produit', 'Description...', 99.99, '[...]');
+INSERT INTO produits (nom, description, prix, embedding)  
+VALUES ('Nouveau produit', 'Description...', 99.99, '[...]');  
 
 -- Insérer dans table liée
-INSERT INTO inventory (produit_id, quantite)
-VALUES (CURRVAL('produits_id_seq'), 100);
+INSERT INTO inventory (produit_id, quantite)  
+VALUES (CURRVAL('produits_id_seq'), 100);  
 
 COMMIT;  -- Tout ou rien, garanti !
 ```
@@ -471,14 +471,14 @@ COMMIT;  -- Tout ou rien, garanti !
 -- Utiliser TOUTES les fonctionnalités PostgreSQL :
 
 -- Jointures
-SELECT p.nom, c.nom_client, p.embedding <=> q.embedding AS sim
-FROM produits p
-JOIN commandes c ON p.id = c.produit_id
-CROSS JOIN LATERAL (SELECT embedding FROM query) q;
+SELECT p.nom, c.nom_client, p.embedding <=> q.embedding AS sim  
+FROM produits p  
+JOIN commandes c ON p.id = c.produit_id  
+CROSS JOIN LATERAL (SELECT embedding FROM query) q;  
 
 -- Vues matérialisées
-CREATE MATERIALIZED VIEW produits_populaires_vecteurs AS
-SELECT * FROM produits WHERE ventes > 1000;
+CREATE MATERIALIZED VIEW produits_populaires_vecteurs AS  
+SELECT * FROM produits WHERE ventes > 1000;  
 
 -- Partitionnement
 CREATE TABLE produits_partitioned (
@@ -580,12 +580,12 @@ SELECT
     p2.nom,
     p2.prix,
     p1.embedding <=> p2.embedding AS similarite
-FROM produits p1
-CROSS JOIN produits p2
-WHERE p1.id = 123  -- Produit actuel
+FROM produits p1  
+CROSS JOIN produits p2  
+WHERE p1.id = 123  -- Produit actuel  
   AND p2.id != 123
-ORDER BY similarite ASC  -- Les plus similaires
-LIMIT 10;
+ORDER BY similarite ASC  -- Les plus similaires  
+LIMIT 10;  
 ```
 
 #### 4. Déduplication / Détection de Plagiat
@@ -596,9 +596,9 @@ SELECT
     d1.titre AS doc1,
     d2.titre AS doc2,
     1 - (d1.embedding <=> d2.embedding) AS similarite
-FROM documents d1
-CROSS JOIN documents d2
-WHERE d1.id < d2.id
+FROM documents d1  
+CROSS JOIN documents d2  
+WHERE d1.id < d2.id  
   AND d1.embedding <=> d2.embedding < 0.1  -- 90%+ similaires
 ORDER BY similarite DESC;
 ```
@@ -614,9 +614,9 @@ SELECT
     c.categorie,
     c.description,
     1 - (c.embedding_reference <=> nt.embedding) AS confiance
-FROM categories c, nouveau_texte nt
-ORDER BY confiance DESC
-LIMIT 1;
+FROM categories c, nouveau_texte nt  
+ORDER BY confiance DESC  
+LIMIT 1;  
 
 -- Résultat : "Support Technique" (confiance: 94%)
 ```
@@ -633,10 +633,10 @@ CREATE TABLE images (
 );
 
 -- Recherche "images similaires"
-SELECT url, description
-FROM images
-ORDER BY embedding <-> '[...]'::vector(2048)
-LIMIT 10;
+SELECT url, description  
+FROM images  
+ORDER BY embedding <-> '[...]'::vector(2048)  
+LIMIT 10;  
 ```
 
 ---
@@ -649,11 +649,11 @@ LIMIT 10;
 
 ```python
 # psycopg2 / psycopg3
-import psycopg2
-from pgvector.psycopg2 import register_vector
+import psycopg2  
+from pgvector.psycopg2 import register_vector  
 
-conn = psycopg2.connect("postgresql://...")
-register_vector(conn)
+conn = psycopg2.connect("postgresql://...")  
+register_vector(conn)  
 
 # LangChain
 from langchain.vectorstores import PGVector
@@ -664,8 +664,8 @@ vectorstore = PGVector(
 )
 
 # LlamaIndex
-from llama_index import VectorStoreIndex
-from llama_index.vector_stores import PGVectorStore
+from llama_index import VectorStoreIndex  
+from llama_index.vector_stores import PGVectorStore  
 
 vector_store = PGVectorStore.from_params(...)
 ```
@@ -764,7 +764,7 @@ const { data } = await supabase
 | **Écosystème** | ✅ PostgreSQL | ⚠️ Propriétaire | ✅ Riche | ✅ Riche |
 
 **Conclusion** :
-- **pgvector** : 95% des cas d'usage, simplicité maximale
+- **pgvector** : 95% des cas d'usage, simplicité maximale  
 - **Bases dédiées** : Échelle extrême (>100M vecteurs), optimisation maximale
 
 ---
@@ -800,21 +800,21 @@ Télécharger depuis https://github.com/pgvector/pgvector/releases
 
 ```bash
 # Cloner le repository
-git clone https://github.com/pgvector/pgvector.git
-cd pgvector
+git clone https://github.com/pgvector/pgvector.git  
+cd pgvector  
 
 # Compiler
-make
-sudo make install
+make  
+sudo make install  
 ```
 
 ### Méthode 3 : Services Managés
 
-**Supabase** : ✅ Inclus par défaut
-**Neon** : ✅ Disponible
-**AWS RDS** : ⚠️ Certaines instances
-**Azure Database** : ⚠️ Certaines instances
-**Google Cloud SQL** : ⚠️ Vérifier disponibilité
+**Supabase** : ✅ Inclus par défaut  
+**Neon** : ✅ Disponible  
+**AWS RDS** : ⚠️ Certaines instances  
+**Azure Database** : ⚠️ Certaines instances  
+**Google Cloud SQL** : ⚠️ Vérifier disponibilité  
 
 ### Activer l'Extension
 
@@ -853,9 +853,9 @@ INSERT INTO items (nom, embedding) VALUES
 SELECT
     nom,
     embedding <-> '[3, 1, 2]' AS distance
-FROM items
-ORDER BY distance
-LIMIT 2;
+FROM items  
+ORDER BY distance  
+LIMIT 2;  
 ```
 
 **Résultat** :
@@ -990,15 +990,15 @@ def search(query: str):
 ### Alternatives à Considérer
 
 **Quand utiliser pgvector** :
-- ✅ < 10M vecteurs
-- ✅ Besoins SQL + vecteurs
-- ✅ Simplicité prioritaire
+- ✅ < 10M vecteurs  
+- ✅ Besoins SQL + vecteurs  
+- ✅ Simplicité prioritaire  
 - ✅ Infrastructure PostgreSQL existante
 
 **Quand utiliser base vectorielle dédiée** :
-- ✅ > 100M vecteurs
-- ✅ Vecteurs uniquement (pas de données relationnelles)
-- ✅ Optimisation maximale requise
+- ✅ > 100M vecteurs  
+- ✅ Vecteurs uniquement (pas de données relationnelles)  
+- ✅ Optimisation maximale requise  
 - ✅ Équipe dédiée DevOps
 
 ---
@@ -1089,21 +1089,21 @@ Les chapitres suivants approfondissent les aspects de pgvector :
 
 ### Ressources pour Démarrer
 
-📚 **Documentation** :
-- [pgvector GitHub](https://github.com/pgvector/pgvector)
+📚 **Documentation** :  
+- [pgvector GitHub](https://github.com/pgvector/pgvector)  
 - [Documentation officielle PostgreSQL](https://www.postgresql.org/docs/)
 
-🎓 **Tutoriels** :
-- [Supabase Vector Docs](https://supabase.com/docs/guides/ai)
+🎓 **Tutoriels** :  
+- [Supabase Vector Docs](https://supabase.com/docs/guides/ai)  
 - [OpenAI Embeddings Guide](https://platform.openai.com/docs/guides/embeddings)
 
-💬 **Communauté** :
-- [Reddit r/PostgreSQL](https://reddit.com/r/PostgreSQL)
+💬 **Communauté** :  
+- [Reddit r/PostgreSQL](https://reddit.com/r/PostgreSQL)  
 - [Discord PostgreSQL](https://discord.gg/postgresql)
 
-🛠️ **Outils** :
-- [LangChain](https://python.langchain.com/)
-- [LlamaIndex](https://www.llamaindex.ai/)
+🛠️ **Outils** :  
+- [LangChain](https://python.langchain.com/)  
+- [LlamaIndex](https://www.llamaindex.ai/)  
 - [Sentence Transformers](https://www.sbert.net/)
 
 ---

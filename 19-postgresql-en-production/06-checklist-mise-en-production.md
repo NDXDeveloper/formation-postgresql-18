@@ -220,29 +220,29 @@ La mise en production ne repose **jamais sur une seule ligne de défense**. C'es
 Ne tentez pas de tout faire en une fois. Suivez cette roadmap progressive :
 
 #### Phase 1 : Fondations (Semaine 1)
-- ✅ Sécurité de base (authentification, firewall)
-- ✅ Configuration initiale (mémoire, connexions)
+- ✅ Sécurité de base (authentification, firewall)  
+- ✅ Configuration initiale (mémoire, connexions)  
 - ✅ Premier backup manuel testé
 
 **Objectif** : Base fonctionnelle et sécurisée.
 
 #### Phase 2 : Automatisation (Semaine 2)
-- ✅ Monitoring basique (Prometheus + Grafana)
-- ✅ Alertes critiques configurées
+- ✅ Monitoring basique (Prometheus + Grafana)  
+- ✅ Alertes critiques configurées  
 - ✅ Backups automatisés quotidiens
 
 **Objectif** : Visibilité et protection automatique.
 
 #### Phase 3 : Optimisation (Semaine 3-4)
-- ✅ Tuning avancé (autovacuum, I/O)
-- ✅ Connection pooling (PgBouncer)
+- ✅ Tuning avancé (autovacuum, I/O)  
+- ✅ Connection pooling (PgBouncer)  
 - ✅ PITR configuré et testé
 
 **Objectif** : Performances optimales et résilience.
 
 #### Phase 4 : Maturité (Mois 2+)
-- ✅ Runbooks complets
-- ✅ Tests de DR trimestriels
+- ✅ Runbooks complets  
+- ✅ Tests de DR trimestriels  
 - ✅ Amélioration continue
 
 **Objectif** : Excellence opérationnelle.
@@ -254,38 +254,38 @@ Ne tentez pas de tout faire en une fois. Suivez cette roadmap progressive :
 Évaluez votre niveau de maturité actuel :
 
 ### Niveau 0 : Cowboy 🤠
-- ❌ Configuration par défaut
-- ❌ Pas de monitoring
-- ❌ Pas de backups (ou non testés)
-- ❌ Pas de documentation
+- ❌ Configuration par défaut  
+- ❌ Pas de monitoring  
+- ❌ Pas de backups (ou non testés)  
+- ❌ Pas de documentation  
 - **Risque** : Catastrophe imminente
 
 ### Niveau 1 : Débutant 📚
-- ✅ Configuration basique ajustée
-- ⚠️ Monitoring minimal (CPU, disque)
-- ✅ Backups quotidiens (non testés)
-- ⚠️ Documentation partielle
+- ✅ Configuration basique ajustée  
+- ⚠️ Monitoring minimal (CPU, disque)  
+- ✅ Backups quotidiens (non testés)  
+- ⚠️ Documentation partielle  
 - **Risque** : Élevé
 
 ### Niveau 2 : Intermédiaire 🛠️
-- ✅ Configuration optimisée
-- ✅ Monitoring complet + alertes
-- ✅ Backups testés mensuellement
-- ✅ Runbooks pour incidents courants
+- ✅ Configuration optimisée  
+- ✅ Monitoring complet + alertes  
+- ✅ Backups testés mensuellement  
+- ✅ Runbooks pour incidents courants  
 - **Risque** : Modéré
 
 ### Niveau 3 : Avancé 🚀
-- ✅ Configuration fine-tunée par charge
-- ✅ Observabilité complète (metrics, logs, traces)
-- ✅ Backups + PITR + DR testé
-- ✅ Runbooks exhaustifs + GameDays
+- ✅ Configuration fine-tunée par charge  
+- ✅ Observabilité complète (metrics, logs, traces)  
+- ✅ Backups + PITR + DR testé  
+- ✅ Runbooks exhaustifs + GameDays  
 - **Risque** : Faible
 
 ### Niveau 4 : Expert 🏆
-- ✅ Tout du niveau 3 +
-- ✅ Haute disponibilité (réplication, failover auto)
-- ✅ Chaos engineering
-- ✅ Amélioration continue basée sur métriques
+- ✅ Tout du niveau 3 +  
+- ✅ Haute disponibilité (réplication, failover auto)  
+- ✅ Chaos engineering  
+- ✅ Amélioration continue basée sur métriques  
 - **Risque** : Très faible
 
 **Objectif** : Atteindre minimum le **Niveau 2** avant la production, puis évoluer progressivement vers les niveaux supérieurs.
@@ -305,9 +305,9 @@ La mise en production est un **effort d'équipe**. Clarifiez les rôles :
 | **Management**        | Validation, budget, arbitrage RTO/RPO                        |
 
 **Principe RACI** : Pour chaque tâche de la checklist, définir :
-- **R**esponsable : Qui fait le travail
-- **A**ccountable : Qui valide
-- **C**onsulted : Qui est consulté
+- **R**esponsable : Qui fait le travail  
+- **A**ccountable : Qui valide  
+- **C**onsulted : Qui est consulté  
 - **I**nformed : Qui est informé
 
 ---
@@ -319,18 +319,18 @@ Investir du temps dans une mise en production rigoureuse peut sembler coûteux. 
 ### Scénarios Réels de Désastres
 
 **Cas 1 : E-commerce (2023)**
-- **Problème** : Pas de backups testés, corruption disque
-- **Impact** : 3 jours de downtime, perte de 2 mois de données
+- **Problème** : Pas de backups testés, corruption disque  
+- **Impact** : 3 jours de downtime, perte de 2 mois de données  
 - **Coût** : 1.2M€ (perte revenus) + 300K€ (récupération partielle) + image de marque
 
 **Cas 2 : SaaS B2B (2024)**
-- **Problème** : Configuration par défaut, saturation connexions le jour du lancement
-- **Impact** : Service down 8h, clients majeurs perdus
+- **Problème** : Configuration par défaut, saturation connexions le jour du lancement  
+- **Impact** : Service down 8h, clients majeurs perdus  
 - **Coût** : 500K€ (perte clients) + 6 mois pour récupérer réputation
 
 **Cas 3 : Fintech (2023)**
-- **Problème** : Sécurité négligée, fuite de données
-- **Impact** : Cyberattaque, 50K utilisateurs compromis
+- **Problème** : Sécurité négligée, fuite de données  
+- **Impact** : Cyberattaque, 50K utilisateurs compromis  
 - **Coût** : 2.5M€ (amendes RGPD) + 1M€ (incident response) + class action lawsuit
 
 ### ROI de la Préparation
@@ -338,10 +338,10 @@ Investir du temps dans une mise en production rigoureuse peut sembler coûteux. 
 **Investissement** : 40-80 heures de préparation (1-2 semaines)
 
 **Bénéfices** :
-- ✅ Réduction 80% des incidents en production
-- ✅ Résolution 3× plus rapide (runbooks)
-- ✅ Confiance équipe et management
-- ✅ Conformité réglementaire (éviter amendes)
+- ✅ Réduction 80% des incidents en production  
+- ✅ Résolution 3× plus rapide (runbooks)  
+- ✅ Confiance équipe et management  
+- ✅ Conformité réglementaire (éviter amendes)  
 - ✅ Sommeil paisible 😴
 
 **ROI** : Positif dès la première semaine. Un seul incident majeur évité paie l'investissement des années.
@@ -404,55 +404,55 @@ Les 5 sous-sections suivantes vous guident **pas à pas** :
 Avant de plonger dans les détails de chaque section, voici la **checklist maître** complète :
 
 ### 🔒 Sécurité
-- [ ] Firewall configuré (seules IPs autorisées)
-- [ ] listen_addresses limité (pas `'*'`)
-- [ ] Authentification SCRAM-SHA-256 (pas MD5)
-- [ ] SSL/TLS activé pour toutes connexions
-- [ ] Certificats valides et à jour
-- [ ] Rôles et permissions (principe moindre privilège)
-- [ ] Row-Level Security (si applicable)
-- [ ] Logging et audit activés
-- [ ] Data checksums activés (PG 18 par défaut)
+- [ ] Firewall configuré (seules IPs autorisées)  
+- [ ] listen_addresses limité (pas `'*'`)  
+- [ ] Authentification SCRAM-SHA-256 (pas MD5)  
+- [ ] SSL/TLS activé pour toutes connexions  
+- [ ] Certificats valides et à jour  
+- [ ] Rôles et permissions (principe moindre privilège)  
+- [ ] Row-Level Security (si applicable)  
+- [ ] Logging et audit activés  
+- [ ] Data checksums activés (PG 18 par défaut)  
 - [ ] Scan de vulnérabilités effectué
 
 ### ⚙️ Configuration
-- [ ] shared_buffers = 25% RAM
-- [ ] effective_cache_size = 75% RAM
-- [ ] work_mem ajusté selon charge
-- [ ] maintenance_work_mem optimisé
-- [ ] max_connections dimensionné
-- [ ] max_wal_size augmenté
-- [ ] io_method = 'async' (PG 18)
-- [ ] Autovacuum configuré et activé
-- [ ] Connection pooling (PgBouncer) si nécessaire
+- [ ] shared_buffers = 25% RAM  
+- [ ] effective_cache_size = 75% RAM  
+- [ ] work_mem ajusté selon charge  
+- [ ] maintenance_work_mem optimisé  
+- [ ] max_connections dimensionné  
+- [ ] max_wal_size augmenté  
+- [ ] io_method = 'worker' ou 'io_uring' (PG 18)  
+- [ ] Autovacuum configuré et activé  
+- [ ] Connection pooling (PgBouncer) si nécessaire  
 - [ ] Configuration testée en staging
 
 ### 📊 Monitoring
-- [ ] pg_stat_statements installé
-- [ ] Prometheus + Grafana déployés
-- [ ] Dashboard de base configuré
-- [ ] Alertes critiques configurées
-- [ ] Logs centralisés
-- [ ] Contacts d'urgence à jour
-- [ ] Tests d'alertes effectués
+- [ ] pg_stat_statements installé  
+- [ ] Prometheus + Grafana déployés  
+- [ ] Dashboard de base configuré  
+- [ ] Alertes critiques configurées  
+- [ ] Logs centralisés  
+- [ ] Contacts d'urgence à jour  
+- [ ] Tests d'alertes effectués  
 - [ ] Runbook monitoring créé
 
 ### 💾 Backup & DR
-- [ ] Backups quotidiens automatisés
-- [ ] PITR configuré (archivage WAL)
-- [ ] Backups testés (restauration réussie)
-- [ ] Rétention définie (7j, 4sem, 12m)
-- [ ] Règle 3-2-1 respectée
-- [ ] Backups cloud configurés
-- [ ] Plan de DR documenté
+- [ ] Backups quotidiens automatisés  
+- [ ] PITR configuré (archivage WAL)  
+- [ ] Backups testés (restauration réussie)  
+- [ ] Rétention définie (7j, 4sem, 12m)  
+- [ ] Règle 3-2-1 respectée  
+- [ ] Backups cloud configurés  
+- [ ] Plan de DR documenté  
 - [ ] Test de DR effectué
 
 ### 📚 Documentation
-- [ ] Runbook incidents critiques créés
-- [ ] Runbook maintenance créés
-- [ ] Architecture documentée
-- [ ] Contacts d'urgence à jour
-- [ ] Procédures accessibles 24/7
+- [ ] Runbook incidents critiques créés  
+- [ ] Runbook maintenance créés  
+- [ ] Architecture documentée  
+- [ ] Contacts d'urgence à jour  
+- [ ] Procédures accessibles 24/7  
 - [ ] Formation équipe effectuée
 
 ---
@@ -474,8 +474,8 @@ Avant de mettre en production, utilisez cette **grille de décision** :
 | **Équipe formée**              | 100% équipe ops trainée   | [ ]    |
 
 **Règle de décision** :
-- ✅ **GO** : Tous les critères ≥ seuil minimum
-- ⚠️ **GO avec réserves** : 1-2 critères légèrement sous seuil, plan de rattrapage J+7
+- ✅ **GO** : Tous les critères ≥ seuil minimum  
+- ⚠️ **GO avec réserves** : 1-2 critères légèrement sous seuil, plan de rattrapage J+7  
 - ❌ **NO-GO** : 3+ critères sous seuil, ou backup non testé
 
 ---
@@ -522,15 +522,15 @@ Voici un calendrier réaliste pour une mise en production professionnelle :
 
 Gardez ces **10 principes** en tête tout au long de cette section :
 
-1. **Mesurer avant d'optimiser** : Pas de tuning à l'aveugle
-2. **Tester tout** : Config, backups, alertes, runbooks
-3. **Documenter tout** : Pour vous, pour les autres, pour dans 6 mois
-4. **Automatiser tout** : Ce qui est manuel sera oublié
-5. **Défense en profondeur** : Plusieurs couches de protection
-6. **Principe de moindre privilège** : Accès minimal nécessaire
-7. **Amélioration continue** : Itérer après chaque incident
-8. **Communication** : Équipe, management, utilisateurs
-9. **Humilité** : Apprendre des erreurs (blameless culture)
+1. **Mesurer avant d'optimiser** : Pas de tuning à l'aveugle  
+2. **Tester tout** : Config, backups, alertes, runbooks  
+3. **Documenter tout** : Pour vous, pour les autres, pour dans 6 mois  
+4. **Automatiser tout** : Ce qui est manuel sera oublié  
+5. **Défense en profondeur** : Plusieurs couches de protection  
+6. **Principe de moindre privilège** : Accès minimal nécessaire  
+7. **Amélioration continue** : Itérer après chaque incident  
+8. **Communication** : Équipe, management, utilisateurs  
+9. **Humilité** : Apprendre des erreurs (blameless culture)  
 10. **Sommeil** : Un système bien préparé = équipe sereine
 
 ---
@@ -584,26 +584,26 @@ Cette checklist est **modulable** selon :
 ## Ressources et Références
 
 ### Standards et Frameworks
-- **CIS PostgreSQL Benchmark** : https://www.cisecurity.org/benchmark/postgresql
-- **NIST Cybersecurity Framework** : https://www.nist.gov/cyberframework
+- **CIS PostgreSQL Benchmark** : https://www.cisecurity.org/benchmark/postgresql  
+- **NIST Cybersecurity Framework** : https://www.nist.gov/cyberframework  
 - **PostgreSQL Security Guide** : https://www.postgresql.org/docs/18/security.html
 
 ### Livres Recommandés
-- "PostgreSQL: Up and Running" (Regina Obe, Leo Hsu)
-- "The Art of PostgreSQL" (Dimitri Fontaine)
-- "Site Reliability Engineering" (Google)
+- "PostgreSQL: Up and Running" (Regina Obe, Leo Hsu)  
+- "The Art of PostgreSQL" (Dimitri Fontaine)  
+- "Site Reliability Engineering" (Google)  
 - "The Checklist Manifesto" (Atul Gawande)
 
 ### Outils Mentionnés
-- **PgBouncer** : Connection pooling
-- **Prometheus + Grafana** : Monitoring
-- **pgBackRest** : Backup enterprise
+- **PgBouncer** : Connection pooling  
+- **Prometheus + Grafana** : Monitoring  
+- **pgBackRest** : Backup enterprise  
 - **PGTune** : Configuration helper
 
 ### Communauté
-- **pgsql-general** : Liste de diffusion officielle
-- **r/PostgreSQL** : Subreddit actif
-- **PostgreSQL Slack** : Communauté temps réel
+- **pgsql-general** : Liste de diffusion officielle  
+- **r/PostgreSQL** : Subreddit actif  
+- **PostgreSQL Slack** : Communauté temps réel  
 - **Planet PostgreSQL** : Agrégateur de blogs
 
 ---
@@ -662,9 +662,9 @@ Créez et maintenez :
 ## Prêt ? Commençons !
 
 Vous avez maintenant :
-- ✅ Compris **pourquoi** cette checklist est critique
-- ✅ Une vue d'ensemble des **5 piliers** de la mise en production
-- ✅ Un **calendrier** et une **méthodologie** claire
+- ✅ Compris **pourquoi** cette checklist est critique  
+- ✅ Une vue d'ensemble des **5 piliers** de la mise en production  
+- ✅ Un **calendrier** et une **méthodologie** claire  
 - ✅ Des **critères Go/No-Go** pour valider votre préparation
 
 **Les 5 sections suivantes** vont vous guider **pas à pas** dans chaque domaine, avec :

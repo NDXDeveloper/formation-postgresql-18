@@ -170,7 +170,7 @@ Cela crée des compromis : un schéma optimisé pour les écritures est rarement
 
 **CQRS** (Command Query Responsibility Segregation) sépare les modèles de lecture et d'écriture :
 
-- **Commands** : Opérations qui modifient l'état (write model)
+- **Commands** : Opérations qui modifient l'état (write model)  
 - **Queries** : Opérations qui lisent l'état (read model)
 
 ```
@@ -294,21 +294,21 @@ Event Sourcing et CQRS se combinent naturellement :
 
 Vous devriez considérer Event Sourcing si :
 
-- ✅ L'audit et la traçabilité sont des exigences métier
-- ✅ Vous avez besoin de "défaire" ou "rejouer" des actions
-- ✅ Le domaine métier est naturellement événementiel
-- ✅ Vous avez des besoins de reporting complexes sur l'historique
-- ✅ Plusieurs systèmes doivent réagir aux mêmes changements
+- ✅ L'audit et la traçabilité sont des exigences métier  
+- ✅ Vous avez besoin de "défaire" ou "rejouer" des actions  
+- ✅ Le domaine métier est naturellement événementiel  
+- ✅ Vous avez des besoins de reporting complexes sur l'historique  
+- ✅ Plusieurs systèmes doivent réagir aux mêmes changements  
 - ✅ La conformité réglementaire exige un historique immuable
 
 ### Quand Éviter
 
 Event Sourcing n'est pas toujours approprié :
 
-- ❌ Applications CRUD simples sans besoin d'historique
-- ❌ Équipes sans expérience du pattern (courbe d'apprentissage)
-- ❌ Domaines où les données peuvent/doivent être supprimées (RGPD complexe)
-- ❌ Systèmes avec très faible complexité métier
+- ❌ Applications CRUD simples sans besoin d'historique  
+- ❌ Équipes sans expérience du pattern (courbe d'apprentissage)  
+- ❌ Domaines où les données peuvent/doivent être supprimées (RGPD complexe)  
+- ❌ Systèmes avec très faible complexité métier  
 - ❌ Contraintes de time-to-market très serrées
 
 ---
@@ -500,9 +500,9 @@ Event Sourcing et CQRS ajoutent de la complexité architecturale :
 
 Notre recommandation :
 
-1. **Ne pas tout migrer d'un coup** — Commencez par un domaine limité
-2. **Choisir un cas d'usage clair** — Où l'audit est déjà une exigence
-3. **Former l'équipe** — Investir dans la compréhension des patterns
+1. **Ne pas tout migrer d'un coup** — Commencez par un domaine limité  
+2. **Choisir un cas d'usage clair** — Où l'audit est déjà une exigence  
+3. **Former l'équipe** — Investir dans la compréhension des patterns  
 4. **Itérer** — Affiner l'implémentation au fil des retours
 
 ---
@@ -521,12 +521,12 @@ Dans les sections suivantes, nous allons construire pas à pas une architecture 
 
 ## Points Clés à Retenir
 
-- **CRUD** : Stocke l'état actuel, perd l'historique
-- **Event Sourcing** : Stocke les événements, dérive l'état
-- **CQRS** : Sépare les modèles de lecture et d'écriture
-- **Event Store** : Base append-only pour les événements
-- **Projection** : Vue dérivée optimisée pour un cas d'usage
-- **PostgreSQL** : Excellente plateforme grâce à JSONB, NOTIFY, Logical Decoding
+- **CRUD** : Stocke l'état actuel, perd l'historique  
+- **Event Sourcing** : Stocke les événements, dérive l'état  
+- **CQRS** : Sépare les modèles de lecture et d'écriture  
+- **Event Store** : Base append-only pour les événements  
+- **Projection** : Vue dérivée optimisée pour un cas d'usage  
+- **PostgreSQL** : Excellente plateforme grâce à JSONB, NOTIFY, Logical Decoding  
 - **Complexité** : À utiliser quand les bénéfices justifient le coût
 
 ---

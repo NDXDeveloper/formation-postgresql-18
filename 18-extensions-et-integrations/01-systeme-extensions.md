@@ -18,17 +18,17 @@ Une **extension** est un module additionnel qui ajoute de nouvelles fonctionnali
 
 Les extensions permettent de :
 
-1. **Étendre les fonctionnalités** : Ajouter des capacités que PostgreSQL ne possède pas nativement (exemple : traitement géospatial, recherche vectorielle)
-2. **Optimiser pour des cas d'usage spécifiques** : Adapter PostgreSQL à des besoins particuliers (séries temporelles, traitement de graphes)
-3. **Maintenir un cœur stable** : Le système principal reste léger et stable, tandis que les fonctionnalités avancées sont optionnelles
+1. **Étendre les fonctionnalités** : Ajouter des capacités que PostgreSQL ne possède pas nativement (exemple : traitement géospatial, recherche vectorielle)  
+2. **Optimiser pour des cas d'usage spécifiques** : Adapter PostgreSQL à des besoins particuliers (séries temporelles, traitement de graphes)  
+3. **Maintenir un cœur stable** : Le système principal reste léger et stable, tandis que les fonctionnalités avancées sont optionnelles  
 4. **Bénéficier de l'écosystème** : Profiter de milliers d'extensions développées par la communauté mondiale
 
 ### Exemples Concrets d'Extensions Populaires
 
-- **PostGIS** : Transforme PostgreSQL en base de données géospatiale capable de gérer des coordonnées GPS, des cartes, des calculs de distances
-- **pgvector** : Permet de stocker et rechercher des vecteurs (embeddings) pour des applications d'intelligence artificielle
-- **pg_stat_statements** : Collecte des statistiques sur toutes les requêtes SQL exécutées (essentiel pour le monitoring)
-- **uuid-ossp** : Génère des identifiants uniques universels (UUID)
+- **PostGIS** : Transforme PostgreSQL en base de données géospatiale capable de gérer des coordonnées GPS, des cartes, des calculs de distances  
+- **pgvector** : Permet de stocker et rechercher des vecteurs (embeddings) pour des applications d'intelligence artificielle  
+- **pg_stat_statements** : Collecte des statistiques sur toutes les requêtes SQL exécutées (essentiel pour le monitoring)  
+- **uuid-ossp** : Génère des identifiants uniques universels (UUID)  
 - **hstore** : Permet de stocker des paires clé-valeur directement dans une colonne
 
 ---
@@ -42,8 +42,8 @@ Le système d'extensions PostgreSQL repose sur plusieurs composants :
 #### 1. Les Fichiers d'Extension
 Les extensions sont constituées de fichiers installés sur le serveur PostgreSQL :
 
-- **Fichiers de contrôle (.control)** : Contiennent les métadonnées de l'extension (nom, version, dépendances)
-- **Scripts SQL (.sql)** : Définissent les objets créés par l'extension (fonctions, types, tables)
+- **Fichiers de contrôle (.control)** : Contiennent les métadonnées de l'extension (nom, version, dépendances)  
+- **Scripts SQL (.sql)** : Définissent les objets créés par l'extension (fonctions, types, tables)  
 - **Bibliothèques partagées (.so ou .dll)** : Contiennent du code compilé pour les fonctions performantes
 
 **Emplacement typique** : `/usr/share/postgresql/<version>/extension/`
@@ -51,7 +51,7 @@ Les extensions sont constituées de fichiers installés sur le serveur PostgreSQ
 #### 2. Le Catalogue Système
 Une fois installée dans une base de données, l'extension est enregistrée dans le catalogue système :
 
-- **pg_extension** : Liste des extensions installées dans la base
+- **pg_extension** : Liste des extensions installées dans la base  
 - **pg_available_extensions** : Extensions disponibles sur le serveur
 
 #### 3. La Portée d'une Extension
@@ -81,23 +81,23 @@ Avant d'installer une extension, il faut savoir ce qui est disponible sur le ser
 
 **Requête SQL** :
 ```sql
-SELECT name, default_version, comment
-FROM pg_available_extensions
-ORDER BY name;
+SELECT name, default_version, comment  
+FROM pg_available_extensions  
+ORDER BY name;  
 ```
 
 **Ce que vous verrez** :
 ```
 name              | default_version | comment
 ------------------+-----------------+------------------------------------------
-adminpack         | 2.1             | administrative functions for PostgreSQL
-bloom             | 1.0             | bloom access method - signature file...
-btree_gin         | 1.3             | support for indexing common datatypes...
-hstore            | 1.8             | data type for storing sets of key/value...
-pg_stat_statements| 1.11            | track execution statistics of all SQL...
-pgcrypto          | 1.3             | cryptographic functions
-postgis           | 3.5.0           | PostGIS geometry and geography spatial...
-uuid-ossp         | 1.1             | generate universally unique identifiers
+adminpack         | 2.1             | administrative functions for PostgreSQL  
+bloom             | 1.0             | bloom access method - signature file...  
+btree_gin         | 1.3             | support for indexing common datatypes...  
+hstore            | 1.8             | data type for storing sets of key/value...  
+pg_stat_statements| 1.11            | track execution statistics of all SQL...  
+pgcrypto          | 1.3             | cryptographic functions  
+postgis           | 3.5.0           | PostGIS geometry and geography spatial...  
+uuid-ossp         | 1.1             | generate universally unique identifiers  
 ```
 
 ### 2. Installer une Extension
@@ -134,19 +134,19 @@ Seuls les **superutilisateurs** (ou les utilisateurs avec le privilège `CREATE`
 SELECT extname AS "Extension",
        extversion AS "Version",
        nspname AS "Schema"
-FROM pg_extension e
-JOIN pg_namespace n ON e.extnamespace = n.oid
-WHERE extname != 'plpgsql'  -- plpgsql est toujours présent par défaut
-ORDER BY extname;
+FROM pg_extension e  
+JOIN pg_namespace n ON e.extnamespace = n.oid  
+WHERE extname != 'plpgsql'  -- plpgsql est toujours présent par défaut  
+ORDER BY extname;  
 ```
 
 **Résultat typique** :
 ```
 Extension          | Version | Schema
 -------------------+---------+--------
-hstore             | 1.8     | public
-pg_stat_statements | 1.11    | public
-uuid-ossp          | 1.1     | public
+hstore             | 1.8     | public  
+pg_stat_statements | 1.11    | public  
+uuid-ossp          | 1.1     | public  
 ```
 
 **Commande alternative dans psql** :
@@ -207,8 +207,8 @@ CREATE EXTENSION postgis_topology;
 
 **Si postgis n'est pas installé**, PostgreSQL retournera une erreur :
 ```
-ERROR: required extension "postgis" is not installed
-HINT: Use CREATE EXTENSION ... CASCADE to install required extensions too.
+ERROR: required extension "postgis" is not installed  
+HINT: Use CREATE EXTENSION ... CASCADE to install required extensions too.  
 ```
 
 **Solution avec CASCADE** :
@@ -222,11 +222,11 @@ CREATE EXTENSION postgis_topology CASCADE;
 ```sql
 SELECT e1.extname AS "Extension",
        e2.extname AS "Depends on"
-FROM pg_extension e1
-LEFT JOIN pg_depend d ON d.objid = e1.oid AND d.deptype = 'e'
-LEFT JOIN pg_extension e2 ON d.refobjid = e2.oid
-WHERE e1.extname != 'plpgsql'
-ORDER BY e1.extname;
+FROM pg_extension e1  
+LEFT JOIN pg_depend d ON d.objid = e1.oid AND d.deptype = 'e'  
+LEFT JOIN pg_extension e2 ON d.refobjid = e2.oid  
+WHERE e1.extname != 'plpgsql'  
+ORDER BY e1.extname;  
 ```
 
 ---
@@ -255,8 +255,8 @@ CREATE EXTENSION hstore SCHEMA extensions;
 SELECT extensions.hstore('key1', 'value1');
 
 -- Ou en ajustant le search_path
-SET search_path TO public, extensions;
-SELECT hstore('key1', 'value1');
+SET search_path TO public, extensions;  
+SELECT hstore('key1', 'value1');  
 ```
 
 ### Extensions et Relocatabilité
@@ -280,12 +280,12 @@ PostgreSQL inclut un ensemble d'extensions appelées **contrib** (contribution).
 
 **Exemples d'extensions contrib populaires** :
 
-- **pg_stat_statements** : Statistiques de requêtes
-- **pgcrypto** : Fonctions cryptographiques
-- **btree_gin**, **btree_gist** : Types d'index avancés
-- **uuid-ossp** : Génération d'UUID
-- **hstore** : Stockage clé-valeur
-- **citext** : Type texte insensible à la casse
+- **pg_stat_statements** : Statistiques de requêtes  
+- **pgcrypto** : Fonctions cryptographiques  
+- **btree_gin**, **btree_gist** : Types d'index avancés  
+- **uuid-ossp** : Génération d'UUID  
+- **hstore** : Stockage clé-valeur  
+- **citext** : Type texte insensible à la casse  
 - **pg_trgm** : Recherche de similarité de texte (trigrams)
 
 **Activation** :
@@ -300,10 +300,10 @@ Ce sont des extensions développées par la communauté ou des entreprises tierc
 
 **Exemples d'extensions tierces majeures** :
 
-- **PostGIS** : Géospatial
-- **TimescaleDB** : Séries temporelles
-- **pgvector** : Recherche vectorielle/IA
-- **Citus** : Distribution et parallélisation
+- **PostGIS** : Géospatial  
+- **TimescaleDB** : Séries temporelles  
+- **pgvector** : Recherche vectorielle/IA  
+- **Citus** : Distribution et parallélisation  
 - **pg_partman** : Gestion automatisée de partitions
 
 **Installation en deux étapes** :
@@ -331,10 +331,10 @@ Une fois une extension installée, vous pouvez explorer ce qu'elle a créé.
 ```sql
 SELECT p.proname AS "Function Name",
        pg_get_function_identity_arguments(p.oid) AS "Arguments"
-FROM pg_proc p
-JOIN pg_depend d ON d.objid = p.oid
-JOIN pg_extension e ON d.refobjid = e.oid
-WHERE e.extname = 'uuid-ossp'
+FROM pg_proc p  
+JOIN pg_depend d ON d.objid = p.oid  
+JOIN pg_extension e ON d.refobjid = e.oid  
+WHERE e.extname = 'uuid-ossp'  
   AND d.deptype = 'e'
 ORDER BY p.proname;
 ```
@@ -343,11 +343,11 @@ ORDER BY p.proname;
 ```
 Function Name      | Arguments
 -------------------+------------------
-uuid_generate_v1   |
-uuid_generate_v1mc |
-uuid_generate_v3   | namespace uuid, name text
-uuid_generate_v4   |
-uuid_generate_v5   | namespace uuid, name text
+uuid_generate_v1   |  
+uuid_generate_v1mc |  
+uuid_generate_v3   | namespace uuid, name text  
+uuid_generate_v4   |  
+uuid_generate_v5   | namespace uuid, name text  
 ```
 
 **Commande psql simplifiée** :
@@ -377,10 +377,10 @@ SELECT similarity('PostgreSQL', 'Postgres');
 -- Résultat : 0.55555557 (55% de similarité)
 
 -- Trouver des textes similaires
-SELECT word
-FROM words_table
-WHERE word % 'PostgreSQL'  -- Opérateur de similarité
-ORDER BY similarity(word, 'PostgreSQL') DESC;
+SELECT word  
+FROM words_table  
+WHERE word % 'PostgreSQL'  -- Opérateur de similarité  
+ORDER BY similarity(word, 'PostgreSQL') DESC;  
 ```
 
 ---
@@ -394,18 +394,18 @@ ORDER BY similarity(word, 'PostgreSQL') DESC;
 ❌ **À éviter** :
 ```sql
 -- Installer toutes les extensions "au cas où"
-CREATE EXTENSION postgis;
-CREATE EXTENSION timescaledb;
-CREATE EXTENSION pgvector;
-CREATE EXTENSION pg_partman;
+CREATE EXTENSION postgis;  
+CREATE EXTENSION timescaledb;  
+CREATE EXTENSION pgvector;  
+CREATE EXTENSION pg_partman;  
 -- ... alors que vous n'utilisez aucune de ces fonctionnalités
 ```
 
 ✅ **Recommandé** :
 ```sql
 -- Installer uniquement ce qui est nécessaire pour votre application
-CREATE EXTENSION IF NOT EXISTS pg_stat_statements; -- Monitoring
-CREATE EXTENSION IF NOT EXISTS uuid-ossp; -- Génération d'identifiants
+CREATE EXTENSION IF NOT EXISTS pg_stat_statements; -- Monitoring  
+CREATE EXTENSION IF NOT EXISTS uuid-ossp; -- Génération d'identifiants  
 ```
 
 ### 2. Utiliser IF NOT EXISTS
@@ -432,10 +432,10 @@ SELECT
         THEN 'Built-in (contrib)'
         ELSE 'External'
     END AS "Type"
-FROM pg_extension e
-JOIN pg_namespace n ON e.extnamespace = n.oid
-WHERE extname != 'plpgsql'
-ORDER BY extname;
+FROM pg_extension e  
+JOIN pg_namespace n ON e.extnamespace = n.oid  
+WHERE extname != 'plpgsql'  
+ORDER BY extname;  
 ```
 
 **Créez également un fichier README** listant :
@@ -448,10 +448,10 @@ ORDER BY extname;
 
 Avant de mettre à jour une extension en production :
 
-1. Créez un environnement de test identique
-2. Testez la mise à jour
-3. Vérifiez que toutes vos requêtes fonctionnent toujours
-4. Lisez le changelog de l'extension
+1. Créez un environnement de test identique  
+2. Testez la mise à jour  
+3. Vérifiez que toutes vos requêtes fonctionnent toujours  
+4. Lisez le changelog de l'extension  
 5. Seulement ensuite, appliquez en production
 
 ### 5. Gérer les Extensions dans le Contrôle de Version
@@ -471,9 +471,9 @@ migrations/
 -- Version: 1.0
 -- Date: 2025-11-22
 
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-CREATE EXTENSION IF NOT EXISTS "pg_stat_statements";
-CREATE EXTENSION IF NOT EXISTS "pg_trgm";
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";  
+CREATE EXTENSION IF NOT EXISTS "pg_stat_statements";  
+CREATE EXTENSION IF NOT EXISTS "pg_trgm";  
 
 -- PostGIS (nécessite installation système préalable)
 -- sudo apt install postgresql-18-postgis-3
@@ -502,8 +502,8 @@ Certaines extensions sont en développement actif et peuvent :
 
 Les extensions suivent généralement le **Semantic Versioning** (SemVer) : `MAJEUR.MINEUR.PATCH`
 
-- **MAJEUR** : Changements incompatibles avec les versions précédentes
-- **MINEUR** : Nouvelles fonctionnalités, rétrocompatibles
+- **MAJEUR** : Changements incompatibles avec les versions précédentes  
+- **MINEUR** : Nouvelles fonctionnalités, rétrocompatibles  
 - **PATCH** : Corrections de bugs, rétrocompatibles
 
 **Exemple** : `postgis 3.5.1`
@@ -528,16 +528,16 @@ PostgreSQL utilise automatiquement ces scripts lors d'un `ALTER EXTENSION UPDATE
 ### Vérifier la Version Installée
 
 ```sql
-SELECT extname, extversion
-FROM pg_extension
-WHERE extname = 'postgis';
+SELECT extname, extversion  
+FROM pg_extension  
+WHERE extname = 'postgis';  
 ```
 
 **Comparer avec la version disponible** :
 ```sql
-SELECT name, installed_version, default_version
-FROM pg_available_extensions
-WHERE name = 'postgis';
+SELECT name, installed_version, default_version  
+FROM pg_available_extensions  
+WHERE name = 'postgis';  
 ```
 
 ---
@@ -548,8 +548,8 @@ WHERE name = 'postgis';
 
 Les extensions peuvent exécuter du code arbitraire sur le serveur. C'est pourquoi :
 
-1. **Seuls les superutilisateurs** peuvent installer des extensions (par défaut)
-2. **Les extensions de confiance** peuvent être installées par des non-superutilisateurs dans PostgreSQL 13+
+1. **Seuls les superutilisateurs** peuvent installer des extensions (par défaut)  
+2. **Les extensions de confiance** peuvent être installées par des non-superutilisateurs dans PostgreSQL 13+  
 3. **Auditez le code** des extensions tierces avant installation en production
 
 ### Extensions de Confiance (Trusted Extensions)
@@ -558,9 +558,9 @@ Depuis PostgreSQL 13, certaines extensions sont marquées comme "trusted" et peu
 
 **Vérifier si une extension est trusted** :
 ```sql
-SELECT name, trusted
-FROM pg_available_extensions
-WHERE name = 'pg_stat_statements';
+SELECT name, trusted  
+FROM pg_available_extensions  
+WHERE name = 'pg_stat_statements';  
 ```
 
 **Extensions trusted communes** :
@@ -572,10 +572,10 @@ WHERE name = 'pg_stat_statements';
 
 ### Recommandations de Sécurité
 
-1. **Utilisez uniquement des sources fiables** : Extensions officielles contrib, PGXN (PostgreSQL Extension Network), dépôts GitHub bien maintenus
-2. **Vérifiez les signatures** quand disponibles
-3. **Lisez le code source** des extensions tierces (surtout si elles contiennent du C)
-4. **Testez en isolation** avant la production
+1. **Utilisez uniquement des sources fiables** : Extensions officielles contrib, PGXN (PostgreSQL Extension Network), dépôts GitHub bien maintenus  
+2. **Vérifiez les signatures** quand disponibles  
+3. **Lisez le code source** des extensions tierces (surtout si elles contiennent du C)  
+4. **Testez en isolation** avant la production  
 5. **Suivez les CVE** (Common Vulnerabilities and Exposures) des extensions que vous utilisez
 
 ---
@@ -617,12 +617,12 @@ ALTER EXTENSION postgis UPDATE;
 **Solution** : Mise à jour incrémentale ou réinstallation
 ```sql
 -- Option 1 : Vérifier les chemins disponibles
-SELECT * FROM pg_extension_update_paths('postgis')
-WHERE source = '3.5.0';
+SELECT * FROM pg_extension_update_paths('postgis')  
+WHERE source = '3.5.0';  
 
 -- Option 2 : Mise à jour par étapes
-ALTER EXTENSION postgis UPDATE TO '3.5.1';
-ALTER EXTENSION postgis UPDATE TO '3.5.2';
+ALTER EXTENSION postgis UPDATE TO '3.5.1';  
+ALTER EXTENSION postgis UPDATE TO '3.5.2';  
 -- ... jusqu'à la version souhaitée
 ```
 
@@ -638,8 +638,8 @@ DROP EXTENSION postgis;
 **Solution** :
 ```sql
 -- Option 1 : Supprimer les dépendances d'abord
-DROP EXTENSION postgis_topology;
-DROP EXTENSION postgis;
+DROP EXTENSION postgis_topology;  
+DROP EXTENSION postgis;  
 
 -- Option 2 : Utiliser CASCADE (ATTENTION : supprime TOUT)
 DROP EXTENSION postgis CASCADE;
@@ -673,8 +673,8 @@ pg_restore -d mydb backup.dump
 - pg_trgm : Index supplémentaires uniquement si créés
 
 **Extensions avec impact** :
-- **pg_stat_statements** : Surcharge de 5-10% pour collecter toutes les statistiques (mais indispensable pour le monitoring)
-- **TimescaleDB** : Restructure le stockage des données (hypertables)
+- **pg_stat_statements** : Surcharge de 5-10% pour collecter toutes les statistiques (mais indispensable pour le monitoring)  
+- **TimescaleDB** : Restructure le stockage des données (hypertables)  
 - **PostGIS** : Ajoute des milliers de fonctions et types
 
 ### Optimiser l'Utilisation des Extensions
@@ -682,8 +682,8 @@ pg_restore -d mydb backup.dump
 1. **pg_stat_statements** : Configurez le nombre de requêtes suivies
 ```sql
 -- Dans postgresql.conf
-pg_stat_statements.max = 10000  -- Nombre max de requêtes distinctes suivies
-pg_stat_statements.track = top  -- 'all', 'top', 'none'
+pg_stat_statements.max = 10000  -- Nombre max de requêtes distinctes suivies  
+pg_stat_statements.track = top  -- 'all', 'top', 'none'  
 ```
 
 2. **PostGIS** : Utilisez les index spatiaux
@@ -721,8 +721,8 @@ CREATE TABLE users (
 );
 
 -- Insertion automatique d'UUID
-INSERT INTO users (username, email)
-VALUES ('alice', 'alice@example.com');
+INSERT INTO users (username, email)  
+VALUES ('alice', 'alice@example.com');  
 
 SELECT id FROM users;
 -- Résultat : a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11
@@ -746,11 +746,11 @@ CREATE TABLE products (
 CREATE INDEX idx_products_name_trgm ON products USING GIN (name gin_trgm_ops);
 
 -- Recherche floue
-SELECT name, similarity(name, 'PostgreSQL') AS sim
-FROM products
-WHERE name % 'PostgreSQL'  -- Opérateur de similarité
-ORDER BY sim DESC
-LIMIT 10;
+SELECT name, similarity(name, 'PostgreSQL') AS sim  
+FROM products  
+WHERE name % 'PostgreSQL'  -- Opérateur de similarité  
+ORDER BY sim DESC  
+LIMIT 10;  
 ```
 
 ### Exemple 3 : Cryptographie avec pgcrypto
@@ -769,13 +769,13 @@ CREATE TABLE secure_users (
 );
 
 -- Insérer un utilisateur avec mot de passe haché
-INSERT INTO secure_users (username, password_hash)
-VALUES ('bob', crypt('my_secure_password', gen_salt('bf')));  -- bcrypt
+INSERT INTO secure_users (username, password_hash)  
+VALUES ('bob', crypt('my_secure_password', gen_salt('bf')));  -- bcrypt  
 
 -- Vérifier un mot de passe
-SELECT username
-FROM secure_users
-WHERE username = 'bob'
+SELECT username  
+FROM secure_users  
+WHERE username = 'bob'  
   AND password_hash = crypt('my_secure_password', password_hash);
 -- Retourne 'bob' si le mot de passe est correct
 ```
@@ -786,8 +786,8 @@ WHERE username = 'bob'
 
 ### Documentation Officielle
 
-- **Manuel PostgreSQL** : https://www.postgresql.org/docs/current/extend-extensions.html
-- **PGXN (PostgreSQL Extension Network)** : https://pgxn.org/
+- **Manuel PostgreSQL** : https://www.postgresql.org/docs/current/extend-extensions.html  
+- **PGXN (PostgreSQL Extension Network)** : https://pgxn.org/  
 - **Liste contrib** : https://www.postgresql.org/docs/current/contrib.html
 
 ### Extensions Incontournables à Connaître
@@ -807,9 +807,9 @@ WHERE username = 'bob'
 
 ### Communauté et Support
 
-- **Mailing list pgsql-general** : Pour poser des questions
-- **Stack Overflow** : Tag [postgresql] + [postgresql-extensions]
-- **GitHub** : Beaucoup d'extensions ont leur dépôt officiel
+- **Mailing list pgsql-general** : Pour poser des questions  
+- **Stack Overflow** : Tag [postgresql] + [postgresql-extensions]  
+- **GitHub** : Beaucoup d'extensions ont leur dépôt officiel  
 - **Reddit** : r/PostgreSQL
 
 ---
@@ -818,18 +818,18 @@ WHERE username = 'bob'
 
 Le système d'extensions de PostgreSQL est l'une des raisons majeures de son succès. Il permet :
 
-- ✅ **Flexibilité** : Adaptez PostgreSQL à vos besoins précis
-- ✅ **Stabilité** : Le cœur reste stable, les innovations se font en périphérie
-- ✅ **Communauté** : Des milliers de développeurs contribuent des extensions
+- ✅ **Flexibilité** : Adaptez PostgreSQL à vos besoins précis  
+- ✅ **Stabilité** : Le cœur reste stable, les innovations se font en périphérie  
+- ✅ **Communauté** : Des milliers de développeurs contribuent des extensions  
 - ✅ **Performance** : N'activez que ce dont vous avez besoin
 
 **Principes à retenir** :
 
-1. Les extensions s'installent **par base de données**
-2. Seuls les **superutilisateurs** peuvent les installer (sauf trusted extensions)
-3. Utilisez `IF NOT EXISTS` dans vos scripts
-4. Documentez les extensions utilisées
-5. Testez les mises à jour avant la production
+1. Les extensions s'installent **par base de données**  
+2. Seuls les **superutilisateurs** peuvent les installer (sauf trusted extensions)  
+3. Utilisez `IF NOT EXISTS` dans vos scripts  
+4. Documentez les extensions utilisées  
+5. Testez les mises à jour avant la production  
 6. N'installez que ce dont vous avez réellement besoin
 
 Dans les prochains chapitres, nous explorerons en détail certaines extensions majeures comme **PostGIS** (18.2), **Full-Text Search** (18.3) et **pgvector** (18.6).

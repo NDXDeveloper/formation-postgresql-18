@@ -321,16 +321,16 @@ Un monolithe bien conçu (parfois appelé "monolithe modulaire") reste souvent l
 - Les applications avec des exigences de cohérence forte
 - Les projets avec des contraintes budgétaires
 
-> *"Si vous ne pouvez pas construire un monolithe bien structuré, qu'est-ce qui vous fait croire que vous pouvez construire un ensemble de microservices bien structurés ?"*
+> *"Si vous ne pouvez pas construire un monolithe bien structuré, qu'est-ce qui vous fait croire que vous pouvez construire un ensemble de microservices bien structurés ?"*  
 > — Simon Brown
 
 ### L'Approche Progressive
 
 La sagesse recommande souvent de :
 
-1. **Commencer** par un monolithe modulaire bien structuré
-2. **Identifier** les domaines qui bénéficieraient d'une extraction
-3. **Extraire** progressivement les services quand le besoin se fait sentir
+1. **Commencer** par un monolithe modulaire bien structuré  
+2. **Identifier** les domaines qui bénéficieraient d'une extraction  
+3. **Extraire** progressivement les services quand le besoin se fait sentir  
 4. **Éviter** de sur-architecturer dès le départ
 
 ---
@@ -382,10 +382,10 @@ Dans les sections suivantes, nous explorerons chaque stratégie en détail, avec
 
 ## Points Clés à Retenir
 
-- **Microservices** : Services autonomes, chacun responsable d'un domaine métier
-- **Défi principal** : La gestion des données distribuées (cohérence, transactions, requêtes)
-- **Trois stratégies clés** : Organisation des bases, transactions distribuées, fédération
-- **Complexité** : Les microservices ne sont pas toujours la bonne solution
+- **Microservices** : Services autonomes, chacun responsable d'un domaine métier  
+- **Défi principal** : La gestion des données distribuées (cohérence, transactions, requêtes)  
+- **Trois stratégies clés** : Organisation des bases, transactions distribuées, fédération  
+- **Complexité** : Les microservices ne sont pas toujours la bonne solution  
 - **PostgreSQL** : Parfaitement adapté aux architectures modernes grâce à sa flexibilité
 
 ---

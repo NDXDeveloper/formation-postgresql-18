@@ -94,8 +94,8 @@ PostgreSQL peut être déployé de quatre manières fondamentalement différente
 | **Maturité** | ⭐⭐⭐⭐⭐ 30+ ans | ⭐⭐⭐⭐⭐ 20+ ans | ⭐⭐⭐⭐ 10+ ans | ⭐⭐⭐⭐ 8+ ans |
 
 **Légende :**
-- ⭐ = Nombre d'étoiles indique le niveau de qualité/facilité
-- €€€ = Nombre de symboles € indique le niveau de coût
+- ⭐ = Nombre d'étoiles indique le niveau de qualité/facilité  
+- €€€ = Nombre de symboles € indique le niveau de coût  
 - ⚙️ = Configuration/action manuelle nécessaire
 
 ### Visualisation des Trade-offs
@@ -496,9 +496,9 @@ Phase 4 : Enterprise
          ↓
 Étape 3 : Orchestrer (Kubernetes)
 
-Durée : 3-6 mois
-Risque : Moyen
-Bénéfice : Agilité ++
+Durée : 3-6 mois  
+Risque : Moyen  
+Bénéfice : Agilité ++  
 ```
 
 **Pattern 2 : Blue/Green (VM → K8s)**
@@ -512,12 +512,12 @@ Infrastructure Nouvelle (Green)
 ├─ PostgreSQL K8s + Operator
 └─ Applications (migrées progressivement)
 
-Basculement progressif par service
-Rollback facile si problème
+Basculement progressif par service  
+Rollback facile si problème  
 
-Durée : 6-12 mois
-Risque : Faible
-Bénéfice : Migration sûre
+Durée : 6-12 mois  
+Risque : Faible  
+Bénéfice : Migration sûre  
 ```
 
 **Pattern 3 : Strangler Fig (Legacy → Modern)**
@@ -531,9 +531,9 @@ Migration app par app vers nouvelle DB
          ↓
 Décommissionnement legacy
 
-Durée : 12-24 mois
-Risque : Faible
-Bénéfice : Pas de big bang, progressif
+Durée : 12-24 mois  
+Risque : Faible  
+Bénéfice : Pas de big bang, progressif  
 ```
 
 ---
@@ -543,60 +543,60 @@ Bénéfice : Pas de big bang, progressif
 ### Bare Metal
 
 **Facteurs Clés de Succès :**
-- ✅ Expertise matériel et tuning système
-- ✅ Monitoring infrastructure proactif
-- ✅ Contrats maintenance matériel 24/7
-- ✅ Procédures backup/restore éprouvées
-- ✅ Documentation runbooks complète
+- ✅ Expertise matériel et tuning système  
+- ✅ Monitoring infrastructure proactif  
+- ✅ Contrats maintenance matériel 24/7  
+- ✅ Procédures backup/restore éprouvées  
+- ✅ Documentation runbooks complète  
 - ✅ Équipe ops senior disponible
 
 **Risques Majeurs :**
-- ⚠️ SPOF (Single Point of Failure) si pas de HA
-- ⚠️ Scaling lent (commande matériel = semaines)
+- ⚠️ SPOF (Single Point of Failure) si pas de HA  
+- ⚠️ Scaling lent (commande matériel = semaines)  
 - ⚠️ Coûts fixes élevés même à faible charge
 
 ### Virtual Machines
 
 **Facteurs Clés de Succès :**
-- ✅ Équipe maîtrisant hyperviseur choisi
-- ✅ Stockage performant (SAN/vSAN)
-- ✅ Politique snapshots claire
-- ✅ Monitoring VMs + hôtes
+- ✅ Équipe maîtrisant hyperviseur choisi  
+- ✅ Stockage performant (SAN/vSAN)  
+- ✅ Politique snapshots claire  
+- ✅ Monitoring VMs + hôtes  
 - ✅ Automatisation (Terraform, Ansible)
 
 **Risques Majeurs :**
-- ⚠️ Overcommit CPU/RAM → dégradation performance
-- ⚠️ Noisy neighbors (voisins bruyants)
+- ⚠️ Overcommit CPU/RAM → dégradation performance  
+- ⚠️ Noisy neighbors (voisins bruyants)  
 - ⚠️ Snapshots mal utilisés → corruption données
 
 ### Conteneurs
 
 **Facteurs Clés de Succès :**
-- ✅ Gestion volumes persistants maîtrisée
-- ✅ Images Docker optimisées et sécurisées
-- ✅ Orchestration (au minimum Docker Compose)
-- ✅ Stratégie backup volumes
+- ✅ Gestion volumes persistants maîtrisée  
+- ✅ Images Docker optimisées et sécurisées  
+- ✅ Orchestration (au minimum Docker Compose)  
+- ✅ Stratégie backup volumes  
 - ✅ Monitoring conteneurs (cAdvisor, etc.)
 
 **Risques Majeurs :**
-- ⚠️ Perte données si volumes mal configurés
-- ⚠️ Réseau complexe → problèmes connectivité
+- ⚠️ Perte données si volumes mal configurés  
+- ⚠️ Réseau complexe → problèmes connectivité  
 - ⚠️ Sécurité conteneurs si mal configurés
 
 ### Kubernetes
 
 **Facteurs Clés de Succès :**
-- ✅ Expertise Kubernetes avancée
-- ✅ Operator PostgreSQL choisi et maîtrisé
-- ✅ StorageClass performant configuré
-- ✅ Monitoring natif (Prometheus/Grafana)
-- ✅ GitOps / Infrastructure as Code
+- ✅ Expertise Kubernetes avancée  
+- ✅ Operator PostgreSQL choisi et maîtrisé  
+- ✅ StorageClass performant configuré  
+- ✅ Monitoring natif (Prometheus/Grafana)  
+- ✅ GitOps / Infrastructure as Code  
 - ✅ Runbooks incidents documentés
 
 **Risques Majeurs :**
-- ⚠️ Complexité → erreurs configuration critiques
-- ⚠️ Debugging multi-couches difficile
-- ⚠️ Dépendance Operator (bugs, maintenance)
+- ⚠️ Complexité → erreurs configuration critiques  
+- ⚠️ Debugging multi-couches difficile  
+- ⚠️ Dépendance Operator (bugs, maintenance)  
 - ⚠️ Coût ressources cluster management
 
 ---
@@ -606,36 +606,36 @@ Bénéfice : Pas de big bang, progressif
 ### Questions à Se Poser
 
 **1. Contexte Organisationnel**
-- [ ] Quelle est la taille de notre équipe technique ? (1-5 / 5-20 / 20-50 / 50+)
-- [ ] Quel est notre niveau d'expertise ? (Débutant / Intermédiaire / Avancé / Expert)
-- [ ] Avons-nous déjà une infrastructure existante ? (Aucune / VM / Conteneurs / K8s)
-- [ ] Quel est notre budget infrastructure annuel ? (< 50k€ / 50-200k€ / 200-500k€ / 500k€+)
+- [ ] Quelle est la taille de notre équipe technique ? (1-5 / 5-20 / 20-50 / 50+)  
+- [ ] Quel est notre niveau d'expertise ? (Débutant / Intermédiaire / Avancé / Expert)  
+- [ ] Avons-nous déjà une infrastructure existante ? (Aucune / VM / Conteneurs / K8s)  
+- [ ] Quel est notre budget infrastructure annuel ? (< 50k€ / 50-200k€ / 200-500k€ / 500k€+)  
 - [ ] Quelle est notre culture d'entreprise ? (Traditionnelle / Agile / DevOps / Cloud-Native)
 
 **2. Besoins Techniques**
-- [ ] Quelle performance requise ? (Standard / Haute / Très haute / Extrême)
-- [ ] Quelle disponibilité cible ? (99% / 99.9% / 99.99% / 99.999%)
-- [ ] Volume de données actuel ? (< 100GB / 100GB-1TB / 1-10TB / 10TB+)
-- [ ] Croissance prévue sur 3 ans ? (Stable / 2× / 5× / 10×+)
+- [ ] Quelle performance requise ? (Standard / Haute / Très haute / Extrême)  
+- [ ] Quelle disponibilité cible ? (99% / 99.9% / 99.99% / 99.999%)  
+- [ ] Volume de données actuel ? (< 100GB / 100GB-1TB / 1-10TB / 10TB+)  
+- [ ] Croissance prévue sur 3 ans ? (Stable / 2× / 5× / 10×+)  
 - [ ] Nombre d'environnements ? (1 prod / +staging / +dev / +multiples)
 
 **3. Contraintes et Exigences**
-- [ ] Avons-nous des contraintes réglementaires ? (RGPD / HDS / PCI-DSS / Autre)
-- [ ] Données on-premise obligatoires ? (Oui / Non / Hybride possible)
-- [ ] Besoin multi-cloud/portabilité ? (Non / Souhaitable / Obligatoire)
-- [ ] Fenêtre de maintenance acceptable ? (Quotidienne / Hebdo / Mensuelle / Jamais)
+- [ ] Avons-nous des contraintes réglementaires ? (RGPD / HDS / PCI-DSS / Autre)  
+- [ ] Données on-premise obligatoires ? (Oui / Non / Hybride possible)  
+- [ ] Besoin multi-cloud/portabilité ? (Non / Souhaitable / Obligatoire)  
+- [ ] Fenêtre de maintenance acceptable ? (Quotidienne / Hebdo / Mensuelle / Jamais)  
 - [ ] Budget formation équipe disponible ? (Limité / Moyen / Important)
 
 **4. Charge de Travail**
-- [ ] Type de charge principale ? (OLTP / OLAP / Mixte / Time-series)
-- [ ] Charge prévisible ou variable ? (Stable / Variable / Pics / Imprévisible)
-- [ ] Latence cible ? (< 1ms / < 10ms / < 100ms / < 1s)
+- [ ] Type de charge principale ? (OLTP / OLAP / Mixte / Time-series)  
+- [ ] Charge prévisible ou variable ? (Stable / Variable / Pics / Imprévisible)  
+- [ ] Latence cible ? (< 1ms / < 10ms / < 100ms / < 1s)  
 - [ ] Besoin scaling horizontal ? (Non / Read replicas / Sharding)
 
 **5. Opérations**
-- [ ] Fréquence déploiements ? (Mensuelle / Hebdo / Quotidienne / Continue)
-- [ ] Équipe ops dédiée ? (Non / Partagée / Dédiée / Platform team)
-- [ ] Besoin automatisation ? (Basique / Moyenne / Avancée / Complète)
+- [ ] Fréquence déploiements ? (Mensuelle / Hebdo / Quotidienne / Continue)  
+- [ ] Équipe ops dédiée ? (Non / Partagée / Dédiée / Platform team)  
+- [ ] Besoin automatisation ? (Basique / Moyenne / Avancée / Complète)  
 - [ ] Maturité monitoring ? (Basique / Logs / Métriques / Observabilité complète)
 
 ### Scoring et Recommandation
@@ -681,9 +681,9 @@ Kubernetes : Si vous avez...
 ```
 
 **Interprétation :**
-- **Score > 20 points** : Stratégie fortement recommandée
-- **Score 15-20 points** : Stratégie viable, à considérer
-- **Score 10-15 points** : Stratégie possible mais pas optimale
+- **Score > 20 points** : Stratégie fortement recommandée  
+- **Score 15-20 points** : Stratégie viable, à considérer  
+- **Score 10-15 points** : Stratégie possible mais pas optimale  
 - **Score < 10 points** : Stratégie déconseillée pour votre contexte
 
 ---
@@ -697,11 +697,11 @@ Kubernetes : Si vous avez...
 ```
 Déploiements PostgreSQL Production Monde :
 
-Bare Metal           : ████████░░ 30%  ↘ (en baisse)
-Virtual Machines     : ████████████████ 40%  → (stable)
-Conteneurs (simple)  : ████░░░░░░ 10%  ↗ (en hausse)
-Kubernetes           : ████░░░░░░ 10%  ↗↗ (forte hausse)
-DBaaS Cloud          : ████░░░░░░ 10%  ↗ (en hausse)
+Bare Metal           : ████████░░ 30%  ↘ (en baisse)  
+Virtual Machines     : ████████████████ 40%  → (stable)  
+Conteneurs (simple)  : ████░░░░░░ 10%  ↗ (en hausse)  
+Kubernetes           : ████░░░░░░ 10%  ↗↗ (forte hausse)  
+DBaaS Cloud          : ████░░░░░░ 10%  ↗ (en hausse)  
 
 Tendance :
 └─ Migration progressive bare metal → VMs → K8s
@@ -741,27 +741,27 @@ Tendance :
 **Impacts des nouveautés PG 18 :**
 
 **I/O Asynchrone (AIO)**
-- ✅ Bénéficie à **toutes** les stratégies
-- ✅ Gain maximal : Bare Metal + NVMe (jusqu'à 3×)
+- ✅ Bénéficie à **toutes** les stratégies  
+- ✅ Gain maximal : Bare Metal + NVMe (jusqu'à 3×)  
 - ✅ Gain significatif : VMs, Conteneurs, K8s
 
 **UUIDv7 (Time-ordered)**
-- ✅ Simplifie architectures distribuées
-- ✅ Idéal pour microservices (Kubernetes)
+- ✅ Simplifie architectures distribuées  
+- ✅ Idéal pour microservices (Kubernetes)  
 - ✅ Facilite sharding
 
 **Colonnes Virtuelles**
-- ✅ Optimise stockage (tous déploiements)
+- ✅ Optimise stockage (tous déploiements)  
 - ✅ Simplifie migrations de schémas
 
 **OAuth 2.0**
-- ✅ Intégration moderne (K8s + Service Mesh)
-- ✅ SSO facilité
+- ✅ Intégration moderne (K8s + Service Mesh)  
+- ✅ SSO facilité  
 - ✅ Architectures cloud-native
 
 **Améliorations pg_upgrade**
-- ✅ Simplifie mises à jour (tous déploiements)
-- ✅ Option --swap accélère upgrades
+- ✅ Simplifie mises à jour (tous déploiements)  
+- ✅ Option --swap accélère upgrades  
 - ✅ Préservation statistiques
 
 ---
@@ -814,10 +814,10 @@ Tendance :
 
 Ce chapitre 19.1 est organisé en **quatre sections détaillées** :
 
-**19.1.1. Bare Metal** : Configuration matérielle optimale, tuning OS/PostgreSQL, production
-**19.1.2. Virtual Machines** : Hyperviseurs, configuration, HA, stockage
-**19.1.3. Conteneurs** : Docker/Podman, volumes, sécurité, Patroni
-**19.1.4. Kubernetes** : StatefulSets, Operators (CloudNativePG, Zalando), production
+**19.1.1. Bare Metal** : Configuration matérielle optimale, tuning OS/PostgreSQL, production  
+**19.1.2. Virtual Machines** : Hyperviseurs, configuration, HA, stockage  
+**19.1.3. Conteneurs** : Docker/Podman, volumes, sécurité, Patroni  
+**19.1.4. Kubernetes** : StatefulSets, Operators (CloudNativePG, Zalando), production  
 
 Chaque section est **autonome et complète**, vous permettant de :
 - Comprendre les fondamentaux de la stratégie

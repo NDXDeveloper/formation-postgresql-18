@@ -99,9 +99,9 @@ Une **API (Application Programming Interface)** est un ensemble de règles et de
 
 #### 1. Couche de présentation (Clients)
 ```plaintext
-Rôle : Interface utilisateur
-Technologies : React, Vue, Angular, Flutter, SwiftUI, etc.
-Responsabilités :
+Rôle : Interface utilisateur  
+Technologies : React, Vue, Angular, Flutter, SwiftUI, etc.  
+Responsabilités :  
   - Affichage des données
   - Interaction utilisateur
   - Appels API (HTTP requests)
@@ -110,9 +110,9 @@ Responsabilités :
 
 #### 2. Couche API (Backend)
 ```plaintext
-Rôle : Point d'entrée pour toutes les requêtes
-Technologies : Node.js, Python (Flask/Django), Java (Spring), Go, etc.
-Responsabilités :
+Rôle : Point d'entrée pour toutes les requêtes  
+Technologies : Node.js, Python (Flask/Django), Java (Spring), Go, etc.  
+Responsabilités :  
   - Routing (diriger les requêtes)
   - Authentification / Autorisation
   - Validation des entrées
@@ -123,9 +123,9 @@ Responsabilités :
 
 #### 3. Couche d'accès aux données
 ```plaintext
-Rôle : Interaction avec PostgreSQL
-Technologies : Repository Pattern, ORM (TypeORM, SQLAlchemy), Query Builders
-Responsabilités :
+Rôle : Interaction avec PostgreSQL  
+Technologies : Repository Pattern, ORM (TypeORM, SQLAlchemy), Query Builders  
+Responsabilités :  
   - Exécuter les requêtes SQL
   - Mapper les résultats vers des objets
   - Gestion des transactions
@@ -135,8 +135,8 @@ Responsabilités :
 
 #### 4. Couche de données (PostgreSQL)
 ```plaintext
-Rôle : Stockage et persistance des données
-Responsabilités :
+Rôle : Stockage et persistance des données  
+Responsabilités :  
   - Intégrité des données (contraintes)
   - Indexation et performance
   - Gestion des transactions (ACID)
@@ -318,11 +318,11 @@ Ressource imbriquée : Orders d'un User
 
 **1.2. Méthodes HTTP sémantiques**
 ```plaintext
-GET    : Lire des données (safe, idempotent)
-POST   : Créer une nouvelle ressource
-PUT    : Remplacer complètement une ressource (idempotent)
-PATCH  : Modifier partiellement une ressource
-DELETE : Supprimer une ressource (idempotent)
+GET    : Lire des données (safe, idempotent)  
+POST   : Créer une nouvelle ressource  
+PUT    : Remplacer complètement une ressource (idempotent)  
+PATCH  : Modifier partiellement une ressource  
+DELETE : Supprimer une ressource (idempotent)  
 
 Idempotent = Appeler plusieurs fois = même résultat
   GET /users/123 : Toujours le même utilisateur
@@ -417,8 +417,8 @@ Niveaux de validation :
 
 **Exemple :**
 ```plaintext
-POST /api/users
-Body: {
+POST /api/users  
+Body: {  
   "email": "invalid-email",
   "age": -5,
   "username": "a"
@@ -445,8 +445,8 @@ Response :
 
 ### 3. Authentification et autorisation
 
-**Authentification** : Qui êtes-vous ?
-**Autorisation** : Que pouvez-vous faire ?
+**Authentification** : Qui êtes-vous ?  
+**Autorisation** : Que pouvez-vous faire ?  
 
 #### Mécanismes d'authentification courants
 
@@ -883,28 +883,28 @@ Libraries :
 
 ### ✅ À faire systématiquement
 
-1. **Validation stricte** : Valider toutes les entrées utilisateur
-2. **Authentification** : Sécuriser tous les endpoints (sauf publics)
-3. **Rate limiting** : Prévenir les abus (ex: 100 req/min/IP)
-4. **Logging** : Tracer toutes les opérations importantes
-5. **Pagination** : Jamais retourner toutes les données
-6. **Codes HTTP sémantiques** : 200, 201, 400, 401, 404, 500...
-7. **HTTPS** : Toujours en production
-8. **CORS** : Configurer correctement (pas `*` en prod)
-9. **Versioning** : Anticiper l'évolution (v1, v2)
+1. **Validation stricte** : Valider toutes les entrées utilisateur  
+2. **Authentification** : Sécuriser tous les endpoints (sauf publics)  
+3. **Rate limiting** : Prévenir les abus (ex: 100 req/min/IP)  
+4. **Logging** : Tracer toutes les opérations importantes  
+5. **Pagination** : Jamais retourner toutes les données  
+6. **Codes HTTP sémantiques** : 200, 201, 400, 401, 404, 500...  
+7. **HTTPS** : Toujours en production  
+8. **CORS** : Configurer correctement (pas `*` en prod)  
+9. **Versioning** : Anticiper l'évolution (v1, v2)  
 10. **Documentation** : OpenAPI/Swagger à jour
 
 ### ❌ À éviter absolument
 
-1. **SQL brut dans les controllers** : Utiliser Repository
-2. **Exposer les IDs séquentiels** : Préférer UUID ou obfuscation
-3. **Retourner des stack traces** : Masquer les erreurs internes
-4. **Pas de limite de requête** : Pagination obligatoire
-5. **Mots de passe en clair** : Hash (bcrypt, argon2)
-6. **Transactions mal gérées** : Toujours commit ou rollback
-7. **N+1 queries** : Utiliser eager loading (JOIN)
-8. **Pas de tests** : Au minimum smoke tests
-9. **Credentials hardcodés** : Variables d'environnement
+1. **SQL brut dans les controllers** : Utiliser Repository  
+2. **Exposer les IDs séquentiels** : Préférer UUID ou obfuscation  
+3. **Retourner des stack traces** : Masquer les erreurs internes  
+4. **Pas de limite de requête** : Pagination obligatoire  
+5. **Mots de passe en clair** : Hash (bcrypt, argon2)  
+6. **Transactions mal gérées** : Toujours commit ou rollback  
+7. **N+1 queries** : Utiliser eager loading (JOIN)  
+8. **Pas de tests** : Au minimum smoke tests  
+9. **Credentials hardcodés** : Variables d'environnement  
 10. **Ignorer les migrations** : Schéma versionné obligatoire
 
 ## Métriques de qualité d'API
@@ -948,10 +948,10 @@ La conception d'API avec PostgreSQL est un art qui combine **architecture logici
 
 ### Principes à retenir
 
-1. **Abstraction** : Séparer couches (API ↔ Business ↔ Data ↔ PostgreSQL)
-2. **Sécurité** : Valider, authentifier, autoriser, logguer
-3. **Performance** : Paginer, indexer, cacher, optimiser
-4. **Évolutivité** : Versionner, migrer, déployer sans interruption
+1. **Abstraction** : Séparer couches (API ↔ Business ↔ Data ↔ PostgreSQL)  
+2. **Sécurité** : Valider, authentifier, autoriser, logguer  
+3. **Performance** : Paginer, indexer, cacher, optimiser  
+4. **Évolutivité** : Versionner, migrer, déployer sans interruption  
 5. **Qualité** : Tester, documenter, monitorer, améliorer
 
 ### Roadmap de lecture

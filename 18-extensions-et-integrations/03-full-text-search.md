@@ -10,8 +10,8 @@ La solution classique avec `LIKE` ou `ILIKE` ne suffit pas :
 
 ```sql
 -- Recherche simple avec LIKE
-SELECT titre, contenu FROM articles
-WHERE contenu LIKE '%base de données%';
+SELECT titre, contenu FROM articles  
+WHERE contenu LIKE '%base de données%';  
 
 -- Problèmes :
 -- ❌ Très lent (scan de toute la table)
@@ -26,12 +26,12 @@ C'est là qu'intervient le **Full-Text Search** (FTS) de PostgreSQL, un système
 **Avec le Full-Text Search** :
 ```sql
 -- Recherche intelligente et rapide
-SELECT titre, ts_rank(search_vector, query) AS score
-FROM articles,
+SELECT titre, ts_rank(search_vector, query) AS score  
+FROM articles,  
      plainto_tsquery('french', 'base données') query
-WHERE search_vector @@ query
-ORDER BY score DESC
-LIMIT 20;
+WHERE search_vector @@ query  
+ORDER BY score DESC  
+LIMIT 20;  
 
 -- Avantages :
 -- ✅ Ultra rapide (index GIN, millisecondes)
@@ -52,9 +52,9 @@ Le **Full-Text Search** (recherche plein texte) est une technique permettant de 
 
 À la différence d'une recherche de chaîne simple (`LIKE`), le Full-Text Search :
 
-1. **Analyse** le texte (tokenization, normalisation)
-2. **Indexe** intelligemment le contenu (index inversé)
-3. **Recherche** rapidement avec des opérateurs avancés
+1. **Analyse** le texte (tokenization, normalisation)  
+2. **Indexe** intelligemment le contenu (index inversé)  
+3. **Recherche** rapidement avec des opérateurs avancés  
 4. **Classe** les résultats par pertinence (ranking)
 
 ### Le Problème que ça Résout
@@ -66,8 +66,8 @@ Vous avez 50 000 pages de documentation. Un utilisateur cherche "connection time
 **Sans Full-Text Search** :
 ```sql
 -- Recherche naïve avec LIKE
-SELECT titre, contenu FROM documentation
-WHERE contenu LIKE '%connection%'
+SELECT titre, contenu FROM documentation  
+WHERE contenu LIKE '%connection%'  
   AND contenu LIKE '%timeout%'
   AND contenu LIKE '%error%';
 
@@ -87,9 +87,9 @@ SELECT
     ts_headline('english', contenu, query) AS extrait
 FROM documentation,
      websearch_to_tsquery('english', 'connection timeout error') query
-WHERE search_vector @@ query
-ORDER BY score DESC
-LIMIT 20;
+WHERE search_vector @@ query  
+ORDER BY score DESC  
+LIMIT 20;  
 
 -- Avantages :
 -- ⏱️ Temps : 12 millisecondes (index GIN)
@@ -140,17 +140,17 @@ LIMIT 20;
 **Recommandations** :
 
 **Utilisez PostgreSQL FTS pour** :
-- ✅ Petites à moyennes applications (< 10M documents)
-- ✅ Besoin de cohérence transactionnelle
-- ✅ Simplicité architecturale (pas d'infrastructure supplémentaire)
-- ✅ Budget limité
+- ✅ Petites à moyennes applications (< 10M documents)  
+- ✅ Besoin de cohérence transactionnelle  
+- ✅ Simplicité architecturale (pas d'infrastructure supplémentaire)  
+- ✅ Budget limité  
 - ✅ Équipe petite/moyenne
 
 **Envisagez Elasticsearch/Solr pour** :
-- 📈 Très grandes applications (> 100M documents)
-- 🌐 Recherche distribuée multi-serveurs
-- 📊 Analytics et agrégations complexes
-- 🔥 Recherche temps réel ultra-performante
+- 📈 Très grandes applications (> 100M documents)  
+- 🌐 Recherche distribuée multi-serveurs  
+- 📊 Analytics et agrégations complexes  
+- 🔥 Recherche temps réel ultra-performante  
 - 💼 Équipe dédiée à la recherche
 
 **Vérité** : Pour 80% des applications, PostgreSQL FTS suffit largement et évite la complexité d'un système externe.
@@ -227,10 +227,10 @@ SELECT plainto_tsquery('french', 'base de données');
 ```
 
 **Opérateurs** :
-- `&` : AND (tous les termes)
-- `|` : OR (au moins un terme)
-- `!` : NOT (exclure)
-- `<->` : Suivi de (mots adjacents)
+- `&` : AND (tous les termes)  
+- `|` : OR (au moins un terme)  
+- `!` : NOT (exclure)  
+- `<->` : Suivi de (mots adjacents)  
 - `<N>` : Proximité (N mots d'écart max)
 
 #### L'Opérateur @@
@@ -275,8 +275,8 @@ Anglais :
 
 Les **stop words** sont des mots très fréquents et peu significatifs qui sont ignorés.
 
-**Exemples français** : le, la, les, un, une, de, du, des, à, au, en, et, ou, mais
-**Exemples anglais** : the, a, an, in, on, at, to, for, of, with
+**Exemples français** : le, la, les, un, une, de, du, des, à, au, en, et, ou, mais  
+**Exemples anglais** : the, a, an, in, on, at, to, for, of, with  
 
 ```sql
 SELECT to_tsvector('french', 'Le chat et le chien');
@@ -395,8 +395,8 @@ SELECT
     ts_rank(search_vector, query) AS score
 FROM articles,
      plainto_tsquery('french', 'postgresql') query
-WHERE search_vector @@ query
-ORDER BY score DESC;
+WHERE search_vector @@ query  
+ORDER BY score DESC;  
 ```
 
 **Facteurs de pertinence** :
@@ -444,8 +444,8 @@ CREATE TEXT SEARCH DICTIONARY tech_synonyms (
 );
 
 -- Configuration personnalisée
-CREATE TEXT SEARCH CONFIGURATION french_tech (COPY = french);
-ALTER TEXT SEARCH CONFIGURATION french_tech
+CREATE TEXT SEARCH CONFIGURATION french_tech (COPY = french);  
+ALTER TEXT SEARCH CONFIGURATION french_tech  
     ALTER MAPPING FOR asciiword WITH tech_synonyms, french_stem;
 ```
 
@@ -467,11 +467,11 @@ CREATE TABLE articles (
 );
 
 -- Recherche intelligente
-SELECT titre, auteur, ts_rank(search_vector, query) AS score
-FROM articles, plainto_tsquery('french', 'postgresql performance') query
-WHERE search_vector @@ query
-ORDER BY score DESC
-LIMIT 20;
+SELECT titre, auteur, ts_rank(search_vector, query) AS score  
+FROM articles, plainto_tsquery('french', 'postgresql performance') query  
+WHERE search_vector @@ query  
+ORDER BY score DESC  
+LIMIT 20;  
 ```
 
 **Fonctionnalités** :
@@ -495,10 +495,10 @@ CREATE TABLE produits (
 );
 
 -- Recherche produits
-SELECT nom, marque, prix
-FROM produits
-WHERE search_vector @@ websearch_to_tsquery('french', 'chaussure running nike')
-ORDER BY ts_rank(search_vector, query) DESC;
+SELECT nom, marque, prix  
+FROM produits  
+WHERE search_vector @@ websearch_to_tsquery('french', 'chaussure running nike')  
+ORDER BY ts_rank(search_vector, query) DESC;  
 ```
 
 **Fonctionnalités** :
@@ -550,9 +550,9 @@ CREATE TABLE tickets (
 );
 
 -- Trouver tickets similaires
-SELECT id, sujet, statut
-FROM tickets
-WHERE search_vector @@ plainto_tsquery('french', 'erreur connexion base')
+SELECT id, sujet, statut  
+FROM tickets  
+WHERE search_vector @@ plainto_tsquery('french', 'erreur connexion base')  
   AND statut = 'résolu'
 ORDER BY ts_rank(search_vector, query) DESC;
 ```
@@ -576,9 +576,9 @@ CREATE TABLE posts (
 );
 
 -- Recherche temporelle + textuelle
-SELECT contenu, auteur_id, created_at
-FROM posts
-WHERE search_vector @@ plainto_tsquery('french', 'postgresql tips')
+SELECT contenu, auteur_id, created_at  
+FROM posts  
+WHERE search_vector @@ plainto_tsquery('french', 'postgresql tips')  
   AND created_at > NOW() - INTERVAL '7 days'
 ORDER BY ts_rank(search_vector, query) DESC;
 ```
@@ -598,10 +598,10 @@ CREATE TABLE jurisprudence (
 );
 
 -- Recherche avec opérateurs complexes
-SELECT titre, juridiction, date_decision
-FROM jurisprudence
-WHERE search_vector @@ to_tsquery('french', 'responsabilité & civil & !pénal')
-ORDER BY date_decision DESC;
+SELECT titre, juridiction, date_decision  
+FROM jurisprudence  
+WHERE search_vector @@ to_tsquery('french', 'responsabilité & civil & !pénal')  
+ORDER BY date_decision DESC;  
 ```
 
 ---
@@ -619,8 +619,8 @@ ALTER TABLE ma_table ADD COLUMN search_vector tsvector;
 
 ```sql
 -- Remplir avec poids différents
-UPDATE ma_table
-SET search_vector =
+UPDATE ma_table  
+SET search_vector =  
     setweight(to_tsvector('french', COALESCE(titre, '')), 'A') ||
     setweight(to_tsvector('french', COALESCE(contenu, '')), 'B');
 ```
@@ -629,8 +629,8 @@ SET search_vector =
 
 ```sql
 -- Trigger pour mise à jour automatique
-CREATE FUNCTION ma_table_search_trigger() RETURNS trigger AS $$
-BEGIN
+CREATE FUNCTION ma_table_search_trigger() RETURNS trigger AS $$  
+BEGIN  
     NEW.search_vector :=
         setweight(to_tsvector('french', COALESCE(NEW.titre, '')), 'A') ||
         setweight(to_tsvector('french', COALESCE(NEW.contenu, '')), 'B');
@@ -638,32 +638,32 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE TRIGGER tsvector_update
-BEFORE INSERT OR UPDATE ON ma_table
-FOR EACH ROW EXECUTE FUNCTION ma_table_search_trigger();
+CREATE TRIGGER tsvector_update  
+BEFORE INSERT OR UPDATE ON ma_table  
+FOR EACH ROW EXECUTE FUNCTION ma_table_search_trigger();  
 ```
 
 ### Étape 4 : Créer l'Index GIN
 
 ```sql
 -- Index pour performance
-CREATE INDEX idx_ma_table_search ON ma_table USING GIN(search_vector);
-ANALYZE ma_table;
+CREATE INDEX idx_ma_table_search ON ma_table USING GIN(search_vector);  
+ANALYZE ma_table;  
 ```
 
 ### Étape 5 : Rechercher
 
 ```sql
 -- Recherche simple
-SELECT * FROM ma_table
-WHERE search_vector @@ plainto_tsquery('french', 'ma recherche');
+SELECT * FROM ma_table  
+WHERE search_vector @@ plainto_tsquery('french', 'ma recherche');  
 
 -- Recherche avec ranking
-SELECT *, ts_rank(search_vector, query) AS score
-FROM ma_table, plainto_tsquery('french', 'ma recherche') query
-WHERE search_vector @@ query
-ORDER BY score DESC
-LIMIT 20;
+SELECT *, ts_rank(search_vector, query) AS score  
+FROM ma_table, plainto_tsquery('french', 'ma recherche') query  
+WHERE search_vector @@ query  
+ORDER BY score DESC  
+LIMIT 20;  
 ```
 
 ---
@@ -685,17 +685,17 @@ LIMIT 20;
 ### Facteurs de Performance
 
 **Ce qui accélère** :
-- ✅ Index GIN sur colonne tsvector
-- ✅ Colonne tsvector pré-calculée (vs expression)
-- ✅ Index partiel (sous-ensemble de données)
-- ✅ Statistiques à jour (ANALYZE)
+- ✅ Index GIN sur colonne tsvector  
+- ✅ Colonne tsvector pré-calculée (vs expression)  
+- ✅ Index partiel (sous-ensemble de données)  
+- ✅ Statistiques à jour (ANALYZE)  
 - ✅ Configuration linguistique appropriée
 
 **Ce qui ralentit** :
-- ❌ Pas d'index GIN (scan séquentiel)
-- ❌ tsvector calculé à la volée
-- ❌ Statistiques obsolètes
-- ❌ Requêtes trop génériques (retournent 50% de la table)
+- ❌ Pas d'index GIN (scan séquentiel)  
+- ❌ tsvector calculé à la volée  
+- ❌ Statistiques obsolètes  
+- ❌ Requêtes trop génériques (retournent 50% de la table)  
 - ❌ Trop de dictionnaires dans la configuration
 
 ---
@@ -722,10 +722,10 @@ LIMIT 20;
 
 ### Quand NE PAS Utiliser PostgreSQL FTS
 
-- ❌ **Très gros volumes** (> 100M documents) avec besoins de sharding
-- ❌ **Analytics avancés** (facettes, agrégations multidimensionnelles)
-- ❌ **Machine Learning** intégré (recommandations, clustering)
-- ❌ **Recherche floue/typo** critique (correction automatique essentielle)
+- ❌ **Très gros volumes** (> 100M documents) avec besoins de sharding  
+- ❌ **Analytics avancés** (facettes, agrégations multidimensionnelles)  
+- ❌ **Machine Learning** intégré (recommandations, clustering)  
+- ❌ **Recherche floue/typo** critique (correction automatique essentielle)  
 - ❌ **Recherche géographique** complexe (combiner avec PostGIS)
 
 ---
@@ -740,8 +740,8 @@ LIMIT 20;
 CREATE EXTENSION pg_trgm;
 
 -- Recherche avec fautes de frappe
-SELECT * FROM articles
-WHERE titre % 'postgrasql';  -- Trouve "postgresql"
+SELECT * FROM articles  
+WHERE titre % 'postgrasql';  -- Trouve "postgresql"  
 ```
 
 #### unaccent : Ignorer les Accents
@@ -760,8 +760,8 @@ Extension pour gestion avancée des synonymes.
 ### Outils d'Interface Utilisateur
 
 **Bibliothèques Frontend** :
-- **JavaScript** : Typeahead.js, Select2, Choices.js
-- **React** : Downshift, React Select
+- **JavaScript** : Typeahead.js, Select2, Choices.js  
+- **React** : Downshift, React Select  
 - **Vue.js** : Vue-select, Vue-multiselect
 
 **Pattern API** :
@@ -770,11 +770,11 @@ Extension pour gestion avancée des synonymes.
 GET /api/search?q=postgresql&limit=20
 
 // Backend PostgreSQL
-SELECT titre, description, ts_rank(...) as score
-FROM articles
-WHERE search_vector @@ websearch_to_tsquery('french', :query)
-ORDER BY score DESC
-LIMIT :limit;
+SELECT titre, description, ts_rank(...) as score  
+FROM articles  
+WHERE search_vector @@ websearch_to_tsquery('french', :query)  
+ORDER BY score DESC  
+LIMIT :limit;  
 ```
 
 ---
@@ -823,25 +823,25 @@ Pour maîtriser le Full-Text Search PostgreSQL, suivez ce parcours :
 
 ### Documentation Officielle
 
-- **PostgreSQL Text Search** : https://www.postgresql.org/docs/current/textsearch.html
-- **Tutorial** : https://www.postgresql.org/docs/current/textsearch-intro.html
+- **PostgreSQL Text Search** : https://www.postgresql.org/docs/current/textsearch.html  
+- **Tutorial** : https://www.postgresql.org/docs/current/textsearch-intro.html  
 - **Functions** : https://www.postgresql.org/docs/current/functions-textsearch.html
 
 ### Articles et Tutoriels
 
-- **Mastering PostgreSQL Full-Text Search** : Blog Compose.io
-- **The Basics of PostgreSQL Text Search** : Thoughtbot
+- **Mastering PostgreSQL Full-Text Search** : Blog Compose.io  
+- **The Basics of PostgreSQL Text Search** : Thoughtbot  
 - **PostgreSQL Full-Text Search Cookbook** : Plusieurs sources
 
 ### Livres
 
-- **PostgreSQL: Up and Running** - Regina Obe, Leo Hsu (Chapitre FTS)
+- **PostgreSQL: Up and Running** - Regina Obe, Leo Hsu (Chapitre FTS)  
 - **The Art of PostgreSQL** - Dimitri Fontaine (Section recherche)
 
 ### Communautés
 
-- **PostgreSQL Mailing List** : pgsql-general@postgresql.org
-- **Stack Overflow** : Tag [postgresql] + [full-text-search]
+- **PostgreSQL Mailing List** : pgsql-general@postgresql.org  
+- **Stack Overflow** : Tag [postgresql] + [full-text-search]  
 - **Reddit** : r/PostgreSQL
 
 ---
