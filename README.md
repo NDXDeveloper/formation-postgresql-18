@@ -77,8 +77,8 @@ Cette formation propose une approche théorique complète de PostgreSQL 18, pens
 
 18. **Extensions et Intégrations** - PostGIS, pgvector, TimescaleDB, FDW  
 19. **PostgreSQL en Production** - Cloud, Kubernetes, migrations, pg_upgrade 🆕  
-20. **Drivers et Connexion Applicative** - psycopg3, node-postgres, patterns
-20bis. **Architectures Modernes** - Microservices, CQRS, serverless, K8s
+20. **Drivers et Connexion Applicative** - psycopg3, node-postgres, patterns  
+20bis. **Architectures Modernes** - Microservices, CQRS, serverless, K8s  
 21. **Conclusion et Perspectives** - Roadmap, certifications, ressources
 
 ### 📖 Annexes de Référence
