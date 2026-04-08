@@ -41,8 +41,8 @@ COUNT(DISTINCT nom_colonne)
 
 #### Comportement
 
-- `COUNT(*)` compte **toutes les lignes**, même si certaines colonnes contiennent des valeurs NULL
-- `COUNT(colonne)` compte **uniquement les valeurs non-NULL** de cette colonne
+- `COUNT(*)` compte **toutes les lignes**, même si certaines colonnes contiennent des valeurs NULL  
+- `COUNT(colonne)` compte **uniquement les valeurs non-NULL** de cette colonne  
 - `COUNT(DISTINCT colonne)` compte les valeurs uniques (en excluant les doublons et les NULL)
 
 #### Exemples Théoriques
@@ -61,29 +61,29 @@ Considérons une table `commandes` :
 
 ```sql
 -- Compter le nombre total de commandes
-SELECT COUNT(*) AS total_commandes
-FROM commandes;
+SELECT COUNT(*) AS total_commandes  
+FROM commandes;  
 -- Résultat : 5
 ```
 
 ```sql
 -- Compter les commandes avec une date de livraison renseignée
-SELECT COUNT(date_livraison) AS commandes_livrees
-FROM commandes;
+SELECT COUNT(date_livraison) AS commandes_livrees  
+FROM commandes;  
 -- Résultat : 3 (les NULL sont ignorés)
 ```
 
 ```sql
 -- Compter le nombre de clients distincts ayant passé commande
-SELECT COUNT(DISTINCT client_id) AS nombre_clients
-FROM commandes;
+SELECT COUNT(DISTINCT client_id) AS nombre_clients  
+FROM commandes;  
 -- Résultat : 3 (clients 101, 102, 103)
 ```
 
 #### Cas d'Usage Typiques
 
-- **Comptage de lignes** : "Combien d'utilisateurs sont inscrits ?"
-- **Validation de données** : "Combien de lignes ont une valeur NULL dans cette colonne ?"
+- **Comptage de lignes** : "Combien d'utilisateurs sont inscrits ?"  
+- **Validation de données** : "Combien de lignes ont une valeur NULL dans cette colonne ?"  
 - **Analyse de cardinalité** : "Combien de valeurs uniques existe-t-il ?"
 
 ---
@@ -111,29 +111,29 @@ Avec la même table `commandes` :
 
 ```sql
 -- Calculer le chiffre d'affaires total
-SELECT SUM(montant) AS ca_total
-FROM commandes;
+SELECT SUM(montant) AS ca_total  
+FROM commandes;  
 -- Résultat : 850.50 (150 + 200 + 75.50 + 300 + 125)
 ```
 
 ```sql
 -- Somme avec une condition WHERE
-SELECT SUM(montant) AS ca_janvier
-FROM commandes
-WHERE date_livraison >= '2024-01-01'
+SELECT SUM(montant) AS ca_janvier  
+FROM commandes  
+WHERE date_livraison >= '2024-01-01'  
   AND date_livraison < '2024-02-01';
 -- Résultat : 525.50 (150 + 75.50 + 300)
 ```
 
 #### Cas d'Usage Typiques
 
-- **Calcul de totaux financiers** : Chiffre d'affaires, coûts totaux, bénéfices
-- **Métriques quantitatives** : Quantité totale vendue, nombre total de connexions
+- **Calcul de totaux financiers** : Chiffre d'affaires, coûts totaux, bénéfices  
+- **Métriques quantitatives** : Quantité totale vendue, nombre total de connexions  
 - **Agrégation de durées** : Temps total passé sur une tâche
 
 #### Points d'Attention
 
-- **Dépassement de capacité** : Avec de très grands nombres, le type de données peut être dépassé (overflow). PostgreSQL gère généralement bien cela avec le type NUMERIC.
+- **Dépassement de capacité** : Avec de très grands nombres, le type de données peut être dépassé (overflow). PostgreSQL gère généralement bien cela avec le type NUMERIC.  
 - **Précision décimale** : Utilisez NUMERIC pour les calculs financiers précis plutôt que FLOAT.
 
 ---
@@ -161,22 +161,22 @@ Avec la table `commandes` :
 
 ```sql
 -- Calculer le montant moyen des commandes
-SELECT AVG(montant) AS montant_moyen
-FROM commandes;
+SELECT AVG(montant) AS montant_moyen  
+FROM commandes;  
 -- Résultat : 170.10 (850.50 / 5)
 ```
 
 ```sql
 -- Moyenne arrondie à 2 décimales
-SELECT ROUND(AVG(montant), 2) AS montant_moyen_arrondi
-FROM commandes;
+SELECT ROUND(AVG(montant), 2) AS montant_moyen_arrondi  
+FROM commandes;  
 -- Résultat : 170.10
 ```
 
 #### Cas d'Usage Typiques
 
-- **Analyse de tendance centrale** : Panier moyen, salaire moyen, note moyenne
-- **Benchmarking** : Comparer une valeur à la moyenne
+- **Analyse de tendance centrale** : Panier moyen, salaire moyen, note moyenne  
+- **Benchmarking** : Comparer une valeur à la moyenne  
 - **Détection d'anomalies** : Identifier les valeurs très éloignées de la moyenne
 
 #### Moyenne vs Médiane
@@ -211,15 +211,15 @@ MIN(nom_colonne)
 
 ```sql
 -- Trouver la commande la moins chère
-SELECT MIN(montant) AS montant_min
-FROM commandes;
+SELECT MIN(montant) AS montant_min  
+FROM commandes;  
 -- Résultat : 75.50
 ```
 
 ```sql
 -- Trouver la date de première livraison
-SELECT MIN(date_livraison) AS premiere_livraison
-FROM commandes;
+SELECT MIN(date_livraison) AS premiere_livraison  
+FROM commandes;  
 -- Résultat : 2024-01-15
 ```
 
@@ -234,15 +234,15 @@ Avec une table `produits` :
 
 ```sql
 -- Trouver le produit dont le nom vient en premier alphabétiquement
-SELECT MIN(nom) AS premier_produit_alpha
-FROM produits;
+SELECT MIN(nom) AS premier_produit_alpha  
+FROM produits;  
 -- Résultat : 'Clavier' (ordre alphabétique : C < E < L < S)
 ```
 
 #### Cas d'Usage Typiques
 
-- **Recherche de bornes** : Prix minimum, date la plus ancienne
-- **Validation de seuils** : Vérifier si une valeur minimale est atteinte
+- **Recherche de bornes** : Prix minimum, date la plus ancienne  
+- **Validation de seuils** : Vérifier si une valeur minimale est atteinte  
 - **Analyse temporelle** : Première occurrence d'un événement
 
 ---
@@ -271,23 +271,23 @@ MAX(nom_colonne)
 
 ```sql
 -- Trouver la commande la plus chère
-SELECT MAX(montant) AS montant_max
-FROM commandes;
+SELECT MAX(montant) AS montant_max  
+FROM commandes;  
 -- Résultat : 300.00
 ```
 
 ```sql
 -- Trouver la date de dernière livraison
-SELECT MAX(date_livraison) AS derniere_livraison
-FROM commandes;
+SELECT MAX(date_livraison) AS derniere_livraison  
+FROM commandes;  
 -- Résultat : 2024-01-16
 ```
 
 ```sql
 -- Trouver le produit le plus cher par catégorie (nécessite GROUP BY)
-SELECT categorie, MAX(prix) AS prix_max
-FROM produits
-GROUP BY categorie;
+SELECT categorie, MAX(prix) AS prix_max  
+FROM produits  
+GROUP BY categorie;  
 -- Résultat :
 -- Électronique | 899
 -- Accessoires  | 75
@@ -295,8 +295,8 @@ GROUP BY categorie;
 
 #### Cas d'Usage Typiques
 
-- **Identification de records** : Meilleur score, prix le plus élevé
-- **Analyse temporelle** : Dernière transaction, date la plus récente
+- **Identification de records** : Meilleur score, prix le plus élevé  
+- **Analyse temporelle** : Dernière transaction, date la plus récente  
 - **Détection de pics** : Valeur maximale atteinte dans une période
 
 ---
@@ -387,15 +387,15 @@ Les agrégations peuvent être combinées avec la clause WHERE pour calculer des
 SELECT
     COUNT(*) AS commandes_livrees,
     AVG(montant) AS panier_moyen_livrees
-FROM commandes
-WHERE date_livraison IS NOT NULL;
+FROM commandes  
+WHERE date_livraison IS NOT NULL;  
 -- Résultat :
 -- commandes_livrees | 3
 -- panier_moyen_livrees | 175.17 (525.50 / 3)
 ```
 
 **Ordre d'exécution** :
-1. PostgreSQL applique d'abord le filtre WHERE
+1. PostgreSQL applique d'abord le filtre WHERE  
 2. Puis calcule les agrégations sur les lignes sélectionnées
 
 ---
@@ -408,8 +408,8 @@ Quand aucune clause GROUP BY n'est présente, les fonctions d'agrégation s'appl
 
 ```sql
 -- Une seule ligne de résultat : statistique globale
-SELECT AVG(montant) AS moyenne_globale
-FROM commandes;
+SELECT AVG(montant) AS moyenne_globale  
+FROM commandes;  
 ```
 
 ### Avec GROUP BY : Agrégations Par Groupe
@@ -422,8 +422,8 @@ SELECT
     client_id,
     COUNT(*) AS nb_commandes,
     SUM(montant) AS total_depense
-FROM commandes
-GROUP BY client_id;
+FROM commandes  
+GROUP BY client_id;  
 ```
 
 **Résultat théorique :**
@@ -444,25 +444,25 @@ Les fonctions d'agrégation peuvent s'appliquer à des **expressions calculées*
 
 ```sql
 -- Calculer la somme des montants TTC (montant HT * 1.20)
-SELECT SUM(montant * 1.20) AS ca_ttc
-FROM commandes;
+SELECT SUM(montant * 1.20) AS ca_ttc  
+FROM commandes;  
 -- Résultat : 1020.60
 ```
 
 ```sql
 -- Compter les commandes supérieures à 100€
-SELECT COUNT(*) AS commandes_importantes
-FROM commandes
-WHERE montant > 100;
+SELECT COUNT(*) AS commandes_importantes  
+FROM commandes  
+WHERE montant > 100;  
 -- Alternative avec CASE dans COUNT :
-SELECT COUNT(CASE WHEN montant > 100 THEN 1 END) AS commandes_importantes
-FROM commandes;
+SELECT COUNT(CASE WHEN montant > 100 THEN 1 END) AS commandes_importantes  
+FROM commandes;  
 ```
 
 ```sql
 -- Moyenne des montants après réduction de 10%
-SELECT AVG(montant * 0.90) AS panier_moyen_promo
-FROM commandes;
+SELECT AVG(montant * 0.90) AS panier_moyen_promo  
+FROM commandes;  
 ```
 
 ---
@@ -531,9 +531,9 @@ FROM commandes;
 
 ### Facteurs d'Impact
 
-1. **Taille de la table** : Plus il y a de lignes, plus l'agrégation prend du temps
-2. **Index** : Les index peuvent accélérer certaines agrégations (MIN/MAX surtout)
-3. **Filtrage WHERE** : Réduire le nombre de lignes avant agrégation améliore les performances
+1. **Taille de la table** : Plus il y a de lignes, plus l'agrégation prend du temps  
+2. **Index** : Les index peuvent accélérer certaines agrégations (MIN/MAX surtout)  
+3. **Filtrage WHERE** : Réduire le nombre de lignes avant agrégation améliore les performances  
 4. **Type de données** : Les types numériques sont plus rapides que les types texte
 
 ### Optimisation MIN/MAX avec Index
@@ -543,14 +543,14 @@ MIN et MAX peuvent être **extrêmement rapides** si un index existe sur la colo
 ```sql
 -- Si un index existe sur montant, PostgreSQL peut récupérer
 -- directement la première/dernière valeur de l'index (O(1))
-SELECT MIN(montant), MAX(montant)
-FROM commandes;
+SELECT MIN(montant), MAX(montant)  
+FROM commandes;  
 ```
 
 ### Agrégations vs Scan Complet
 
-- **COUNT(*)** nécessite un scan complet (parcourir toutes les lignes)
-- **SUM, AVG** nécessitent aussi un scan complet
+- **COUNT(*)** nécessite un scan complet (parcourir toutes les lignes)  
+- **SUM, AVG** nécessitent aussi un scan complet  
 - **MIN/MAX** peuvent utiliser un index pour une récupération directe
 
 ---
@@ -570,12 +570,12 @@ FROM commandes;
 
 ## À Retenir
 
-1. **Les agrégations condensent plusieurs lignes en une seule valeur**
-2. **Les NULL sont généralement ignorés** (sauf COUNT(*))
-3. **COUNT(*) compte les lignes, COUNT(colonne) compte les non-NULL**
-4. **Toujours nommer les colonnes agrégées avec AS**
-5. **MIN/MAX fonctionnent sur tous types comparables** (pas uniquement numériques)
-6. **Les agrégations nécessitent GROUP BY pour calculer par groupe** (section suivante)
+1. **Les agrégations condensent plusieurs lignes en une seule valeur**  
+2. **Les NULL sont généralement ignorés** (sauf COUNT(*))  
+3. **COUNT(*) compte les lignes, COUNT(colonne) compte les non-NULL**  
+4. **Toujours nommer les colonnes agrégées avec AS**  
+5. **MIN/MAX fonctionnent sur tous types comparables** (pas uniquement numériques)  
+6. **Les agrégations nécessitent GROUP BY pour calculer par groupe** (section suivante)  
 7. **Les expressions sont acceptées dans les fonctions d'agrégation**
 
 ---
@@ -584,8 +584,8 @@ FROM commandes;
 
 Maintenant que vous maîtrisez les fonctions d'agrégation standards, vous êtes prêt pour :
 
-- **Section 8.2** : Fonctions d'agrégation statistiques (STDDEV, VARIANCE, PERCENTILE)
-- **Section 8.3** : GROUP BY et HAVING pour des agrégations par groupe
+- **Section 8.2** : Fonctions d'agrégation statistiques (STDDEV, VARIANCE, PERCENTILE)  
+- **Section 8.3** : GROUP BY et HAVING pour des agrégations par groupe  
 - **Section 8.4** : Extensions de groupement (ROLLUP, CUBE, GROUPING SETS)
 
 Les agrégations sont un pilier fondamental de l'analyse de données en SQL. Avec ces cinq fonctions, vous pouvez déjà répondre à une multitude de questions analytiques !

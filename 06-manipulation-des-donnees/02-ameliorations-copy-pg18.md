@@ -42,14 +42,14 @@ La dernière ligne `\.` indique à PostgreSQL : "C'est la fin des données, arr�
 
 Le marqueur `\.` a été introduit pour deux raisons principales :
 
-1. **Différencier données et commandes** : Dans l'interface interactive `psql`, il fallait un moyen clair de marquer la fin des données saisies manuellement
+1. **Différencier données et commandes** : Dans l'interface interactive `psql`, il fallait un moyen clair de marquer la fin des données saisies manuellement  
 2. **Compatibilité avec STDIN** : Lors de la lecture depuis l'entrée standard, PostgreSQL devait savoir quand s'arrêter
 
 #### Exemple d'utilisation avec STDIN
 
 ```bash
-psql -d mabase << EOF
-COPY employes FROM STDIN;
+psql -d mabase << EOF  
+COPY employes FROM STDIN;  
 1	Dupont	Marie	marie@example.com
 2	Martin	Pierre	pierre@example.com
 \.
@@ -84,9 +84,9 @@ id,nom,chemin
 Lors de l'importation avec `COPY` :
 
 ```sql
-COPY chemins (id, nom, chemin)
-FROM '/tmp/chemins_windows.csv'
-WITH (FORMAT csv, HEADER true);
+COPY chemins (id, nom, chemin)  
+FROM '/tmp/chemins_windows.csv'  
+WITH (FORMAT csv, HEADER true);  
 ```
 
 **Problème** : PostgreSQL interprétait la ligne contenant `D:\.` comme un marqueur de fin de fichier, stoppant l'importation prématurément !
@@ -105,8 +105,8 @@ Ce problème affectait plusieurs scénarios réels :
 #### 1. Chemins de fichiers Windows et Unix
 
 ```csv
-chemin
-C:\Users\.config
+chemin  
+C:\Users\.config  
 /home/user/.\file
 .\relative\path
 ```
@@ -122,9 +122,9 @@ pattern,description
 #### 3. Code source et échappements
 
 ```csv
-code,langage
-console.log('\.'),JavaScript
-echo "\.",Bash
+code,langage  
+console.log('\.'),JavaScript  
+echo "\.",Bash  
 ```
 
 #### 4. Données mathématiques ou scientifiques
@@ -142,9 +142,9 @@ Avant PostgreSQL 18, plusieurs solutions de contournement existaient, toutes ins
 #### Solution 1 : Échappement manuel des données
 
 ```csv
-chemin
-C:\\.config\system.ini
-D:\\..
+chemin  
+C:\\.config\system.ini  
+D:\\..  
 ```
 
 **Inconvénients** :
@@ -221,9 +221,9 @@ id,application,chemin_config
 #### PostgreSQL 17 (ÉCHEC)
 
 ```sql
-COPY configurations (id, application, chemin_config)
-FROM '/tmp/chemins_windows.csv'
-WITH (FORMAT csv, HEADER true);
+COPY configurations (id, application, chemin_config)  
+FROM '/tmp/chemins_windows.csv'  
+WITH (FORMAT csv, HEADER true);  
 
 -- Résultat : Seulement la ligne 1 importée
 -- La ligne 2 est vue comme un marqueur de fin
@@ -232,9 +232,9 @@ WITH (FORMAT csv, HEADER true);
 #### PostgreSQL 18 (SUCCÈS)
 
 ```sql
-COPY configurations (id, application, chemin_config)
-FROM '/tmp/chemins_windows.csv'
-WITH (FORMAT csv, HEADER true);
+COPY configurations (id, application, chemin_config)  
+FROM '/tmp/chemins_windows.csv'  
+WITH (FORMAT csv, HEADER true);  
 
 -- Résultat : Toutes les lignes importées correctement
 -- Le \. dans "D:\." est traité comme une donnée normale
@@ -267,9 +267,9 @@ id,pattern,description,exemple
 #### PostgreSQL 18 : Import sans modification
 
 ```sql
-COPY regex_library (id, pattern, description, exemple)
-FROM '/tmp/regex_patterns.csv'
-WITH (FORMAT csv, HEADER true);
+COPY regex_library (id, pattern, description, exemple)  
+FROM '/tmp/regex_patterns.csv'  
+WITH (FORMAT csv, HEADER true);  
 
 -- Toutes les lignes sont importées correctement
 ```
@@ -292,28 +292,28 @@ SELECT pattern, description FROM regex_library;
 #### Fichier `code_samples.csv`
 
 ```csv
-langage,code,description
-JavaScript,"const x = '\.';",Chaîne avec backslash-point
-Python,"print('\.')",Affichage de \.
-Bash,"echo '\.'",Echo en shell
-Regex,"\.",Point littéral
+langage,code,description  
+JavaScript,"const x = '\.';",Chaîne avec backslash-point  
+Python,"print('\.')",Affichage de \.  
+Bash,"echo '\.'",Echo en shell  
+Regex,"\.",Point littéral  
 ```
 
 #### PostgreSQL 18 : Aucun problème
 
 ```sql
-COPY code_snippets (langage, code, description)
-FROM '/tmp/code_samples.csv'
-WITH (FORMAT csv, HEADER true);
+COPY code_snippets (langage, code, description)  
+FROM '/tmp/code_samples.csv'  
+WITH (FORMAT csv, HEADER true);  
 
 SELECT * FROM code_snippets;
 
   langage   |       code        |      description
 ------------+-------------------+------------------------
-JavaScript | const x = '\.';   | Chaîne avec backslash-point
-Python     | print('\.')       | Affichage de \.
-Bash       | echo '\.'         | Echo en shell
-Regex      | \.                | Point littéral
+JavaScript | const x = '\.';   | Chaîne avec backslash-point  
+Python     | print('\.')       | Affichage de \.  
+Bash       | echo '\.'         | Echo en shell  
+Regex      | \.                | Point littéral  
 ```
 
 ---
@@ -327,10 +327,10 @@ Pour maintenir la **compatibilité ascendante** avec les scripts existants, Post
 #### Avec STDIN : `\.` reste un marqueur de fin
 
 ```bash
-psql -d mabase << EOF
-COPY employes (nom, prenom) FROM STDIN WITH (FORMAT csv);
-Dupont,Marie
-Martin,Pierre
+psql -d mabase << EOF  
+COPY employes (nom, prenom) FROM STDIN WITH (FORMAT csv);  
+Dupont,Marie  
+Martin,Pierre  
 \.
 EOF
 ```
@@ -339,8 +339,8 @@ Le `\.` est **toujours nécessaire** pour marquer la fin des données avec STDIN
 
 #### Pourquoi cette exception ?
 
-1. **Scripts existants** : Des milliers de scripts utilisent ce comportement
-2. **Interface interactive** : Dans `psql`, l'utilisateur doit pouvoir signaler la fin de la saisie
+1. **Scripts existants** : Des milliers de scripts utilisent ce comportement  
+2. **Interface interactive** : Dans `psql`, l'utilisateur doit pouvoir signaler la fin de la saisie  
 3. **Backward compatibility** : Garantir que les anciens scripts continuent de fonctionner
 
 ### Différenciation automatique
@@ -367,8 +367,8 @@ PostgreSQL 18 optimise le traitement interne de `COPY`, notamment :
 
 #### Optimisations I/O
 
-- **Lecture en buffer plus efficace** : Meilleure utilisation de la mémoire tampon
-- **Parallélisation améliorée** : Traitement plus rapide des gros fichiers
+- **Lecture en buffer plus efficace** : Meilleure utilisation de la mémoire tampon  
+- **Parallélisation améliorée** : Traitement plus rapide des gros fichiers  
 - **Réduction des allocations mémoire** : Moins de fragmentation
 
 #### Gains mesurables
@@ -394,9 +394,9 @@ id,data
 ```
 
 ```sql
-COPY users (id, data)
-FROM '/tmp/users.csv'
-WITH (FORMAT csv, HEADER true);
+COPY users (id, data)  
+FROM '/tmp/users.csv'  
+WITH (FORMAT csv, HEADER true);  
 
 -- PostgreSQL 18 : Parsing JSONB plus rapide de ~15%
 ```
@@ -410,9 +410,9 @@ id,tags,scores
 ```
 
 ```sql
-COPY products (id, tags, scores)
-FROM '/tmp/products.csv'
-WITH (FORMAT csv, HEADER true);
+COPY products (id, tags, scores)  
+FROM '/tmp/products.csv'  
+WITH (FORMAT csv, HEADER true);  
 
 -- Gestion améliorée des délimiteurs et échappements dans les tableaux
 ```
@@ -424,17 +424,17 @@ PostgreSQL 18 améliore les messages d'erreur lors des échecs d'import :
 #### Avant (PostgreSQL 17)
 
 ```
-ERROR: invalid input syntax for type integer: "abc"
-CONTEXT: COPY employes, line 2347
+ERROR: invalid input syntax for type integer: "abc"  
+CONTEXT: COPY employes, line 2347  
 ```
 
 #### Après (PostgreSQL 18)
 
 ```
-ERROR: invalid input syntax for type integer: "abc"
-DETAIL: Column "age" expects an integer value
-CONTEXT: COPY employes, line 2347, column age
-HINT: Check the data type of column "age" in your CSV file
+ERROR: invalid input syntax for type integer: "abc"  
+DETAIL: Column "age" expects an integer value  
+CONTEXT: COPY employes, line 2347, column age  
+HINT: Check the data type of column "age" in your CSV file  
 ```
 
 Les messages incluent maintenant :
@@ -448,12 +448,12 @@ PostgreSQL 18 gère mieux les conversions d'encodage lors de l'import :
 
 ```sql
 -- Détection automatique améliorée
-COPY employes FROM '/tmp/data_utf16.csv'
-WITH (FORMAT csv, ENCODING 'UTF16');
+COPY employes FROM '/tmp/data_utf16.csv'  
+WITH (FORMAT csv, ENCODING 'UTF16');  
 
 -- Gestion plus robuste des caractères invalides
-COPY logs FROM '/tmp/logs_mixed.csv'
-WITH (FORMAT csv, ENCODING 'UTF8');
+COPY logs FROM '/tmp/logs_mixed.csv'  
+WITH (FORMAT csv, ENCODING 'UTF8');  
 ```
 
 ---
@@ -479,9 +479,9 @@ COPY employes FROM '/tmp/employes.csv' WITH (FORMAT csv);
 
 ```bash
 # Ce script continue de fonctionner en PG 18
-psql -d mabase << EOF
-COPY employes FROM STDIN WITH (FORMAT csv);
-Dupont,Marie
+psql -d mabase << EOF  
+COPY employes FROM STDIN WITH (FORMAT csv);  
+Dupont,Marie  
 \.
 EOF
 ```
@@ -549,10 +549,10 @@ timestamp,level,message,file
 ### 2. Import de configurations applicatives
 
 ```csv
-app,config_key,config_value
-nginx,root_path,/var/www/.\public
-apache,htaccess_path,/.\.htaccess
-tomcat,webapp_path,.\webapps
+app,config_key,config_value  
+nginx,root_path,/var/www/.\public  
+apache,htaccess_path,/.\.htaccess  
+tomcat,webapp_path,.\webapps  
 ```
 
 **PostgreSQL 18** : Toutes les valeurs importées correctement.
@@ -571,10 +571,10 @@ rule_id,pattern,risk_level
 ### 4. Bases de données de recherche de code
 
 ```csv
-repo,file,line_number,code_snippet
-myapp,utils.js,45,"const re = /\./g;"
-myapp,config.py,12,"if path.startswith('\.'):
-otherapp,main.c,89,"printf(""\\."");"
+repo,file,line_number,code_snippet  
+myapp,utils.js,45,"const re = /\./g;"  
+myapp,config.py,12,"if path.startswith('\.'):  
+otherapp,main.c,89,"printf(""\\."");"  
 ```
 
 **PostgreSQL 18** : Code source importé sans altération.
@@ -612,10 +612,10 @@ COPY employes FROM '/tmp/data.txt';
 En cas d'erreur, lisez attentivement le message complet :
 
 ```sql
-ERROR: invalid input syntax for type date: "2025-13-45"
-DETAIL: Column "date_embauche" expects a valid date
-CONTEXT: COPY employes, line 3421, column date_embauche
-HINT: Check the date format in your CSV file (expected: YYYY-MM-DD)
+ERROR: invalid input syntax for type date: "2025-13-45"  
+DETAIL: Column "date_embauche" expects a valid date  
+CONTEXT: COPY employes, line 3421, column date_embauche  
+HINT: Check the date format in your CSV file (expected: YYYY-MM-DD)  
 ```
 
 Le message vous donne :
@@ -631,9 +631,9 @@ Si vos fichiers CSV peuvent contenir des caractères spéciaux, documentez-le :
 ```sql
 -- Import de données Windows pouvant contenir des chemins avec \.
 -- PostgreSQL 18+ requis pour une gestion correcte
-COPY configurations
-FROM '/data/windows_configs.csv'
-WITH (FORMAT csv, HEADER true, ENCODING 'UTF8');
+COPY configurations  
+FROM '/data/windows_configs.csv'  
+WITH (FORMAT csv, HEADER true, ENCODING 'UTF8');  
 ```
 
 ---
@@ -656,8 +656,8 @@ CREATE TABLE test_copy_pg18 (
 ```
 
 ```bash
-cat > /tmp/test_copy.csv << 'EOF'
-id,data
+cat > /tmp/test_copy.csv << 'EOF'  
+id,data  
 1,"Simple data"
 2,"Data with \. in middle"
 3,"D:\."
@@ -671,18 +671,18 @@ EOF
 
 ```sql
 -- 3. Importer les données
-COPY test_copy_pg18 (id, data)
-FROM '/tmp/test_copy.csv'
-WITH (FORMAT csv, HEADER true);
+COPY test_copy_pg18 (id, data)  
+FROM '/tmp/test_copy.csv'  
+WITH (FORMAT csv, HEADER true);  
 
 -- 4. Vérifier que toutes les lignes sont importées
 SELECT COUNT(*) FROM test_copy_pg18;
 -- Attendu : 8 lignes
 
 -- 5. Vérifier que les \. sont préservés
-SELECT id, data
-FROM test_copy_pg18
-WHERE data LIKE '%\.%';
+SELECT id, data  
+FROM test_copy_pg18  
+WHERE data LIKE '%\.%';  
 -- Attendu : 7 lignes (toutes sauf la première)
 
 -- 6. Vérifier des cas spécifiques
@@ -697,13 +697,13 @@ DROP TABLE test_copy_pg18;
 ```
 
 **Résultats attendus dans PostgreSQL 18** :
-- ✅ 8 lignes importées (100%)
-- ✅ Tous les `\.` préservés dans les données
+- ✅ 8 lignes importées (100%)  
+- ✅ Tous les `\.` préservés dans les données  
 - ✅ Aucune erreur
 
 **Résultats dans PostgreSQL 17** :
-- ❌ Import interrompu à la ligne 3
-- ❌ Seulement 2 lignes importées
+- ❌ Import interrompu à la ligne 3  
+- ❌ Seulement 2 lignes importées  
 - ❌ Données après `D:\.` ignorées
 
 ---

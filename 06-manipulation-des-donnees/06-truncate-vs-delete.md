@@ -33,8 +33,8 @@ Cette section explore en profondeur ces différences pour vous permettre de choi
 `DELETE` est la commande SQL standard pour supprimer des lignes :
 
 ```sql
-DELETE FROM table_name
-WHERE condition;
+DELETE FROM table_name  
+WHERE condition;  
 ```
 
 **Caractéristiques** :
@@ -66,22 +66,22 @@ TRUNCATE TABLE table_name;
 
 ```sql
 -- Supprimer des lignes spécifiques
-DELETE FROM employes
-WHERE date_embauche < '2020-01-01';
+DELETE FROM employes  
+WHERE date_embauche < '2020-01-01';  
 
 -- Supprimer toutes les lignes (déconseillé, préférez TRUNCATE)
 DELETE FROM employes;
 
 -- Supprimer avec sous-requête
-DELETE FROM employes
-WHERE id IN (
+DELETE FROM employes  
+WHERE id IN (  
     SELECT employe_id FROM licenciements
 );
 
 -- Supprimer avec RETURNING
-DELETE FROM employes
-WHERE id = 42
-RETURNING *;
+DELETE FROM employes  
+WHERE id = 42  
+RETURNING *;  
 ```
 
 ### TRUNCATE : Syntaxe détaillée
@@ -117,20 +117,20 @@ CREATE TABLE test (
 );
 
 -- Insérer des données
-INSERT INTO test (nom) VALUES ('Alice'), ('Bob'), ('Charlie');
-SELECT * FROM test;
+INSERT INTO test (nom) VALUES ('Alice'), ('Bob'), ('Charlie');  
+SELECT * FROM test;  
 -- Résultat : id = 1, 2, 3
 
 -- Vider sans réinitialiser
-TRUNCATE TABLE test;
-INSERT INTO test (nom) VALUES ('David');
-SELECT * FROM test;
+TRUNCATE TABLE test;  
+INSERT INTO test (nom) VALUES ('David');  
+SELECT * FROM test;  
 -- Résultat : id = 4 (continue la séquence)
 
 -- Vider avec réinitialisation
-TRUNCATE TABLE test RESTART IDENTITY;
-INSERT INTO test (nom) VALUES ('Emma');
-SELECT * FROM test;
+TRUNCATE TABLE test RESTART IDENTITY;  
+INSERT INTO test (nom) VALUES ('Emma');  
+SELECT * FROM test;  
 -- Résultat : id = 1 (séquence réinitialisée)
 ```
 
@@ -190,8 +190,8 @@ CREATE TABLE test_perf (
 );
 
 -- Insérer 10 000 lignes
-INSERT INTO test_perf (data)
-SELECT 'test_' || generate_series(1, 10000);
+INSERT INTO test_perf (data)  
+SELECT 'test_' || generate_series(1, 10000);  
 ```
 
 **Résultats** :
@@ -206,8 +206,8 @@ SELECT 'test_' || generate_series(1, 10000);
 #### Test 2 : Table de 1 000 000 lignes
 
 ```sql
-INSERT INTO test_perf (data)
-SELECT 'test_' || generate_series(1, 1000000);
+INSERT INTO test_perf (data)  
+SELECT 'test_' || generate_series(1, 1000000);  
 ```
 
 **Résultats** :
@@ -325,8 +325,8 @@ DELETE utilise le système MVCC (Multi-Version Concurrency Control) de PostgreSQ
 
 ```sql
 -- Session 1
-BEGIN;
-DELETE FROM employes WHERE id = 42;
+BEGIN;  
+DELETE FROM employes WHERE id = 42;  
 -- La ligne est marquée comme supprimée, mais pas encore committée
 
 -- Session 2 (en parallèle)
@@ -348,8 +348,8 @@ TRUNCATE prend un verrou exclusif, bloquant toutes les autres opérations :
 
 ```sql
 -- Session 1
-BEGIN;
-TRUNCATE TABLE employes;
+BEGIN;  
+TRUNCATE TABLE employes;  
 
 -- Session 2 (en parallèle)
 SELECT COUNT(*) FROM employes;
@@ -385,8 +385,8 @@ CREATE TABLE employes (
     departement_id INTEGER REFERENCES departements(id)
 );
 
-INSERT INTO departements (nom) VALUES ('IT');
-INSERT INTO employes (nom, departement_id) VALUES ('Alice', 1);
+INSERT INTO departements (nom) VALUES ('IT');  
+INSERT INTO employes (nom, departement_id) VALUES ('Alice', 1);  
 
 -- Tentative de suppression
 DELETE FROM departements WHERE id = 1;
@@ -397,8 +397,8 @@ DELETE FROM departements WHERE id = 1;
 
 ```sql
 -- Solution 1 : Supprimer d'abord les dépendances
-DELETE FROM employes WHERE departement_id = 1;
-DELETE FROM departements WHERE id = 1;
+DELETE FROM employes WHERE departement_id = 1;  
+DELETE FROM departements WHERE id = 1;  
 
 -- Solution 2 : Utiliser ON DELETE CASCADE (défini à la création)
 CREATE TABLE employes (
@@ -429,8 +429,8 @@ TRUNCATE TABLE departements CASCADE;
 -- Vide departements ET employes
 
 -- Solution 2 : Vider manuellement dans le bon ordre
-TRUNCATE TABLE employes;
-TRUNCATE TABLE departements;
+TRUNCATE TABLE employes;  
+TRUNCATE TABLE departements;  
 
 -- Solution 3 : Vider plusieurs tables simultanément
 TRUNCATE TABLE employes, departements;
@@ -442,19 +442,19 @@ TRUNCATE TABLE employes, departements;
 
 ```sql
 -- Créer un trigger
-CREATE OR REPLACE FUNCTION log_delete()
-RETURNS TRIGGER AS $$
-BEGIN
+CREATE OR REPLACE FUNCTION log_delete()  
+RETURNS TRIGGER AS $$  
+BEGIN  
     INSERT INTO audit_log (action, table_name, row_id)
     VALUES ('DELETE', TG_TABLE_NAME, OLD.id);
     RETURN OLD;
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE TRIGGER employes_delete_trigger
-AFTER DELETE ON employes
-FOR EACH ROW
-EXECUTE FUNCTION log_delete();
+CREATE TRIGGER employes_delete_trigger  
+AFTER DELETE ON employes  
+FOR EACH ROW  
+EXECUTE FUNCTION log_delete();  
 
 -- DELETE déclenche le trigger
 DELETE FROM employes WHERE id = 42;
@@ -469,19 +469,19 @@ TRUNCATE TABLE employes;
 -- → Aucun enregistrement dans audit_log
 
 -- Pour intercepter TRUNCATE, créer un trigger spécifique
-CREATE OR REPLACE FUNCTION log_truncate()
-RETURNS TRIGGER AS $$
-BEGIN
+CREATE OR REPLACE FUNCTION log_truncate()  
+RETURNS TRIGGER AS $$  
+BEGIN  
     INSERT INTO audit_log (action, table_name)
     VALUES ('TRUNCATE', TG_TABLE_NAME);
     RETURN NULL;
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE TRIGGER employes_truncate_trigger
-BEFORE TRUNCATE ON employes
-FOR EACH STATEMENT
-EXECUTE FUNCTION log_truncate();
+CREATE TRIGGER employes_truncate_trigger  
+BEFORE TRUNCATE ON employes  
+FOR EACH STATEMENT  
+EXECUTE FUNCTION log_truncate();  
 ```
 
 ---
@@ -640,8 +640,8 @@ DELETE prend des verrous au niveau des lignes :
 
 ```sql
 -- Session 1
-BEGIN;
-DELETE FROM employes WHERE id = 42;
+BEGIN;  
+DELETE FROM employes WHERE id = 42;  
 -- Verrou sur la ligne id=42
 
 -- Session 2 (en parallèle)
@@ -663,8 +663,8 @@ TRUNCATE prend un verrou exclusif (ACCESS EXCLUSIVE) sur toute la table :
 
 ```sql
 -- Session 1
-BEGIN;
-TRUNCATE TABLE employes;
+BEGIN;  
+TRUNCATE TABLE employes;  
 
 -- Session 2 (en parallèle)
 SELECT COUNT(*) FROM employes;
@@ -728,13 +728,13 @@ TRUNCATE TABLE logs;
 ### Comparaison visuelle
 
 ```
-DELETE (1M lignes) :
-WAL : [████████████████████████████████] 1.5 GB
-Durée réplication : ~30 secondes
+DELETE (1M lignes) :  
+WAL : [████████████████████████████████] 1.5 GB  
+Durée réplication : ~30 secondes  
 
-TRUNCATE (même table) :
-WAL : [█] 8 KB
-Durée réplication : ~0.1 seconde
+TRUNCATE (même table) :  
+WAL : [█] 8 KB  
+Durée réplication : ~0.1 seconde  
 ```
 
 ---
@@ -745,14 +745,14 @@ Durée réplication : ~0.1 seconde
 
 ✅ **Vous devez supprimer seulement certaines lignes**
 ```sql
-DELETE FROM logs WHERE date_creation < '2024-01-01';
-DELETE FROM employes WHERE statut = 'inactif';
+DELETE FROM logs WHERE date_creation < '2024-01-01';  
+DELETE FROM employes WHERE statut = 'inactif';  
 ```
 
 ✅ **Vous avez besoin de RETURNING**
 ```sql
-DELETE FROM employes WHERE id = 42
-RETURNING id, nom, prenom, email;
+DELETE FROM employes WHERE id = 42  
+RETURNING id, nom, prenom, email;  
 ```
 
 ✅ **Les triggers doivent s'exécuter**
@@ -778,8 +778,8 @@ DELETE FROM sessions WHERE date_expiration < NOW();
 
 ✅ **Vous voulez vider complètement une table**
 ```sql
-TRUNCATE TABLE logs_temporaires;
-TRUNCATE TABLE cache_table;
+TRUNCATE TABLE logs_temporaires;  
+TRUNCATE TABLE cache_table;  
 ```
 
 ✅ **La performance est critique**
@@ -834,18 +834,18 @@ TRUNCATE TABLE rapports_journaliers;
 
 ```sql
 -- ❌ Inefficace pour gros volumes
-DELETE FROM application_logs
-WHERE date_creation < CURRENT_DATE - INTERVAL '1 year';
+DELETE FROM application_logs  
+WHERE date_creation < CURRENT_DATE - INTERVAL '1 year';  
 -- Peut prendre des minutes/heures sur des millions de lignes
 
 -- ✅ Solution hybride : Partitionnement + TRUNCATE
 -- Table partitionnée par mois
-CREATE TABLE logs_2024_01 PARTITION OF logs
-FOR VALUES FROM ('2024-01-01') TO ('2024-02-01');
+CREATE TABLE logs_2024_01 PARTITION OF logs  
+FOR VALUES FROM ('2024-01-01') TO ('2024-02-01');  
 
 -- Détacher et supprimer la partition (équivalent à TRUNCATE ultra-rapide)
-ALTER TABLE logs DETACH PARTITION logs_2024_01;
-DROP TABLE logs_2024_01;
+ALTER TABLE logs DETACH PARTITION logs_2024_01;  
+DROP TABLE logs_2024_01;  
 ```
 
 ### Pattern 2 : Staging tables (import de données)
@@ -862,9 +862,9 @@ TRUNCATE TABLE staging_import RESTART IDENTITY;
 COPY staging_import FROM '/data/import.csv' CSV;
 
 -- 3. Valider et transformer
-INSERT INTO production_table
-SELECT * FROM staging_import
-WHERE validation_rules_ok;
+INSERT INTO production_table  
+SELECT * FROM staging_import  
+WHERE validation_rules_ok;  
 
 COMMIT;
 ```
@@ -878,14 +878,14 @@ COMMIT;
 TRUNCATE TABLE cache_statistics;
 
 -- Recalculer
-INSERT INTO cache_statistics
-SELECT
+INSERT INTO cache_statistics  
+SELECT  
     date_trunc('day', date_vente) AS jour,
     SUM(montant) AS total_ventes,
     COUNT(*) AS nb_commandes
-FROM ventes
-WHERE date_vente >= CURRENT_DATE - INTERVAL '30 days'
-GROUP BY jour;
+FROM ventes  
+WHERE date_vente >= CURRENT_DATE - INTERVAL '30 days'  
+GROUP BY jour;  
 ```
 
 ### Pattern 4 : Tests unitaires
@@ -893,9 +893,9 @@ GROUP BY jour;
 ```sql
 -- Setup de test : table propre à chaque test
 
-CREATE OR REPLACE FUNCTION setup_test()
-RETURNS VOID AS $$
-BEGIN
+CREATE OR REPLACE FUNCTION setup_test()  
+RETURNS VOID AS $$  
+BEGIN  
     -- Réinitialiser complètement
     TRUNCATE TABLE test_users RESTART IDENTITY CASCADE;
 
@@ -923,8 +923,8 @@ WITH archived AS (
     WHERE date_commande < '2023-01-01'
     RETURNING *
 )
-INSERT INTO commandes_archives
-SELECT * FROM archived;
+INSERT INTO commandes_archives  
+SELECT * FROM archived;  
 
 COMMIT;
 
@@ -963,8 +963,8 @@ TRUNCATE TABLE departements CASCADE;
 -- Vide aussi employes, projets, et toutes tables liées !
 
 -- ✅ Explicite et sûr
-TRUNCATE TABLE employes;
-TRUNCATE TABLE departements;
+TRUNCATE TABLE employes;  
+TRUNCATE TABLE departements;  
 ```
 
 ### Piège 3 : Oublier VACUUM après DELETE massif
@@ -990,8 +990,8 @@ TRUNCATE TABLE sessions_actives;
 -- Tous les utilisateurs sont bloqués !
 
 -- ✅ DELETE avec WHERE ou hors heures de pointe
-DELETE FROM sessions_actives
-WHERE date_expiration < NOW();
+DELETE FROM sessions_actives  
+WHERE date_expiration < NOW();  
 ```
 
 ### Piège 5 : Séquence non réinitialisée
@@ -1005,8 +1005,8 @@ INSERT INTO test_data (nom) VALUES ('Test');
 -- id = 1001 (séquence pas réinitialisée !)
 
 -- ✅ Réinitialiser explicitement
-TRUNCATE TABLE test_data RESTART IDENTITY;
-INSERT INTO test_data (nom) VALUES ('Test');
+TRUNCATE TABLE test_data RESTART IDENTITY;  
+INSERT INTO test_data (nom) VALUES ('Test');  
 -- id = 1
 ```
 
@@ -1026,10 +1026,10 @@ SELECT
     ROUND(100.0 * n_dead_tup / NULLIF(n_live_tup + n_dead_tup, 0), 2) AS dead_pct,
     last_vacuum,
     last_autovacuum
-FROM pg_stat_user_tables
-WHERE n_dead_tup > 1000
-ORDER BY n_dead_tup DESC
-LIMIT 10;
+FROM pg_stat_user_tables  
+WHERE n_dead_tup > 1000  
+ORDER BY n_dead_tup DESC  
+LIMIT 10;  
 ```
 
 ### Surveiller l'impact sur le WAL
@@ -1055,8 +1055,8 @@ SELECT
     state,
     query,
     age(clock_timestamp(), query_start) AS duree
-FROM pg_stat_activity
-WHERE query LIKE 'DELETE%'
+FROM pg_stat_activity  
+WHERE query LIKE 'DELETE%'  
   AND state = 'active'
 ORDER BY query_start;
 ```
@@ -1081,20 +1081,20 @@ ORDER BY query_start;
 ### Points clés à retenir
 
 **DELETE** :
-- ✅ Flexible (WHERE)
-- ✅ Transactionnel
-- ✅ Triggers
-- ✅ RETURNING
-- ⚠️ Lent
+- ✅ Flexible (WHERE)  
+- ✅ Transactionnel  
+- ✅ Triggers  
+- ✅ RETURNING  
+- ⚠️ Lent  
 - ⚠️ VACUUM nécessaire
 
 **TRUNCATE** :
-- ✅ Ultra-rapide
-- ✅ Libération espace immédiate
-- ✅ Transactionnel (rollback possible)
-- ✅ Réinitialisation séquences
-- ❌ Pas de WHERE
-- ❌ Pas de RETURNING
+- ✅ Ultra-rapide  
+- ✅ Libération espace immédiate  
+- ✅ Transactionnel (rollback possible)  
+- ✅ Réinitialisation séquences  
+- ❌ Pas de WHERE  
+- ❌ Pas de RETURNING  
 - ⚠️ Verrou exclusif
 
 ### Règle d'or
@@ -1107,9 +1107,9 @@ ORDER BY query_start;
 
 DELETE et TRUNCATE sont deux outils complémentaires dans l'arsenal PostgreSQL. Comprendre leurs différences est essentiel pour :
 
-1. **Optimiser les performances** : TRUNCATE peut être 1000× plus rapide
-2. **Éviter les erreurs** : Savoir quel outil utiliser dans quelle situation
-3. **Maintenir la cohérence** : Comprendre l'impact sur les contraintes et triggers
+1. **Optimiser les performances** : TRUNCATE peut être 1000× plus rapide  
+2. **Éviter les erreurs** : Savoir quel outil utiliser dans quelle situation  
+3. **Maintenir la cohérence** : Comprendre l'impact sur les contraintes et triggers  
 4. **Gérer la concurrence** : Anticiper les verrous et blocages
 
 En production, le choix entre DELETE et TRUNCATE peut faire la différence entre une opération de quelques millisecondes et une opération de plusieurs heures. Choisissez judicieusement !

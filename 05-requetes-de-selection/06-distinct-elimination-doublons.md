@@ -50,12 +50,12 @@ SELECT ville FROM clients;
 ```
 ville
 ----------
-Paris
-Lyon
-Paris
-Marseille
-Paris
-Lyon
+Paris  
+Lyon  
+Paris  
+Marseille  
+Paris  
+Lyon  
 ```
 
 Vous obtenez 6 lignes avec **des doublons** : Paris apparaît 3 fois, Lyon 2 fois.
@@ -70,9 +70,9 @@ SELECT DISTINCT ville FROM clients;
 ```
 ville
 ----------
-Lyon
-Marseille
-Paris
+Lyon  
+Marseille  
+Paris  
 ```
 
 Maintenant, chaque ville n'apparaît qu'**une seule fois** !
@@ -84,10 +84,10 @@ Maintenant, chaque ville n'apparaît qu'**une seule fois** !
 ### Syntaxe de base
 
 ```sql
-SELECT DISTINCT colonne1, colonne2, ...
-FROM table
-WHERE conditions
-ORDER BY colonne;
+SELECT DISTINCT colonne1, colonne2, ...  
+FROM table  
+WHERE conditions  
+ORDER BY colonne;  
 ```
 
 ### Placement de DISTINCT
@@ -105,9 +105,9 @@ SELECT ville DISTINCT FROM clients;
 ### Fonctionnement interne
 
 PostgreSQL :
-1. Exécute la requête normalement (FROM, WHERE, etc.)
-2. Récupère toutes les lignes
-3. **Élimine les doublons** en comparant toutes les colonnes sélectionnées
+1. Exécute la requête normalement (FROM, WHERE, etc.)  
+2. Récupère toutes les lignes  
+3. **Élimine les doublons** en comparant toutes les colonnes sélectionnées  
 4. Retourne les lignes uniques
 
 **Important :** DISTINCT compare **toutes les colonnes** du SELECT pour déterminer l'unicité.
@@ -135,18 +135,18 @@ Vous pouvez combiner DISTINCT avec ORDER BY :
 
 ```sql
 -- Villes distinctes, triées alphabétiquement
-SELECT DISTINCT ville
-FROM clients
-ORDER BY ville ASC;
+SELECT DISTINCT ville  
+FROM clients  
+ORDER BY ville ASC;  
 ```
 
 **Résultat :**
 ```
 ville
 ----------
-Lyon
-Marseille
-Paris
+Lyon  
+Marseille  
+Paris  
 ```
 
 ### Avec WHERE
@@ -155,10 +155,10 @@ DISTINCT s'applique **après** le filtrage WHERE :
 
 ```sql
 -- Villes distinctes des clients actifs uniquement
-SELECT DISTINCT ville
-FROM clients
-WHERE statut = 'actif'
-ORDER BY ville;
+SELECT DISTINCT ville  
+FROM clients  
+WHERE statut = 'actif'  
+ORDER BY ville;  
 ```
 
 ---
@@ -185,8 +185,8 @@ INSERT INTO commandes (client_id, produit, date_commande) VALUES
     (1, 'Laptop', '2024-02-10');  -- Date différente
 
 -- Combinaisons uniques de client_id et produit
-SELECT DISTINCT client_id, produit
-FROM commandes;
+SELECT DISTINCT client_id, produit  
+FROM commandes;  
 ```
 
 **Résultat :**
@@ -209,8 +209,8 @@ L'ordre des colonnes après DISTINCT **n'affecte pas** le résultat, mais affect
 
 ```sql
 -- Ces deux requêtes retournent les mêmes combinaisons uniques
-SELECT DISTINCT ville, pays FROM clients;
-SELECT DISTINCT pays, ville FROM clients;
+SELECT DISTINCT ville, pays FROM clients;  
+SELECT DISTINCT pays, ville FROM clients;  
 
 -- Mais l'affichage sera différent (colonnes dans un ordre différent)
 ```
@@ -279,12 +279,12 @@ SELECT COUNT(DISTINCT categorie) FROM produits;
 
 ```sql
 -- Méthode 1 : COUNT(DISTINCT)
-SELECT COUNT(DISTINCT ville) as nb_villes
-FROM clients;
+SELECT COUNT(DISTINCT ville) as nb_villes  
+FROM clients;  
 
 -- Méthode 2 : DISTINCT + sous-requête
-SELECT COUNT(*) as nb_villes
-FROM (
+SELECT COUNT(*) as nb_villes  
+FROM (  
     SELECT DISTINCT ville FROM clients
 ) sub;
 
@@ -313,9 +313,9 @@ SELECT COUNT(DISTINCT telephone) FROM clients;
 ### Syntaxe
 
 ```sql
-SELECT DISTINCT ON (colonnes_groupement) colonnes_selection
-FROM table
-ORDER BY colonnes_groupement, colonnes_tri;
+SELECT DISTINCT ON (colonnes_groupement) colonnes_selection  
+FROM table  
+ORDER BY colonnes_groupement, colonnes_tri;  
 ```
 
 **Important :** `ORDER BY` est **fortement recommandé** avec DISTINCT ON pour contrôler quelle ligne est conservée dans chaque groupe.
@@ -363,22 +363,22 @@ SELECT DISTINCT ON (produit)
     vendeur,
     montant,
     date_vente
-FROM ventes
-ORDER BY produit, date_vente DESC;
+FROM ventes  
+ORDER BY produit, date_vente DESC;  
 ```
 
 **Résultat :**
 ```
 produit  | vendeur | montant | date_vente
 ---------|---------|---------|------------
-Keyboard | Alice   | 80      | 2024-01-14
-Laptop   | Charlie | 1300    | 2024-01-20  -- Vente la plus récente pour Laptop
-Mouse    | Bob     | 30      | 2024-01-18  -- Vente la plus récente pour Mouse
+Keyboard | Alice   | 80      | 2024-01-14  
+Laptop   | Charlie | 1300    | 2024-01-20  -- Vente la plus récente pour Laptop  
+Mouse    | Bob     | 30      | 2024-01-18  -- Vente la plus récente pour Mouse  
 ```
 
 **Explication :**
-1. DISTINCT ON (produit) groupe les lignes par produit
-2. ORDER BY produit, date_vente DESC trie par produit puis date décroissante
+1. DISTINCT ON (produit) groupe les lignes par produit  
+2. ORDER BY produit, date_vente DESC trie par produit puis date décroissante  
 3. Pour chaque produit, seule la **première ligne** (= la plus récente) est conservée
 
 ### Ordre du ORDER BY avec DISTINCT ON
@@ -387,14 +387,14 @@ Mouse    | Bob     | 30      | 2024-01-18  -- Vente la plus récente pour Mouse
 
 ```sql
 -- ✅ Correct : produit est en premier dans ORDER BY
-SELECT DISTINCT ON (produit) produit, montant
-FROM ventes
-ORDER BY produit, date_vente DESC;
+SELECT DISTINCT ON (produit) produit, montant  
+FROM ventes  
+ORDER BY produit, date_vente DESC;  
 
 -- ❌ Erreur : ORDER BY doit commencer par produit
-SELECT DISTINCT ON (produit) produit, montant
-FROM ventes
-ORDER BY date_vente DESC, produit;
+SELECT DISTINCT ON (produit) produit, montant  
+FROM ventes  
+ORDER BY date_vente DESC, produit;  
 -- ERROR: SELECT DISTINCT ON expressions must match initial ORDER BY expressions
 ```
 
@@ -409,8 +409,8 @@ SELECT DISTINCT ON (produit, vendeur)
     vendeur,
     montant,
     date_vente
-FROM ventes
-ORDER BY produit, vendeur, montant DESC;
+FROM ventes  
+ORDER BY produit, vendeur, montant DESC;  
 ```
 
 ---
@@ -426,16 +426,16 @@ SELECT DISTINCT ON (conversation_id)
     message,
     auteur,
     timestamp
-FROM messages
-ORDER BY conversation_id, timestamp DESC;
+FROM messages  
+ORDER BY conversation_id, timestamp DESC;  
 
 -- Dernière connexion de chaque utilisateur
 SELECT DISTINCT ON (user_id)
     user_id,
     adresse_ip,
     date_connexion
-FROM logs_connexion
-ORDER BY user_id, date_connexion DESC;
+FROM logs_connexion  
+ORDER BY user_id, date_connexion DESC;  
 ```
 
 ### 2. Meilleure valeur par groupe
@@ -446,16 +446,16 @@ SELECT DISTINCT ON (categorie)
     categorie,
     nom_produit,
     prix
-FROM produits
-ORDER BY categorie, prix ASC;
+FROM produits  
+ORDER BY categorie, prix ASC;  
 
 -- Employé le mieux payé par département
 SELECT DISTINCT ON (departement)
     departement,
     nom,
     salaire
-FROM employes
-ORDER BY departement, salaire DESC;
+FROM employes  
+ORDER BY departement, salaire DESC;  
 ```
 
 ### 3. Première occurrence par groupe
@@ -466,16 +466,16 @@ SELECT DISTINCT ON (ville)
     ville,
     nom,
     date_inscription
-FROM clients
-ORDER BY ville, date_inscription ASC;
+FROM clients  
+ORDER BY ville, date_inscription ASC;  
 
 -- Première commande de chaque produit
 SELECT DISTINCT ON (produit_id)
     produit_id,
     numero_commande,
     date_commande
-FROM commandes
-ORDER BY produit_id, date_commande ASC;
+FROM commandes  
+ORDER BY produit_id, date_commande ASC;  
 ```
 
 ### 4. Déduplication intelligente
@@ -487,8 +487,8 @@ SELECT DISTINCT ON (email)
     nom,
     telephone,
     derniere_mise_a_jour
-FROM clients_doublons
-ORDER BY email, derniere_mise_a_jour DESC;
+FROM clients_doublons  
+ORDER BY email, derniere_mise_a_jour DESC;  
 ```
 
 ---
@@ -513,9 +513,9 @@ SELECT DISTINCT ville FROM clients;
 
 ```sql
 -- Nombre de clients par ville
-SELECT ville, COUNT(*) as nb_clients
-FROM clients
-GROUP BY ville;
+SELECT ville, COUNT(*) as nb_clients  
+FROM clients  
+GROUP BY ville;  
 ```
 
 **Caractéristiques :**
@@ -529,8 +529,8 @@ Pour obtenir uniquement des valeurs distinctes, les deux sont équivalents :
 
 ```sql
 -- Ces deux requêtes donnent le même résultat
-SELECT DISTINCT ville FROM clients;
-SELECT ville FROM clients GROUP BY ville;
+SELECT DISTINCT ville FROM clients;  
+SELECT ville FROM clients GROUP BY ville;  
 ```
 
 **Quelle syntaxe choisir ?**
@@ -549,8 +549,8 @@ En général, les performances sont **similaires** car PostgreSQL optimise les d
 
 ```sql
 -- Performance équivalente
-EXPLAIN ANALYZE SELECT DISTINCT ville FROM clients;
-EXPLAIN ANALYZE SELECT ville FROM clients GROUP BY ville;
+EXPLAIN ANALYZE SELECT DISTINCT ville FROM clients;  
+EXPLAIN ANALYZE SELECT ville FROM clients GROUP BY ville;  
 
 -- Les deux utilisent souvent la même stratégie (HashAggregate ou Sort + Unique)
 ```
@@ -562,7 +562,7 @@ EXPLAIN ANALYZE SELECT ville FROM clients GROUP BY ville;
 ### Impact sur les performances
 
 L'élimination des doublons nécessite de :
-1. **Trier** les résultats (pour identifier les doublons consécutifs)
+1. **Trier** les résultats (pour identifier les doublons consécutifs)  
 2. Ou utiliser une **table de hachage** (pour mémoriser les valeurs vues)
 
 Ces opérations ont un **coût** :
@@ -587,8 +587,8 @@ SELECT DISTINCT ville FROM clients;
 ### EXPLAIN pour comprendre
 
 ```sql
-EXPLAIN ANALYZE
-SELECT DISTINCT ville FROM clients;
+EXPLAIN ANALYZE  
+SELECT DISTINCT ville FROM clients;  
 ```
 
 **Plans d'exécution possibles :**
@@ -636,18 +636,18 @@ SELECT id FROM clients;
 
 ```sql
 -- ❌ ERREUR (sur certains SGBD, pas PostgreSQL)
-SELECT DISTINCT ville
-FROM clients
-ORDER BY date_inscription;
+SELECT DISTINCT ville  
+FROM clients  
+ORDER BY date_inscription;  
 -- ERROR: for SELECT DISTINCT, ORDER BY expressions must appear in select list
 
 -- PostgreSQL autorise cela, mais c'est ambigu
 -- Quelle date_inscription choisir quand plusieurs clients ont la même ville ?
 
 -- ✅ Solution : inclure la colonne de tri
-SELECT DISTINCT ville, date_inscription
-FROM clients
-ORDER BY date_inscription;
+SELECT DISTINCT ville, date_inscription  
+FROM clients  
+ORDER BY date_inscription;  
 ```
 
 ### 2. Confondre DISTINCT et DISTINCT ON
@@ -682,9 +682,9 @@ SELECT DISTINCT id FROM clients;  -- id est déjà unique !
 SELECT id FROM clients;
 
 -- ❌ DISTINCT inutile si la requête retourne déjà des valeurs uniques
-SELECT DISTINCT departement, SUM(salaire)
-FROM employes
-GROUP BY departement;
+SELECT DISTINCT departement, SUM(salaire)  
+FROM employes  
+GROUP BY departement;  
 -- GROUP BY garantit déjà l'unicité de departement, DISTINCT ne sert à rien
 ```
 
@@ -692,29 +692,29 @@ GROUP BY departement;
 
 ```sql
 -- ❌ Confusion : DISTINCT ne s'applique pas aux agrégations
-SELECT DISTINCT departement, COUNT(*)
-FROM employes
-GROUP BY departement;
+SELECT DISTINCT departement, COUNT(*)  
+FROM employes  
+GROUP BY departement;  
 -- DISTINCT ici n'a aucun effet, GROUP BY garantit déjà l'unicité
 
 -- ✅ Si vous voulez compter les valeurs distinctes
-SELECT departement, COUNT(DISTINCT poste)
-FROM employes
-GROUP BY departement;
+SELECT departement, COUNT(DISTINCT poste)  
+FROM employes  
+GROUP BY departement;  
 ```
 
 ### 6. DISTINCT ON sans ORDER BY approprié
 
 ```sql
 -- ⚠️ Résultat imprévisible
-SELECT DISTINCT ON (produit) produit, vendeur, montant
-FROM ventes;
+SELECT DISTINCT ON (produit) produit, vendeur, montant  
+FROM ventes;  
 -- Quelle ligne sera conservée pour chaque produit ? Imprévisible !
 
 -- ✅ Toujours spécifier ORDER BY
-SELECT DISTINCT ON (produit) produit, vendeur, montant
-FROM ventes
-ORDER BY produit, montant DESC;
+SELECT DISTINCT ON (produit) produit, vendeur, montant  
+FROM ventes  
+ORDER BY produit, montant DESC;  
 -- Maintenant on sait : la vente la plus élevée pour chaque produit
 ```
 
@@ -735,8 +735,8 @@ SELECT
     produit,
     COUNT(*) as nb_ventes,
     MAX(montant) as meilleure_vente
-FROM ventes
-GROUP BY produit;
+FROM ventes  
+GROUP BY produit;  
 
 -- Résultat :
 -- produit  | nb_ventes | meilleure_vente
@@ -765,17 +765,17 @@ SELECT
     s.nb_ventes,
     s.meilleure_vente,
     dv.dernier_vendeur
-FROM stats s
-JOIN derniere_vente dv ON s.produit = dv.produit;
+FROM stats s  
+JOIN derniere_vente dv ON s.produit = dv.produit;  
 ```
 
 **Résultat :**
 ```
 produit  | nb_ventes | meilleure_vente | dernier_vendeur
 ---------|-----------|-----------------|----------------
-Laptop   | 3         | 1300            | Charlie
-Mouse    | 2         | 30              | Bob
-Keyboard | 1         | 80              | Alice
+Laptop   | 3         | 1300            | Charlie  
+Mouse    | 2         | 30              | Bob  
+Keyboard | 1         | 80              | Alice  
 ```
 
 ### Exemple 2 : Déduplication d'emails
@@ -793,17 +793,17 @@ SELECT DISTINCT ON (email)
     email,
     nom,
     date_import
-FROM emails_importes
-ORDER BY email, date_import DESC;
+FROM emails_importes  
+ORDER BY email, date_import DESC;  
 
 -- Ou insérer dans une table propre
-INSERT INTO emails_uniques (email, nom)
-SELECT DISTINCT ON (email)
+INSERT INTO emails_uniques (email, nom)  
+SELECT DISTINCT ON (email)  
     email,
     nom
-FROM emails_importes
-ORDER BY email, date_import DESC
-ON CONFLICT (email) DO NOTHING;
+FROM emails_importes  
+ORDER BY email, date_import DESC  
+ON CONFLICT (email) DO NOTHING;  
 ```
 
 ### Exemple 3 : Dashboard avec dernières valeurs
@@ -820,9 +820,9 @@ SELECT DISTINCT ON (capteur_id)
         WHEN valeur > seuil_warning THEN 'ATTENTION'
         ELSE 'OK'
     END as statut
-FROM mesures m
-JOIN capteurs c ON m.capteur_id = c.id
-ORDER BY capteur_id, timestamp DESC;
+FROM mesures m  
+JOIN capteurs c ON m.capteur_id = c.id  
+ORDER BY capteur_id, timestamp DESC;  
 ```
 
 ---
@@ -843,13 +843,13 @@ SELECT ville, COUNT(*) FROM clients GROUP BY ville;
 
 ```sql
 -- Au lieu de DISTINCT ON pour obtenir le top 1
-SELECT DISTINCT ON (categorie) categorie, nom_produit, prix
-FROM produits
-ORDER BY categorie, prix DESC;
+SELECT DISTINCT ON (categorie) categorie, nom_produit, prix  
+FROM produits  
+ORDER BY categorie, prix DESC;  
 
 -- Avec window function (plus flexible)
-SELECT *
-FROM (
+SELECT *  
+FROM (  
     SELECT
         categorie,
         nom_produit,
@@ -893,7 +893,7 @@ SELECT EXISTS (
    - Compare toutes les colonnes du SELECT
    - Garde une seule occurrence de chaque combinaison unique
 
-2. **DISTINCT s'applique à toutes les colonnes**
+2. **DISTINCT s'applique à toutes les colonnes**  
    - `SELECT DISTINCT col1, col2` → unicité sur (col1, col2)
 
 3. **NULL sont considérés égaux**

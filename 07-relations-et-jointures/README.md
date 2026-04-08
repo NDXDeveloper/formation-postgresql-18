@@ -44,11 +44,11 @@ Table : commandes_tout_en_un
 ```
 
 **Problèmes de cette approche** :
-1. **Redondance** : Les informations d'Alice (nom, email, ville) sont répétées 3 fois
-2. **Incohérence** : Si Alice change d'email, il faut modifier 3 lignes (risque d'oubli)
-3. **Gaspillage d'espace** : Les données sont dupliquées inutilement
-4. **Anomalies de mise à jour** : Que se passe-t-il si on modifie l'email d'Alice sur une seule ligne ?
-5. **Anomalies de suppression** : Si on supprime toutes les commandes d'Alice, on perd toutes ses informations
+1. **Redondance** : Les informations d'Alice (nom, email, ville) sont répétées 3 fois  
+2. **Incohérence** : Si Alice change d'email, il faut modifier 3 lignes (risque d'oubli)  
+3. **Gaspillage d'espace** : Les données sont dupliquées inutilement  
+4. **Anomalies de mise à jour** : Que se passe-t-il si on modifie l'email d'Alice sur une seule ligne ?  
+5. **Anomalies de suppression** : Si on supprime toutes les commandes d'Alice, on perd toutes ses informations  
 6. **Anomalies d'insertion** : Comment ajouter un nouveau client qui n'a pas encore commandé ?
 
 #### Approche Relationnelle : Tables Séparées (✅ Bonne Pratique)
@@ -84,10 +84,10 @@ Table : commandes
 ```
 
 **Avantages de cette approche** :
-1. ✅ **Pas de redondance** : Chaque information n'existe qu'une seule fois
-2. ✅ **Cohérence** : Modifier l'email d'Alice se fait en un seul endroit
-3. ✅ **Économie d'espace** : Moins de duplication
-4. ✅ **Intégrité** : Les données restent cohérentes
+1. ✅ **Pas de redondance** : Chaque information n'existe qu'une seule fois  
+2. ✅ **Cohérence** : Modifier l'email d'Alice se fait en un seul endroit  
+3. ✅ **Économie d'espace** : Moins de duplication  
+4. ✅ **Intégrité** : Les données restent cohérentes  
 5. ✅ **Flexibilité** : On peut ajouter un client sans commande, ou une commande sans tout répéter
 
 **Le lien** : Les colonnes `client_id` et `produit_id` dans la table `commandes` créent les **relations** avec les tables `clients` et `produits`.
@@ -237,8 +237,8 @@ Table : etudiants              Table : cours
 ### 4. Permettre des Requêtes Complexes
 
 Avec des tables séparées, on peut facilement répondre à des questions comme :
-- "Quels clients ont commandé plus de 1000€ ?"
-- "Quels produits n'ont jamais été vendus ?"
+- "Quels clients ont commandé plus de 1000€ ?"  
+- "Quels produits n'ont jamais été vendus ?"  
 - "Quel est le top 10 des clients par chiffre d'affaires ?"
 
 C'est là que les **jointures** entrent en jeu !
@@ -264,8 +264,8 @@ SELECT
     clients.nom AS client,
     commandes.id AS numero_commande,
     commandes.montant
-FROM clients
-INNER JOIN commandes ON clients.id = commandes.client_id;
+FROM clients  
+INNER JOIN commandes ON clients.id = commandes.client_id;  
 ```
 
 **Résultat** :
@@ -288,11 +288,11 @@ INNER JOIN commandes ON clients.id = commandes.client_id;
 
 PostgreSQL offre plusieurs types de jointures :
 
-1. **INNER JOIN** : Retourne seulement les lignes qui ont une correspondance dans les deux tables
-2. **LEFT JOIN** : Retourne toutes les lignes de la table de gauche, même sans correspondance
-3. **RIGHT JOIN** : Retourne toutes les lignes de la table de droite, même sans correspondance
-4. **FULL OUTER JOIN** : Retourne toutes les lignes des deux tables
-5. **CROSS JOIN** : Produit cartésien (toutes les combinaisons)
+1. **INNER JOIN** : Retourne seulement les lignes qui ont une correspondance dans les deux tables  
+2. **LEFT JOIN** : Retourne toutes les lignes de la table de gauche, même sans correspondance  
+3. **RIGHT JOIN** : Retourne toutes les lignes de la table de droite, même sans correspondance  
+4. **FULL OUTER JOIN** : Retourne toutes les lignes des deux tables  
+5. **CROSS JOIN** : Produit cartésien (toutes les combinaisons)  
 6. **SELF JOIN** : Une table jointe à elle-même
 
 Nous explorerons chacun de ces types en détail dans les sections suivantes.
@@ -331,27 +331,27 @@ Trouvez ce qui **existe** ou **n'existe pas** dans vos données.
 À la fin de ce chapitre, vous serez capable de :
 
 ### 1. Concevoir un Schéma Relationnel
-- ✅ Identifier les entités de votre domaine métier
-- ✅ Déterminer les relations entre ces entités (1:1, 1:N, N:M)
-- ✅ Normaliser vos tables pour éliminer la redondance
+- ✅ Identifier les entités de votre domaine métier  
+- ✅ Déterminer les relations entre ces entités (1:1, 1:N, N:M)  
+- ✅ Normaliser vos tables pour éliminer la redondance  
 - ✅ Définir les clés primaires et étrangères appropriées
 
 ### 2. Garantir l'Intégrité des Données
-- ✅ Utiliser les contraintes PRIMARY KEY et FOREIGN KEY
-- ✅ Appliquer des contraintes UNIQUE, NOT NULL, CHECK
-- ✅ Comprendre les actions CASCADE, RESTRICT, SET NULL
+- ✅ Utiliser les contraintes PRIMARY KEY et FOREIGN KEY  
+- ✅ Appliquer des contraintes UNIQUE, NOT NULL, CHECK  
+- ✅ Comprendre les actions CASCADE, RESTRICT, SET NULL  
 - ✅ Gérer les contraintes temporelles (PostgreSQL 18)
 
 ### 3. Écrire des Jointures Efficaces
-- ✅ Choisir le bon type de jointure selon vos besoins
-- ✅ Combiner plusieurs tables en une seule requête
-- ✅ Éviter les pièges courants (produit cartésien accidentel, NULL dans les jointures)
+- ✅ Choisir le bon type de jointure selon vos besoins  
+- ✅ Combiner plusieurs tables en une seule requête  
+- ✅ Éviter les pièges courants (produit cartésien accidentel, NULL dans les jointures)  
 - ✅ Optimiser les performances avec les bons index
 
 ### 4. Résoudre des Problèmes Complexes
-- ✅ Trouver les clients sans commande (anti-jointure)
-- ✅ Obtenir les top N par groupe (LATERAL JOIN)
-- ✅ Gérer les hiérarchies (self-join)
+- ✅ Trouver les clients sans commande (anti-jointure)  
+- ✅ Obtenir les top N par groupe (LATERAL JOIN)  
+- ✅ Gérer les hiérarchies (self-join)  
 - ✅ Combiner des données de sources multiples
 
 ---
@@ -360,9 +360,9 @@ Trouvez ce qui **existe** ou **n'existe pas** dans vos données.
 
 Avant de commencer ce chapitre, assurez-vous de maîtriser :
 
-- ✅ Les bases de SQL (SELECT, FROM, WHERE)
-- ✅ La création de tables (CREATE TABLE)
-- ✅ L'insertion de données (INSERT)
+- ✅ Les bases de SQL (SELECT, FROM, WHERE)  
+- ✅ La création de tables (CREATE TABLE)  
+- ✅ L'insertion de données (INSERT)  
 - ✅ Les types de données de base (INTEGER, VARCHAR, DATE, etc.)
 
 Si vous avez des doutes, n'hésitez pas à réviser les chapitres précédents.
@@ -391,14 +391,14 @@ Les alias rendent vos requêtes plus lisibles :
 
 ```sql
 -- ❌ Difficile à lire
-SELECT clients.nom, commandes.montant
-FROM clients
-INNER JOIN commandes ON clients.id = commandes.client_id;
+SELECT clients.nom, commandes.montant  
+FROM clients  
+INNER JOIN commandes ON clients.id = commandes.client_id;  
 
 -- ✅ Plus lisible
-SELECT c.nom, cmd.montant
-FROM clients AS c
-INNER JOIN commandes AS cmd ON c.id = cmd.client_id;
+SELECT c.nom, cmd.montant  
+FROM clients AS c  
+INNER JOIN commandes AS cmd ON c.id = cmd.client_id;  
 ```
 
 ### 4. Testez sur des Petits Échantillons
@@ -406,10 +406,10 @@ INNER JOIN commandes AS cmd ON c.id = cmd.client_id;
 Avant de lancer une jointure sur des millions de lignes, testez d'abord sur quelques lignes avec `LIMIT` :
 
 ```sql
-SELECT ...
-FROM table1
-JOIN table2 ON ...
-LIMIT 10;
+SELECT ...  
+FROM table1  
+JOIN table2 ON ...  
+LIMIT 10;  
 ```
 
 ### 5. Utilisez EXPLAIN
@@ -417,10 +417,10 @@ LIMIT 10;
 Pour comprendre comment PostgreSQL exécute votre requête :
 
 ```sql
-EXPLAIN ANALYZE
-SELECT ...
-FROM table1
-JOIN table2 ON ...;
+EXPLAIN ANALYZE  
+SELECT ...  
+FROM table1  
+JOIN table2 ON ...;  
 ```
 
 ---
@@ -433,8 +433,8 @@ JOIN table2 ON ...;
 
 ```sql
 -- ❌ DANGER : Produit cartésien !
-SELECT *
-FROM clients, commandes;
+SELECT *  
+FROM clients, commandes;  
 -- Si clients a 1000 lignes et commandes 5000 → 5 000 000 lignes !
 ```
 
@@ -442,9 +442,9 @@ FROM clients, commandes;
 
 ```sql
 -- ✅ Correct
-SELECT *
-FROM clients
-INNER JOIN commandes ON clients.id = commandes.client_id;
+SELECT *  
+FROM clients  
+INNER JOIN commandes ON clients.id = commandes.client_id;  
 ```
 
 ### ⚠️ Piège 2 : Colonnes Ambiguës
@@ -453,9 +453,9 @@ INNER JOIN commandes ON clients.id = commandes.client_id;
 
 ```sql
 -- ❌ Erreur si les deux tables ont une colonne "id"
-SELECT id, nom
-FROM clients
-JOIN commandes ON clients.id = commandes.client_id;
+SELECT id, nom  
+FROM clients  
+JOIN commandes ON clients.id = commandes.client_id;  
 -- ERROR: column reference "id" is ambiguous
 ```
 
@@ -463,9 +463,9 @@ JOIN commandes ON clients.id = commandes.client_id;
 
 ```sql
 -- ✅ Correct
-SELECT clients.id, clients.nom, commandes.id AS commande_id
-FROM clients
-JOIN commandes ON clients.id = commandes.client_id;
+SELECT clients.id, clients.nom, commandes.id AS commande_id  
+FROM clients  
+JOIN commandes ON clients.id = commandes.client_id;  
 ```
 
 ### ⚠️ Piège 3 : NULL dans les Jointures
@@ -474,16 +474,16 @@ JOIN commandes ON clients.id = commandes.client_id;
 
 ```sql
 -- Si client_id est NULL, la ligne ne sera jamais jointe
-SELECT *
-FROM commandes
-JOIN clients ON commandes.client_id = clients.id;
+SELECT *  
+FROM commandes  
+JOIN clients ON commandes.client_id = clients.id;  
 ```
 
 ### ⚠️ Piège 4 : Mauvais Type de Jointure
 
 Utiliser `INNER JOIN` quand on voulait `LEFT JOIN` (et vice-versa) est une erreur fréquente.
 
-- **INNER JOIN** exclut les lignes sans correspondance
+- **INNER JOIN** exclut les lignes sans correspondance  
 - **LEFT JOIN** les inclut (avec NULL)
 
 **Conseil** : Posez-vous toujours la question : "Est-ce que je veux inclure les lignes sans correspondance ?"
@@ -578,12 +578,12 @@ Ce schéma sera notre fil conducteur pour illustrer tous les concepts de ce chap
 Vous êtes maintenant prêt à plonger dans le monde fascinant des relations et jointures. Chaque section de ce chapitre vous apportera de nouvelles compétences et vous rapprochera de la maîtrise de PostgreSQL.
 
 **Rappel de la structure** :
-1. 🔒 Contraintes d'intégrité (garantir la cohérence)
-2. ⏰ Contraintes temporelles PostgreSQL 18 (nouveauté)
-3. 📐 Théorie mathématique (comprendre les fondements)
-4. 🔗 Types de jointures (combiner les données)
-5. 🪞 Self-joins (relations hiérarchiques)
-6. ↔️ LATERAL JOIN (corrélation avancée)
+1. 🔒 Contraintes d'intégrité (garantir la cohérence)  
+2. ⏰ Contraintes temporelles PostgreSQL 18 (nouveauté)  
+3. 📐 Théorie mathématique (comprendre les fondements)  
+4. 🔗 Types de jointures (combiner les données)  
+5. 🪞 Self-joins (relations hiérarchiques)  
+6. ↔️ LATERAL JOIN (corrélation avancée)  
 7. ⛔ Anti-jointures (trouver ce qui n'existe pas)
 
 **Conseil final** : Ne cherchez pas à tout mémoriser. Concentrez-vous sur la **compréhension des concepts**, la **pratique** viendra naturellement.
@@ -597,29 +597,29 @@ Bonne chance, et que les jointures soient avec vous ! 🚀
 ### Compétences Techniques
 
 À la fin de ce chapitre, vous saurez :
-- ✅ Modéliser des relations entre entités
-- ✅ Implémenter des contraintes d'intégrité
-- ✅ Écrire des jointures simples et complexes
-- ✅ Choisir le bon type de jointure
-- ✅ Optimiser les performances de vos jointures
-- ✅ Déboguer les erreurs de jointure
+- ✅ Modéliser des relations entre entités  
+- ✅ Implémenter des contraintes d'intégrité  
+- ✅ Écrire des jointures simples et complexes  
+- ✅ Choisir le bon type de jointure  
+- ✅ Optimiser les performances de vos jointures  
+- ✅ Déboguer les erreurs de jointure  
 - ✅ Utiliser les fonctionnalités avancées (LATERAL, EXISTS)
 
 ### Compétences Analytiques
 
 Vous serez capable de :
-- ✅ Analyser un schéma de base de données
-- ✅ Identifier les relations entre tables
-- ✅ Diagnostiquer les problèmes d'intégrité
-- ✅ Concevoir des schémas efficaces et maintenables
+- ✅ Analyser un schéma de base de données  
+- ✅ Identifier les relations entre tables  
+- ✅ Diagnostiquer les problèmes d'intégrité  
+- ✅ Concevoir des schémas efficaces et maintenables  
 - ✅ Répondre à des questions métier complexes avec SQL
 
 ### Mindset du Développeur
 
 Vous développerez :
-- ✅ Une pensée relationnelle (comment structurer les données)
-- ✅ Une approche méthodique (résoudre des problèmes étape par étape)
-- ✅ Un sens critique (évaluer différentes approches)
+- ✅ Une pensée relationnelle (comment structurer les données)  
+- ✅ Une approche méthodique (résoudre des problèmes étape par étape)  
+- ✅ Un sens critique (évaluer différentes approches)  
 - ✅ Une rigueur (garantir la qualité des données)
 
 ---

@@ -22,28 +22,28 @@ Dans ce chapitre, nous allons explorer en profondeur la clause `WHERE` et la log
 ### Syntaxe de base
 
 ```sql
-SELECT colonnes
-FROM table
-WHERE condition;
+SELECT colonnes  
+FROM table  
+WHERE condition;  
 ```
 
 La `condition` est une **expression booléenne** qui évalue à :
-- `TRUE` (vrai) → la ligne est **conservée**
-- `FALSE` (faux) → la ligne est **éliminée**
+- `TRUE` (vrai) → la ligne est **conservée**  
+- `FALSE` (faux) → la ligne est **éliminée**  
 - `NULL` → la ligne est **éliminée** (comportement spécial, voir section sur NULL)
 
 ### Exemple simple
 
 ```sql
-SELECT nom, prenom, salaire
-FROM employes
-WHERE salaire > 50000;
+SELECT nom, prenom, salaire  
+FROM employes  
+WHERE salaire > 50000;  
 ```
 
 **Ce qui se passe :**
-1. PostgreSQL charge toutes les lignes de `employes`
-2. Pour chaque ligne, il évalue `salaire > 50000`
-3. Si le résultat est `TRUE`, la ligne est conservée
+1. PostgreSQL charge toutes les lignes de `employes`  
+2. Pour chaque ligne, il évalue `salaire > 50000`  
+3. Si le résultat est `TRUE`, la ligne est conservée  
 4. Toutes les lignes conservées sont retournées avec les colonnes `nom`, `prenom`, `salaire`
 
 ---
@@ -96,8 +96,8 @@ Par défaut, PostgreSQL est **sensible à la casse** pour les comparaisons :
 
 ```sql
 -- Ces deux requêtes donnent des résultats différents
-WHERE nom = 'Dupont'   -- Trouve uniquement 'Dupont'
-WHERE nom = 'dupont'   -- Trouve uniquement 'dupont'
+WHERE nom = 'Dupont'   -- Trouve uniquement 'Dupont'  
+WHERE nom = 'dupont'   -- Trouve uniquement 'dupont'  
 ```
 
 Pour ignorer la casse, utilisez `ILIKE` ou la fonction `LOWER()` :
@@ -111,13 +111,13 @@ WHERE LOWER(nom) = 'dupont'  -- Trouve 'Dupont', 'DUPONT', 'dupont', etc.
 
 ```sql
 -- Employés embauchés après le 1er janvier 2020
-SELECT nom, date_embauche
-FROM employes
-WHERE date_embauche > '2020-01-01';
+SELECT nom, date_embauche  
+FROM employes  
+WHERE date_embauche > '2020-01-01';  
 
 -- Commandes passées en 2024
-SELECT * FROM commandes
-WHERE date_commande >= '2024-01-01'
+SELECT * FROM commandes  
+WHERE date_commande >= '2024-01-01'  
   AND date_commande < '2025-01-01';
 ```
 
@@ -149,24 +149,24 @@ WHERE condition1 AND condition2 AND condition3
 
 ```sql
 -- Employés du département IT gagnant plus de 50000
-SELECT nom, departement, salaire
-FROM employes
-WHERE departement = 'IT' AND salaire > 50000;
+SELECT nom, departement, salaire  
+FROM employes  
+WHERE departement = 'IT' AND salaire > 50000;  
 
 -- Produits en stock et bon marché
-SELECT nom_produit, prix, quantite_stock
-FROM produits
-WHERE quantite_stock > 0 AND prix < 50;
+SELECT nom_produit, prix, quantite_stock  
+FROM produits  
+WHERE quantite_stock > 0 AND prix < 50;  
 
 -- Clients majeurs habitant Paris
-SELECT nom, age, ville
-FROM clients
-WHERE age >= 18 AND ville = 'Paris';
+SELECT nom, age, ville  
+FROM clients  
+WHERE age >= 18 AND ville = 'Paris';  
 
 -- Trois conditions en même temps
-SELECT nom, salaire, departement, anciennete
-FROM employes
-WHERE salaire > 40000
+SELECT nom, salaire, departement, anciennete  
+FROM employes  
+WHERE salaire > 40000  
   AND departement = 'Ventes'
   AND anciennete >= 5;
 ```
@@ -195,19 +195,19 @@ WHERE condition1 OR condition2 OR condition3
 
 ```sql
 -- Employés du département IT ou RH
-SELECT nom, departement
-FROM employes
-WHERE departement = 'IT' OR departement = 'RH';
+SELECT nom, departement  
+FROM employes  
+WHERE departement = 'IT' OR departement = 'RH';  
 
 -- Produits soit très chers soit en rupture de stock
-SELECT nom_produit, prix, quantite_stock
-FROM produits
-WHERE prix > 1000 OR quantite_stock = 0;
+SELECT nom_produit, prix, quantite_stock  
+FROM produits  
+WHERE prix > 1000 OR quantite_stock = 0;  
 
 -- Commandes urgentes (priorité haute ou très haute)
-SELECT numero_commande, priorite
-FROM commandes
-WHERE priorite = 'haute' OR priorite = 'très haute';
+SELECT numero_commande, priorite  
+FROM commandes  
+WHERE priorite = 'haute' OR priorite = 'très haute';  
 ```
 
 **Principe :** Plus vous ajoutez de conditions avec `OR`, plus le filtrage est **permissif** (plus de lignes retournées).
@@ -233,29 +233,29 @@ WHERE NOT condition
 
 ```sql
 -- Employés qui ne sont PAS dans le département IT
-SELECT nom, departement
-FROM employes
-WHERE NOT departement = 'IT';
+SELECT nom, departement  
+FROM employes  
+WHERE NOT departement = 'IT';  
 
 -- Équivalent (plus lisible)
-SELECT nom, departement
-FROM employes
-WHERE departement != 'IT';
+SELECT nom, departement  
+FROM employes  
+WHERE departement != 'IT';  
 
 -- Produits qui ne sont PAS en rupture de stock
-SELECT nom_produit, quantite_stock
-FROM produits
-WHERE NOT quantite_stock = 0;
+SELECT nom_produit, quantite_stock  
+FROM produits  
+WHERE NOT quantite_stock = 0;  
 
 -- Équivalent
-SELECT nom_produit, quantite_stock
-FROM produits
-WHERE quantite_stock != 0;
+SELECT nom_produit, quantite_stock  
+FROM produits  
+WHERE quantite_stock != 0;  
 
 -- Utilisation avec des conditions complexes
-SELECT nom, age, statut
-FROM clients
-WHERE NOT (age < 18 OR statut = 'bloqué');
+SELECT nom, age, statut  
+FROM clients  
+WHERE NOT (age < 18 OR statut = 'bloqué');  
 -- Signifie : ni mineur, ni bloqué
 ```
 
@@ -265,21 +265,21 @@ Vous pouvez combiner ces opérateurs pour créer des conditions complexes :
 
 ```sql
 -- Employés IT ou RH, mais seulement ceux gagnant plus de 50000
-SELECT nom, departement, salaire
-FROM employes
-WHERE (departement = 'IT' OR departement = 'RH')
+SELECT nom, departement, salaire  
+FROM employes  
+WHERE (departement = 'IT' OR departement = 'RH')  
   AND salaire > 50000;
 
 -- Produits chers ou en rupture, mais pas les produits obsolètes
-SELECT nom_produit, prix, quantite_stock, statut
-FROM produits
-WHERE (prix > 1000 OR quantite_stock = 0)
+SELECT nom_produit, prix, quantite_stock, statut  
+FROM produits  
+WHERE (prix > 1000 OR quantite_stock = 0)  
   AND NOT statut = 'obsolète';
 
 -- Clients parisiens majeurs ou lyonnais de tout âge
-SELECT nom, ville, age
-FROM clients
-WHERE (ville = 'Paris' AND age >= 18)
+SELECT nom, ville, age  
+FROM clients  
+WHERE (ville = 'Paris' AND age >= 18)  
    OR ville = 'Lyon';
 ```
 
@@ -289,8 +289,8 @@ WHERE (ville = 'Paris' AND age >= 18)
 
 Les opérateurs logiques ont un **ordre de priorité** :
 
-1. **NOT** (priorité la plus haute)
-2. **AND**
+1. **NOT** (priorité la plus haute)  
+2. **AND**  
 3. **OR** (priorité la plus basse)
 
 Cela peut créer des résultats inattendus si vous n'utilisez pas de parenthèses.
@@ -299,9 +299,9 @@ Cela peut créer des résultats inattendus si vous n'utilisez pas de parenthèse
 
 ```sql
 -- SANS parenthèses (ambigu)
-SELECT nom, departement, salaire
-FROM employes
-WHERE departement = 'IT' OR departement = 'RH' AND salaire > 50000;
+SELECT nom, departement, salaire  
+FROM employes  
+WHERE departement = 'IT' OR departement = 'RH' AND salaire > 50000;  
 ```
 
 **Comment PostgreSQL interprète cette requête ?**
@@ -322,9 +322,9 @@ WHERE departement = 'IT' OR (departement = 'RH' AND salaire > 50000)
 
 ```sql
 -- AVEC parenthèses (clair)
-SELECT nom, departement, salaire
-FROM employes
-WHERE (departement = 'IT' OR departement = 'RH') AND salaire > 50000;
+SELECT nom, departement, salaire  
+FROM employes  
+WHERE (departement = 'IT' OR departement = 'RH') AND salaire > 50000;  
 ```
 
 **Résultat :**
@@ -368,38 +368,38 @@ WHERE colonne IN (valeur1, valeur2, valeur3, ...)
 
 ```sql
 -- Employés des départements IT, RH ou Finance
-SELECT nom, departement
-FROM employes
-WHERE departement IN ('IT', 'RH', 'Finance');
+SELECT nom, departement  
+FROM employes  
+WHERE departement IN ('IT', 'RH', 'Finance');  
 
 -- Équivalent (mais plus verbeux)
-SELECT nom, departement
-FROM employes
-WHERE departement = 'IT'
+SELECT nom, departement  
+FROM employes  
+WHERE departement = 'IT'  
    OR departement = 'RH'
    OR departement = 'Finance';
 
 -- Produits avec des IDs spécifiques
-SELECT * FROM produits
-WHERE id IN (10, 25, 42, 103);
+SELECT * FROM produits  
+WHERE id IN (10, 25, 42, 103);  
 
 -- Clients habitant dans plusieurs villes
-SELECT nom, ville
-FROM clients
-WHERE ville IN ('Paris', 'Lyon', 'Marseille', 'Toulouse');
+SELECT nom, ville  
+FROM clients  
+WHERE ville IN ('Paris', 'Lyon', 'Marseille', 'Toulouse');  
 ```
 
 **NOT IN :**
 
 ```sql
 -- Employés n'étant PAS dans IT, RH ou Finance
-SELECT nom, departement
-FROM employes
-WHERE departement NOT IN ('IT', 'RH', 'Finance');
+SELECT nom, departement  
+FROM employes  
+WHERE departement NOT IN ('IT', 'RH', 'Finance');  
 
 -- Produits dont l'ID n'est pas dans la liste
-SELECT * FROM produits
-WHERE id NOT IN (10, 25, 42, 103);
+SELECT * FROM produits  
+WHERE id NOT IN (10, 25, 42, 103);  
 ```
 
 **⚠️ Attention avec NULL :**
@@ -426,41 +426,41 @@ WHERE colonne BETWEEN valeur_min AND valeur_max
 
 ```sql
 -- Employés gagnant entre 40000 et 60000 (inclus)
-SELECT nom, salaire
-FROM employes
-WHERE salaire BETWEEN 40000 AND 60000;
+SELECT nom, salaire  
+FROM employes  
+WHERE salaire BETWEEN 40000 AND 60000;  
 
 -- Équivalent
-SELECT nom, salaire
-FROM employes
-WHERE salaire >= 40000 AND salaire <= 60000;
+SELECT nom, salaire  
+FROM employes  
+WHERE salaire >= 40000 AND salaire <= 60000;  
 
 -- Produits avec un prix entre 10 et 50 euros
-SELECT nom_produit, prix
-FROM produits
-WHERE prix BETWEEN 10 AND 50;
+SELECT nom_produit, prix  
+FROM produits  
+WHERE prix BETWEEN 10 AND 50;  
 
 -- Commandes passées en 2024
-SELECT * FROM commandes
-WHERE date_commande BETWEEN '2024-01-01' AND '2024-12-31';
+SELECT * FROM commandes  
+WHERE date_commande BETWEEN '2024-01-01' AND '2024-12-31';  
 
 -- Étudiants ayant entre 18 et 25 ans
-SELECT nom, age FROM etudiants
-WHERE age BETWEEN 18 AND 25;
+SELECT nom, age FROM etudiants  
+WHERE age BETWEEN 18 AND 25;  
 ```
 
 **NOT BETWEEN :**
 
 ```sql
 -- Salaires en dehors de la fourchette 40000-60000
-SELECT nom, salaire
-FROM employes
-WHERE salaire NOT BETWEEN 40000 AND 60000;
+SELECT nom, salaire  
+FROM employes  
+WHERE salaire NOT BETWEEN 40000 AND 60000;  
 
 -- Équivalent
-SELECT nom, salaire
-FROM employes
-WHERE salaire < 40000 OR salaire > 60000;
+SELECT nom, salaire  
+FROM employes  
+WHERE salaire < 40000 OR salaire > 60000;  
 ```
 
 **⚠️ Ordre important :**
@@ -478,7 +478,7 @@ WHERE age BETWEEN 65 AND 18  -- min doit être inférieur à max !
 `LIKE` permet de rechercher des chaînes de caractères selon un **motif** (pattern).
 
 **Caractères spéciaux :**
-- `%` : Représente **zéro, un ou plusieurs caractères**
+- `%` : Représente **zéro, un ou plusieurs caractères**  
 - `_` : Représente **exactement un caractère**
 
 **Syntaxe :**
@@ -490,64 +490,64 @@ WHERE colonne LIKE 'motif'
 
 ```sql
 -- Noms commençant par 'Dup'
-SELECT nom FROM employes
-WHERE nom LIKE 'Dup%';
+SELECT nom FROM employes  
+WHERE nom LIKE 'Dup%';  
 -- Trouve : Dupont, Dupuis, Duprès, etc.
 
 -- Noms se terminant par 'ard'
-SELECT nom FROM employes
-WHERE nom LIKE '%ard';
+SELECT nom FROM employes  
+WHERE nom LIKE '%ard';  
 -- Trouve : Bernard, Gérard, Richard, etc.
 
 -- Noms contenant 'mar' (n'importe où)
-SELECT nom FROM employes
-WHERE nom LIKE '%mar%';
+SELECT nom FROM employes  
+WHERE nom LIKE '%mar%';  
 -- Trouve : Martin, Lamarche, Dumarché, Marie, etc.
 
 -- Emails du domaine gmail.com
-SELECT email FROM clients
-WHERE email LIKE '%@gmail.com';
+SELECT email FROM clients  
+WHERE email LIKE '%@gmail.com';  
 
 -- Produits dont le nom contient 'ordinateur'
-SELECT nom_produit FROM produits
-WHERE nom_produit LIKE '%ordinateur%';
+SELECT nom_produit FROM produits  
+WHERE nom_produit LIKE '%ordinateur%';  
 ```
 
 **Exemples avec _ :**
 
 ```sql
 -- Codes produit format : 3 lettres + 2 chiffres (ex: ABC12)
-SELECT code FROM produits
-WHERE code LIKE '___##';  -- 3 underscores + 2 caractères
+SELECT code FROM produits  
+WHERE code LIKE '___##';  -- 3 underscores + 2 caractères  
 
 -- Numéros de téléphone format : 06-##-##-##-##
-SELECT telephone FROM clients
-WHERE telephone LIKE '06-__-__-__-__';
+SELECT telephone FROM clients  
+WHERE telephone LIKE '06-__-__-__-__';  
 
 -- Codes postaux parisiens (750## ou 751##)
-SELECT ville, code_postal FROM adresses
-WHERE code_postal LIKE '75%';
+SELECT ville, code_postal FROM adresses  
+WHERE code_postal LIKE '75%';  
 ```
 
 **Combiner % et _ :**
 
 ```sql
 -- Prénoms de 5 lettres commençant par 'M'
-SELECT prenom FROM employes
-WHERE prenom LIKE 'M____';  -- M + 4 underscores
+SELECT prenom FROM employes  
+WHERE prenom LIKE 'M____';  -- M + 4 underscores  
 -- Trouve : Marie, Marco, Manon, etc.
 
 -- Emails du format : prénom.nom@entreprise.com
-SELECT email FROM employes
-WHERE email LIKE '%._@%.com';
+SELECT email FROM employes  
+WHERE email LIKE '%._@%.com';  
 ```
 
 **ILIKE : Insensible à la casse (spécifique PostgreSQL)**
 
 ```sql
 -- Recherche insensible à la casse (PostgreSQL uniquement)
-SELECT nom FROM employes
-WHERE nom ILIKE 'dup%';
+SELECT nom FROM employes  
+WHERE nom ILIKE 'dup%';  
 -- Trouve : Dupont, DUPONT, dupont, DuPont, etc.
 ```
 
@@ -555,12 +555,12 @@ WHERE nom ILIKE 'dup%';
 
 ```sql
 -- Employés dont le nom ne commence PAS par 'A'
-SELECT nom FROM employes
-WHERE nom NOT LIKE 'A%';
+SELECT nom FROM employes  
+WHERE nom NOT LIKE 'A%';  
 
 -- Emails qui ne sont PAS des Gmail
-SELECT email FROM clients
-WHERE email NOT LIKE '%@gmail.com';
+SELECT email FROM clients  
+WHERE email NOT LIKE '%@gmail.com';  
 ```
 
 **Échapper les caractères spéciaux :**
@@ -569,13 +569,13 @@ Si votre motif contient littéralement `%` ou `_`, utilisez `ESCAPE` :
 
 ```sql
 -- Rechercher des produits avec un nom contenant littéralement '50%'
-SELECT nom FROM produits
-WHERE nom LIKE '%50!%%' ESCAPE '!';
+SELECT nom FROM produits  
+WHERE nom LIKE '%50!%%' ESCAPE '!';  
 -- Le ! signale que le % suivant est littéral
 
 -- Rechercher des fichiers .txt (underscore littéral)
-SELECT nom_fichier FROM documents
-WHERE nom_fichier LIKE '%!_.txt' ESCAPE '!';
+SELECT nom_fichier FROM documents  
+WHERE nom_fichier LIKE '%!_.txt' ESCAPE '!';  
 ```
 
 ### SIMILAR TO et expressions régulières
@@ -584,16 +584,16 @@ PostgreSQL supporte aussi les expressions régulières pour des recherches plus 
 
 ```sql
 -- Avec SIMILAR TO (SQL standard)
-SELECT nom FROM employes
-WHERE nom SIMILAR TO '(Martin|Dupont|Bernard)';
+SELECT nom FROM employes  
+WHERE nom SIMILAR TO '(Martin|Dupont|Bernard)';  
 
 -- Avec ~ (expression régulière POSIX, spécifique PostgreSQL)
-SELECT email FROM clients
-WHERE email ~ '^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$';
+SELECT email FROM clients  
+WHERE email ~ '^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$';  
 
 -- Insensible à la casse avec ~*
-SELECT nom FROM employes
-WHERE nom ~* '^dup';  -- Commence par 'dup' (insensible à la casse)
+SELECT nom FROM employes  
+WHERE nom ~* '^dup';  -- Commence par 'dup' (insensible à la casse)  
 ```
 
 ---
@@ -608,8 +608,8 @@ Les valeurs `NULL` représentent **l'absence de données** ou **une valeur incon
 
 ```sql
 -- ❌ NE FONCTIONNE PAS
-WHERE colonne = NULL   -- Toujours faux !
-WHERE colonne != NULL  -- Toujours faux !
+WHERE colonne = NULL   -- Toujours faux !  
+WHERE colonne != NULL  -- Toujours faux !  
 ```
 
 **✅ Syntaxe correcte :**
@@ -626,39 +626,39 @@ WHERE colonne IS NOT NULL
 
 ```sql
 -- Employés sans manager assigné
-SELECT nom, manager_id
-FROM employes
-WHERE manager_id IS NULL;
+SELECT nom, manager_id  
+FROM employes  
+WHERE manager_id IS NULL;  
 
 -- Produits dont le prix est défini
-SELECT nom_produit, prix
-FROM produits
-WHERE prix IS NOT NULL;
+SELECT nom_produit, prix  
+FROM produits  
+WHERE prix IS NOT NULL;  
 
 -- Clients ayant renseigné leur email
-SELECT nom, email
-FROM clients
-WHERE email IS NOT NULL AND email != '';
+SELECT nom, email  
+FROM clients  
+WHERE email IS NOT NULL AND email != '';  
 
 -- Commandes en attente de livraison (date_livraison pas encore définie)
-SELECT numero_commande, date_commande, date_livraison
-FROM commandes
-WHERE date_livraison IS NULL;
+SELECT numero_commande, date_commande, date_livraison  
+FROM commandes  
+WHERE date_livraison IS NULL;  
 ```
 
 **Combiner avec d'autres conditions :**
 
 ```sql
 -- Employés IT sans manager ou avec un salaire > 70000
-SELECT nom, departement, manager_id, salaire
-FROM employes
-WHERE departement = 'IT'
+SELECT nom, departement, manager_id, salaire  
+FROM employes  
+WHERE departement = 'IT'  
   AND (manager_id IS NULL OR salaire > 70000);
 
 -- Produits disponibles (prix défini et stock > 0)
-SELECT nom_produit, prix, quantite_stock
-FROM produits
-WHERE prix IS NOT NULL
+SELECT nom_produit, prix, quantite_stock  
+FROM produits  
+WHERE prix IS NOT NULL  
   AND quantite_stock > 0;
 ```
 
@@ -670,51 +670,51 @@ Vous pouvez utiliser des **expressions** dans la clause `WHERE`, pas seulement d
 
 ```sql
 -- Employés dont le salaire annuel dépasse 600000
-SELECT nom, salaire
-FROM employes
-WHERE salaire * 12 > 600000;
+SELECT nom, salaire  
+FROM employes  
+WHERE salaire * 12 > 600000;  
 
 -- Produits avec une remise de plus de 20%
-SELECT nom_produit, prix, prix_reduit
-FROM produits
-WHERE ((prix - prix_reduit) / prix) > 0.20;
+SELECT nom_produit, prix, prix_reduit  
+FROM produits  
+WHERE ((prix - prix_reduit) / prix) > 0.20;  
 
 -- Clients dont le nom complet (prénom + nom) dépasse 20 caractères
-SELECT prenom, nom
-FROM clients
-WHERE LENGTH(prenom || ' ' || nom) > 20;
+SELECT prenom, nom  
+FROM clients  
+WHERE LENGTH(prenom || ' ' || nom) > 20;  
 
 -- Commandes passées dans les 30 derniers jours
-SELECT * FROM commandes
-WHERE date_commande > CURRENT_DATE - INTERVAL '30 days';
+SELECT * FROM commandes  
+WHERE date_commande > CURRENT_DATE - INTERVAL '30 days';  
 
 -- Employés embauchés il y a plus de 5 ans
-SELECT nom, date_embauche
-FROM employes
-WHERE date_embauche < CURRENT_DATE - INTERVAL '5 years';
+SELECT nom, date_embauche  
+FROM employes  
+WHERE date_embauche < CURRENT_DATE - INTERVAL '5 years';  
 ```
 
 **Fonctions dans WHERE :**
 
 ```sql
 -- Recherche insensible à la casse avec LOWER()
-SELECT nom, email
-FROM clients
-WHERE LOWER(email) = 'jean.dupont@example.com';
+SELECT nom, email  
+FROM clients  
+WHERE LOWER(email) = 'jean.dupont@example.com';  
 
 -- Extraire l'année d'une date
-SELECT nom, date_embauche
-FROM employes
-WHERE EXTRACT(YEAR FROM date_embauche) = 2023;
+SELECT nom, date_embauche  
+FROM employes  
+WHERE EXTRACT(YEAR FROM date_embauche) = 2023;  
 
 -- Nom contenant exactement 5 caractères
-SELECT nom FROM employes
-WHERE LENGTH(nom) = 5;
+SELECT nom FROM employes  
+WHERE LENGTH(nom) = 5;  
 
 -- Prix arrondi à l'euro supérieur
-SELECT nom_produit, prix
-FROM produits
-WHERE CEIL(prix) > 100;
+SELECT nom_produit, prix  
+FROM produits  
+WHERE CEIL(prix) > 100;  
 ```
 
 ---
@@ -725,65 +725,65 @@ WHERE CEIL(prix) > 100;
 
 ```sql
 -- Produits contenant 'ordinateur' OU 'laptop' OU 'PC'
-SELECT nom_produit
-FROM produits
-WHERE nom_produit ILIKE '%ordinateur%'
+SELECT nom_produit  
+FROM produits  
+WHERE nom_produit ILIKE '%ordinateur%'  
    OR nom_produit ILIKE '%laptop%'
    OR nom_produit ILIKE '%PC%';
 
 -- Avec expression régulière (plus concis)
-SELECT nom_produit
-FROM produits
-WHERE nom_produit ~* 'ordinateur|laptop|PC';
+SELECT nom_produit  
+FROM produits  
+WHERE nom_produit ~* 'ordinateur|laptop|PC';  
 ```
 
 ### Filtrage sur plages multiples
 
 ```sql
 -- Salaires dans plusieurs fourchettes
-SELECT nom, salaire
-FROM employes
-WHERE (salaire BETWEEN 30000 AND 40000)
+SELECT nom, salaire  
+FROM employes  
+WHERE (salaire BETWEEN 30000 AND 40000)  
    OR (salaire BETWEEN 60000 AND 80000)
    OR (salaire > 100000);
 
 -- Âges : mineurs ou seniors
-SELECT nom, age
-FROM clients
-WHERE age < 18 OR age >= 65;
+SELECT nom, age  
+FROM clients  
+WHERE age < 18 OR age >= 65;  
 ```
 
 ### Filtrage complexe avec dates
 
 ```sql
 -- Commandes du dernier trimestre
-SELECT * FROM commandes
-WHERE date_commande >= DATE_TRUNC('quarter', CURRENT_DATE - INTERVAL '3 months')
+SELECT * FROM commandes  
+WHERE date_commande >= DATE_TRUNC('quarter', CURRENT_DATE - INTERVAL '3 months')  
   AND date_commande < DATE_TRUNC('quarter', CURRENT_DATE);
 
 -- Employés embauchés en janvier de n'importe quelle année
-SELECT nom, date_embauche
-FROM employes
-WHERE EXTRACT(MONTH FROM date_embauche) = 1;
+SELECT nom, date_embauche  
+FROM employes  
+WHERE EXTRACT(MONTH FROM date_embauche) = 1;  
 
 -- Événements du week-end
-SELECT titre, date_evenement
-FROM evenements
-WHERE EXTRACT(DOW FROM date_evenement) IN (0, 6);  -- 0=dimanche, 6=samedi
+SELECT titre, date_evenement  
+FROM evenements  
+WHERE EXTRACT(DOW FROM date_evenement) IN (0, 6);  -- 0=dimanche, 6=samedi  
 ```
 
 ### Exclusions multiples
 
 ```sql
 -- Tous les départements sauf IT, RH et Finance
-SELECT nom, departement
-FROM employes
-WHERE departement NOT IN ('IT', 'RH', 'Finance');
+SELECT nom, departement  
+FROM employes  
+WHERE departement NOT IN ('IT', 'RH', 'Finance');  
 
 -- Produits actifs (ni obsolètes, ni discontinués, ni en rupture)
-SELECT nom_produit, statut
-FROM produits
-WHERE statut NOT IN ('obsolète', 'discontinué')
+SELECT nom_produit, statut  
+FROM produits  
+WHERE statut NOT IN ('obsolète', 'discontinué')  
   AND quantite_stock > 0;
 ```
 
@@ -797,15 +797,15 @@ Plus vous filtrez tôt avec `WHERE`, moins PostgreSQL a de données à traiter :
 
 ```sql
 -- ✅ Excellent : filtre avant traitement
-SELECT AVG(salaire)
-FROM employes
-WHERE departement = 'IT';
+SELECT AVG(salaire)  
+FROM employes  
+WHERE departement = 'IT';  
 
 -- ❌ Moins bon : traite toutes les données puis filtre
-SELECT departement, AVG(salaire)
-FROM employes
-GROUP BY departement
-HAVING departement = 'IT';
+SELECT departement, AVG(salaire)  
+FROM employes  
+GROUP BY departement  
+HAVING departement = 'IT';  
 ```
 
 ### 2. Utilisez les index
@@ -830,8 +830,8 @@ WHERE UPPER(nom) = 'DUPONT';
 WHERE nom = 'Dupont' OR nom = 'DUPONT' OR nom = 'dupont';
 
 -- Ou créez un index fonctionnel :
-CREATE INDEX idx_clients_nom_upper ON clients(UPPER(nom));
-WHERE UPPER(nom) = 'DUPONT';  -- Peut maintenant utiliser l'index
+CREATE INDEX idx_clients_nom_upper ON clients(UPPER(nom));  
+WHERE UPPER(nom) = 'DUPONT';  -- Peut maintenant utiliser l'index  
 ```
 
 ### 4. IN vs OR : quelle est la différence ?
@@ -840,8 +840,8 @@ En termes de performances, `IN` et `OR` sont équivalents (PostgreSQL les optimi
 
 ```sql
 -- Ces deux requêtes ont les mêmes performances
-WHERE ville IN ('Paris', 'Lyon', 'Marseille')
-WHERE ville = 'Paris' OR ville = 'Lyon' OR ville = 'Marseille'
+WHERE ville IN ('Paris', 'Lyon', 'Marseille')  
+WHERE ville = 'Paris' OR ville = 'Lyon' OR ville = 'Marseille'  
 ```
 
 Utilisez `IN` pour la **lisibilité** quand vous avez plusieurs valeurs.
@@ -911,8 +911,8 @@ WHERE departement NOT IN ('IT', 'RH') OR departement IS NULL
 
 ```sql
 -- Ces deux valeurs sont différentes :
-WHERE nom = 'Dupont'   -- 6 caractères
-WHERE nom = 'Dupont '  -- 7 caractères (espace à la fin)
+WHERE nom = 'Dupont'   -- 6 caractères  
+WHERE nom = 'Dupont '  -- 7 caractères (espace à la fin)  
 
 -- Solution : nettoyer avec TRIM()
 WHERE TRIM(nom) = 'Dupont'
@@ -968,8 +968,8 @@ SELECT
     email,
     ville,
     age
-FROM clients
-WHERE
+FROM clients  
+WHERE  
     -- Critère géographique
     ville IN ('Paris', 'Lyon', 'Marseille')
     -- Critère d'âge
@@ -992,8 +992,8 @@ SELECT
     categorie,
     prix,
     quantite_stock
-FROM produits
-WHERE
+FROM produits  
+WHERE  
     -- Catégories acceptées
     categorie IN ('Électronique', 'Informatique', 'Téléphonie')
     -- Prix dans une fourchette
@@ -1020,8 +1020,8 @@ ORDER BY prix ASC;
 
 4. **BETWEEN inclut les bornes** (intervalle fermé)
 
-5. **LIKE utilise % et _** pour le pattern matching
-   - `%` = zéro ou plusieurs caractères
+5. **LIKE utilise % et _** pour le pattern matching  
+   - `%` = zéro ou plusieurs caractères  
    - `_` = exactement un caractère
 
 6. **NULL nécessite IS NULL / IS NOT NULL**, jamais `= NULL`

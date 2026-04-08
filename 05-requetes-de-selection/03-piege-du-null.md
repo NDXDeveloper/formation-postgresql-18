@@ -64,9 +64,9 @@ FROM employes;
 ```
 nom      | salaire | statut
 ---------|---------|-------------------
-Alice    | 50000   | Salaire: 50000
-Bob      | 0       | Salaire nul
-Charlie  | NULL    | Salaire inconnu
+Alice    | 50000   | Salaire: 50000  
+Bob      | 0       | Salaire nul  
+Charlie  | NULL    | Salaire inconnu  
 ```
 
 **NULL ≠ '' (chaîne vide)**
@@ -107,8 +107,8 @@ SELECT
 En logique booléenne classique, vous avez deux états : **TRUE** (vrai) ou **FALSE** (faux).
 
 En SQL, avec NULL, vous avez **trois états** :
-- **TRUE** : vrai
-- **FALSE** : faux
+- **TRUE** : vrai  
+- **FALSE** : faux  
 - **NULL** : inconnu
 
 C'est ce qu'on appelle la **logique ternaire** (ou logique à trois valeurs).
@@ -146,12 +146,12 @@ C'est pourquoi SQL fournit des opérateurs spéciaux pour tester NULL :
 
 ```sql
 -- ❌ NE FONCTIONNE JAMAIS
-WHERE colonne = NULL    -- Retourne toujours NULL (évalué comme FALSE en WHERE)
-WHERE colonne != NULL   -- Retourne toujours NULL
+WHERE colonne = NULL    -- Retourne toujours NULL (évalué comme FALSE en WHERE)  
+WHERE colonne != NULL   -- Retourne toujours NULL  
 
 -- ✅ SYNTAXE CORRECTE
-WHERE colonne IS NULL       -- Teste si la valeur est NULL
-WHERE colonne IS NOT NULL   -- Teste si la valeur n'est pas NULL
+WHERE colonne IS NULL       -- Teste si la valeur est NULL  
+WHERE colonne IS NOT NULL   -- Teste si la valeur n'est pas NULL  
 ```
 
 **Exemple concret :**
@@ -199,16 +199,16 @@ SELECT nom FROM employes WHERE manager_id IS NOT NULL;
 | NULL  | NULL  | **NULL**|
 
 **Règle mnémotechnique :**
-- `FALSE AND n'importe quoi` = **FALSE** (car une seule condition fausse suffit)
-- `TRUE AND NULL` = **NULL** (on ne sait pas)
+- `FALSE AND n'importe quoi` = **FALSE** (car une seule condition fausse suffit)  
+- `TRUE AND NULL` = **NULL** (on ne sait pas)  
 - `NULL AND NULL` = **NULL** (on ne sait pas)
 
 **Exemple :**
 
 ```sql
-SELECT nom, salaire, age
-FROM employes
-WHERE salaire > 50000 AND age > 30;
+SELECT nom, salaire, age  
+FROM employes  
+WHERE salaire > 50000 AND age > 30;  
 
 -- Si un employé a salaire=60000 mais age=NULL :
 -- 60000 > 50000 = TRUE
@@ -232,16 +232,16 @@ WHERE salaire > 50000 AND age > 30;
 | NULL  | NULL  | **NULL**|
 
 **Règle mnémotechnique :**
-- `TRUE OR n'importe quoi` = **TRUE** (car une seule condition vraie suffit)
-- `FALSE OR NULL` = **NULL** (on ne sait pas)
+- `TRUE OR n'importe quoi` = **TRUE** (car une seule condition vraie suffit)  
+- `FALSE OR NULL` = **NULL** (on ne sait pas)  
 - `NULL OR NULL` = **NULL** (on ne sait pas)
 
 **Exemple :**
 
 ```sql
-SELECT nom, statut, date_fin_contrat
-FROM employes
-WHERE statut = 'actif' OR date_fin_contrat > CURRENT_DATE;
+SELECT nom, statut, date_fin_contrat  
+FROM employes  
+WHERE statut = 'actif' OR date_fin_contrat > CURRENT_DATE;  
 
 -- Si un employé a statut='inactif' et date_fin_contrat=NULL :
 -- 'inactif' = 'actif' = FALSE
@@ -289,9 +289,9 @@ INSERT INTO produits VALUES
     ('Produit C', 200, 20);
 
 -- Requête
-SELECT nom, prix, remise
-FROM produits
-WHERE prix - remise > 80;
+SELECT nom, prix, remise  
+FROM produits  
+WHERE prix - remise > 80;  
 
 -- Résultats :
 -- Produit A : 100 - 10 = 90 > 80 → TRUE → retourné
@@ -303,8 +303,8 @@ WHERE prix - remise > 80;
 ```
 nom        | prix | remise
 -----------|------|-------
-Produit A  | 100  | 10
-Produit C  | 200  | 20
+Produit A  | 100  | 10  
+Produit C  | 200  | 20  
 ```
 
 Le Produit B est éliminé car `NULL > 80` = `NULL`.
@@ -362,8 +362,8 @@ SELECT SUM(montant) FROM ventes;  -- Résultat : 300 (pas 300 + NULL + NULL)
 SELECT AVG(montant) FROM ventes;  -- Résultat : 150 (moyenne de 100 et 200)
 
 -- MIN et MAX ignorent les NULL
-SELECT MIN(montant) FROM ventes;  -- Résultat : 100
-SELECT MAX(montant) FROM ventes;  -- Résultat : 200
+SELECT MIN(montant) FROM ventes;  -- Résultat : 100  
+SELECT MAX(montant) FROM ventes;  -- Résultat : 200  
 
 -- COUNT(*) compte tout
 SELECT COUNT(*) FROM ventes;  -- Résultat : 4
@@ -466,8 +466,8 @@ FROM clients;
 SELECT
     departement,
     COALESCE(AVG(salaire)::TEXT, 'Aucune donnée') as salaire_moyen
-FROM employes
-GROUP BY departement;
+FROM employes  
+GROUP BY departement;  
 ```
 
 #### 5. Jointures avec valeurs manquantes
@@ -477,16 +477,16 @@ GROUP BY departement;
 SELECT
     e.nom as employe,
     COALESCE(m.nom, 'PDG') as manager
-FROM employes e
-LEFT JOIN employes m ON e.manager_id = m.id;
+FROM employes e  
+LEFT JOIN employes m ON e.manager_id = m.id;  
 ```
 
 #### 6. Formulaires et valeurs par défaut
 
 ```sql
 -- Insérer des valeurs avec défauts si non fournies
-INSERT INTO preferences (user_id, theme, langue, notifications)
-VALUES (
+INSERT INTO preferences (user_id, theme, langue, notifications)  
+VALUES (  
     123,
     COALESCE(:theme, 'clair'),           -- 'clair' par défaut
     COALESCE(:langue, 'fr'),             -- 'fr' par défaut
@@ -514,10 +514,10 @@ Parfois, certaines valeurs "spéciales" doivent être traitées comme NULL (par 
 **Exemples simples :**
 
 ```sql
-SELECT NULLIF(5, 5);       -- Résultat : NULL (5 = 5)
-SELECT NULLIF(5, 10);      -- Résultat : 5 (5 ≠ 10)
-SELECT NULLIF('', '');     -- Résultat : NULL ('' = '')
-SELECT NULLIF('abc', '');  -- Résultat : 'abc' ('abc' ≠ '')
+SELECT NULLIF(5, 5);       -- Résultat : NULL (5 = 5)  
+SELECT NULLIF(5, 10);      -- Résultat : 5 (5 ≠ 10)  
+SELECT NULLIF('', '');     -- Résultat : NULL ('' = '')  
+SELECT NULLIF('abc', '');  -- Résultat : 'abc' ('abc' ≠ '')  
 ```
 
 **Cas d'usage pratiques :**
@@ -547,9 +547,9 @@ FROM produits;
 ```sql
 -- Certaines applications insèrent '' au lieu de NULL
 -- Normaliser ces données :
-UPDATE clients
-SET email = NULLIF(email, '')
-WHERE email = '';
+UPDATE clients  
+SET email = NULLIF(email, '')  
+WHERE email = '';  
 
 -- Ou en requête de sélection
 SELECT
@@ -655,17 +655,17 @@ Opérateur spécial qui traite NULL comme une valeur comparable :
 
 ```sql
 -- Comparaison classique
-SELECT NULL = NULL;    -- Résultat : NULL
-SELECT NULL != NULL;   -- Résultat : NULL
+SELECT NULL = NULL;    -- Résultat : NULL  
+SELECT NULL != NULL;   -- Résultat : NULL  
 
 -- Avec IS DISTINCT FROM
-SELECT NULL IS DISTINCT FROM NULL;  -- Résultat : FALSE (ils sont "égaux")
-SELECT 5 IS DISTINCT FROM NULL;     -- Résultat : TRUE (ils sont différents)
-SELECT 5 IS DISTINCT FROM 5;        -- Résultat : FALSE
+SELECT NULL IS DISTINCT FROM NULL;  -- Résultat : FALSE (ils sont "égaux")  
+SELECT 5 IS DISTINCT FROM NULL;     -- Résultat : TRUE (ils sont différents)  
+SELECT 5 IS DISTINCT FROM 5;        -- Résultat : FALSE  
 
 -- Cas d'usage : détecter des changements (même si NULL)
-SELECT * FROM employes_nouveau
-WHERE (salaire, departement) IS DISTINCT FROM
+SELECT * FROM employes_nouveau  
+WHERE (salaire, departement) IS DISTINCT FROM  
       (SELECT salaire, departement FROM employes_ancien WHERE id = employes_nouveau.id);
 ```
 
@@ -679,13 +679,13 @@ C'est l'un des pièges les plus vicieux de SQL.
 
 ```sql
 -- Table de départements autorisés
-CREATE TABLE dept_autorises (dept VARCHAR(50));
-INSERT INTO dept_autorises VALUES ('IT'), ('RH'), (NULL);
+CREATE TABLE dept_autorises (dept VARCHAR(50));  
+INSERT INTO dept_autorises VALUES ('IT'), ('RH'), (NULL);  
 
 -- Trouver les employés n'étant PAS dans les départements autorisés
-SELECT nom, departement
-FROM employes
-WHERE departement NOT IN (SELECT dept FROM dept_autorises);
+SELECT nom, departement  
+FROM employes  
+WHERE departement NOT IN (SELECT dept FROM dept_autorises);  
 ```
 
 **Résultat attendu :** Les employés des départements non listés (Ventes, Finance, etc.)
@@ -739,9 +739,9 @@ INSERT INTO commandes VALUES
     (NULL, 50),  -- Commande sans client
     (NULL, 75);
 
-SELECT client_id, SUM(montant)
-FROM commandes
-GROUP BY client_id;
+SELECT client_id, SUM(montant)  
+FROM commandes  
+GROUP BY client_id;  
 ```
 
 **Résultat :**
@@ -766,13 +766,13 @@ CREATE TABLE utilisateurs (
 );
 
 -- Ces trois insertions fonctionnent !
-INSERT INTO utilisateurs (email) VALUES (NULL);
-INSERT INTO utilisateurs (email) VALUES (NULL);
-INSERT INTO utilisateurs (email) VALUES (NULL);
+INSERT INTO utilisateurs (email) VALUES (NULL);  
+INSERT INTO utilisateurs (email) VALUES (NULL);  
+INSERT INTO utilisateurs (email) VALUES (NULL);  
 
 -- Mais celle-ci échoue (doublon non-NULL)
-INSERT INTO utilisateurs (email) VALUES ('test@example.com');
-INSERT INTO utilisateurs (email) VALUES ('test@example.com');  -- ❌ ERREUR
+INSERT INTO utilisateurs (email) VALUES ('test@example.com');  
+INSERT INTO utilisateurs (email) VALUES ('test@example.com');  -- ❌ ERREUR  
 ```
 
 **Pourquoi ?** Selon le standard SQL, NULL != NULL, donc plusieurs NULL ne violent pas la contrainte UNIQUE.
@@ -793,20 +793,20 @@ CREATE UNIQUE INDEX idx_users_email ON utilisateurs(email) WHERE email IS NOT NU
 Par défaut, PostgreSQL place les NULL **en dernier** lors du tri ascendant :
 
 ```sql
-SELECT nom, salaire
-FROM employes
-ORDER BY salaire ASC;
+SELECT nom, salaire  
+FROM employes  
+ORDER BY salaire ASC;  
 ```
 
 **Résultat :**
 ```
 nom      | salaire
 ---------|--------
-Alice    | 30000
-Bob      | 50000
-Charlie  | 70000
-David    | NULL    -- NULL en dernier
-Eve      | NULL
+Alice    | 30000  
+Bob      | 50000  
+Charlie  | 70000  
+David    | NULL    -- NULL en dernier  
+Eve      | NULL  
 ```
 
 **Contrôler le placement des NULL :**
@@ -833,16 +833,16 @@ SELECT 'Bonjour ' || NULL || ' monde';  -- Résultat : NULL
 -- Toute la chaîne devient NULL !
 
 -- ✅ Solution avec COALESCE
-SELECT 'Bonjour ' || COALESCE(prenom, '') || ' ' || nom
-FROM clients;
+SELECT 'Bonjour ' || COALESCE(prenom, '') || ' ' || nom  
+FROM clients;  
 ```
 
 ### Piège 6 : Calculs avec NULL
 
 ```sql
 -- Un seul NULL rend tout le calcul NULL
-SELECT prix * quantite * (1 - COALESCE(remise_pct, 0) / 100) as total
-FROM lignes_commande;
+SELECT prix * quantite * (1 - COALESCE(remise_pct, 0) / 100) as total  
+FROM lignes_commande;  
 
 -- Si quantite est NULL, total sera NULL
 -- Si remise_pct est NULL, on utilise 0
@@ -866,7 +866,7 @@ CREATE TABLE employes (
 ```
 
 **⚠️ Mais attention :** Une chaîne vide n'est pas la même chose que NULL. Réfléchissez à la sémantique :
-- `NULL` = "information non fournie"
+- `NULL` = "information non fournie"  
 - `''` = "information fournie, mais vide"
 
 ### 2. Utiliser NOT NULL quand une valeur est obligatoire
@@ -893,16 +893,16 @@ SELECT
 FROM clients;
 
 -- À l'insertion
-INSERT INTO produits (nom, prix, remise)
-VALUES ('Nouveau produit', 99.99, COALESCE(:remise_input, 0));
+INSERT INTO produits (nom, prix, remise)  
+VALUES ('Nouveau produit', 99.99, COALESCE(:remise_input, 0));  
 ```
 
 ### 4. Normaliser les NULL à l'insertion
 
 ```sql
 -- Transformer les chaînes vides en NULL
-INSERT INTO clients (nom, email, telephone)
-VALUES (
+INSERT INTO clients (nom, email, telephone)  
+VALUES (  
     'Alice',
     NULLIF(TRIM(:email), ''),      -- Si email vide, mettre NULL
     NULLIF(TRIM(:telephone), '')   -- Si telephone vide, mettre NULL
@@ -932,9 +932,9 @@ CREATE TABLE employes (
 ## Comparaison : NULL vs valeurs sentinelles
 
 Certains systèmes utilisent des **valeurs sentinelles** au lieu de NULL :
-- `-1` pour "non défini"
-- `0` pour "inconnu"
-- `''` pour "pas de texte"
+- `-1` pour "non défini"  
+- `0` pour "inconnu"  
+- `''` pour "pas de texte"  
 - `'1900-01-01'` pour "pas de date"
 
 **Avantages de NULL :**
@@ -981,10 +981,10 @@ SELECT
     -- Dernière vente avec message si aucune
     COALESCE(MAX(c.date_vente)::TEXT, 'Aucune vente') as derniere_vente
 
-FROM vendeurs v
-LEFT JOIN commandes c ON v.id = c.vendeur_id
-GROUP BY v.id, v.nom, v.departement, v.taux_commission
-ORDER BY total_ventes DESC NULLS LAST;
+FROM vendeurs v  
+LEFT JOIN commandes c ON v.id = c.vendeur_id  
+GROUP BY v.id, v.nom, v.departement, v.taux_commission  
+ORDER BY total_ventes DESC NULLS LAST;  
 ```
 
 ---
@@ -1007,10 +1007,10 @@ ORDER BY total_ventes DESC NULLS LAST;
 5. **Les agrégations ignorent NULL**
    - Sauf `COUNT(*)` qui compte toutes les lignes
 
-6. **COALESCE pour les valeurs par défaut**
+6. **COALESCE pour les valeurs par défaut**  
    - `COALESCE(valeur, defaut)` retourne la première valeur non-NULL
 
-7. **NULLIF pour convertir en NULL**
+7. **NULLIF pour convertir en NULL**  
    - `NULLIF(valeur, sentinelle)` retourne NULL si égales
 
 8. **Attention à NOT IN avec NULL**
@@ -1029,11 +1029,11 @@ ORDER BY total_ventes DESC NULLS LAST;
 NULL est un concept fondamental mais déroutant en SQL. Sa logique ternaire (TRUE/FALSE/NULL) crée des comportements contre-intuitifs qui peuvent générer des bugs subtils.
 
 Les clés pour maîtriser NULL :
-- **Comprendre** que NULL signifie "inconnu", pas "zéro" ou "vide"
-- **Utiliser** `IS NULL` et `IS NOT NULL` pour les tests
-- **Anticiper** le comportement de NULL dans les opérations et les agrégations
-- **Gérer** NULL explicitement avec `COALESCE`, `NULLIF` et `CASE`
-- **Éviter** NULL quand une valeur est obligatoire (contrainte `NOT NULL`)
+- **Comprendre** que NULL signifie "inconnu", pas "zéro" ou "vide"  
+- **Utiliser** `IS NULL` et `IS NOT NULL` pour les tests  
+- **Anticiper** le comportement de NULL dans les opérations et les agrégations  
+- **Gérer** NULL explicitement avec `COALESCE`, `NULLIF` et `CASE`  
+- **Éviter** NULL quand une valeur est obligatoire (contrainte `NOT NULL`)  
 - **Documenter** la signification de NULL dans votre modèle de données
 
 Avec ces connaissances, vous êtes maintenant équipé pour éviter les pièges courants et écrire des requêtes SQL robustes qui gèrent correctement l'absence de données.

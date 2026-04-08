@@ -12,9 +12,9 @@ PostgreSQL propose des **fonctions d'agrégation statistiques avancées** qui pe
 
 Traditionnellement, les analyses statistiques se font dans des outils comme Excel, Python ou R. Mais effectuer ces calculs directement en SQL présente des avantages majeurs :
 
-- ✅ **Performance** : Calculs effectués au plus près des données, sans transfert réseau
-- ✅ **Simplicité** : Pas besoin d'exporter puis réimporter les résultats
-- ✅ **Cohérence** : Garantie transactionnelle sur les données analysées
+- ✅ **Performance** : Calculs effectués au plus près des données, sans transfert réseau  
+- ✅ **Simplicité** : Pas besoin d'exporter puis réimporter les résultats  
+- ✅ **Cohérence** : Garantie transactionnelle sur les données analysées  
 - ✅ **Scalabilité** : PostgreSQL optimise les calculs sur des millions de lignes
 
 ---
@@ -40,7 +40,7 @@ Nous allons explorer les plus importantes dans cette section.
 
 La variance mesure **à quel point les valeurs sont dispersées autour de la moyenne**. C'est un indicateur fondamental de variabilité des données.
 
-- **Variance faible** : Les valeurs sont proches de la moyenne (données homogènes)
+- **Variance faible** : Les valeurs sont proches de la moyenne (données homogènes)  
 - **Variance élevée** : Les valeurs sont très dispersées (données hétérogènes)
 
 ### Formule Mathématique
@@ -52,8 +52,8 @@ Variance = Σ(xi - moyenne)² / N
 ```
 
 Où :
-- `xi` = chaque valeur
-- `moyenne` = moyenne des valeurs
+- `xi` = chaque valeur  
+- `moyenne` = moyenne des valeurs  
 - `N` = nombre total de valeurs
 
 ### Syntaxe PostgreSQL
@@ -62,8 +62,8 @@ PostgreSQL propose deux variantes :
 
 ```sql
 -- Variance d'échantillon (Sample Variance) - LA PLUS COURANTE
-VAR_SAMP(colonne)
-VARIANCE(colonne)  -- Alias de VAR_SAMP
+VAR_SAMP(colonne)  
+VARIANCE(colonne)  -- Alias de VAR_SAMP  
 
 -- Variance de population (Population Variance)
 VAR_POP(colonne)
@@ -71,7 +71,7 @@ VAR_POP(colonne)
 
 **Quelle version utiliser ?**
 
-- **VAR_SAMP / VARIANCE** : Utiliser **dans 99% des cas** (données = échantillon d'une population plus large)
+- **VAR_SAMP / VARIANCE** : Utiliser **dans 99% des cas** (données = échantillon d'une population plus large)  
 - **VAR_POP** : Seulement si vos données représentent la **totalité** d'une population (rare en pratique)
 
 ### Exemple Théorique
@@ -108,9 +108,9 @@ FROM salaires_employes;
 
 ### Cas d'Usage
 
-- **Finance** : Volatilité des prix, risque de portefeuille
-- **Qualité** : Cohérence de la production industrielle
-- **Performance** : Variabilité des temps de réponse d'une API
+- **Finance** : Volatilité des prix, risque de portefeuille  
+- **Qualité** : Cohérence de la production industrielle  
+- **Performance** : Variabilité des temps de réponse d'une API  
 - **Marketing** : Dispersion des comportements d'achat
 
 ---
@@ -133,8 +133,8 @@ Reprenons l'exemple des salaires :
 
 ```sql
 -- Écart-type d'échantillon (Sample Standard Deviation) - LA PLUS COURANTE
-STDDEV_SAMP(colonne)
-STDDEV(colonne)  -- Alias de STDDEV_SAMP
+STDDEV_SAMP(colonne)  
+STDDEV(colonne)  -- Alias de STDDEV_SAMP  
 
 -- Écart-type de population (Population Standard Deviation)
 STDDEV_POP(colonne)
@@ -160,13 +160,13 @@ FROM salaires_employes;
 
 Pour une distribution normale (en cloche) :
 
-- **68%** des valeurs se situent à ±1 écart-type de la moyenne
-- **95%** des valeurs se situent à ±2 écarts-types de la moyenne
+- **68%** des valeurs se situent à ±1 écart-type de la moyenne  
+- **95%** des valeurs se situent à ±2 écarts-types de la moyenne  
 - **99.7%** des valeurs se situent à ±3 écarts-types de la moyenne
 
 **Exemple avec nos salaires** (moyenne = 36 000, écart-type = 1 581) :
 
-- **68%** des salaires devraient être entre 34 419 € et 37 581 €
+- **68%** des salaires devraient être entre 34 419 € et 37 581 €  
 - **95%** des salaires devraient être entre 32 838 € et 39 162 €
 
 ### Comparaison de Dispersion
@@ -199,9 +199,9 @@ WITH stats AS (
         STDDEV(salaire) AS ecart_type
     FROM salaires_employes
 )
-SELECT e.*
-FROM salaires_employes e, stats s
-WHERE e.salaire > s.moyenne + (3 * s.ecart_type)
+SELECT e.*  
+FROM salaires_employes e, stats s  
+WHERE e.salaire > s.moyenne + (3 * s.ecart_type)  
    OR e.salaire < s.moyenne - (3 * s.ecart_type);
 ```
 
@@ -217,8 +217,8 @@ Cette requête identifie les salaires qui s'écartent de plus de 3 σ (sigma) de
 
 La covariance mesure **dans quelle mesure deux variables varient ensemble** :
 
-- **Covariance positive** : Quand X augmente, Y augmente aussi
-- **Covariance négative** : Quand X augmente, Y diminue
+- **Covariance positive** : Quand X augmente, Y augmente aussi  
+- **Covariance négative** : Quand X augmente, Y diminue  
 - **Covariance proche de zéro** : Aucune relation linéaire évidente
 
 #### Syntaxe PostgreSQL
@@ -246,8 +246,8 @@ Table `ventes_marketing` :
 | 5    | 1800       | 20000  |
 
 ```sql
-SELECT COVAR_SAMP(ventes, budget_pub) AS covariance
-FROM ventes_marketing;
+SELECT COVAR_SAMP(ventes, budget_pub) AS covariance  
+FROM ventes_marketing;  
 -- Résultat positif → relation positive entre budget pub et ventes
 ```
 
@@ -265,8 +265,8 @@ FROM ventes_marketing;
 
 Le coefficient de corrélation (de Pearson) est une **version standardisée de la covariance**. Il est toujours compris entre **-1 et +1** :
 
-- **+1** : Corrélation positive parfaite (relation linéaire croissante parfaite)
-- **0** : Aucune corrélation linéaire
+- **+1** : Corrélation positive parfaite (relation linéaire croissante parfaite)  
+- **0** : Aucune corrélation linéaire  
 - **-1** : Corrélation négative parfaite (relation linéaire décroissante parfaite)
 
 #### Formule
@@ -319,23 +319,23 @@ FROM ventes_marketing;
 ```sql
 -- Y a-t-il une corrélation entre le nombre de produits consultés
 -- et le montant du panier final ?
-SELECT CORR(montant_panier, nb_produits_vus) AS correlation
-FROM sessions_utilisateurs;
+SELECT CORR(montant_panier, nb_produits_vus) AS correlation  
+FROM sessions_utilisateurs;  
 ```
 
 **Performance Web :**
 ```sql
 -- Le temps de chargement impacte-t-il le taux de rebond ?
-SELECT CORR(taux_rebond, temps_chargement_ms) AS correlation
-FROM analytics_pages;
+SELECT CORR(taux_rebond, temps_chargement_ms) AS correlation  
+FROM analytics_pages;  
 -- Résultat attendu : corrélation positive (+ de temps = + de rebond)
 ```
 
 **RH :**
 ```sql
 -- Ancienneté vs salaire : quelle corrélation ?
-SELECT CORR(salaire, annees_anciennete) AS correlation
-FROM employes;
+SELECT CORR(salaire, annees_anciennete) AS correlation  
+FROM employes;  
 ```
 
 #### ⚠️ Attention : Corrélation ≠ Causalité !
@@ -356,9 +356,9 @@ Toujours analyser le contexte métier avant de conclure !
 
 Un **percentile** est une valeur qui sépare les données en pourcentages :
 
-- **Médiane** = 50ᵉ percentile (50% des valeurs en dessous, 50% au-dessus)
-- **Premier quartile (Q1)** = 25ᵉ percentile
-- **Troisième quartile (Q3)** = 75ᵉ percentile
+- **Médiane** = 50ᵉ percentile (50% des valeurs en dessous, 50% au-dessus)  
+- **Premier quartile (Q1)** = 25ᵉ percentile  
+- **Troisième quartile (Q3)** = 75ᵉ percentile  
 - **95ᵉ percentile** = 95% des valeurs sont inférieures
 
 ### Pourquoi les Percentiles ?
@@ -370,7 +370,7 @@ La **moyenne est sensible aux valeurs extrêmes**. Les percentiles sont plus rob
 - 1 personne (PDG) gagne 1 000 000 €
 
 Statistiques :
-- **Moyenne** : 127 000 € (ne représente PERSONNE !)
+- **Moyenne** : 127 000 € (ne représente PERSONNE !)  
 - **Médiane (50ᵉ percentile)** : 30 000 € (représentative)
 
 ### Syntaxe PostgreSQL
@@ -424,12 +424,12 @@ Si on ajoute une 6ᵉ note de 20 :
 |--------------|--------------|
 | 15.0         | 14 ou 16     |
 
-- **CONT** : Interpole entre 14 et 16 → 15 (valeur qui n'existe pas dans le dataset)
+- **CONT** : Interpole entre 14 et 16 → 15 (valeur qui n'existe pas dans le dataset)  
 - **DISC** : Choisit une valeur réelle (généralement la plus basse des deux)
 
 **Quand utiliser quoi ?**
 
-- **PERCENTILE_CONT** : Pour des données continues (salaires, températures, temps)
+- **PERCENTILE_CONT** : Pour des données continues (salaires, températures, temps)  
 - **PERCENTILE_DISC** : Pour des données discrètes ou quand vous voulez une valeur réelle
 
 ### Exemple : Analyse Salariale Complète
@@ -477,9 +477,9 @@ FROM logs_requetes_api;
 | 120         | 350  | 520  | 1850 |
 
 **Interprétation (SLA Web typique) :**
-- **50% des requêtes** répondent en moins de 120ms (expérience majoritaire)
-- **90% des requêtes** répondent en moins de 350ms (bon)
-- **5% des requêtes** prennent plus de 520ms (acceptable)
+- **50% des requêtes** répondent en moins de 120ms (expérience majoritaire)  
+- **90% des requêtes** répondent en moins de 350ms (bon)  
+- **5% des requêtes** prennent plus de 520ms (acceptable)  
 - **1% des requêtes** prennent plus de 1.8s (cas extrêmes à investiguer)
 
 **Pourquoi P95/P99 plutôt que la moyenne ?**
@@ -543,9 +543,9 @@ SELECT
     AVG(salaire) AS salaire_moyen,
     STDDEV(salaire) AS ecart_type,
     PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY salaire) AS mediane
-FROM employes
-GROUP BY departement
-ORDER BY salaire_moyen DESC;
+FROM employes  
+GROUP BY departement  
+ORDER BY salaire_moyen DESC;  
 ```
 
 **Résultat théorique :**
@@ -591,10 +591,10 @@ SELECT
     AVG(prix_cloture) AS prix_moyen,
     STDDEV(prix_cloture) AS volatilite,
     (STDDEV(prix_cloture) / AVG(prix_cloture)) * 100 AS coeff_variation_pct
-FROM cours_bourse
-WHERE date >= CURRENT_DATE - INTERVAL '30 days'
-GROUP BY ticker
-ORDER BY volatilite DESC;
+FROM cours_bourse  
+WHERE date >= CURRENT_DATE - INTERVAL '30 days'  
+GROUP BY ticker  
+ORDER BY volatilite DESC;  
 ```
 
 ### 🏥 Santé & Biologie
@@ -606,8 +606,8 @@ SELECT
     PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY duree_attente_min) AS mediane,
     PERCENTILE_CONT(0.75) WITHIN GROUP (ORDER BY duree_attente_min) AS q3,
     PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY duree_attente_min) AS p95
-FROM admissions_urgences
-WHERE date_admission >= CURRENT_DATE - INTERVAL '7 days';
+FROM admissions_urgences  
+WHERE date_admission >= CURRENT_DATE - INTERVAL '7 days';  
 ```
 
 ### 🌐 Performance Web & SRE
@@ -621,11 +621,11 @@ SELECT
     PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY latence_ms) AS p50,
     PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY latence_ms) AS p95,
     PERCENTILE_CONT(0.99) WITHIN GROUP (ORDER BY latence_ms) AS p99
-FROM logs_http
-WHERE timestamp >= NOW() - INTERVAL '1 hour'
-GROUP BY endpoint
-HAVING COUNT(*) > 100  -- Minimum de requêtes pour statistiques fiables
-ORDER BY p95 DESC;
+FROM logs_http  
+WHERE timestamp >= NOW() - INTERVAL '1 hour'  
+GROUP BY endpoint  
+HAVING COUNT(*) > 100  -- Minimum de requêtes pour statistiques fiables  
+ORDER BY p95 DESC;  
 ```
 
 ### 🎓 Éducation
@@ -639,9 +639,9 @@ SELECT
     PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY note) AS mediane,
     -- Écart entre moyenne et médiane (asymétrie)
     AVG(note) - PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY note) AS skew_indicator
-FROM resultats_examens
-WHERE annee_scolaire = '2024-2025'
-GROUP BY matiere;
+FROM resultats_examens  
+WHERE annee_scolaire = '2024-2025'  
+GROUP BY matiere;  
 ```
 
 ### 🛒 E-commerce & Marketing
@@ -652,8 +652,8 @@ SELECT
     CORR(montant_achat, nb_pages_vues) AS corr_pages_achat,
     CORR(montant_achat, duree_session_sec) AS corr_duree_achat,
     CORR(montant_achat, nb_produits_favoris) AS corr_favoris_achat
-FROM sessions_utilisateurs
-WHERE a_achete = TRUE
+FROM sessions_utilisateurs  
+WHERE a_achete = TRUE  
   AND date_session >= CURRENT_DATE - INTERVAL '90 days';
 ```
 
@@ -729,9 +729,9 @@ WHERE a_achete = TRUE
 
 Les fonctions statistiques nécessitent de **parcourir toutes les lignes** (full table scan) :
 
-- **COUNT, SUM, AVG** : Scan simple (rapide)
-- **STDDEV, VARIANCE** : Deux passes (moyenne d'abord, puis variance)
-- **PERCENTILE** : Tri complet des données (le plus coûteux)
+- **COUNT, SUM, AVG** : Scan simple (rapide)  
+- **STDDEV, VARIANCE** : Deux passes (moyenne d'abord, puis variance)  
+- **PERCENTILE** : Tri complet des données (le plus coûteux)  
 - **CORR, COVAR** : Calculs croisés sur deux colonnes
 
 ### Optimisations
@@ -821,9 +821,9 @@ SELECT
     p.prix,
     -- Z-score : nombre d'écarts-types par rapport à la moyenne
     (p.prix - s.moyenne) / s.ecart_type AS z_score
-FROM produits p, stats s
-WHERE ABS((p.prix - s.moyenne) / s.ecart_type) > 3
-ORDER BY ABS((p.prix - s.moyenne) / s.ecart_type) DESC;
+FROM produits p, stats s  
+WHERE ABS((p.prix - s.moyenne) / s.ecart_type) > 3  
+ORDER BY ABS((p.prix - s.moyenne) / s.ecart_type) DESC;  
 ```
 
 ### Analyse de Tendance Temporelle
@@ -853,13 +853,13 @@ FROM series;
 
 ## À Retenir
 
-1. **VARIANCE et STDDEV** mesurent la dispersion des données (STDDEV est plus intuitif)
-2. **CORR** (entre -1 et +1) révèle les relations entre variables
-3. **Corrélation ≠ Causalité** : toujours analyser le contexte métier
-4. **PERCENTILE** est plus robuste que la moyenne pour les distributions asymétriques
-5. **PERCENTILE_CONT** = interpolation, **PERCENTILE_DISC** = valeur réelle
-6. Les fonctions de **régression** (REGR_*) permettent de prédire et détecter des tendances
-7. Toujours vérifier la **taille de l'échantillon** (>30 pour fiabilité)
+1. **VARIANCE et STDDEV** mesurent la dispersion des données (STDDEV est plus intuitif)  
+2. **CORR** (entre -1 et +1) révèle les relations entre variables  
+3. **Corrélation ≠ Causalité** : toujours analyser le contexte métier  
+4. **PERCENTILE** est plus robuste que la moyenne pour les distributions asymétriques  
+5. **PERCENTILE_CONT** = interpolation, **PERCENTILE_DISC** = valeur réelle  
+6. Les fonctions de **régression** (REGR_*) permettent de prédire et détecter des tendances  
+7. Toujours vérifier la **taille de l'échantillon** (>30 pour fiabilité)  
 8. Préférer **STDDEV_SAMP** et **VAR_SAMP** (échantillon) sauf cas très spécifiques
 
 ---
@@ -868,8 +868,8 @@ FROM series;
 
 Maintenant que vous maîtrisez les fonctions d'agrégation statistiques, vous êtes prêt pour :
 
-- **Section 8.3** : GROUP BY et HAVING - Agréger par groupes et filtrer les résultats
-- **Section 8.4** : Extensions de groupement (ROLLUP, CUBE, GROUPING SETS)
+- **Section 8.3** : GROUP BY et HAVING - Agréger par groupes et filtrer les résultats  
+- **Section 8.4** : Extensions de groupement (ROLLUP, CUBE, GROUPING SETS)  
 - **Section 10** : Window Functions - Agrégations sans perdre les détails de chaque ligne !
 
 Les statistiques en SQL sont un **superpouvoir** pour l'analyse de données. PostgreSQL vous donne les outils d'un data scientist directement dans votre base de données !

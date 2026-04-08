@@ -26,8 +26,8 @@ C'est exactement le rôle de la clause **GROUP BY** : **diviser les données en 
 
 Imaginez que vous avez une pile de factures d'entreprise. Sans GROUP BY, vous calculez le total de toutes les factures ensemble. Avec GROUP BY, vous :
 
-1. **Triez les factures par client** (création des groupes)
-2. **Calculez le total pour chaque pile** (agrégation par groupe)
+1. **Triez les factures par client** (création des groupes)  
+2. **Calculez le total pour chaque pile** (agrégation par groupe)  
 3. **Obtenez un résultat par client** (une ligne par groupe)
 
 ---
@@ -38,14 +38,14 @@ Imaginez que vous avez une pile de factures d'entreprise. Sans GROUP BY, vous ca
 SELECT
     colonne_de_groupement,
     fonction_agregation(colonne)
-FROM table
-GROUP BY colonne_de_groupement;
+FROM table  
+GROUP BY colonne_de_groupement;  
 ```
 
 ### Règle Fondamentale
 
-⚠️ **RÈGLE CRITIQUE** : Dans une requête avec GROUP BY, vous ne pouvez sélectionner que :
-1. Les colonnes mentionnées dans GROUP BY
+⚠️ **RÈGLE CRITIQUE** : Dans une requête avec GROUP BY, vous ne pouvez sélectionner que :  
+1. Les colonnes mentionnées dans GROUP BY  
 2. Des fonctions d'agrégation
 
 Tout le reste produira une **erreur** !
@@ -70,8 +70,8 @@ Considérons une table `ventes` :
 **Sans GROUP BY (erreur conceptuelle) :**
 ```sql
 -- Ceci donne le total GLOBAL, pas par client
-SELECT SUM(montant) AS total
-FROM ventes;
+SELECT SUM(montant) AS total  
+FROM ventes;  
 -- Résultat : 2173 (une seule ligne)
 ```
 
@@ -80,8 +80,8 @@ FROM ventes;
 SELECT
     client_id,
     SUM(montant) AS total_depense
-FROM ventes
-GROUP BY client_id;
+FROM ventes  
+GROUP BY client_id;  
 ```
 
 **Résultat :**
@@ -93,8 +93,8 @@ GROUP BY client_id;
 | 103       | 250           |
 
 **Ce qui s'est passé :**
-1. PostgreSQL a regroupé toutes les lignes ayant le même `client_id`
-2. Pour chaque groupe, il a calculé `SUM(montant)`
+1. PostgreSQL a regroupé toutes les lignes ayant le même `client_id`  
+2. Pour chaque groupe, il a calculé `SUM(montant)`  
 3. Il a retourné **une ligne par groupe** (donc 3 lignes, une par client)
 
 ---
@@ -122,9 +122,9 @@ Groupe client_id = 103:
 **Étape 2 : Agrégation par Groupe**
 
 ```
-Groupe 101: SUM(899, 75, 25) = 999
-Groupe 102: SUM(25, 899) = 924
-Groupe 103: SUM(250) = 250
+Groupe 101: SUM(899, 75, 25) = 999  
+Groupe 102: SUM(25, 899) = 924  
+Groupe 103: SUM(250) = 250  
 ```
 
 **Étape 3 : Résultat Final**
@@ -149,9 +149,9 @@ SELECT
     AVG(montant) AS panier_moyen,
     MIN(montant) AS achat_min,
     MAX(montant) AS achat_max
-FROM ventes
-GROUP BY client_id
-ORDER BY total_depense DESC;
+FROM ventes  
+GROUP BY client_id  
+ORDER BY total_depense DESC;  
 ```
 
 **Résultat :**
@@ -183,9 +183,9 @@ SELECT
     produit,
     COUNT(*) AS nb_ventes,
     SUM(montant) AS ca_total
-FROM ventes
-GROUP BY EXTRACT(MONTH FROM date_vente), produit
-ORDER BY mois, ca_total DESC;
+FROM ventes  
+GROUP BY EXTRACT(MONTH FROM date_vente), produit  
+ORDER BY mois, ca_total DESC;  
 ```
 
 **Résultat théorique :**
@@ -207,8 +207,8 @@ L'ordre des colonnes dans GROUP BY n'affecte **pas** le résultat, uniquement la
 
 ```sql
 -- Ces deux requêtes donnent le MÊME résultat
-GROUP BY produit, mois
-GROUP BY mois, produit
+GROUP BY produit, mois  
+GROUP BY mois, produit  
 ```
 
 Mais l'ordre dans ORDER BY, lui, change l'affichage !
@@ -223,19 +223,19 @@ Mais l'ordre dans ORDER BY, lui, change l'affichage !
 SELECT      -- 5. Sélection des colonnes finales
     client_id,
     SUM(montant) AS total
-FROM ventes -- 1. Source des données
-WHERE date_vente >= '2024-01-01'  -- 2. Filtrage des LIGNES
-GROUP BY client_id                 -- 3. Regroupement
-HAVING SUM(montant) > 500         -- 4. Filtrage des GROUPES
-ORDER BY total DESC;              -- 6. Tri
+FROM ventes -- 1. Source des données  
+WHERE date_vente >= '2024-01-01'  -- 2. Filtrage des LIGNES  
+GROUP BY client_id                 -- 3. Regroupement  
+HAVING SUM(montant) > 500         -- 4. Filtrage des GROUPES  
+ORDER BY total DESC;              -- 6. Tri  
 ```
 
 **Séquence :**
-1. **FROM** : Charger la table `ventes`
-2. **WHERE** : Filtrer les lignes (uniquement celles de 2024)
-3. **GROUP BY** : Créer les groupes par `client_id`
-4. **HAVING** : Filtrer les groupes (garder ceux avec total > 500)
-5. **SELECT** : Calculer les agrégations et sélectionner les colonnes
+1. **FROM** : Charger la table `ventes`  
+2. **WHERE** : Filtrer les lignes (uniquement celles de 2024)  
+3. **GROUP BY** : Créer les groupes par `client_id`  
+4. **HAVING** : Filtrer les groupes (garder ceux avec total > 500)  
+5. **SELECT** : Calculer les agrégations et sélectionner les colonnes  
 6. **ORDER BY** : Trier le résultat final
 
 **Point clé** : WHERE s'exécute **AVANT** GROUP BY, HAVING s'exécute **APRÈS** !
@@ -253,9 +253,9 @@ Imaginez que vous voulez trouver les clients qui ont dépensé **plus de 500 €
 SELECT
     client_id,
     SUM(montant) AS total_depense
-FROM ventes
-WHERE SUM(montant) > 500  -- ❌ Erreur de syntaxe !
-GROUP BY client_id;
+FROM ventes  
+WHERE SUM(montant) > 500  -- ❌ Erreur de syntaxe !  
+GROUP BY client_id;  
 ```
 
 **Pourquoi cette erreur ?**
@@ -271,10 +271,10 @@ WHERE s'exécute **AVANT** le groupement. À ce stade, `SUM(montant)` n'a pas en
 SELECT
     client_id,
     SUM(montant) AS total_depense
-FROM ventes
-GROUP BY client_id
-HAVING SUM(montant) > 500
-ORDER BY total_depense DESC;
+FROM ventes  
+GROUP BY client_id  
+HAVING SUM(montant) > 500  
+ORDER BY total_depense DESC;  
 ```
 
 **Résultat :**
@@ -308,14 +308,14 @@ Le client 103 (total = 250) a été **exclu** car il ne satisfait pas la conditi
 SELECT
     client_id,
     SUM(montant) AS total_depense
-FROM ventes
-WHERE montant > 50  -- Filtre les LIGNES
-GROUP BY client_id;
+FROM ventes  
+WHERE montant > 50  -- Filtre les LIGNES  
+GROUP BY client_id;  
 ```
 
 **Processus :**
-1. Exclure les achats de 25€ (souris)
-2. Grouper par client sur les lignes restantes
+1. Exclure les achats de 25€ (souris)  
+2. Grouper par client sur les lignes restantes  
 3. Calculer les sommes
 
 **Cas 2 : Filtrer des GROUPES après agrégation (HAVING)**
@@ -325,14 +325,14 @@ GROUP BY client_id;
 SELECT
     client_id,
     SUM(montant) AS total_depense
-FROM ventes
-GROUP BY client_id
-HAVING SUM(montant) > 500;  -- Filtre les GROUPES
+FROM ventes  
+GROUP BY client_id  
+HAVING SUM(montant) > 500;  -- Filtre les GROUPES  
 ```
 
 **Processus :**
-1. Grouper toutes les lignes par client
-2. Calculer les sommes
+1. Grouper toutes les lignes par client  
+2. Calculer les sommes  
 3. Exclure les groupes dont la somme ≤ 500€
 
 ---
@@ -346,11 +346,11 @@ SELECT
     client_id,
     COUNT(*) AS nb_achats,
     SUM(montant) AS total_depense
-FROM ventes
-WHERE date_vente >= '2024-01-01'     -- Filtre 1 : lignes (dates récentes)
-GROUP BY client_id
-HAVING COUNT(*) >= 2                 -- Filtre 2 : groupes (au moins 2 achats)
-ORDER BY total_depense DESC;
+FROM ventes  
+WHERE date_vente >= '2024-01-01'     -- Filtre 1 : lignes (dates récentes)  
+GROUP BY client_id  
+HAVING COUNT(*) >= 2                 -- Filtre 2 : groupes (au moins 2 achats)  
+ORDER BY total_depense DESC;  
 ```
 
 **Résultat :**
@@ -378,9 +378,9 @@ SELECT
     client_id,
     COUNT(*) AS nb_achats,
     SUM(montant) AS total_depense
-FROM ventes
-GROUP BY client_id
-HAVING COUNT(*) >= 3
+FROM ventes  
+GROUP BY client_id  
+HAVING COUNT(*) >= 3  
    AND SUM(montant) > 800;
 ```
 
@@ -393,9 +393,9 @@ SELECT
     COUNT(*) AS nb_achats,
     AVG(montant) AS panier_moyen,
     SUM(montant) AS total_depense
-FROM ventes
-GROUP BY client_id
-HAVING COUNT(*) <= 2
+FROM ventes  
+GROUP BY client_id  
+HAVING COUNT(*) <= 2  
    AND AVG(montant) > 400;
 ```
 
@@ -407,9 +407,9 @@ SELECT
     client_id,
     COUNT(*) AS nb_achats,
     STDDEV(montant) AS variabilite
-FROM ventes
-GROUP BY client_id
-HAVING COUNT(*) >= 3                -- Minimum statistique
+FROM ventes  
+GROUP BY client_id  
+HAVING COUNT(*) >= 3                -- Minimum statistique  
    AND STDDEV(montant) > 200;       -- Forte dispersion
 ```
 
@@ -426,9 +426,9 @@ En SQL standard, les alias définis dans SELECT **ne sont pas accessibles** dans
 SELECT
     client_id,
     SUM(montant) AS total
-FROM ventes
-GROUP BY client_id
-HAVING total > 500;  -- ❌ "total" peut ne pas être reconnu
+FROM ventes  
+GROUP BY client_id  
+HAVING total > 500;  -- ❌ "total" peut ne pas être reconnu  
 ```
 
 **Solution standard : Répéter l'expression**
@@ -438,9 +438,9 @@ HAVING total > 500;  -- ❌ "total" peut ne pas être reconnu
 SELECT
     client_id,
     SUM(montant) AS total
-FROM ventes
-GROUP BY client_id
-HAVING SUM(montant) > 500;
+FROM ventes  
+GROUP BY client_id  
+HAVING SUM(montant) > 500;  
 ```
 
 **Note PostgreSQL** : PostgreSQL **permet** d'utiliser les alias dans HAVING (extension non-standard), mais ce n'est pas portable vers d'autres SGBD.
@@ -457,10 +457,10 @@ SELECT
     produit,
     COUNT(*) AS nb_ventes,
     SUM(montant) AS ca_total
-FROM ventes
-GROUP BY produit
-ORDER BY nb_ventes DESC
-LIMIT 3;
+FROM ventes  
+GROUP BY produit  
+ORDER BY nb_ventes DESC  
+LIMIT 3;  
 ```
 
 ### Pattern 2 : Identification des Outliers
@@ -471,9 +471,9 @@ SELECT
     client_id,
     COUNT(*) AS nb_achats,
     MAX(montant) AS achat_max
-FROM ventes
-GROUP BY client_id
-HAVING MAX(montant) > (SELECT AVG(montant) * 3 FROM ventes);
+FROM ventes  
+GROUP BY client_id  
+HAVING MAX(montant) > (SELECT AVG(montant) * 3 FROM ventes);  
 -- Achat maximum > 3× la moyenne globale
 ```
 
@@ -485,10 +485,10 @@ SELECT
     date_vente::DATE AS jour,
     COUNT(*) AS nb_ventes,
     SUM(montant) AS ca_jour
-FROM ventes
-GROUP BY date_vente::DATE
-HAVING COUNT(*) > 10  -- Plus de 10 ventes
-ORDER BY ca_jour DESC;
+FROM ventes  
+GROUP BY date_vente::DATE  
+HAVING COUNT(*) > 10  -- Plus de 10 ventes  
+ORDER BY ca_jour DESC;  
 ```
 
 ### Pattern 4 : Détection de Segments Inactifs
@@ -499,10 +499,10 @@ SELECT
     client_id,
     MAX(date_vente) AS derniere_vente,
     CURRENT_DATE - MAX(date_vente) AS jours_inactivite
-FROM ventes
-GROUP BY client_id
-HAVING MAX(date_vente) < CURRENT_DATE - INTERVAL '90 days'
-ORDER BY derniere_vente;
+FROM ventes  
+GROUP BY client_id  
+HAVING MAX(date_vente) < CURRENT_DATE - INTERVAL '90 days'  
+ORDER BY derniere_vente;  
 ```
 
 ---
@@ -520,8 +520,8 @@ SELECT
     EXTRACT(MONTH FROM date_vente) AS mois,
     COUNT(*) AS nb_ventes,
     SUM(montant) AS ca_mensuel
-FROM ventes
-GROUP BY
+FROM ventes  
+GROUP BY  
     EXTRACT(YEAR FROM date_vente),
     EXTRACT(MONTH FROM date_vente)
 ORDER BY annee, mois;
@@ -535,9 +535,9 @@ SELECT
     DATE_TRUNC('month', date_vente) AS mois,
     COUNT(*) AS nb_ventes,
     SUM(montant) AS ca_mensuel
-FROM ventes
-GROUP BY DATE_TRUNC('month', date_vente)
-ORDER BY mois;
+FROM ventes  
+GROUP BY DATE_TRUNC('month', date_vente)  
+ORDER BY mois;  
 ```
 
 ### Exemple 2 : Groupement par Tranches
@@ -553,8 +553,8 @@ SELECT
     END AS tranche_prix,
     COUNT(*) AS nb_ventes,
     SUM(montant) AS ca_total
-FROM ventes
-GROUP BY
+FROM ventes  
+GROUP BY  
     CASE
         WHEN montant < 50 THEN 'Petit panier'
         WHEN montant BETWEEN 50 AND 200 THEN 'Panier moyen'
@@ -579,11 +579,11 @@ SELECT
     COUNT(*) AS nb_achats,                                 -- Frequency
     SUM(montant) AS total_depense,                         -- Monetary
     AVG(montant) AS panier_moyen
-FROM ventes
-WHERE date_vente >= CURRENT_DATE - INTERVAL '1 year'
-GROUP BY client_id
-HAVING COUNT(*) >= 3  -- Clients récurrents uniquement
-ORDER BY total_depense DESC;
+FROM ventes  
+WHERE date_vente >= CURRENT_DATE - INTERVAL '1 year'  
+GROUP BY client_id  
+HAVING COUNT(*) >= 3  -- Clients récurrents uniquement  
+ORDER BY total_depense DESC;  
 ```
 
 ### 🏥 Santé : Analyse de Consultations Médicales
@@ -595,11 +595,11 @@ SELECT
     COUNT(*) AS nb_consultations,
     AVG(duree_consultation_min) AS duree_moyenne,
     COUNT(DISTINCT patient_id) AS nb_patients_uniques
-FROM consultations
-WHERE date_consultation >= CURRENT_DATE - INTERVAL '30 days'
-GROUP BY medecin_id
-HAVING COUNT(*) > 100  -- Plus de 100 consultations/mois
-ORDER BY nb_consultations DESC;
+FROM consultations  
+WHERE date_consultation >= CURRENT_DATE - INTERVAL '30 days'  
+GROUP BY medecin_id  
+HAVING COUNT(*) > 100  -- Plus de 100 consultations/mois  
+ORDER BY nb_consultations DESC;  
 ```
 
 ### 📈 Finance : Analyse de Transactions Bancaires
@@ -612,10 +612,10 @@ SELECT
     SUM(montant) AS total_mouvement,
     MAX(montant) AS transaction_max,
     STDDEV(montant) AS variabilite
-FROM transactions
-WHERE date_transaction >= CURRENT_DATE - INTERVAL '7 days'
-GROUP BY compte_id
-HAVING MAX(montant) > 10000  -- Transaction élevée
+FROM transactions  
+WHERE date_transaction >= CURRENT_DATE - INTERVAL '7 days'  
+GROUP BY compte_id  
+HAVING MAX(montant) > 10000  -- Transaction élevée  
    OR STDDEV(montant) > 5000  -- Forte variabilité
 ORDER BY transaction_max DESC;
 ```
@@ -633,10 +633,10 @@ SELECT
         2
     ) AS taux_erreur_pct,
     PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY latence_ms) AS p95_latence
-FROM logs_api
-WHERE timestamp >= NOW() - INTERVAL '1 hour'
-GROUP BY endpoint
-HAVING COUNT(*) > 100  -- Minimum de requêtes
+FROM logs_api  
+WHERE timestamp >= NOW() - INTERVAL '1 hour'  
+GROUP BY endpoint  
+HAVING COUNT(*) > 100  -- Minimum de requêtes  
    AND SUM(CASE WHEN status_code >= 500 THEN 1 ELSE 0 END) > 5  -- Au moins 5 erreurs
 ORDER BY taux_erreur_pct DESC;
 ```
@@ -651,10 +651,10 @@ SELECT
     AVG(note) AS moyenne,
     MIN(note) AS note_min,
     MAX(note) AS note_max
-FROM notes
-WHERE annee_scolaire = '2024-2025'
-GROUP BY etudiant_id
-HAVING COUNT(*) >= 3  -- Au moins 3 notes
+FROM notes  
+WHERE annee_scolaire = '2024-2025'  
+GROUP BY etudiant_id  
+HAVING COUNT(*) >= 3  -- Au moins 3 notes  
    AND AVG(note) < 10  -- Moyenne insuffisante
 ORDER BY moyenne;
 ```
@@ -780,8 +780,8 @@ ORDER BY moyenne;
 ### Impact de GROUP BY sur les Performances
 
 GROUP BY nécessite :
-1. **Tri ou hachage** des données pour créer les groupes
-2. **Parcours complet** de la table (ou de l'index)
+1. **Tri ou hachage** des données pour créer les groupes  
+2. **Parcours complet** de la table (ou de l'index)  
 3. **Calculs d'agrégation** pour chaque groupe
 
 ### Optimisations
@@ -793,39 +793,39 @@ GROUP BY nécessite :
 CREATE INDEX idx_ventes_client_id ON ventes(client_id);
 
 -- PostgreSQL peut utiliser cet index pour accélérer le groupement
-SELECT client_id, SUM(montant)
-FROM ventes
-GROUP BY client_id;
+SELECT client_id, SUM(montant)  
+FROM ventes  
+GROUP BY client_id;  
 ```
 
 #### 2. Filtrage Précoce avec WHERE
 
 ```sql
 -- ✅ RAPIDE : WHERE filtre avant groupement
-SELECT client_id, SUM(montant)
-FROM ventes
-WHERE date_vente >= '2024-01-01'  -- Réduit le volume
-GROUP BY client_id;
+SELECT client_id, SUM(montant)  
+FROM ventes  
+WHERE date_vente >= '2024-01-01'  -- Réduit le volume  
+GROUP BY client_id;  
 
 -- ❌ LENT : Tout est groupé puis filtré
-SELECT client_id, SUM(montant), MAX(date_vente)
-FROM ventes
-GROUP BY client_id
-HAVING MAX(date_vente) >= '2024-01-01';
+SELECT client_id, SUM(montant), MAX(date_vente)  
+FROM ventes  
+GROUP BY client_id  
+HAVING MAX(date_vente) >= '2024-01-01';  
 ```
 
 #### 3. Index Couvrants (Covering Index)
 
 ```sql
 -- Index incluant colonnes de groupement ET d'agrégation
-CREATE INDEX idx_ventes_covering
-ON ventes(client_id)
-INCLUDE (montant);
+CREATE INDEX idx_ventes_covering  
+ON ventes(client_id)  
+INCLUDE (montant);  
 
 -- Cette requête peut être résolue uniquement avec l'index (index-only scan)
-SELECT client_id, SUM(montant)
-FROM ventes
-GROUP BY client_id;
+SELECT client_id, SUM(montant)  
+FROM ventes  
+GROUP BY client_id;  
 ```
 
 #### 4. Matérialiser les Agrégations Fréquentes
@@ -834,24 +834,24 @@ Pour des requêtes exécutées régulièrement :
 
 ```sql
 -- Table de résumé mise à jour quotidiennement
-CREATE TABLE ventes_quotidiennes AS
-SELECT
+CREATE TABLE ventes_quotidiennes AS  
+SELECT  
     date_vente::DATE AS jour,
     client_id,
     COUNT(*) AS nb_ventes,
     SUM(montant) AS ca_jour
-FROM ventes
-GROUP BY date_vente::DATE, client_id;
+FROM ventes  
+GROUP BY date_vente::DATE, client_id;  
 
 -- Créer des index
-CREATE INDEX idx_ventes_quotidiennes_jour ON ventes_quotidiennes(jour);
-CREATE INDEX idx_ventes_quotidiennes_client ON ventes_quotidiennes(client_id);
+CREATE INDEX idx_ventes_quotidiennes_jour ON ventes_quotidiennes(jour);  
+CREATE INDEX idx_ventes_quotidiennes_client ON ventes_quotidiennes(client_id);  
 
 -- Requêtes très rapides sur la table précalculée
-SELECT client_id, SUM(ca_jour)
-FROM ventes_quotidiennes
-WHERE jour >= '2024-01-01'
-GROUP BY client_id;
+SELECT client_id, SUM(ca_jour)  
+FROM ventes_quotidiennes  
+WHERE jour >= '2024-01-01'  
+GROUP BY client_id;  
 ```
 
 ---
@@ -861,13 +861,13 @@ GROUP BY client_id;
 Analysons le plan d'exécution d'une requête avec GROUP BY :
 
 ```sql
-EXPLAIN ANALYZE
-SELECT
+EXPLAIN ANALYZE  
+SELECT  
     client_id,
     COUNT(*) AS nb_ventes,
     SUM(montant) AS total
-FROM ventes
-GROUP BY client_id;
+FROM ventes  
+GROUP BY client_id;  
 ```
 
 **Résultat possible :**
@@ -904,9 +904,9 @@ L'index permet d'éviter un tri explicite (les données sont déjà ordonnées).
 SELECT
     v.client_id,
     SUM(v.montant) AS total_depense
-FROM ventes v
-GROUP BY v.client_id
-HAVING SUM(v.montant) > (
+FROM ventes v  
+GROUP BY v.client_id  
+HAVING SUM(v.montant) > (  
     SELECT AVG(total_client)
     FROM (
         SELECT SUM(montant) AS total_client
@@ -926,10 +926,10 @@ SELECT
     c.email,
     COUNT(v.id_vente) AS nb_achats,
     COALESCE(SUM(v.montant), 0) AS total_depense
-FROM clients c
-LEFT JOIN ventes v ON c.client_id = v.client_id
-GROUP BY c.client_id, c.nom, c.prenom, c.email
-ORDER BY total_depense DESC;
+FROM clients c  
+LEFT JOIN ventes v ON c.client_id = v.client_id  
+GROUP BY c.client_id, c.nom, c.prenom, c.email  
+ORDER BY total_depense DESC;  
 ```
 
 **Note** : Toutes les colonnes de `clients` sélectionnées doivent être dans GROUP BY !
@@ -947,9 +947,9 @@ WITH stats_clients AS (
     FROM ventes
     GROUP BY client_id
 )
-SELECT *
-FROM stats_clients
-WHERE nb_achats >= 5
+SELECT *  
+FROM stats_clients  
+WHERE nb_achats >= 5  
   AND panier_moyen > 200
 ORDER BY total_depense DESC;
 ```
@@ -974,13 +974,13 @@ ORDER BY total_depense DESC;
 
 ## À Retenir
 
-1. **GROUP BY divise les données en groupes** et calcule des agrégations par groupe
-2. **Une ligne de résultat par groupe** (ou combinaison de groupes si multi-colonnes)
-3. **Seules les colonnes de GROUP BY et les agrégations** peuvent apparaître dans SELECT
-4. **WHERE filtre les lignes AVANT groupement**, HAVING filtre les groupes APRÈS
-5. **Ordre d'exécution** : FROM → WHERE → GROUP BY → HAVING → SELECT → ORDER BY
-6. **Performance** : Toujours filtrer avec WHERE quand possible, utiliser des index
-7. **Bonnes pratiques** : Inclure COUNT(*), utiliser HAVING pour écarter petits échantillons
+1. **GROUP BY divise les données en groupes** et calcule des agrégations par groupe  
+2. **Une ligne de résultat par groupe** (ou combinaison de groupes si multi-colonnes)  
+3. **Seules les colonnes de GROUP BY et les agrégations** peuvent apparaître dans SELECT  
+4. **WHERE filtre les lignes AVANT groupement**, HAVING filtre les groupes APRÈS  
+5. **Ordre d'exécution** : FROM → WHERE → GROUP BY → HAVING → SELECT → ORDER BY  
+6. **Performance** : Toujours filtrer avec WHERE quand possible, utiliser des index  
+7. **Bonnes pratiques** : Inclure COUNT(*), utiliser HAVING pour écarter petits échantillons  
 8. **Expressions calculées** : On peut grouper par DATE_TRUNC, EXTRACT, CASE, etc.
 
 ---
@@ -989,8 +989,8 @@ ORDER BY total_depense DESC;
 
 Vous maîtrisez maintenant GROUP BY et HAVING ! Prochains sujets :
 
-- **Section 8.4** : Extensions de groupement (ROLLUP, CUBE, GROUPING SETS) - Pour des agrégations multi-niveaux
-- **Section 8.5** : Filtres d'agrégation (FILTER clause) - Agrégations conditionnelles avancées
+- **Section 8.4** : Extensions de groupement (ROLLUP, CUBE, GROUPING SETS) - Pour des agrégations multi-niveaux  
+- **Section 8.5** : Filtres d'agrégation (FILTER clause) - Agrégations conditionnelles avancées  
 - **Section 10** : Window Functions - Agréger SANS perdre les détails des lignes !
 
 GROUP BY est un **pilier fondamental** de l'analyse de données en SQL. Avec HAVING, vous contrôlez précisément quels groupes apparaissent dans vos résultats. Ces outils sont essentiels pour tout travail analytique !

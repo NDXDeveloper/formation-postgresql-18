@@ -7,10 +7,10 @@
 Les **jointures** sont le cœur du langage SQL et des bases de données relationnelles. Elles permettent de **combiner des données provenant de plusieurs tables** en une seule requête, exploitant ainsi les relations entre les tables.
 
 PostgreSQL offre plusieurs types de jointures, chacune répondant à des besoins spécifiques :
-- **INNER JOIN** : Seulement les correspondances
-- **LEFT JOIN** : Tout ce qui est à gauche + correspondances
-- **RIGHT JOIN** : Tout ce qui est à droite + correspondances
-- **FULL OUTER JOIN** : Tout ce qui existe dans les deux tables
+- **INNER JOIN** : Seulement les correspondances  
+- **LEFT JOIN** : Tout ce qui est à gauche + correspondances  
+- **RIGHT JOIN** : Tout ce qui est à droite + correspondances  
+- **FULL OUTER JOIN** : Tout ce qui existe dans les deux tables  
 - **CROSS JOIN** : Toutes les combinaisons possibles
 
 Dans ce chapitre, nous allons explorer chaque type en détail avec des exemples concrets et des visualisations.
@@ -103,14 +103,14 @@ L'**INNER JOIN** (ou simplement **JOIN**) retourne **uniquement les lignes qui o
 ### Syntaxe
 
 ```sql
-SELECT colonnes
-FROM table_gauche
-INNER JOIN table_droite ON condition_jointure;
+SELECT colonnes  
+FROM table_gauche  
+INNER JOIN table_droite ON condition_jointure;  
 
 -- "INNER" est optionnel, on peut écrire simplement :
-SELECT colonnes
-FROM table_gauche
-JOIN table_droite ON condition_jointure;
+SELECT colonnes  
+FROM table_gauche  
+JOIN table_droite ON condition_jointure;  
 ```
 
 ### Exemple avec nos tables
@@ -122,8 +122,8 @@ SELECT
     commandes.id AS commande_id,
     commandes.montant,
     commandes.date_commande
-FROM clients
-INNER JOIN commandes ON clients.id = commandes.client_id;
+FROM clients  
+INNER JOIN commandes ON clients.id = commandes.client_id;  
 ```
 
 ### Résultat
@@ -135,9 +135,9 @@ INNER JOIN commandes ON clients.id = commandes.client_id;
 | 2  | Bob   | 103         | 99.50   | 2025-01-12    |
 
 **Observations** :
-- ✅ Alice apparaît **2 fois** (elle a 2 commandes)
-- ✅ Bob apparaît **1 fois** (il a 1 commande)
-- ❌ Charlie et Diana **n'apparaissent pas** (aucune commande)
+- ✅ Alice apparaît **2 fois** (elle a 2 commandes)  
+- ✅ Bob apparaît **1 fois** (il a 1 commande)  
+- ❌ Charlie et Diana **n'apparaissent pas** (aucune commande)  
 - ❌ La commande 104 (client_id=5) **n'apparaît pas** (client inexistant)
 
 ### Interprétation
@@ -151,8 +151,8 @@ C'est-à-dire : **Seulement les clients qui ont passé des commandes**.
 
 ### Cas d'usage typiques
 
-1. **Afficher les relations existantes** : "Lister tous les clients qui ont commandé"
-2. **Éviter les orphelins** : Exclure les données sans correspondance
+1. **Afficher les relations existantes** : "Lister tous les clients qui ont commandé"  
+2. **Éviter les orphelins** : Exclure les données sans correspondance  
 3. **Analyses sur données complètes** : Calculer des statistiques sur des relations confirmées
 
 ### Exemple : Calculer le total des commandes par client
@@ -162,9 +162,9 @@ SELECT
     clients.nom,
     COUNT(commandes.id) AS nombre_commandes,
     SUM(commandes.montant) AS total_depense
-FROM clients
-INNER JOIN commandes ON clients.id = commandes.client_id
-GROUP BY clients.id, clients.nom;
+FROM clients  
+INNER JOIN commandes ON clients.id = commandes.client_id  
+GROUP BY clients.id, clients.nom;  
 ```
 
 **Résultat** :
@@ -203,14 +203,14 @@ Le **LEFT JOIN** retourne **toutes les lignes de la table de gauche**, qu'il y a
 ### Syntaxe
 
 ```sql
-SELECT colonnes
-FROM table_gauche
-LEFT JOIN table_droite ON condition_jointure;
+SELECT colonnes  
+FROM table_gauche  
+LEFT JOIN table_droite ON condition_jointure;  
 
 -- Équivalent à :
-SELECT colonnes
-FROM table_gauche
-LEFT OUTER JOIN table_droite ON condition_jointure;
+SELECT colonnes  
+FROM table_gauche  
+LEFT OUTER JOIN table_droite ON condition_jointure;  
 ```
 
 **Note** : `OUTER` est optionnel et rarement utilisé.
@@ -225,8 +225,8 @@ SELECT
     commandes.id AS commande_id,
     commandes.montant,
     commandes.date_commande
-FROM clients
-LEFT JOIN commandes ON clients.id = commandes.client_id;
+FROM clients  
+LEFT JOIN commandes ON clients.id = commandes.client_id;  
 ```
 
 ### Résultat
@@ -240,9 +240,9 @@ LEFT JOIN commandes ON clients.id = commandes.client_id;
 | 4  | Diana    | Toulouse   | NULL        | NULL    | NULL          |
 
 **Observations** :
-- ✅ **Tous les clients** apparaissent (même ceux sans commande)
-- ✅ Alice et Bob ont leurs commandes
-- ✅ Charlie et Diana apparaissent avec `NULL` pour les colonnes de commandes
+- ✅ **Tous les clients** apparaissent (même ceux sans commande)  
+- ✅ Alice et Bob ont leurs commandes  
+- ✅ Charlie et Diana apparaissent avec `NULL` pour les colonnes de commandes  
 - ❌ La commande 104 (client_id=5) n'apparaît toujours pas (pas de LEFT JOIN depuis commandes)
 
 ### Interprétation
@@ -251,8 +251,8 @@ Le LEFT JOIN garantit : **Toutes les lignes de la table de gauche sont présente
 
 ### Cas d'usage typiques
 
-1. **Identifier les absences** : "Quels clients n'ont jamais commandé ?"
-2. **Rapports complets** : Afficher tous les éléments, même sans données associées
+1. **Identifier les absences** : "Quels clients n'ont jamais commandé ?"  
+2. **Rapports complets** : Afficher tous les éléments, même sans données associées  
 3. **Analyses inclusives** : Inclure les éléments sans relation
 
 ### Exemple : Trouver les clients sans commande
@@ -261,9 +261,9 @@ Le LEFT JOIN garantit : **Toutes les lignes de la table de gauche sont présente
 SELECT
     clients.id,
     clients.nom
-FROM clients
-LEFT JOIN commandes ON clients.id = commandes.client_id
-WHERE commandes.id IS NULL;
+FROM clients  
+LEFT JOIN commandes ON clients.id = commandes.client_id  
+WHERE commandes.id IS NULL;  
 ```
 
 **Résultat** :
@@ -282,10 +282,10 @@ SELECT
     clients.nom,
     COALESCE(COUNT(commandes.id), 0) AS nombre_commandes,
     COALESCE(SUM(commandes.montant), 0) AS total_depense
-FROM clients
-LEFT JOIN commandes ON clients.id = commandes.client_id
-GROUP BY clients.id, clients.nom
-ORDER BY total_depense DESC;
+FROM clients  
+LEFT JOIN commandes ON clients.id = commandes.client_id  
+GROUP BY clients.id, clients.nom  
+ORDER BY total_depense DESC;  
 ```
 
 **Résultat** :
@@ -328,14 +328,14 @@ C'est l'inverse symétrique du LEFT JOIN.
 ### Syntaxe
 
 ```sql
-SELECT colonnes
-FROM table_gauche
-RIGHT JOIN table_droite ON condition_jointure;
+SELECT colonnes  
+FROM table_gauche  
+RIGHT JOIN table_droite ON condition_jointure;  
 
 -- Équivalent à :
-SELECT colonnes
-FROM table_gauche
-RIGHT OUTER JOIN table_droite ON condition_jointure;
+SELECT colonnes  
+FROM table_gauche  
+RIGHT OUTER JOIN table_droite ON condition_jointure;  
 ```
 
 ### Exemple avec nos tables
@@ -347,8 +347,8 @@ SELECT
     commandes.id AS commande_id,
     commandes.montant,
     commandes.date_commande
-FROM clients
-RIGHT JOIN commandes ON clients.id = commandes.client_id;
+FROM clients  
+RIGHT JOIN commandes ON clients.id = commandes.client_id;  
 ```
 
 ### Résultat
@@ -361,9 +361,9 @@ RIGHT JOIN commandes ON clients.id = commandes.client_id;
 | NULL      | NULL  | 104         | 175.00  | 2025-01-18    |
 
 **Observations** :
-- ✅ **Toutes les commandes** apparaissent
-- ✅ Alice et Bob ont leurs informations
-- ✅ La commande 104 apparaît avec `NULL` pour le client (client_id=5 n'existe pas)
+- ✅ **Toutes les commandes** apparaissent  
+- ✅ Alice et Bob ont leurs informations  
+- ✅ La commande 104 apparaît avec `NULL` pour le client (client_id=5 n'existe pas)  
 - ❌ Charlie et Diana n'apparaissent pas (ils n'ont pas de commande)
 
 ### Interprétation
@@ -388,8 +388,8 @@ SELECT * FROM commandes LEFT JOIN clients ON commandes.client_id = clients.id;
 
 ### Cas d'usage
 
-1. **Identifier les orphelins** : "Quelles commandes ont un client_id invalide ?"
-2. **Audit d'intégrité** : Détecter les références brisées
+1. **Identifier les orphelins** : "Quelles commandes ont un client_id invalide ?"  
+2. **Audit d'intégrité** : Détecter les références brisées  
 3. **Rapports depuis la table de détail** : Partir des commandes pour remonter aux clients
 
 ### Exemple : Trouver les commandes sans client valide
@@ -399,9 +399,9 @@ SELECT
     commandes.id AS commande_id,
     commandes.client_id,
     commandes.montant
-FROM clients
-RIGHT JOIN commandes ON clients.id = commandes.client_id
-WHERE clients.id IS NULL;
+FROM clients  
+RIGHT JOIN commandes ON clients.id = commandes.client_id  
+WHERE clients.id IS NULL;  
 ```
 
 **Résultat** :
@@ -439,14 +439,14 @@ Le **FULL OUTER JOIN** retourne **toutes les lignes des deux tables**, qu'il y a
 ### Syntaxe
 
 ```sql
-SELECT colonnes
-FROM table_gauche
-FULL OUTER JOIN table_droite ON condition_jointure;
+SELECT colonnes  
+FROM table_gauche  
+FULL OUTER JOIN table_droite ON condition_jointure;  
 
 -- "OUTER" est optionnel :
-SELECT colonnes
-FROM table_gauche
-FULL JOIN table_droite ON condition_jointure;
+SELECT colonnes  
+FROM table_gauche  
+FULL JOIN table_droite ON condition_jointure;  
 ```
 
 ### Exemple avec nos tables
@@ -459,9 +459,9 @@ SELECT
     commandes.id AS commande_id,
     commandes.montant,
     commandes.date_commande
-FROM clients
-FULL OUTER JOIN commandes ON clients.id = commandes.client_id
-ORDER BY clients.id, commandes.id;
+FROM clients  
+FULL OUTER JOIN commandes ON clients.id = commandes.client_id  
+ORDER BY clients.id, commandes.id;  
 ```
 
 ### Résultat
@@ -476,9 +476,9 @@ ORDER BY clients.id, commandes.id;
 | NULL      | NULL     | NULL       | 104         | 175.00  | 2025-01-18    |
 
 **Observations** :
-- ✅ **Tous les clients** apparaissent (même sans commande)
-- ✅ **Toutes les commandes** apparaissent (même sans client valide)
-- ✅ Charlie et Diana ont `NULL` pour les commandes
+- ✅ **Tous les clients** apparaissent (même sans commande)  
+- ✅ **Toutes les commandes** apparaissent (même sans client valide)  
+- ✅ Charlie et Diana ont `NULL` pour les commandes  
 - ✅ La commande 104 a `NULL` pour le client
 
 ### Interprétation
@@ -487,8 +487,8 @@ Le FULL OUTER JOIN garantit : **Aucune donnée n'est perdue, tout est visible**.
 
 ### Cas d'usage typiques
 
-1. **Audit complet** : Voir toutes les données, correspondances et orphelins
-2. **Réconciliation** : Comparer deux sources de données
+1. **Audit complet** : Voir toutes les données, correspondances et orphelins  
+2. **Réconciliation** : Comparer deux sources de données  
 3. **Détection d'anomalies** : Identifier les incohérences dans les deux sens
 
 ### Exemple : Rapport complet d'audit
@@ -503,8 +503,8 @@ SELECT
         WHEN commandes.id IS NULL THEN 'Client sans commande'
         ELSE 'OK'
     END AS statut
-FROM clients
-FULL OUTER JOIN commandes ON clients.id = commandes.client_id;
+FROM clients  
+FULL OUTER JOIN commandes ON clients.id = commandes.client_id;  
 ```
 
 **Résultat** :
@@ -544,13 +544,13 @@ A3 ─┬─ B1
 ### Syntaxe
 
 ```sql
-SELECT colonnes
-FROM table_gauche
-CROSS JOIN table_droite;
+SELECT colonnes  
+FROM table_gauche  
+CROSS JOIN table_droite;  
 
 -- Ancienne syntaxe (équivalente) :
-SELECT colonnes
-FROM table_gauche, table_droite;
+SELECT colonnes  
+FROM table_gauche, table_droite;  
 ```
 
 ### Exemple avec nos tables
@@ -560,8 +560,8 @@ SELECT
     clients.nom AS client,
     commandes.id AS commande_id,
     commandes.montant
-FROM clients
-CROSS JOIN commandes;
+FROM clients  
+CROSS JOIN commandes;  
 ```
 
 ### Résultat (16 lignes !)
@@ -595,13 +595,13 @@ CROSS JOIN commandes;
 ### Danger : Explosion Combinatoire
 
 ```
-Table A : 1 000 lignes
-Table B : 1 000 lignes
-CROSS JOIN : 1 000 000 lignes ! 💥
+Table A : 1 000 lignes  
+Table B : 1 000 lignes  
+CROSS JOIN : 1 000 000 lignes ! 💥  
 
-Table A : 10 000 lignes
-Table B : 10 000 lignes
-CROSS JOIN : 100 000 000 lignes ! 💥💥
+Table A : 10 000 lignes  
+Table B : 10 000 lignes  
+CROSS JOIN : 100 000 000 lignes ! 💥💥  
 ```
 
 ### Cas d'usage légitimes
@@ -611,19 +611,19 @@ CROSS JOIN : 100 000 000 lignes ! 💥💥
 Créer un catalogue produit avec toutes les variantes :
 
 ```sql
-CREATE TABLE tailles (nom VARCHAR(10));
-CREATE TABLE couleurs (nom VARCHAR(20));
+CREATE TABLE tailles (nom VARCHAR(10));  
+CREATE TABLE couleurs (nom VARCHAR(20));  
 
-INSERT INTO tailles VALUES ('S'), ('M'), ('L'), ('XL');
-INSERT INTO couleurs VALUES ('Rouge'), ('Bleu'), ('Noir');
+INSERT INTO tailles VALUES ('S'), ('M'), ('L'), ('XL');  
+INSERT INTO couleurs VALUES ('Rouge'), ('Bleu'), ('Noir');  
 
 -- Générer toutes les combinaisons taille × couleur
 SELECT
     tailles.nom AS taille,
     couleurs.nom AS couleur
-FROM tailles
-CROSS JOIN couleurs
-ORDER BY tailles.nom, couleurs.nom;
+FROM tailles  
+CROSS JOIN couleurs  
+ORDER BY tailles.nom, couleurs.nom;  
 ```
 
 **Résultat** : 4 × 3 = 12 combinaisons
@@ -651,8 +651,8 @@ Créer une ligne par jour et par magasin :
 SELECT
     magasins.nom,
     dates.jour
-FROM magasins
-CROSS JOIN generate_series(
+FROM magasins  
+CROSS JOIN generate_series(  
     '2025-01-01'::date,
     '2025-01-07'::date,
     '1 day'::interval
@@ -665,18 +665,18 @@ ORDER BY magasins.nom, dates.jour;
 Générer toutes les combinaisons de paramètres de test :
 
 ```sql
-CREATE TABLE navigateurs (nom VARCHAR(50));
-CREATE TABLE systemes (nom VARCHAR(50));
+CREATE TABLE navigateurs (nom VARCHAR(50));  
+CREATE TABLE systemes (nom VARCHAR(50));  
 
-INSERT INTO navigateurs VALUES ('Chrome'), ('Firefox'), ('Safari');
-INSERT INTO systemes VALUES ('Windows'), ('macOS'), ('Linux');
+INSERT INTO navigateurs VALUES ('Chrome'), ('Firefox'), ('Safari');  
+INSERT INTO systemes VALUES ('Windows'), ('macOS'), ('Linux');  
 
 -- Générer toutes les combinaisons pour tests
 SELECT
     navigateurs.nom AS navigateur,
     systemes.nom AS systeme
-FROM navigateurs
-CROSS JOIN systemes;
+FROM navigateurs  
+CROSS JOIN systemes;  
 ```
 
 **Résultat** : 3 × 3 = 9 combinaisons de tests
@@ -778,10 +778,10 @@ SELECT
         WHEN commandes.id IS NOT NULL THEN 'Oui'
         ELSE 'Non'
     END AS a_commande
-FROM clients
-LEFT JOIN commandes ON clients.id = commandes.client_id
-GROUP BY clients.id, clients.nom, clients.ville
-ORDER BY clients.nom;
+FROM clients  
+LEFT JOIN commandes ON clients.id = commandes.client_id  
+GROUP BY clients.id, clients.nom, clients.ville  
+ORDER BY clients.nom;  
 ```
 
 **Résultat** :
@@ -800,10 +800,10 @@ SELECT
     clients.nom,
     COALESCE(SUM(commandes.montant), 0) AS total_depense,
     COUNT(commandes.id) AS nombre_commandes
-FROM clients
-LEFT JOIN commandes ON clients.id = commandes.client_id
-GROUP BY clients.id, clients.nom
-ORDER BY total_depense DESC;
+FROM clients  
+LEFT JOIN commandes ON clients.id = commandes.client_id  
+GROUP BY clients.id, clients.nom  
+ORDER BY total_depense DESC;  
 ```
 
 **Résultat** :
@@ -828,10 +828,10 @@ SELECT
         WHEN commandes.id IS NULL THEN 'ℹ️ Client sans commande'
         ELSE '✅ OK'
     END AS statut
-FROM clients
-FULL OUTER JOIN commandes ON clients.id = commandes.client_id
-WHERE clients.id IS NULL OR commandes.id IS NULL
-ORDER BY statut;
+FROM clients  
+FULL OUTER JOIN commandes ON clients.id = commandes.client_id  
+WHERE clients.id IS NULL OR commandes.id IS NULL  
+ORDER BY statut;  
 ```
 
 **Résultat** :
@@ -861,8 +861,8 @@ INSERT INTO jours_semaine VALUES
 SELECT
     jours.nom AS jour,
     horaires.heure::TIME AS heure
-FROM jours_semaine jours
-CROSS JOIN generate_series(
+FROM jours_semaine jours  
+CROSS JOIN generate_series(  
     '09:00'::TIME,
     '17:00'::TIME,
     '1 hour'::INTERVAL
@@ -889,19 +889,19 @@ ORDER BY jours.id, horaires.heure;
 Vous pouvez combiner plusieurs tables en enchaînant les jointures :
 
 ```sql
-SELECT colonnes
-FROM table_a
-INNER JOIN table_b ON condition_ab
-LEFT JOIN table_c ON condition_bc
-INNER JOIN table_d ON condition_cd;
+SELECT colonnes  
+FROM table_a  
+INNER JOIN table_b ON condition_ab  
+LEFT JOIN table_c ON condition_bc  
+INNER JOIN table_d ON condition_cd;  
 ```
 
 ### Exemple : Système de Commandes Complet
 
 **Tables** :
-- `clients` : Les clients
-- `commandes` : Les commandes
-- `lignes_commande` : Détail des produits commandés
+- `clients` : Les clients  
+- `commandes` : Les commandes  
+- `lignes_commande` : Détail des produits commandés  
 - `produits` : Informations sur les produits
 
 ```sql
@@ -912,12 +912,12 @@ SELECT
     lignes_commande.quantite,
     lignes_commande.prix_unitaire,
     (lignes_commande.quantite * lignes_commande.prix_unitaire) AS sous_total
-FROM clients
-INNER JOIN commandes ON clients.id = commandes.client_id
-INNER JOIN lignes_commande ON commandes.id = lignes_commande.commande_id
-INNER JOIN produits ON lignes_commande.produit_id = produits.id
-WHERE clients.id = 1
-ORDER BY commandes.date_commande;
+FROM clients  
+INNER JOIN commandes ON clients.id = commandes.client_id  
+INNER JOIN lignes_commande ON commandes.id = lignes_commande.commande_id  
+INNER JOIN produits ON lignes_commande.produit_id = produits.id  
+WHERE clients.id = 1  
+ORDER BY commandes.date_commande;  
 ```
 
 ### Mélanger les Types de Jointures
@@ -929,10 +929,10 @@ SELECT
     clients.nom,
     commandes.id AS commande_id,
     produits.nom AS produit
-FROM clients
-LEFT JOIN commandes ON clients.id = commandes.client_id
-LEFT JOIN lignes_commande ON commandes.id = lignes_commande.commande_id
-LEFT JOIN produits ON lignes_commande.produit_id = produits.id;
+FROM clients  
+LEFT JOIN commandes ON clients.id = commandes.client_id  
+LEFT JOIN lignes_commande ON commandes.id = lignes_commande.commande_id  
+LEFT JOIN produits ON lignes_commande.produit_id = produits.id;  
 ```
 
 **Important** : L'ordre des jointures compte ! Si vous faites un LEFT JOIN suivi d'un INNER JOIN, le INNER JOIN peut annuler l'effet du LEFT JOIN.
@@ -941,14 +941,14 @@ LEFT JOIN produits ON lignes_commande.produit_id = produits.id;
 
 ```sql
 -- ✅ BON : LEFT JOIN en cascade
-FROM clients
-LEFT JOIN commandes ON ...
-LEFT JOIN lignes_commande ON ...
+FROM clients  
+LEFT JOIN commandes ON ...  
+LEFT JOIN lignes_commande ON ...  
 
 -- ⚠️ ATTENTION : LEFT puis INNER
-FROM clients
-LEFT JOIN commandes ON ...
-INNER JOIN lignes_commande ON ...  -- Peut exclure des clients !
+FROM clients  
+LEFT JOIN commandes ON ...  
+INNER JOIN lignes_commande ON ...  -- Peut exclure des clients !  
 ```
 
 Le INNER JOIN sur `lignes_commande` ne retournera que les lignes où `lignes_commande` existe, annulant partiellement l'effet du LEFT JOIN précédent.
@@ -959,8 +959,8 @@ Le INNER JOIN sur `lignes_commande` ne retournera que les lignes où `lignes_com
 
 ### Pourquoi Utiliser des Alias ?
 
-1. **Clarté** : Noms plus courts
-2. **Éviter les ambiguïtés** : Quand deux tables ont des colonnes du même nom
+1. **Clarté** : Noms plus courts  
+2. **Éviter les ambiguïtés** : Quand deux tables ont des colonnes du même nom  
 3. **Lisibilité** : Code plus facile à lire
 
 ### Syntaxe
@@ -970,15 +970,15 @@ SELECT
     c.nom AS nom_client,
     cmd.date_commande,
     cmd.montant
-FROM clients AS c  -- Alias "c"
-INNER JOIN commandes AS cmd ON c.id = cmd.client_id;  -- Alias "cmd"
+FROM clients AS c  -- Alias "c"  
+INNER JOIN commandes AS cmd ON c.id = cmd.client_id;  -- Alias "cmd"  
 ```
 
 **Note** : Le mot-clé `AS` est optionnel, on peut écrire simplement :
 
 ```sql
-FROM clients c
-INNER JOIN commandes cmd ON c.id = cmd.client_id;
+FROM clients c  
+INNER JOIN commandes cmd ON c.id = cmd.client_id;  
 ```
 
 ### Jointures Auto-Référencées (Self-Join)
@@ -997,8 +997,8 @@ CREATE TABLE employes (
 SELECT
     e.nom AS employe,
     m.nom AS manager
-FROM employes e
-LEFT JOIN employes m ON e.manager_id = m.id;
+FROM employes e  
+LEFT JOIN employes m ON e.manager_id = m.id;  
 ```
 
 **Résultat** :
@@ -1020,8 +1020,8 @@ LEFT JOIN employes m ON e.manager_id = m.id;
 
 ```sql
 -- Créer des index sur les colonnes de jointure
-CREATE INDEX idx_commandes_client_id ON commandes(client_id);
-CREATE INDEX idx_lignes_commande_commande_id ON lignes_commande(commande_id);
+CREATE INDEX idx_commandes_client_id ON commandes(client_id);  
+CREATE INDEX idx_lignes_commande_commande_id ON lignes_commande(commande_id);  
 ```
 
 **Pourquoi ?** Les jointures utilisent ces colonnes pour trouver les correspondances. Un index accélère drastiquement les recherches.
@@ -1029,10 +1029,10 @@ CREATE INDEX idx_lignes_commande_commande_id ON lignes_commande(commande_id);
 #### 2. Utiliser EXPLAIN pour Comprendre
 
 ```sql
-EXPLAIN ANALYZE
-SELECT *
-FROM clients
-INNER JOIN commandes ON clients.id = commandes.client_id;
+EXPLAIN ANALYZE  
+SELECT *  
+FROM clients  
+INNER JOIN commandes ON clients.id = commandes.client_id;  
 ```
 
 Cela montre :
@@ -1044,15 +1044,15 @@ Cela montre :
 
 ```sql
 -- ⚠️ Moins efficace : Jointure puis filtrage
-SELECT *
-FROM clients
-INNER JOIN commandes ON clients.id = commandes.client_id
-WHERE clients.ville = 'Paris';
+SELECT *  
+FROM clients  
+INNER JOIN commandes ON clients.id = commandes.client_id  
+WHERE clients.ville = 'Paris';  
 
 -- ✅ Plus efficace : Filtrage puis jointure (si possible)
-SELECT *
-FROM (SELECT * FROM clients WHERE ville = 'Paris') c
-INNER JOIN commandes ON c.id = commandes.client_id;
+SELECT *  
+FROM (SELECT * FROM clients WHERE ville = 'Paris') c  
+INNER JOIN commandes ON c.id = commandes.client_id;  
 ```
 
 **Note** : L'optimiseur de PostgreSQL fait souvent cette optimisation automatiquement.
@@ -1083,9 +1083,9 @@ SELECT * FROM clients INNER JOIN commandes ON clients.id = commandes.client_id;
 
 ```sql
 -- ❌ Erreur : colonne "id" est ambiguë
-SELECT id, nom, montant
-FROM clients
-INNER JOIN commandes ON clients.id = commandes.client_id;
+SELECT id, nom, montant  
+FROM clients  
+INNER JOIN commandes ON clients.id = commandes.client_id;  
 -- ERROR: column reference "id" is ambiguous
 ```
 
@@ -1093,9 +1093,9 @@ INNER JOIN commandes ON clients.id = commandes.client_id;
 
 ```sql
 -- ✅ Correct
-SELECT clients.id, clients.nom, commandes.montant
-FROM clients
-INNER JOIN commandes ON clients.id = commandes.client_id;
+SELECT clients.id, clients.nom, commandes.montant  
+FROM clients  
+INNER JOIN commandes ON clients.id = commandes.client_id;  
 ```
 
 ### Erreur 2 : Oublier la Condition de Jointure
@@ -1132,9 +1132,9 @@ SELECT COUNT(*) FROM clients LEFT JOIN commandes ON clients.id = commandes.clien
 ```sql
 -- Si client_id est NULL, la ligne ne correspondra JAMAIS
 -- même avec LEFT JOIN
-SELECT *
-FROM commandes
-LEFT JOIN clients ON commandes.client_id = clients.id;
+SELECT *  
+FROM commandes  
+LEFT JOIN clients ON commandes.client_id = clients.id;  
 ```
 
 **Important** : `NULL = NULL` retourne `NULL` (pas `TRUE`), donc les lignes avec `NULL` ne correspondent jamais.
@@ -1143,9 +1143,9 @@ LEFT JOIN clients ON commandes.client_id = clients.id;
 
 ```sql
 -- ⚠️ Peut donner un résultat inattendu
-FROM clients
-LEFT JOIN commandes ON ...
-INNER JOIN produits ON ...  -- Peut filtrer les clients sans commande !
+FROM clients  
+LEFT JOIN commandes ON ...  
+INNER JOIN produits ON ...  -- Peut filtrer les clients sans commande !  
 ```
 
 **Solution** : Utiliser LEFT JOIN en cascade si vous voulez garder tous les clients.
@@ -1326,10 +1326,10 @@ SELECT * FROM table_a INNER JOIN table_b ON table_a.id = table_b.a_id;
 
 ### Points Clés à Retenir
 
-1. **INNER JOIN** : Intersection (seulement les correspondances)
-2. **LEFT JOIN** : Tout ce qui est à gauche + correspondances
-3. **RIGHT JOIN** : Tout ce qui est à droite + correspondances (rarement utilisé)
-4. **FULL OUTER JOIN** : Union (tout ce qui existe)
+1. **INNER JOIN** : Intersection (seulement les correspondances)  
+2. **LEFT JOIN** : Tout ce qui est à gauche + correspondances  
+3. **RIGHT JOIN** : Tout ce qui est à droite + correspondances (rarement utilisé)  
+4. **FULL OUTER JOIN** : Union (tout ce qui existe)  
 5. **CROSS JOIN** : Produit cartésien (toutes les combinaisons)
 
 ### La Règle d'Or
@@ -1342,19 +1342,19 @@ SELECT * FROM table_a INNER JOIN table_b ON table_a.id = table_b.a_id;
 
 ### Bonnes Pratiques Finales
 
-1. ✅ Toujours qualifier les colonnes ambiguës
-2. ✅ Utiliser des alias pour la lisibilité
-3. ✅ Indexer les colonnes de jointure
-4. ✅ Préférer INNER JOIN quand c'est suffisant
-5. ✅ Utiliser EXPLAIN pour comprendre les performances
-6. ✅ Tester avec de petits échantillons d'abord
+1. ✅ Toujours qualifier les colonnes ambiguës  
+2. ✅ Utiliser des alias pour la lisibilité  
+3. ✅ Indexer les colonnes de jointure  
+4. ✅ Préférer INNER JOIN quand c'est suffisant  
+5. ✅ Utiliser EXPLAIN pour comprendre les performances  
+6. ✅ Tester avec de petits échantillons d'abord  
 7. ⚠️ Attention aux CROSS JOIN sur grandes tables
 
 ### Prochaines Étapes
 
 Dans les sections suivantes, nous explorerons :
-- **7.5 Self-Joins** : Joindre une table à elle-même
-- **7.6 LATERAL JOIN** : Jointures corrélées avancées
+- **7.5 Self-Joins** : Joindre une table à elle-même  
+- **7.6 LATERAL JOIN** : Jointures corrélées avancées  
 - **7.7 Anti-jointures et Semi-jointures** : NOT EXISTS, NOT IN, EXCEPT
 
 Vous êtes maintenant équipé pour maîtriser les jointures, l'une des compétences les plus importantes en SQL !

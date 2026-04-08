@@ -4,7 +4,7 @@
 
 ## Introduction
 
-`MERGE` est une commande SQL standard (SQL:2016) introduite dans PostgreSQL 15 et significativement améliorée dans PostgreSQL 18 avec le support de OLD et NEW dans les clauses RETURNING.
+`MERGE` est une commande SQL standard (SQL:2003) introduite dans **PostgreSQL 15** avec le support de base (WHEN MATCHED, WHEN NOT MATCHED), puis enrichie dans **PostgreSQL 17** (WHEN NOT MATCHED BY SOURCE, RETURNING) et **PostgreSQL 18** (OLD et NEW dans RETURNING).
 
 Cette commande permet de **synchroniser** des données entre deux tables en effectuant différentes actions (INSERT, UPDATE, DELETE) selon qu'une ligne correspond ou non. C'est l'outil idéal pour les opérations ETL (Extract, Transform, Load), les synchronisations de données, et les imports complexes.
 
@@ -17,25 +17,25 @@ Cette commande permet de **synchroniser** des données entre deux tables en effe
 ### Concept de base
 
 `MERGE` combine trois opérations SQL en une seule commande :
-- **INSERT** : Pour les lignes qui existent dans la source mais pas dans la cible
-- **UPDATE** : Pour les lignes qui existent dans les deux tables (correspondance)
+- **INSERT** : Pour les lignes qui existent dans la source mais pas dans la cible  
+- **UPDATE** : Pour les lignes qui existent dans les deux tables (correspondance)  
 - **DELETE** : Pour les lignes qui existent dans la cible mais plus dans la source
 
 ### Terminologie
 
-- **Table cible (target)** : La table que vous voulez modifier
-- **Table source (source)** : La table ou requête contenant les nouvelles données
-- **Condition de correspondance (ON)** : Critère pour déterminer si une ligne correspond
-- **WHEN MATCHED** : Actions à effectuer quand il y a correspondance
+- **Table cible (target)** : La table que vous voulez modifier  
+- **Table source (source)** : La table ou requête contenant les nouvelles données  
+- **Condition de correspondance (ON)** : Critère pour déterminer si une ligne correspond  
+- **WHEN MATCHED** : Actions à effectuer quand il y a correspondance  
 - **WHEN NOT MATCHED** : Actions pour les lignes sans correspondance
 
 ### Syntaxe générale
 
 ```sql
-MERGE INTO table_cible AS target
-USING table_source AS source
-ON condition_de_correspondance
-WHEN MATCHED [AND condition] THEN
+MERGE INTO table_cible AS target  
+USING table_source AS source  
+ON condition_de_correspondance  
+WHEN MATCHED [AND condition] THEN  
     UPDATE SET colonne = valeur | DELETE
 WHEN NOT MATCHED [BY TARGET] [AND condition] THEN
     INSERT (colonnes) VALUES (valeurs)
@@ -54,7 +54,7 @@ Avant de plonger dans MERGE, comparons-le avec ON CONFLICT (UPSERT) que nous avo
 
 | Aspect | ON CONFLICT | MERGE |
 |--------|-------------|-------|
-| **Standard SQL** | ❌ PostgreSQL spécifique | ✅ SQL:2016 standard |
+| **Standard SQL** | ❌ PostgreSQL spécifique | ✅ SQL:2003 standard |
 | **Opérations** | INSERT + UPDATE | INSERT + UPDATE + DELETE |
 | **Source de données** | VALUES ou SELECT | Table ou requête |
 | **Portabilité** | PostgreSQL uniquement | Portable (SQL Server, Oracle, etc.) |
@@ -66,16 +66,16 @@ Avant de plonger dans MERGE, comparons-le avec ON CONFLICT (UPSERT) que nous avo
 ### Quand utiliser quoi ?
 
 **Utilisez ON CONFLICT quand** :
-- ✅ Vous faites un simple upsert (INSERT or UPDATE)
-- ✅ Vous voulez une syntaxe courte et claire
-- ✅ Vous n'avez pas besoin de DELETE
+- ✅ Vous faites un simple upsert (INSERT or UPDATE)  
+- ✅ Vous voulez une syntaxe courte et claire  
+- ✅ Vous n'avez pas besoin de DELETE  
 - ✅ La source est directement dans la requête (VALUES)
 
 **Utilisez MERGE quand** :
-- ✅ Vous synchronisez deux tables complètes
-- ✅ Vous avez besoin de DELETE en plus de INSERT/UPDATE
-- ✅ Vous avez des conditions complexes
-- ✅ Vous voulez de la portabilité SQL standard
+- ✅ Vous synchronisez deux tables complètes  
+- ✅ Vous avez besoin de DELETE en plus de INSERT/UPDATE  
+- ✅ Vous avez des conditions complexes  
+- ✅ Vous voulez de la portabilité SQL standard  
 - ✅ Vous avez plusieurs sources de données à fusionner
 
 ---
@@ -121,10 +121,10 @@ INSERT INTO produits_import (sku, nom, prix, stock) VALUES
 ### MERGE pour synchroniser
 
 ```sql
-MERGE INTO produits AS target
-USING produits_import AS source
-ON target.sku = source.sku
-WHEN MATCHED THEN
+MERGE INTO produits AS target  
+USING produits_import AS source  
+ON target.sku = source.sku  
+WHEN MATCHED THEN  
     UPDATE SET
         nom = source.nom,
         prix = source.prix,
@@ -147,10 +147,10 @@ WHEN NOT MATCHED THEN
 
 ### Décomposition étape par étape
 
-1. **MERGE INTO produits AS target** : Désigne la table à modifier
-2. **USING produits_import AS source** : Désigne la source des données
-3. **ON target.sku = source.sku** : Condition de correspondance (comme un JOIN)
-4. **WHEN MATCHED THEN UPDATE** : Si la correspondance existe → mise à jour
+1. **MERGE INTO produits AS target** : Désigne la table à modifier  
+2. **USING produits_import AS source** : Désigne la source des données  
+3. **ON target.sku = source.sku** : Condition de correspondance (comme un JOIN)  
+4. **WHEN MATCHED THEN UPDATE** : Si la correspondance existe → mise à jour  
 5. **WHEN NOT MATCHED THEN INSERT** : Si pas de correspondance → insertion
 
 ---
@@ -162,10 +162,10 @@ Vous pouvez ajouter des conditions supplémentaires à chaque clause WHEN.
 ### UPDATE seulement si les données ont changé
 
 ```sql
-MERGE INTO produits AS target
-USING produits_import AS source
-ON target.sku = source.sku
-WHEN MATCHED AND (
+MERGE INTO produits AS target  
+USING produits_import AS source  
+ON target.sku = source.sku  
+WHEN MATCHED AND (  
     target.nom != source.nom OR
     target.prix != source.prix OR
     target.stock != source.stock
@@ -185,10 +185,10 @@ Cela évite de mettre à jour des lignes qui n'ont pas changé, améliorant les 
 ### INSERT seulement si le stock est suffisant
 
 ```sql
-MERGE INTO produits AS target
-USING produits_import AS source
-ON target.sku = source.sku
-WHEN MATCHED THEN
+MERGE INTO produits AS target  
+USING produits_import AS source  
+ON target.sku = source.sku  
+WHEN MATCHED THEN  
     UPDATE SET
         nom = source.nom,
         prix = source.prix,
@@ -215,10 +215,10 @@ Supprimer les produits qui ne sont plus dans le catalogue source :
 -- Scénario : produits_import contient seulement les produits actifs
 -- On veut supprimer de produits ceux qui ne sont plus dans produits_import
 
-MERGE INTO produits AS target
-USING produits_import AS source
-ON target.sku = source.sku
-WHEN MATCHED THEN
+MERGE INTO produits AS target  
+USING produits_import AS source  
+ON target.sku = source.sku  
+WHEN MATCHED THEN  
     UPDATE SET
         nom = source.nom,
         prix = source.prix,
@@ -232,19 +232,19 @@ WHEN NOT MATCHED BY SOURCE THEN
 ```
 
 **Explication des clauses** :
-- `WHEN MATCHED` : Le produit existe dans les deux tables → UPDATE
-- `WHEN NOT MATCHED BY TARGET` : Le produit existe seulement dans la source → INSERT
-- `WHEN NOT MATCHED BY SOURCE` : Le produit existe seulement dans la cible → DELETE
+- `WHEN MATCHED` : Le produit existe dans les deux tables → UPDATE  
+- `WHEN NOT MATCHED BY TARGET` : Le produit existe seulement dans la source → INSERT  
+- `WHEN NOT MATCHED BY SOURCE` : Le produit existe seulement dans la cible → DELETE (requiert **PostgreSQL 17+**)
 
 ### DELETE conditionnel
 
 Supprimer seulement si certaines conditions sont remplies :
 
 ```sql
-MERGE INTO produits AS target
-USING produits_import AS source
-ON target.sku = source.sku
-WHEN MATCHED THEN
+MERGE INTO produits AS target  
+USING produits_import AS source  
+ON target.sku = source.sku  
+WHEN MATCHED THEN  
     UPDATE SET
         nom = source.nom,
         prix = source.prix,
@@ -270,10 +270,10 @@ CREATE TABLE catalogue_fournisseur (
 );
 
 -- Synchronisation complète
-MERGE INTO produits AS target
-USING catalogue_fournisseur AS source
-ON target.sku = source.reference
-WHEN MATCHED AND source.disponible = true THEN
+MERGE INTO produits AS target  
+USING catalogue_fournisseur AS source  
+ON target.sku = source.reference  
+WHEN MATCHED AND source.disponible = true THEN  
     UPDATE SET
         nom = source.designation,
         prix = source.prix_achat * 1.5,  -- Marge de 50%
@@ -289,7 +289,7 @@ WHEN NOT MATCHED AND source.disponible = true THEN
 
 ## 6.8.6. OLD et NEW dans MERGE (PostgreSQL 18)
 
-PostgreSQL 18 ajoute le support de OLD et NEW dans la clause RETURNING de MERGE, permettant de distinguer et comparer les valeurs avant et après l'opération.
+La clause RETURNING avec MERGE a été introduite dans **PostgreSQL 17**. **PostgreSQL 18** y ajoute le support de OLD et NEW, permettant de distinguer et comparer les valeurs avant et après l'opération.
 
 ### Comprendre OLD et NEW dans MERGE
 
@@ -302,10 +302,10 @@ PostgreSQL 18 ajoute le support de OLD et NEW dans la clause RETURNING de MERGE,
 ### Exemple basique avec OLD et NEW
 
 ```sql
-MERGE INTO produits AS target
-USING produits_import AS source
-ON target.sku = source.sku
-WHEN MATCHED THEN
+MERGE INTO produits AS target  
+USING produits_import AS source  
+ON target.sku = source.sku  
+WHEN MATCHED THEN  
     UPDATE SET
         prix = source.prix,
         stock = source.stock
@@ -336,10 +336,10 @@ RETURNING
 ### Distinguer les trois types d'opérations
 
 ```sql
-MERGE INTO produits AS target
-USING produits_import AS source
-ON target.sku = source.sku
-WHEN MATCHED AND source.stock > 0 THEN
+MERGE INTO produits AS target  
+USING produits_import AS source  
+ON target.sku = source.sku  
+WHEN MATCHED AND source.stock > 0 THEN  
     UPDATE SET
         nom = source.nom,
         prix = source.prix,
@@ -409,9 +409,9 @@ WITH merge_results AS (
         OLD.prix AS ancien_prix,
         NEW.prix AS nouveau_prix
 )
-INSERT INTO audit_merge (operation, table_name, sku, ancien_prix, nouveau_prix)
-SELECT operation, 'produits', sku, ancien_prix, nouveau_prix
-FROM merge_results;
+INSERT INTO audit_merge (operation, table_name, sku, ancien_prix, nouveau_prix)  
+SELECT operation, 'produits', sku, ancien_prix, nouveau_prix  
+FROM merge_results;  
 ```
 
 ### Cas 2 : Import ETL avec validation
@@ -438,10 +438,10 @@ CREATE TABLE clients (
 );
 
 -- Import avec validation
-MERGE INTO clients AS target
-USING staging_clients AS source
-ON target.id_externe = source.id_externe
-WHEN MATCHED AND source.valide = true THEN
+MERGE INTO clients AS target  
+USING staging_clients AS source  
+ON target.id_externe = source.id_externe  
+WHEN MATCHED AND source.valide = true THEN  
     UPDATE SET
         nom = source.nom,
         email = source.email,
@@ -481,10 +481,10 @@ CREATE TABLE cache_updates (
 );
 
 -- Synchroniser le cache
-MERGE INTO cache AS target
-USING cache_updates AS source
-ON target.key = source.key
-WHEN MATCHED THEN
+MERGE INTO cache AS target  
+USING cache_updates AS source  
+ON target.key = source.key  
+WHEN MATCHED THEN  
     UPDATE SET
         value = source.value,
         expires_at = CURRENT_TIMESTAMP + (source.ttl_seconds || ' seconds')::INTERVAL
@@ -525,16 +525,16 @@ CREATE TABLE mouvements_stock (
 );
 
 -- Synchroniser l'inventaire
-MERGE INTO inventaire AS target
-USING (
+MERGE INTO inventaire AS target  
+USING (  
     SELECT
         produit_id,
         SUM(ajustement) AS ajustement_total
     FROM mouvements_stock
     GROUP BY produit_id
 ) AS source
-ON target.produit_id = source.produit_id
-WHEN MATCHED THEN
+ON target.produit_id = source.produit_id  
+WHEN MATCHED THEN  
     UPDATE SET
         quantite = target.quantite + source.ajustement_total,
         statut = CASE
@@ -566,8 +566,8 @@ MERGE accepte n'importe quelle requête SQL comme source, pas seulement une tabl
 
 ```sql
 -- Mettre à jour les produits avec des informations de plusieurs tables
-MERGE INTO produits AS target
-USING (
+MERGE INTO produits AS target  
+USING (  
     SELECT
         p.sku,
         p.nom,
@@ -577,8 +577,8 @@ USING (
     JOIN categories c ON p.categorie_id = c.id
     LEFT JOIN stock_entrepot s ON p.sku = s.sku
 ) AS source
-ON target.sku = source.sku
-WHEN MATCHED THEN
+ON target.sku = source.sku  
+WHEN MATCHED THEN  
     UPDATE SET
         nom = source.nom,
         prix = source.prix_vente,
@@ -592,8 +592,8 @@ WHEN NOT MATCHED THEN
 
 ```sql
 -- Mettre à jour les statistiques clients
-MERGE INTO client_stats AS target
-USING (
+MERGE INTO client_stats AS target  
+USING (  
     SELECT
         client_id,
         COUNT(*) AS nb_commandes,
@@ -603,8 +603,8 @@ USING (
     WHERE date_commande >= CURRENT_DATE - INTERVAL '1 year'
     GROUP BY client_id
 ) AS source
-ON target.client_id = source.client_id
-WHEN MATCHED THEN
+ON target.client_id = source.client_id  
+WHEN MATCHED THEN  
     UPDATE SET
         nb_commandes = source.nb_commandes,
         montant_total = source.montant_total,
@@ -629,16 +629,16 @@ RETURNING
 
 ```sql
 -- Fusionner les données de plusieurs sources
-MERGE INTO contacts AS target
-USING (
+MERGE INTO contacts AS target  
+USING (  
     SELECT email, nom, prenom, 'CRM' AS source FROM crm_contacts
     UNION
     SELECT email, nom, prenom, 'Newsletter' AS source FROM newsletter_subscribers
     UNION
     SELECT email, nom, prenom, 'Support' AS source FROM support_tickets
 ) AS source
-ON target.email = source.email
-WHEN MATCHED THEN
+ON target.email = source.email  
+WHEN MATCHED THEN  
     UPDATE SET
         nom = COALESCE(source.nom, target.nom),
         prenom = COALESCE(source.prenom, target.prenom),
@@ -658,9 +658,9 @@ PostgreSQL permet d'avoir plusieurs clauses WHEN du même type avec des conditio
 ### Exemple : Actions différentes selon les conditions
 
 ```sql
-MERGE INTO produits AS target
-USING produits_import AS source
-ON target.sku = source.sku
+MERGE INTO produits AS target  
+USING produits_import AS source  
+ON target.sku = source.sku  
 -- Première condition MATCHED : mise à jour normale
 WHEN MATCHED AND source.prix > target.prix THEN
     UPDATE SET
@@ -698,13 +698,13 @@ MERGE nécessite des index sur les colonnes de jointure (clause ON) :
 
 ```sql
 -- ✅ Index sur la colonne de jointure
-CREATE INDEX idx_produits_sku ON produits(sku);
-CREATE INDEX idx_import_sku ON produits_import(sku);
+CREATE INDEX idx_produits_sku ON produits(sku);  
+CREATE INDEX idx_import_sku ON produits_import(sku);  
 
 -- MERGE sera efficace
-MERGE INTO produits AS target
-USING produits_import AS source
-ON target.sku = source.sku
+MERGE INTO produits AS target  
+USING produits_import AS source  
+ON target.sku = source.sku  
 ...;
 ```
 
@@ -724,8 +724,8 @@ Pour des millions de lignes, traiter par lots :
 
 ```sql
 -- Traiter par lots de 100 000 lignes
-DO $$
-DECLARE
+DO $$  
+DECLARE  
     batch_size INTEGER := 100000;
     offset_val INTEGER := 0;
     affected_rows INTEGER;
@@ -772,10 +772,10 @@ MERGE INTO produits, categories AS target
 
 ```sql
 -- ❌ RETURNING seulement à la fin du MERGE
-MERGE INTO produits AS target
-USING source
-ON condition
-WHEN MATCHED THEN
+MERGE INTO produits AS target  
+USING source  
+ON condition  
+WHEN MATCHED THEN  
     UPDATE SET ... RETURNING id  -- ERROR
 WHEN NOT MATCHED THEN
     INSERT ... RETURNING id;  -- ERROR
@@ -790,10 +790,10 @@ RETURNING id, nom;  -- OK
 
 ```sql
 -- ❌ Impossible d'utiliser OLD dans WHERE
-MERGE INTO produits AS target
-USING source
-ON target.sku = source.sku
-WHEN MATCHED AND OLD.prix < source.prix THEN  -- ERROR
+MERGE INTO produits AS target  
+USING source  
+ON target.sku = source.sku  
+WHEN MATCHED AND OLD.prix < source.prix THEN  -- ERROR  
     UPDATE SET prix = source.prix;
 
 -- ✅ Utiliser les noms de table
@@ -807,10 +807,10 @@ MERGE prend des verrous sur les lignes affectées :
 
 ```sql
 -- Session 1
-BEGIN;
-MERGE INTO produits AS target
-USING source
-ON target.sku = source.sku
+BEGIN;  
+MERGE INTO produits AS target  
+USING source  
+ON target.sku = source.sku  
 ...;
 -- Lignes verrouillées jusqu'au COMMIT
 
@@ -837,8 +837,8 @@ UPDATE produits SET prix = 99 WHERE sku = 'PROD-001';
 
 ```sql
 -- Complexe et verbeux
-DO $$
-DECLARE
+DO $$  
+DECLARE  
     rec RECORD;
 BEGIN
     FOR rec IN SELECT * FROM produits_import LOOP
@@ -858,11 +858,11 @@ END $$;
 
 ```sql
 -- Simple mais ne gère pas les suppressions
-INSERT INTO produits (sku, nom, prix, stock)
-SELECT sku, nom, prix, stock
-FROM produits_import
-ON CONFLICT (sku)
-DO UPDATE SET
+INSERT INTO produits (sku, nom, prix, stock)  
+SELECT sku, nom, prix, stock  
+FROM produits_import  
+ON CONFLICT (sku)  
+DO UPDATE SET  
     prix = EXCLUDED.prix,
     stock = EXCLUDED.stock;
 ```
@@ -871,10 +871,10 @@ DO UPDATE SET
 
 ```sql
 -- Flexible et performant
-MERGE INTO produits AS target
-USING produits_import AS source
-ON target.sku = source.sku
-WHEN MATCHED THEN
+MERGE INTO produits AS target  
+USING produits_import AS source  
+ON target.sku = source.sku  
+WHEN MATCHED THEN  
     UPDATE SET prix = source.prix, stock = source.stock
 WHEN NOT MATCHED THEN
     INSERT (sku, nom, prix, stock)
@@ -920,8 +920,8 @@ SELECT
     operation,
     COUNT(*) AS nombre,
     SUM(CASE WHEN operation = 'UPDATE' THEN (nouveau_prix - ancien_prix) * nouveau_stock ELSE 0 END) AS impact_valeur_stock
-FROM merge_report
-GROUP BY operation;
+FROM merge_report  
+GROUP BY operation;  
 ```
 
 **Résultat** :
@@ -958,9 +958,9 @@ SELECT
     ancien_prix,
     nouveau_prix,
     ROUND(variation_pct * 100, 2) AS variation_pourcentage
-FROM merge_changes
-WHERE variation_pct > 0.20  -- Plus de 20% de variation
-ORDER BY variation_pct DESC;
+FROM merge_changes  
+WHERE variation_pct > 0.20  -- Plus de 20% de variation  
+ORDER BY variation_pct DESC;  
 ```
 
 ### Pattern 3 : Historisation automatique
@@ -999,10 +999,10 @@ WITH merged AS (
         OLD.stock AS ancien_stock,
         NEW.stock AS nouveau_stock
 )
-INSERT INTO produits_historique (sku, operation, ancien_prix, nouveau_prix, ancien_stock, nouveau_stock)
-SELECT sku, operation, ancien_prix, nouveau_prix, ancien_stock, nouveau_stock
-FROM merged
-WHERE operation = 'UPDATE';  -- Historiser seulement les modifications
+INSERT INTO produits_historique (sku, operation, ancien_prix, nouveau_prix, ancien_stock, nouveau_stock)  
+SELECT sku, operation, ancien_prix, nouveau_prix, ancien_stock, nouveau_stock  
+FROM merged  
+WHERE operation = 'UPDATE';  -- Historiser seulement les modifications  
 ```
 
 ---
@@ -1012,9 +1012,9 @@ WHERE operation = 'UPDATE';  -- Historiser seulement les modifications
 ### Syntaxe de référence complète
 
 ```sql
-MERGE INTO table_cible AS target
-USING table_source AS source
-ON condition_jointure
+MERGE INTO table_cible AS target  
+USING table_source AS source  
+ON condition_jointure  
 
 -- Plusieurs WHEN MATCHED possibles
 WHEN MATCHED AND condition1 THEN
@@ -1052,18 +1052,18 @@ RETURNING
 | INSERT + UPDATE + DELETE | ✅ Idéal |
 | Conditions complexes multiples | ✅ Très flexible |
 | Besoin OLD et NEW dans RETURNING | ✅ PostgreSQL 18+ |
-| Portabilité SQL standard | ✅ SQL:2016 |
+| Portabilité SQL standard | ✅ SQL:2003 |
 | Performance critique | ✅ Optimisé |
 | Une seule source de données simple | ⚠️ ON CONFLICT peut suffire |
 
 ### Points clés à retenir
 
-1. **MERGE = Synchronisation** : Idéal pour maintenir deux tables en sync
-2. **Trois opérations** : INSERT, UPDATE, DELETE en une seule commande
-3. **Conditions flexibles** : Plusieurs WHEN avec des AND
-4. **OLD et NEW (PG 18)** : Distinguer et comparer avant/après dans RETURNING
-5. **Standard SQL** : Portable vers d'autres SGBD
-6. **Performance** : Bien plus rapide que des requêtes séparées
+1. **MERGE = Synchronisation** : Idéal pour maintenir deux tables en sync  
+2. **Trois opérations** : INSERT, UPDATE, DELETE en une seule commande  
+3. **Conditions flexibles** : Plusieurs WHEN avec des AND  
+4. **OLD et NEW (PG 18)** : Distinguer et comparer avant/après dans RETURNING  
+5. **Standard SQL** : Portable vers d'autres SGBD  
+6. **Performance** : Bien plus rapide que des requêtes séparées  
 7. **Source flexible** : Accepte n'importe quelle requête SELECT
 
 ---
@@ -1073,11 +1073,11 @@ RETURNING
 `MERGE` est l'outil de choix pour les opérations de synchronisation de données complexes. Introduit dans PostgreSQL 15 et enrichi dans PostgreSQL 18 avec le support de OLD/NEW, il offre :
 
 **Avantages principaux** :
-- ✅ **Simplicité** : Une commande au lieu de multiples requêtes
-- ✅ **Atomicité** : Toutes les opérations dans une seule transaction
-- ✅ **Flexibilité** : INSERT + UPDATE + DELETE avec conditions
-- ✅ **Performance** : Optimisé pour les synchronisations de masse
-- ✅ **Standard** : SQL:2016, portable vers d'autres SGBD
+- ✅ **Simplicité** : Une commande au lieu de multiples requêtes  
+- ✅ **Atomicité** : Toutes les opérations dans une seule transaction  
+- ✅ **Flexibilité** : INSERT + UPDATE + DELETE avec conditions  
+- ✅ **Performance** : Optimisé pour les synchronisations de masse  
+- ✅ **Standard** : SQL:2003, portable vers d'autres SGBD  
 - ✅ **Traçabilité** : OLD/NEW dans RETURNING pour l'audit complet
 
 **Cas d'usage idéaux** :

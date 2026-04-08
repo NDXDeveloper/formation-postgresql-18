@@ -12,9 +12,9 @@ Avec les jointures classiques, chaque table est évaluée **indépendamment**. V
 
 ```sql
 -- ❌ ERREUR : sous-requête ne peut pas référencer clients
-SELECT *
-FROM clients
-CROSS JOIN (
+SELECT *  
+FROM clients  
+CROSS JOIN (  
     SELECT * FROM commandes
     WHERE commandes.client_id = clients.id  -- ❌ clients pas accessible
     LIMIT 3
@@ -25,9 +25,9 @@ Avec **LATERAL**, c'est possible :
 
 ```sql
 -- ✅ FONCTIONNE : LATERAL permet la corrélation
-SELECT *
-FROM clients
-CROSS JOIN LATERAL (
+SELECT *  
+FROM clients  
+CROSS JOIN LATERAL (  
     SELECT * FROM commandes
     WHERE commandes.client_id = clients.id  -- ✅ clients accessible !
     LIMIT 3
@@ -37,7 +37,7 @@ CROSS JOIN LATERAL (
 ### Analogie Simple
 
 Imaginez que vous lisez un livre :
-- **Jointure classique** : Chaque chapitre est indépendant, vous ne pouvez pas référencer le chapitre précédent
+- **Jointure classique** : Chaque chapitre est indépendant, vous ne pouvez pas référencer le chapitre précédent  
 - **LATERAL JOIN** : Chaque chapitre peut faire référence aux chapitres précédents
 
 ---
@@ -52,9 +52,9 @@ Une requête est **corrélée** quand elle fait référence à des colonnes déf
 
 ```sql
 -- Trouver les clients ayant commandé plus que la moyenne
-SELECT nom
-FROM clients
-WHERE (
+SELECT nom  
+FROM clients  
+WHERE (  
     SELECT AVG(montant)
     FROM commandes
     WHERE commandes.client_id = clients.id  -- Corrélation ici
@@ -77,16 +77,16 @@ LATERAL permet de placer cette corrélation dans la clause `FROM`, ce qui :
 ### Forme Générale
 
 ```sql
-SELECT ...
-FROM table_gauche
-CROSS JOIN LATERAL (
+SELECT ...  
+FROM table_gauche  
+CROSS JOIN LATERAL (  
     sous_requete_qui_reference_table_gauche
 ) AS alias;
 
 -- Ou avec LEFT JOIN LATERAL
-SELECT ...
-FROM table_gauche
-LEFT JOIN LATERAL (
+SELECT ...  
+FROM table_gauche  
+LEFT JOIN LATERAL (  
     sous_requete_qui_reference_table_gauche
 ) AS alias ON true;
 ```
@@ -133,8 +133,8 @@ SELECT
     dernieres.id AS commande_id,
     dernieres.montant,
     dernieres.date_commande
-FROM clients
-CROSS JOIN LATERAL (
+FROM clients  
+CROSS JOIN LATERAL (  
     SELECT id, montant, date_commande
     FROM commandes
     WHERE commandes.client_id = clients.id  -- Corrélation
@@ -166,9 +166,9 @@ CROSS JOIN LATERAL (
 Équivalent à un **INNER JOIN** : Retourne seulement les lignes où la sous-requête produit des résultats.
 
 ```sql
-SELECT clients.nom, dernieres.*
-FROM clients
-CROSS JOIN LATERAL (
+SELECT clients.nom, dernieres.*  
+FROM clients  
+CROSS JOIN LATERAL (  
     SELECT * FROM commandes
     WHERE commandes.client_id = clients.id
     LIMIT 2
@@ -186,8 +186,8 @@ SELECT
     clients.nom,
     dernieres.id AS commande_id,
     dernieres.montant
-FROM clients
-LEFT JOIN LATERAL (
+FROM clients  
+LEFT JOIN LATERAL (  
     SELECT id, montant
     FROM commandes
     WHERE commandes.client_id = clients.id
@@ -254,8 +254,8 @@ SELECT
     categories.nom AS categorie,
     top_produits.nom AS produit,
     top_produits.ventes
-FROM categories
-CROSS JOIN LATERAL (
+FROM categories  
+CROSS JOIN LATERAL (  
     SELECT nom, ventes
     FROM produits
     WHERE produits.categorie_id = categories.id
@@ -281,8 +281,8 @@ ORDER BY categories.nom, top_produits.ventes DESC;
 **Alternative sans LATERAL** (avec Window Functions) :
 
 ```sql
-SELECT categorie, produit, ventes
-FROM (
+SELECT categorie, produit, ventes  
+FROM (  
     SELECT
         c.nom AS categorie,
         p.nom AS produit,
@@ -291,12 +291,12 @@ FROM (
     FROM categories c
     INNER JOIN produits p ON c.id = p.categorie_id
 ) AS ranked
-WHERE rang <= 3
-ORDER BY categorie, ventes DESC;
+WHERE rang <= 3  
+ORDER BY categorie, ventes DESC;  
 ```
 
 **Comparaison** :
-- **LATERAL** : Plus intuitif, lecture naturelle (pour chaque catégorie, prendre les 3 meilleurs)
+- **LATERAL** : Plus intuitif, lecture naturelle (pour chaque catégorie, prendre les 3 meilleurs)  
 - **Window Functions** : Plus performant sur grandes tables, syntaxe plus compacte
 
 ### Cas 2 : Calculs Complexes Corrélés
@@ -309,8 +309,8 @@ SELECT
     stats.derniere_commande,
     stats.moyenne_commandes,
     stats.derniere_commande - stats.moyenne_commandes AS difference
-FROM clients
-CROSS JOIN LATERAL (
+FROM clients  
+CROSS JOIN LATERAL (  
     SELECT
         (SELECT montant FROM commandes
          WHERE commandes.client_id = clients.id
@@ -340,14 +340,14 @@ LATERAL est particulièrement utile avec des fonctions qui retournent des ensemb
 SELECT
     clients.nom,
     TO_CHAR(mois.date, 'YYYY-MM') AS mois
-FROM clients
-CROSS JOIN LATERAL generate_series(
+FROM clients  
+CROSS JOIN LATERAL generate_series(  
     CURRENT_DATE,
     CURRENT_DATE + INTERVAL '4 months',
     INTERVAL '1 month'
 ) AS mois(date)
-WHERE clients.id <= 2  -- Limiter pour l'exemple
-ORDER BY clients.nom, mois.date;
+WHERE clients.id <= 2  -- Limiter pour l'exemple  
+ORDER BY clients.nom, mois.date;  
 ```
 
 **Résultat** :
@@ -369,8 +369,8 @@ ORDER BY clients.nom, mois.date;
 
 ```sql
 -- Créer une fonction qui retourne les commandes d'un client
-CREATE OR REPLACE FUNCTION get_client_orders(p_client_id INTEGER, p_limit INTEGER)
-RETURNS TABLE (
+CREATE OR REPLACE FUNCTION get_client_orders(p_client_id INTEGER, p_limit INTEGER)  
+RETURNS TABLE (  
     commande_id INTEGER,
     montant NUMERIC,
     date_commande DATE
@@ -389,8 +389,8 @@ $$ LANGUAGE plpgsql;
 SELECT
     clients.nom,
     orders.*
-FROM clients
-CROSS JOIN LATERAL get_client_orders(clients.id, 2) AS orders;
+FROM clients  
+CROSS JOIN LATERAL get_client_orders(clients.id, 2) AS orders;  
 ```
 
 ### Cas 4 : Enrichissement de Données
@@ -404,8 +404,8 @@ SELECT
     stats.nombre_total_commandes,
     stats.montant_total_depense,
     stats.commande_moyenne
-FROM commandes
-CROSS JOIN LATERAL (
+FROM commandes  
+CROSS JOIN LATERAL (  
     SELECT
         COUNT(*) AS nombre_total_commandes,
         SUM(montant) AS montant_total_depense,
@@ -440,8 +440,8 @@ SELECT
     dernieres_cmd.date_commande,
     lignes.produit_nom,
     lignes.quantite
-FROM clients
-CROSS JOIN LATERAL (
+FROM clients  
+CROSS JOIN LATERAL (  
     SELECT id AS commande_id, date_commande
     FROM commandes
     WHERE commandes.client_id = clients.id
@@ -457,8 +457,8 @@ ORDER BY clients.nom, dernieres_cmd.date_commande DESC;
 ```
 
 **Explication** :
-1. Pour chaque client
-2. Obtenir ses 2 dernières commandes (LATERAL 1)
+1. Pour chaque client  
+2. Obtenir ses 2 dernières commandes (LATERAL 1)  
 3. Pour chaque commande, obtenir ses lignes (LATERAL 2)
 
 ---
@@ -481,9 +481,9 @@ FROM clients;
 
 ```sql
 -- ⚠️ Lent : Exécuté pour chaque ligne
-SELECT *
-FROM clients
-WHERE EXISTS (
+SELECT *  
+FROM clients  
+WHERE EXISTS (  
     SELECT 1 FROM commandes
     WHERE commandes.client_id = clients.id
     AND montant > 100
@@ -501,8 +501,8 @@ SELECT
     details.commande_id,
     details.montant,
     details.date_commande
-FROM clients
-CROSS JOIN LATERAL (
+FROM clients  
+CROSS JOIN LATERAL (  
     SELECT id AS commande_id, montant, date_commande
     FROM commandes
     WHERE commandes.client_id = clients.id
@@ -512,9 +512,9 @@ CROSS JOIN LATERAL (
 ```
 
 **Avantages** :
-- ✅ Retourne plusieurs lignes
-- ✅ Retourne plusieurs colonnes
-- ✅ Permet ORDER BY, LIMIT, OFFSET
+- ✅ Retourne plusieurs lignes  
+- ✅ Retourne plusieurs colonnes  
+- ✅ Permet ORDER BY, LIMIT, OFFSET  
 - ✅ Plus lisible
 
 ---
@@ -541,9 +541,9 @@ CROSS JOIN LATERAL (
 #### Avec LATERAL
 
 ```sql
-SELECT cat.nom, top.nom, top.ventes
-FROM categories cat
-CROSS JOIN LATERAL (
+SELECT cat.nom, top.nom, top.ventes  
+FROM categories cat  
+CROSS JOIN LATERAL (  
     SELECT nom, ventes
     FROM produits
     WHERE produits.categorie_id = cat.id
@@ -555,8 +555,8 @@ CROSS JOIN LATERAL (
 #### Avec Window Functions
 
 ```sql
-SELECT categorie, nom, ventes
-FROM (
+SELECT categorie, nom, ventes  
+FROM (  
     SELECT
         c.nom AS categorie,
         p.nom,
@@ -569,7 +569,7 @@ WHERE rang <= 3;
 ```
 
 **Benchmark** (sur 1 million de lignes) :
-- **Window Functions** : ~200ms
+- **Window Functions** : ~200ms  
 - **LATERAL** : ~250ms
 
 **Conclusion** : Window Functions généralement plus rapides, mais LATERAL plus flexible et lisible.
@@ -587,8 +587,8 @@ SELECT
     produits.nom,
     forecast.mois,
     forecast.ventes_prevues
-FROM produits
-CROSS JOIN LATERAL (
+FROM produits  
+CROSS JOIN LATERAL (  
     SELECT
         date,
         produits.ventes * (1 + (RANDOM() * 0.1 - 0.05)) AS ventes_prevues
@@ -617,8 +617,8 @@ SELECT
     e.nom AS employe,
     hierarchy.niveau,
     hierarchy.manager_nom
-FROM employes e
-CROSS JOIN LATERAL (
+FROM employes e  
+CROSS JOIN LATERAL (  
     WITH RECURSIVE chain AS (
         SELECT id, nom, manager_id, 0 AS niveau
         FROM employes
@@ -653,8 +653,8 @@ SELECT
     clients.nom AS client,
     proches.nom AS magasin,
     proches.distance_km
-FROM clients
-CROSS JOIN LATERAL (
+FROM clients  
+CROSS JOIN LATERAL (  
     SELECT
         magasins.nom,
         -- Formule de distance approximative
@@ -687,8 +687,8 @@ SELECT
     precedentes.id AS transaction_precedente_id,
     precedentes.montant AS montant_precedent,
     EXTRACT(EPOCH FROM (t.date_transaction - precedentes.date_transaction)) / 60 AS minutes_ecoulees
-FROM transactions t
-CROSS JOIN LATERAL (
+FROM transactions t  
+CROSS JOIN LATERAL (  
     SELECT id, montant, date_transaction
     FROM transactions t2
     WHERE t2.utilisateur_id = t.utilisateur_id
@@ -721,16 +721,16 @@ LATERAL peut générer beaucoup de lignes. Utilisez LIMIT judicieusement.
 
 ```sql
 -- ⚠️ Peut générer énormément de lignes
-SELECT *
-FROM clients
-CROSS JOIN LATERAL (
+SELECT *  
+FROM clients  
+CROSS JOIN LATERAL (  
     SELECT * FROM commandes WHERE commandes.client_id = clients.id
 ) AS all_orders;
 
 -- ✅ Limitez pour améliorer les performances
-SELECT *
-FROM clients
-CROSS JOIN LATERAL (
+SELECT *  
+FROM clients  
+CROSS JOIN LATERAL (  
     SELECT * FROM commandes
     WHERE commandes.client_id = clients.id
     ORDER BY date_commande DESC
@@ -741,10 +741,10 @@ CROSS JOIN LATERAL (
 #### 3. Utiliser EXPLAIN ANALYZE
 
 ```sql
-EXPLAIN ANALYZE
-SELECT *
-FROM clients
-CROSS JOIN LATERAL (
+EXPLAIN ANALYZE  
+SELECT *  
+FROM clients  
+CROSS JOIN LATERAL (  
     SELECT * FROM commandes
     WHERE commandes.client_id = clients.id
     ORDER BY date_commande DESC
@@ -753,17 +753,17 @@ CROSS JOIN LATERAL (
 ```
 
 Cherchez :
-- **Nested Loop** : Normal pour LATERAL
-- **Index Scan** : Bon signe (l'index est utilisé)
+- **Nested Loop** : Normal pour LATERAL  
+- **Index Scan** : Bon signe (l'index est utilisé)  
 - **Seq Scan** : Peut indiquer un manque d'index
 
 #### 4. Filtrer AVANT le LATERAL
 
 ```sql
 -- ✅ Meilleur : Filtrer d'abord les clients
-SELECT *
-FROM (SELECT * FROM clients WHERE ville = 'Paris') AS clients_paris
-CROSS JOIN LATERAL (
+SELECT *  
+FROM (SELECT * FROM clients WHERE ville = 'Paris') AS clients_paris  
+CROSS JOIN LATERAL (  
     SELECT * FROM commandes
     WHERE commandes.client_id = clients_paris.id
     LIMIT 5
@@ -772,9 +772,9 @@ CROSS JOIN LATERAL (
 -- vs
 
 -- ⚠️ Moins efficace : LATERAL pour tous les clients
-SELECT *
-FROM clients
-CROSS JOIN LATERAL (
+SELECT *  
+FROM clients  
+CROSS JOIN LATERAL (  
     SELECT * FROM commandes
     WHERE commandes.client_id = clients.id
     LIMIT 5
@@ -784,9 +784,9 @@ WHERE clients.ville = 'Paris';
 
 ### Quand LATERAL Peut Être Lent
 
-1. **Tables volumineuses sans index** sur les colonnes de corrélation
-2. **LATERAL sans LIMIT** générant des millions de lignes
-3. **Fonctions coûteuses** appelées pour chaque ligne
+1. **Tables volumineuses sans index** sur les colonnes de corrélation  
+2. **LATERAL sans LIMIT** générant des millions de lignes  
+3. **Fonctions coûteuses** appelées pour chaque ligne  
 4. **Sous-requêtes complexes** dans LATERAL
 
 ### Alternatives Plus Rapides
@@ -804,13 +804,13 @@ SELECT * FROM (
 SELECT
     clients.nom,
     ARRAY_AGG(commandes.id ORDER BY date_commande DESC) FILTER (WHERE row_num <= 5) AS top_5_commandes
-FROM clients
-LEFT JOIN (
+FROM clients  
+LEFT JOIN (  
     SELECT *, ROW_NUMBER() OVER (PARTITION BY client_id ORDER BY date_commande DESC) AS row_num
     FROM commandes
 ) commandes ON clients.id = commandes.client_id
-WHERE commandes.row_num <= 5 OR commandes.row_num IS NULL
-GROUP BY clients.id, clients.nom;
+WHERE commandes.row_num <= 5 OR commandes.row_num IS NULL  
+GROUP BY clients.id, clients.nom;  
 ```
 
 ---
@@ -821,17 +821,17 @@ GROUP BY clients.id, clients.nom;
 
 ```sql
 -- ❌ ERREUR : Référence invalide à clients
-SELECT *
-FROM clients
-CROSS JOIN (
+SELECT *  
+FROM clients  
+CROSS JOIN (  
     SELECT * FROM commandes WHERE commandes.client_id = clients.id
 ) AS orders;
 -- ERROR: invalid reference to FROM-clause entry for table "clients"
 
 -- ✅ CORRECT : Ajouter LATERAL
-SELECT *
-FROM clients
-CROSS JOIN LATERAL (
+SELECT *  
+FROM clients  
+CROSS JOIN LATERAL (  
     SELECT * FROM commandes WHERE commandes.client_id = clients.id
 ) AS orders;
 ```
@@ -840,16 +840,16 @@ CROSS JOIN LATERAL (
 
 ```sql
 -- CROSS JOIN LATERAL : Exclut les clients sans commande
-SELECT clients.nom, orders.id
-FROM clients
-CROSS JOIN LATERAL (
+SELECT clients.nom, orders.id  
+FROM clients  
+CROSS JOIN LATERAL (  
     SELECT id FROM commandes WHERE commandes.client_id = clients.id LIMIT 1
 ) AS orders;
 
 -- LEFT JOIN LATERAL : Inclut tous les clients
-SELECT clients.nom, orders.id
-FROM clients
-LEFT JOIN LATERAL (
+SELECT clients.nom, orders.id  
+FROM clients  
+LEFT JOIN LATERAL (  
     SELECT id FROM commandes WHERE commandes.client_id = clients.id LIMIT 1
 ) AS orders ON true;
 ```
@@ -858,17 +858,17 @@ LEFT JOIN LATERAL (
 
 ```sql
 -- ❌ ERREUR : Sous-requête doit avoir un alias
-SELECT *
-FROM clients
-CROSS JOIN LATERAL (
+SELECT *  
+FROM clients  
+CROSS JOIN LATERAL (  
     SELECT * FROM commandes WHERE commandes.client_id = clients.id
 );
 -- ERROR: subquery in FROM must have an alias
 
 -- ✅ CORRECT
-SELECT *
-FROM clients
-CROSS JOIN LATERAL (
+SELECT *  
+FROM clients  
+CROSS JOIN LATERAL (  
     SELECT * FROM commandes WHERE commandes.client_id = clients.id
 ) AS orders;  -- Alias obligatoire
 ```
@@ -877,9 +877,9 @@ CROSS JOIN LATERAL (
 
 ```sql
 -- ❌ ERREUR : LATERAL fait référence à une table qui vient après
-SELECT *
-FROM commandes
-CROSS JOIN LATERAL (
+SELECT *  
+FROM commandes  
+CROSS JOIN LATERAL (  
     SELECT * FROM clients WHERE clients.id = commandes.client_id
 ) AS client_info
 CROSS JOIN orders;  -- orders n'est pas défini ici
@@ -891,9 +891,9 @@ CROSS JOIN orders;  -- orders n'est pas défini ici
 
 ```sql
 -- ❌ Impossible : Référence circulaire
-SELECT *
-FROM clients
-CROSS JOIN LATERAL (
+SELECT *  
+FROM clients  
+CROSS JOIN LATERAL (  
     SELECT * FROM commandes
     WHERE commandes.client_id = orders.some_column  -- orders pas encore défini
 ) AS orders;
@@ -905,8 +905,8 @@ CROSS JOIN LATERAL (
 
 ### Support PostgreSQL
 
-- **Introduit** : PostgreSQL 9.3 (2013)
-- **Standard SQL** : SQL:2003 (partie de la norme)
+- **Introduit** : PostgreSQL 9.3 (2013)  
+- **Standard SQL** : SQL:2003 (partie de la norme)  
 - **Maturité** : Stable et largement utilisé
 
 ### Autres SGBD
@@ -925,14 +925,14 @@ CROSS JOIN LATERAL (
 
 ```sql
 -- PostgreSQL
-SELECT * FROM clients
-CROSS JOIN LATERAL (
+SELECT * FROM clients  
+CROSS JOIN LATERAL (  
     SELECT TOP 5 * FROM commandes WHERE commandes.client_id = clients.id
 ) AS orders;
 
 -- SQL Server équivalent
-SELECT * FROM clients
-CROSS APPLY (
+SELECT * FROM clients  
+CROSS APPLY (  
     SELECT TOP 5 * FROM commandes WHERE commandes.client_id = clients.id
 ) AS orders;
 ```
@@ -957,8 +957,8 @@ SELECT
     top_order.montant AS commande_max,
     stats.total_commandes,
     stats.montant_total
-FROM clients
-LEFT JOIN LATERAL (
+FROM clients  
+LEFT JOIN LATERAL (  
     SELECT date_commande, montant
     FROM commandes
     WHERE commandes.client_id = clients.id
@@ -991,8 +991,8 @@ SELECT
     p.nom AS produit_consulte,
     recommandations.nom AS produit_recommande,
     recommandations.prix
-FROM produits p
-CROSS JOIN LATERAL (
+FROM produits p  
+CROSS JOIN LATERAL (  
     SELECT nom, prix
     FROM produits p2
     WHERE p2.categorie_id = p.categorie_id
@@ -1020,33 +1020,33 @@ SELECT
     COUNT(m1.client_id) AS clients_ce_mois,
     COUNT(retention.client_id) AS clients_retour_mois_suivant,
     ROUND(COUNT(retention.client_id)::NUMERIC / COUNT(m1.client_id) * 100, 2) AS taux_retention
-FROM mois_commandes m1
-LEFT JOIN LATERAL (
+FROM mois_commandes m1  
+LEFT JOIN LATERAL (  
     SELECT client_id
     FROM mois_commandes m2
     WHERE m2.client_id = m1.client_id
       AND m2.mois = m1.mois + INTERVAL '1 month'
 ) AS retention ON true
-GROUP BY m1.mois
-ORDER BY m1.mois;
+GROUP BY m1.mois  
+ORDER BY m1.mois;  
 ```
 
 ---
 
 ## 13. Récapitulatif : LATERAL en 10 Points
 
-1. **LATERAL permet la corrélation** : Une sous-requête peut référencer les tables précédentes
-2. **Syntaxe** : `CROSS JOIN LATERAL` ou `LEFT JOIN LATERAL`
-3. **Cas d'usage principal** : Top N par groupe
+1. **LATERAL permet la corrélation** : Une sous-requête peut référencer les tables précédentes  
+2. **Syntaxe** : `CROSS JOIN LATERAL` ou `LEFT JOIN LATERAL`  
+3. **Cas d'usage principal** : Top N par groupe  
 4. **Avantages** :
    - Plus lisible que les sous-requêtes corrélées en WHERE
    - Permet LIMIT, ORDER BY corrélés
    - Retourne plusieurs lignes et colonnes
-5. **CROSS JOIN LATERAL** = INNER (exclut lignes sans résultat)
-6. **LEFT JOIN LATERAL** = LEFT (inclut toutes les lignes avec NULL)
-7. **Performances** : Indexer les colonnes de corrélation
-8. **Alternative** : Window Functions (souvent plus rapides pour Top N)
-9. **Compatibilité** : PostgreSQL 9.3+, SQL:2003
+5. **CROSS JOIN LATERAL** = INNER (exclut lignes sans résultat)  
+6. **LEFT JOIN LATERAL** = LEFT (inclut toutes les lignes avec NULL)  
+7. **Performances** : Indexer les colonnes de corrélation  
+8. **Alternative** : Window Functions (souvent plus rapides pour Top N)  
+9. **Compatibilité** : PostgreSQL 9.3+, SQL:2003  
 10. **Équivalent SQL Server** : CROSS APPLY / OUTER APPLY
 
 ---
@@ -1069,11 +1069,11 @@ ORDER BY m1.mois;
 
 ### Points Clés à Retenir
 
-1. **LATERAL** transforme une sous-requête en "consciente" des tables précédentes
-2. C'est une **jointure corrélée** dans la clause FROM
-3. Indispensable pour **Top N par groupe avec LIMIT**
-4. Très utile avec les **fonctions retournant des ensembles**
-5. **Alternative** : Window Functions (souvent plus rapides)
+1. **LATERAL** transforme une sous-requête en "consciente" des tables précédentes  
+2. C'est une **jointure corrélée** dans la clause FROM  
+3. Indispensable pour **Top N par groupe avec LIMIT**  
+4. Très utile avec les **fonctions retournant des ensembles**  
+5. **Alternative** : Window Functions (souvent plus rapides)  
 6. **Toujours indexer** les colonnes de corrélation
 
 ### Quand Utiliser LATERAL ?

@@ -28,21 +28,21 @@ Sans alias, PostgreSQL ne peut pas distinguer de quelle "instance" de la table v
 
 ```sql
 -- ❌ ERREUR : Impossible sans alias
-SELECT *
-FROM employes
-JOIN employes ON employes.manager_id = employes.id;
+SELECT *  
+FROM employes  
+JOIN employes ON employes.manager_id = employes.id;  
 -- ERROR: table name "employes" specified more than once
 
 -- ✅ CORRECT : Avec alias
-SELECT *
-FROM employes AS e1
-JOIN employes AS e2 ON e1.manager_id = e2.id;
+SELECT *  
+FROM employes AS e1  
+JOIN employes AS e2 ON e1.manager_id = e2.id;  
 ```
 
 ### Analogie
 
 Pensez aux alias comme à des **surnoms temporaires** :
-- `employes AS e1` → "Appelons cette version 'e1'"
+- `employes AS e1` → "Appelons cette version 'e1'"  
 - `employes AS e2` → "Appelons cette version 'e2'"
 
 Maintenant, vous pouvez parler de `e1.nom` et `e2.nom` distinctement.
@@ -111,14 +111,14 @@ SELECT
     e.poste AS poste_employe,
     m.nom AS manager,
     m.poste AS poste_manager
-FROM employes AS e
-LEFT JOIN employes AS m ON e.manager_id = m.id
-ORDER BY e.id;
+FROM employes AS e  
+LEFT JOIN employes AS m ON e.manager_id = m.id  
+ORDER BY e.id;  
 ```
 
 **Explication** :
-- `employes AS e` → La table des employés (première "copie")
-- `employes AS m` → La table des managers (deuxième "copie")
+- `employes AS e` → La table des employés (première "copie")  
+- `employes AS m` → La table des managers (deuxième "copie")  
 - `e.manager_id = m.id` → Lier l'employé à son manager
 
 ### Résultat
@@ -144,14 +144,14 @@ Nous utilisons **LEFT JOIN** (et non INNER JOIN) pour inclure les employés sans
 
 ```sql
 -- Avec INNER JOIN : Alice disparaît
-SELECT e.nom AS employe, m.nom AS manager
-FROM employes AS e
-INNER JOIN employes AS m ON e.manager_id = m.id;
+SELECT e.nom AS employe, m.nom AS manager  
+FROM employes AS e  
+INNER JOIN employes AS m ON e.manager_id = m.id;  
 
 -- Avec LEFT JOIN : Alice apparaît avec NULL
-SELECT e.nom AS employe, m.nom AS manager
-FROM employes AS e
-LEFT JOIN employes AS m ON e.manager_id = m.id;
+SELECT e.nom AS employe, m.nom AS manager  
+FROM employes AS e  
+LEFT JOIN employes AS m ON e.manager_id = m.id;  
 ```
 
 ---
@@ -166,10 +166,10 @@ LEFT JOIN employes AS m ON e.manager_id = m.id;
 SELECT
     e.nom AS employe,
     e.poste
-FROM employes AS e
-INNER JOIN employes AS m ON e.manager_id = m.id
-WHERE m.nom = 'Bob Dupont'
-ORDER BY e.nom;
+FROM employes AS e  
+INNER JOIN employes AS m ON e.manager_id = m.id  
+WHERE m.nom = 'Bob Dupont'  
+ORDER BY e.nom;  
 ```
 
 **Résultat** :
@@ -188,11 +188,11 @@ SELECT
     m.nom AS manager,
     m.poste,
     COUNT(e.id) AS nombre_subordonnes
-FROM employes AS m
-LEFT JOIN employes AS e ON m.id = e.manager_id
-GROUP BY m.id, m.nom, m.poste
-HAVING COUNT(e.id) > 0
-ORDER BY nombre_subordonnes DESC;
+FROM employes AS m  
+LEFT JOIN employes AS e ON m.id = e.manager_id  
+GROUP BY m.id, m.nom, m.poste  
+HAVING COUNT(e.id) > 0  
+ORDER BY nombre_subordonnes DESC;  
 ```
 
 **Résultat** :
@@ -214,10 +214,10 @@ SELECT
     m.nom AS manager,
     m.salaire AS salaire_manager,
     (e.salaire - m.salaire) AS difference
-FROM employes AS e
-INNER JOIN employes AS m ON e.manager_id = m.id
-WHERE e.salaire > m.salaire
-ORDER BY difference DESC;
+FROM employes AS e  
+INNER JOIN employes AS m ON e.manager_id = m.id  
+WHERE e.salaire > m.salaire  
+ORDER BY difference DESC;  
 ```
 
 **Résultat** (avec nos données, aucune anomalie) :
@@ -237,11 +237,11 @@ SELECT
     e.nom AS employe,
     m1.nom AS manager_direct,
     m2.nom AS manager_niveau_2
-FROM employes AS e
-LEFT JOIN employes AS m1 ON e.manager_id = m1.id
-LEFT JOIN employes AS m2 ON m1.manager_id = m2.id
-WHERE e.manager_id IS NOT NULL  -- Exclure le PDG
-ORDER BY e.id;
+FROM employes AS e  
+LEFT JOIN employes AS m1 ON e.manager_id = m1.id  
+LEFT JOIN employes AS m2 ON m1.manager_id = m2.id  
+WHERE e.manager_id IS NOT NULL  -- Exclure le PDG  
+ORDER BY e.id;  
 ```
 
 **Résultat** :
@@ -268,8 +268,8 @@ ORDER BY e.id;
 
 ```sql
 -- Ajouter un doublon pour l'exemple
-INSERT INTO employes (nom, poste, manager_id, salaire)
-VALUES ('Bob Dupont', 'Consultant', 1, 85000);
+INSERT INTO employes (nom, poste, manager_id, salaire)  
+VALUES ('Bob Dupont', 'Consultant', 1, 85000);  
 
 -- Trouver les doublons
 SELECT
@@ -278,10 +278,10 @@ SELECT
     e1.poste AS poste1,
     e2.id AS id2,
     e2.poste AS poste2
-FROM employes AS e1
-INNER JOIN employes AS e2 ON e1.nom = e2.nom
-WHERE e1.id < e2.id  -- Éviter les paires symétriques et l'auto-match
-ORDER BY e1.nom;
+FROM employes AS e1  
+INNER JOIN employes AS e2 ON e1.nom = e2.nom  
+WHERE e1.id < e2.id  -- Éviter les paires symétriques et l'auto-match  
+ORDER BY e1.nom;  
 ```
 
 **Résultat** :
@@ -305,10 +305,10 @@ SELECT
     e2.nom AS employe2,
     e2.salaire AS salaire2,
     ABS(e1.salaire - e2.salaire) AS difference
-FROM employes AS e1
-INNER JOIN employes AS e2 ON ABS(e1.salaire - e2.salaire) <= 5000
-WHERE e1.id < e2.id  -- Éviter doublons et auto-match
-ORDER BY difference;
+FROM employes AS e1  
+INNER JOIN employes AS e2 ON ABS(e1.salaire - e2.salaire) <= 5000  
+WHERE e1.id < e2.id  -- Éviter doublons et auto-match  
+ORDER BY difference;  
 ```
 
 **Résultat** :
@@ -348,9 +348,9 @@ SELECT
     v2.montant AS montant_precedent,
     v1.montant - v2.montant AS variation,
     ROUND(((v1.montant - v2.montant) / v2.montant) * 100, 2) AS variation_pct
-FROM ventes_annuelles AS v1
-INNER JOIN ventes_annuelles AS v2 ON v1.annee = v2.annee + 1
-ORDER BY v1.annee;
+FROM ventes_annuelles AS v1  
+INNER JOIN ventes_annuelles AS v2 ON v1.annee = v2.annee + 1  
+ORDER BY v1.annee;  
 ```
 
 **Résultat** :
@@ -412,10 +412,10 @@ INSERT INTO utilisateurs (nom) VALUES
 SELECT
     u.nom AS utilisateur,
     a.nom AS ami
-FROM amities
-INNER JOIN utilisateurs AS u ON amities.utilisateur_id = u.id
-INNER JOIN utilisateurs AS a ON amities.ami_id = a.id
-WHERE amities.utilisateur_id = 1;
+FROM amities  
+INNER JOIN utilisateurs AS u ON amities.utilisateur_id = u.id  
+INNER JOIN utilisateurs AS a ON amities.ami_id = a.id  
+WHERE amities.utilisateur_id = 1;  
 ```
 
 **Résultat** :
@@ -433,13 +433,13 @@ WHERE amities.utilisateur_id = 1;
 SELECT DISTINCT
     u1.nom AS utilisateur1,
     u2.nom AS utilisateur2
-FROM amities AS a1
-INNER JOIN amities AS a2 ON a1.utilisateur_id = a2.ami_id
+FROM amities AS a1  
+INNER JOIN amities AS a2 ON a1.utilisateur_id = a2.ami_id  
                          AND a1.ami_id = a2.utilisateur_id
-INNER JOIN utilisateurs AS u1 ON a1.utilisateur_id = u1.id
-INNER JOIN utilisateurs AS u2 ON a1.ami_id = u2.id
-WHERE a1.utilisateur_id < a1.ami_id  -- Éviter les doublons
-ORDER BY u1.nom;
+INNER JOIN utilisateurs AS u1 ON a1.utilisateur_id = u1.id  
+INNER JOIN utilisateurs AS u2 ON a1.ami_id = u2.id  
+WHERE a1.utilisateur_id < a1.ami_id  -- Éviter les doublons  
+ORDER BY u1.nom;  
 ```
 
 **Résultat** :
@@ -458,10 +458,10 @@ ORDER BY u1.nom;
 -- Amis en commun entre Alice (id=1) et Bob (id=2)
 SELECT DISTINCT
     u.nom AS ami_commun
-FROM amities AS a1
-INNER JOIN amities AS a2 ON a1.ami_id = a2.ami_id
-INNER JOIN utilisateurs AS u ON a1.ami_id = u.id
-WHERE a1.utilisateur_id = 1  -- Alice
+FROM amities AS a1  
+INNER JOIN amities AS a2 ON a1.ami_id = a2.ami_id  
+INNER JOIN utilisateurs AS u ON a1.ami_id = u.id  
+WHERE a1.utilisateur_id = 1  -- Alice  
   AND a2.utilisateur_id = 2  -- Bob
   AND a1.ami_id NOT IN (1, 2);  -- Ne pas inclure Alice ou Bob
 ```
@@ -498,9 +498,9 @@ SELECT
     t2.date AS date_precedente,
     t2.temperature AS temperature_precedente,
     t1.temperature - t2.temperature AS variation
-FROM mesures_temperature AS t1
-LEFT JOIN mesures_temperature AS t2 ON t1.id = t2.id + 1
-ORDER BY t1.date;
+FROM mesures_temperature AS t1  
+LEFT JOIN mesures_temperature AS t2 ON t1.id = t2.id + 1  
+ORDER BY t1.date;  
 ```
 
 **Résultat** :
@@ -521,8 +521,8 @@ SELECT
     temperature,
     LAG(temperature) OVER (ORDER BY date) AS temperature_precedente,
     temperature - LAG(temperature) OVER (ORDER BY date) AS variation
-FROM mesures_temperature
-ORDER BY date;
+FROM mesures_temperature  
+ORDER BY date;  
 ```
 
 **Note** : Les window functions sont généralement préférées pour ce type d'opération, mais les self-joins restent utiles pour des comparaisons plus complexes.
@@ -535,9 +535,9 @@ ORDER BY date;
 
 ```sql
 -- Employés ayant un manager (exclut le PDG)
-SELECT e.nom AS employe, m.nom AS manager
-FROM employes AS e
-INNER JOIN employes AS m ON e.manager_id = m.id;
+SELECT e.nom AS employe, m.nom AS manager  
+FROM employes AS e  
+INNER JOIN employes AS m ON e.manager_id = m.id;  
 ```
 
 **Résultat** : Alice (PDG) n'apparaît pas car elle n'a pas de manager.
@@ -546,9 +546,9 @@ INNER JOIN employes AS m ON e.manager_id = m.id;
 
 ```sql
 -- Tous les employés, avec manager si existe
-SELECT e.nom AS employe, m.nom AS manager
-FROM employes AS e
-LEFT JOIN employes AS m ON e.manager_id = m.id;
+SELECT e.nom AS employe, m.nom AS manager  
+FROM employes AS e  
+LEFT JOIN employes AS m ON e.manager_id = m.id;  
 ```
 
 **Résultat** : Alice apparaît avec `NULL` comme manager.
@@ -557,9 +557,9 @@ LEFT JOIN employes AS m ON e.manager_id = m.id;
 
 ```sql
 -- Tous les employés qui sont managers, avec leurs subordonnés
-SELECT e.nom AS employe, m.nom AS manager
-FROM employes AS e
-RIGHT JOIN employes AS m ON e.manager_id = m.id;
+SELECT e.nom AS employe, m.nom AS manager  
+FROM employes AS e  
+RIGHT JOIN employes AS m ON e.manager_id = m.id;  
 ```
 
 **Résultat** : Tous les managers apparaissent, même ceux sans subordonnés directs.
@@ -571,10 +571,10 @@ RIGHT JOIN employes AS m ON e.manager_id = m.id;
 SELECT
     m.nom AS manager,
     COUNT(e.id) AS nombre_subordonnes
-FROM employes AS m
-LEFT JOIN employes AS e ON m.id = e.manager_id
-GROUP BY m.id, m.nom
-ORDER BY nombre_subordonnes DESC;
+FROM employes AS m  
+LEFT JOIN employes AS e ON m.id = e.manager_id  
+GROUP BY m.id, m.nom  
+ORDER BY nombre_subordonnes DESC;  
 ```
 
 ---
@@ -590,10 +590,10 @@ SELECT
     e.nom AS employe,
     m1.nom AS manager,
     m2.nom AS directeur
-FROM employes AS e
-LEFT JOIN employes AS m1 ON e.manager_id = m1.id
-LEFT JOIN employes AS m2 ON m1.manager_id = m2.id
-ORDER BY e.id;
+FROM employes AS e  
+LEFT JOIN employes AS m1 ON e.manager_id = m1.id  
+LEFT JOIN employes AS m2 ON m1.manager_id = m2.id  
+ORDER BY e.id;  
 ```
 
 **Résultat** :
@@ -625,9 +625,9 @@ WITH RECURSIVE hierarchy AS (
     FROM employes e
     INNER JOIN hierarchy h ON e.id = h.manager_id
 )
-SELECT nom, niveau
-FROM hierarchy
-ORDER BY niveau;
+SELECT nom, niveau  
+FROM hierarchy  
+ORDER BY niveau;  
 ```
 
 **Résultat** :
@@ -646,9 +646,9 @@ ORDER BY niveau;
 
 ```sql
 -- ❌ ERREUR
-SELECT *
-FROM employes
-JOIN employes ON employes.manager_id = employes.id;
+SELECT *  
+FROM employes  
+JOIN employes ON employes.manager_id = employes.id;  
 -- ERROR: table name "employes" specified more than once
 ```
 
@@ -656,18 +656,18 @@ JOIN employes ON employes.manager_id = employes.id;
 
 ```sql
 -- ✅ CORRECT
-SELECT *
-FROM employes AS e
-JOIN employes AS m ON e.manager_id = m.id;
+SELECT *  
+FROM employes AS e  
+JOIN employes AS m ON e.manager_id = m.id;  
 ```
 
 ### Erreur 2 : Créer des Boucles Infinies (Comparaisons)
 
 ```sql
 -- ⚠️ DANGER : Produit cartésien !
-SELECT *
-FROM employes AS e1
-CROSS JOIN employes AS e2;
+SELECT *  
+FROM employes AS e1  
+CROSS JOIN employes AS e2;  
 -- Résultat : n × n lignes (explosion combinatoire)
 ```
 
@@ -679,34 +679,34 @@ Lors de comparaisons, sans précaution, vous obtenez des doublons :
 
 ```sql
 -- ❌ Problème : Paires (A,B) et (B,A), plus (A,A)
-SELECT e1.nom, e2.nom
-FROM employes AS e1
-JOIN employes AS e2 ON e1.salaire = e2.salaire;
+SELECT e1.nom, e2.nom  
+FROM employes AS e1  
+JOIN employes AS e2 ON e1.salaire = e2.salaire;  
 ```
 
 **Solution** : Utiliser `e1.id < e2.id`
 
 ```sql
 -- ✅ CORRECT : Pas de doublons, pas d'auto-match
-SELECT e1.nom, e2.nom
-FROM employes AS e1
-JOIN employes AS e2 ON e1.salaire = e2.salaire
-WHERE e1.id < e2.id;
+SELECT e1.nom, e2.nom  
+FROM employes AS e1  
+JOIN employes AS e2 ON e1.salaire = e2.salaire  
+WHERE e1.id < e2.id;  
 ```
 
 ### Erreur 4 : Confusion entre INNER et LEFT JOIN
 
 ```sql
 -- INNER JOIN : Exclut les employés sans manager
-SELECT e.nom, m.nom
-FROM employes AS e
-INNER JOIN employes AS m ON e.manager_id = m.id;
+SELECT e.nom, m.nom  
+FROM employes AS e  
+INNER JOIN employes AS m ON e.manager_id = m.id;  
 -- Alice (PDG) ne apparaît pas
 
 -- LEFT JOIN : Inclut tous les employés
-SELECT e.nom, m.nom
-FROM employes AS e
-LEFT JOIN employes AS m ON e.manager_id = m.id;
+SELECT e.nom, m.nom  
+FROM employes AS e  
+LEFT JOIN employes AS m ON e.manager_id = m.id;  
 -- Alice apparaît avec NULL
 ```
 
@@ -718,15 +718,15 @@ Sans `ORDER BY`, les comparaisons séquentielles peuvent être incorrectes :
 
 ```sql
 -- ⚠️ Sans ORDER BY, l'ordre n'est pas garanti
-SELECT t1.date, t2.date
-FROM mesures_temperature AS t1
-JOIN mesures_temperature AS t2 ON t1.id = t2.id + 1;
+SELECT t1.date, t2.date  
+FROM mesures_temperature AS t1  
+JOIN mesures_temperature AS t2 ON t1.id = t2.id + 1;  
 
 -- ✅ Avec ORDER BY explicite
-SELECT t1.date, t2.date
-FROM mesures_temperature AS t1
-JOIN mesures_temperature AS t2 ON t1.id = t2.id + 1
-ORDER BY t1.date;
+SELECT t1.date, t2.date  
+FROM mesures_temperature AS t1  
+JOIN mesures_temperature AS t2 ON t1.id = t2.id + 1  
+ORDER BY t1.date;  
 ```
 
 ---
@@ -748,10 +748,10 @@ CREATE INDEX idx_employes_salaire ON employes(salaire);
 #### 2. Utiliser EXPLAIN pour Vérifier
 
 ```sql
-EXPLAIN ANALYZE
-SELECT e.nom, m.nom
-FROM employes AS e
-LEFT JOIN employes AS m ON e.manager_id = m.id;
+EXPLAIN ANALYZE  
+SELECT e.nom, m.nom  
+FROM employes AS e  
+LEFT JOIN employes AS m ON e.manager_id = m.id;  
 ```
 
 Vérifiez que les index sont utilisés (cherchez "Index Scan" plutôt que "Seq Scan").
@@ -761,11 +761,11 @@ Vérifiez que les index sont utilisés (cherchez "Index Scan" plutôt que "Seq S
 Pour les tables volumineuses, limitez les résultats lors des tests :
 
 ```sql
-SELECT e1.nom, e2.nom
-FROM employes AS e1
-JOIN employes AS e2 ON e1.salaire = e2.salaire
-WHERE e1.id < e2.id
-LIMIT 100;
+SELECT e1.nom, e2.nom  
+FROM employes AS e1  
+JOIN employes AS e2 ON e1.salaire = e2.salaire  
+WHERE e1.id < e2.id  
+LIMIT 100;  
 ```
 
 #### 4. Préférer Window Functions pour les Séquences
@@ -787,8 +787,8 @@ SELECT
     t1.date,
     t1.temperature,
     t2.temperature AS temperature_precedente
-FROM mesures_temperature AS t1
-LEFT JOIN mesures_temperature AS t2 ON t1.id = t2.id + 1;
+FROM mesures_temperature AS t1  
+LEFT JOIN mesures_temperature AS t2 ON t1.id = t2.id + 1;  
 ```
 
 #### 5. Attention aux Self-Joins sur Grandes Tables
@@ -817,10 +817,10 @@ Un self-join sur une table de 1 million de lignes peut générer des résultats 
 -- Trouver les amis potentiels pour Alice (id=1)
 SELECT DISTINCT
     u.nom AS ami_potentiel
-FROM amities AS a1  -- Mes amis
-INNER JOIN amities AS a2 ON a1.ami_id = a2.utilisateur_id  -- Amis de mes amis
-INNER JOIN utilisateurs AS u ON a2.ami_id = u.id
-WHERE a1.utilisateur_id = 1  -- Alice
+FROM amities AS a1  -- Mes amis  
+INNER JOIN amities AS a2 ON a1.ami_id = a2.utilisateur_id  -- Amis de mes amis  
+INNER JOIN utilisateurs AS u ON a2.ami_id = u.id  
+WHERE a1.utilisateur_id = 1  -- Alice  
   AND a2.ami_id != 1  -- Pas moi-même
   AND a2.ami_id NOT IN (  -- Pas déjà mon ami
       SELECT ami_id FROM amities WHERE utilisateur_id = 1
@@ -837,9 +837,9 @@ ORDER BY u.nom;
 SELECT
     e1.nom AS employe1,
     e2.nom AS employe2
-FROM employes AS e1
-INNER JOIN employes AS e2 ON e1.manager_id = e2.id
-WHERE e2.manager_id = e1.id;
+FROM employes AS e1  
+INNER JOIN employes AS e2 ON e1.manager_id = e2.id  
+WHERE e2.manager_id = e1.id;  
 ```
 
 **Note** : Pour des cycles plus profonds, utilisez des CTEs récursives.
@@ -853,9 +853,9 @@ SELECT
     e.id,
     e.nom,
     e.manager_id
-FROM employes AS e
-LEFT JOIN employes AS m ON e.manager_id = m.id
-WHERE e.manager_id IS NOT NULL
+FROM employes AS e  
+LEFT JOIN employes AS m ON e.manager_id = m.id  
+WHERE e.manager_id IS NOT NULL  
   AND m.id IS NULL;
 ```
 
@@ -867,17 +867,17 @@ WHERE e.manager_id IS NOT NULL
 
 ```sql
 -- Distance 1 : Amis directs
-SELECT a.utilisateur_id, a.ami_id, 1 AS distance
-FROM amities AS a
-WHERE a.utilisateur_id = 1
+SELECT a.utilisateur_id, a.ami_id, 1 AS distance  
+FROM amities AS a  
+WHERE a.utilisateur_id = 1  
 
 UNION
 
 -- Distance 2 : Amis d'amis
-SELECT a1.utilisateur_id, a2.ami_id, 2 AS distance
-FROM amities AS a1
-INNER JOIN amities AS a2 ON a1.ami_id = a2.utilisateur_id
-WHERE a1.utilisateur_id = 1
+SELECT a1.utilisateur_id, a2.ami_id, 2 AS distance  
+FROM amities AS a1  
+INNER JOIN amities AS a2 ON a1.ami_id = a2.utilisateur_id  
+WHERE a1.utilisateur_id = 1  
   AND a2.ami_id != 1;
 ```
 
@@ -896,8 +896,8 @@ Pour les comparaisons séquentielles :
 SELECT
     t1.date,
     t1.temperature - t2.temperature AS variation
-FROM mesures_temperature AS t1
-LEFT JOIN mesures_temperature AS t2 ON t1.id = t2.id + 1;
+FROM mesures_temperature AS t1  
+LEFT JOIN mesures_temperature AS t2 ON t1.id = t2.id + 1;  
 
 -- Window function (préférable)
 SELECT
@@ -912,10 +912,10 @@ Pour les hiérarchies profondes :
 
 ```sql
 -- Self-join (limité à quelques niveaux)
-SELECT e.nom, m1.nom, m2.nom
-FROM employes AS e
-LEFT JOIN employes AS m1 ON e.manager_id = m1.id
-LEFT JOIN employes AS m2 ON m1.manager_id = m2.id;
+SELECT e.nom, m1.nom, m2.nom  
+FROM employes AS e  
+LEFT JOIN employes AS m1 ON e.manager_id = m1.id  
+LEFT JOIN employes AS m2 ON m1.manager_id = m2.id;  
 
 -- CTE récursive (niveaux illimités)
 WITH RECURSIVE hierarchy AS (
@@ -945,9 +945,9 @@ CREATE TABLE utilisateurs_v2 (
 );
 
 -- Requête
-SELECT nom, amis
-FROM utilisateurs_v2
-WHERE 1 = ANY(amis);  -- Utilisateurs dont Alice (id=1) est amie
+SELECT nom, amis  
+FROM utilisateurs_v2  
+WHERE 1 = ANY(amis);  -- Utilisateurs dont Alice (id=1) est amie  
 ```
 
 ---
@@ -972,8 +972,8 @@ WHERE 1 = ANY(amis);  -- Utilisateurs dont Alice (id=1) est amie
 SELECT
     enfant.nom AS enfant,
     parent.nom AS parent
-FROM table AS enfant
-LEFT JOIN table AS parent ON enfant.parent_id = parent.id;
+FROM table AS enfant  
+LEFT JOIN table AS parent ON enfant.parent_id = parent.id;  
 ```
 
 ### Modèle 2 : Comparaison (Éviter Doublons)
@@ -982,9 +982,9 @@ LEFT JOIN table AS parent ON enfant.parent_id = parent.id;
 SELECT
     t1.colonne,
     t2.colonne
-FROM table AS t1
-INNER JOIN table AS t2 ON t1.colonne_cle = t2.colonne_cle
-WHERE t1.id < t2.id;  -- Clé pour éviter doublons
+FROM table AS t1  
+INNER JOIN table AS t2 ON t1.colonne_cle = t2.colonne_cle  
+WHERE t1.id < t2.id;  -- Clé pour éviter doublons  
 ```
 
 ### Modèle 3 : Séquence (Précédent/Suivant)
@@ -994,9 +994,9 @@ SELECT
     t1.id,
     t1.valeur AS valeur_actuelle,
     t2.valeur AS valeur_precedente
-FROM table AS t1
-LEFT JOIN table AS t2 ON t1.id = t2.id + 1
-ORDER BY t1.id;
+FROM table AS t1  
+LEFT JOIN table AS t2 ON t1.id = t2.id + 1  
+ORDER BY t1.id;  
 ```
 
 ### Modèle 4 : Relation Symétrique
@@ -1005,12 +1005,12 @@ ORDER BY t1.id;
 SELECT DISTINCT
     u1.nom,
     u2.nom
-FROM relations AS r1
-INNER JOIN relations AS r2 ON r1.utilisateur_id = r2.ami_id
+FROM relations AS r1  
+INNER JOIN relations AS r2 ON r1.utilisateur_id = r2.ami_id  
                           AND r1.ami_id = r2.utilisateur_id
-INNER JOIN utilisateurs AS u1 ON r1.utilisateur_id = u1.id
-INNER JOIN utilisateurs AS u2 ON r1.ami_id = u2.id
-WHERE r1.utilisateur_id < r1.ami_id;
+INNER JOIN utilisateurs AS u1 ON r1.utilisateur_id = u1.id  
+INNER JOIN utilisateurs AS u2 ON r1.ami_id = u2.id  
+WHERE r1.utilisateur_id < r1.ami_id;  
 ```
 
 ---
@@ -1019,8 +1019,8 @@ WHERE r1.utilisateur_id < r1.ami_id;
 
 ### Points Clés à Retenir
 
-1. **Self-join** = Joindre une table à elle-même en utilisant des alias différents
-2. **Alias obligatoires** : `FROM table AS t1 JOIN table AS t2`
+1. **Self-join** = Joindre une table à elle-même en utilisant des alias différents  
+2. **Alias obligatoires** : `FROM table AS t1 JOIN table AS t2`  
 3. **Cas d'usage principaux** :
    - Hiérarchies (employés/managers)
    - Comparaisons entre lignes
@@ -1052,7 +1052,7 @@ WHERE r1.utilisateur_id < r1.ami_id;
 ### Prochaines Étapes
 
 Dans les sections suivantes, nous explorerons :
-- **7.6 LATERAL JOIN** : Jointures corrélées avancées
+- **7.6 LATERAL JOIN** : Jointures corrélées avancées  
 - **7.7 Anti-jointures et Semi-jointures** : NOT EXISTS, NOT IN, EXCEPT
 
 Le self-join est une technique puissante qui, une fois maîtrisée, ouvre de nombreuses possibilités pour résoudre des problèmes complexes avec élégance !

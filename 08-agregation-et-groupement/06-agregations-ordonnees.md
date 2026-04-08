@@ -5,14 +5,14 @@
 ## Introduction : Quand l'Ordre Compte dans les Agrégations
 
 Jusqu'à présent, nous avons utilisé des fonctions d'agrégation où **l'ordre des lignes n'a pas d'importance** :
-- `SUM(montant)` : 10 + 20 + 30 = 20 + 30 + 10 (ordre indifférent)
-- `AVG(note)` : La moyenne est la même quel que soit l'ordre
+- `SUM(montant)` : 10 + 20 + 30 = 20 + 30 + 10 (ordre indifférent)  
+- `AVG(note)` : La moyenne est la même quel que soit l'ordre  
 - `COUNT(*)` : Le comptage ne dépend pas de l'ordre
 
 Mais certaines opérations **nécessitent un ordre** pour avoir du sens :
-- **Calculer la médiane** : Il faut d'abord trier les valeurs !
-- **Concaténer des noms** : "Alice, Bob, Charlie" ≠ "Charlie, Alice, Bob"
-- **Trouver le mode** (valeur la plus fréquente) : Nécessite un tri par fréquence
+- **Calculer la médiane** : Il faut d'abord trier les valeurs !  
+- **Concaténer des noms** : "Alice, Bob, Charlie" ≠ "Charlie, Alice, Bob"  
+- **Trouver le mode** (valeur la plus fréquente) : Nécessite un tri par fréquence  
 - **Créer des listes ordonnées** : Top 3, classement, etc.
 
 PostgreSQL offre des **agrégations ordonnées** pour ces besoins spécifiques.
@@ -125,8 +125,8 @@ SELECT
     region,
     MODE() WITHIN GROUP (ORDER BY produit) AS produit_favori,
     COUNT(*) AS total_commandes
-FROM commandes
-GROUP BY region;
+FROM commandes  
+GROUP BY region;  
 ```
 
 ### Cas d'Usage du MODE
@@ -139,8 +139,8 @@ SELECT
     categorie,
     MODE() WITHIN GROUP (ORDER BY taille) AS taille_populaire,
     COUNT(*) AS nb_ventes
-FROM ventes_vetements
-GROUP BY categorie;
+FROM ventes_vetements  
+GROUP BY categorie;  
 ```
 
 **2. Support Client : Problème le Plus Fréquent**
@@ -150,8 +150,8 @@ GROUP BY categorie;
 SELECT
     produit,
     MODE() WITHIN GROUP (ORDER BY type_probleme) AS probleme_principal
-FROM tickets_support
-GROUP BY produit;
+FROM tickets_support  
+GROUP BY produit;  
 ```
 
 **3. Analyse Comportementale : Jour de Visite Préféré**
@@ -195,8 +195,8 @@ Table `equipe` :
 
 ```sql
 -- Concaténer tous les noms
-SELECT STRING_AGG(nom, ', ') AS membres
-FROM equipe;
+SELECT STRING_AGG(nom, ', ') AS membres  
+FROM equipe;  
 ```
 
 **Résultat :**
@@ -211,8 +211,8 @@ FROM equipe;
 
 ```sql
 -- Concaténer les noms par ordre alphabétique
-SELECT STRING_AGG(nom, ', ' ORDER BY nom) AS membres_ordonnes
-FROM equipe;
+SELECT STRING_AGG(nom, ', ' ORDER BY nom) AS membres_ordonnes  
+FROM equipe;  
 ```
 
 **Résultat :**
@@ -232,8 +232,8 @@ FROM equipe;
 SELECT
     id_commande,
     STRING_AGG(produit, ', ' ORDER BY produit) AS produits
-FROM lignes_commande
-GROUP BY id_commande;
+FROM lignes_commande  
+GROUP BY id_commande;  
 ```
 
 **Résultat théorique :**
@@ -252,8 +252,8 @@ SELECT
     article_id,
     titre,
     STRING_AGG(tag, ' #' ORDER BY tag) AS tags
-FROM articles_tags
-GROUP BY article_id, titre;
+FROM articles_tags  
+GROUP BY article_id, titre;  
 ```
 
 **Résultat théorique :**
@@ -274,8 +274,8 @@ SELECT
         ' → '
         ORDER BY date_changement
     ) AS historique
-FROM historique_commandes
-GROUP BY id_commande;
+FROM historique_commandes  
+GROUP BY id_commande;  
 ```
 
 **Résultat théorique :**
@@ -315,8 +315,8 @@ STRING_AGG(lettre, '')  -- Concatène sans espace
 SELECT
     client_id,
     STRING_AGG(DISTINCT categorie, ', ' ORDER BY categorie) AS categories_achetees
-FROM achats
-GROUP BY client_id;
+FROM achats  
+GROUP BY client_id;  
 ```
 
 **Exemple :**
@@ -329,8 +329,8 @@ Par défaut, STRING_AGG **ignore les valeurs NULL**.
 
 ```sql
 -- Table avec NULL
-SELECT STRING_AGG(nom, ', ')
-FROM (VALUES ('Alice'), (NULL), ('Bob'), (NULL), ('Charlie')) AS t(nom);
+SELECT STRING_AGG(nom, ', ')  
+FROM (VALUES ('Alice'), (NULL), ('Bob'), (NULL), ('Charlie')) AS t(nom);  
 
 -- Résultat : "Alice, Bob, Charlie"
 ```
@@ -338,8 +338,8 @@ FROM (VALUES ('Alice'), (NULL), ('Bob'), (NULL), ('Charlie')) AS t(nom);
 Si vous voulez inclure les NULL comme chaîne :
 
 ```sql
-SELECT STRING_AGG(COALESCE(nom, '[Inconnu]'), ', ')
-FROM equipe;
+SELECT STRING_AGG(COALESCE(nom, '[Inconnu]'), ', ')  
+FROM equipe;  
 ```
 
 ---
@@ -372,8 +372,8 @@ ARRAY_AGG(expression ORDER BY colonne)
 
 ```sql
 -- Créer un tableau de noms
-SELECT ARRAY_AGG(nom ORDER BY nom) AS noms_array
-FROM employes;
+SELECT ARRAY_AGG(nom ORDER BY nom) AS noms_array  
+FROM employes;  
 ```
 
 **Résultat :**
@@ -393,8 +393,8 @@ FROM employes;
 SELECT
     article_id,
     ARRAY_AGG(tag ORDER BY tag) AS tags
-FROM articles_tags
-GROUP BY article_id;
+FROM articles_tags  
+GROUP BY article_id;  
 ```
 
 **Résultat :**
@@ -411,8 +411,8 @@ GROUP BY article_id;
 SELECT
     produit_id,
     ARRAY_AGG(prix ORDER BY date_modification) AS historique_prix
-FROM historique_prix
-GROUP BY produit_id;
+FROM historique_prix  
+GROUP BY produit_id;  
 ```
 
 **Résultat :**
@@ -431,22 +431,22 @@ Une fois créé, vous pouvez manipuler l'array :
 SELECT
     produit_id,
     (ARRAY_AGG(prix ORDER BY date_modification))[1] AS prix_initial
-FROM historique_prix
-GROUP BY produit_id;
+FROM historique_prix  
+GROUP BY produit_id;  
 
 -- Compter les éléments
 SELECT
     produit_id,
     ARRAY_LENGTH(ARRAY_AGG(prix), 1) AS nb_changements_prix
-FROM historique_prix
-GROUP BY produit_id;
+FROM historique_prix  
+GROUP BY produit_id;  
 
 -- Vérifier si une valeur existe
 SELECT
     article_id,
     'sql' = ANY(ARRAY_AGG(tag)) AS contient_sql
-FROM articles_tags
-GROUP BY article_id;
+FROM articles_tags  
+GROUP BY article_id;  
 ```
 
 ### ARRAY_AGG avec FILTER
@@ -458,8 +458,8 @@ Combinaison puissante !
 SELECT
     categorie,
     ARRAY_AGG(nom ORDER BY prix DESC) FILTER (WHERE prix > 100) AS produits_premium
-FROM produits
-GROUP BY categorie;
+FROM produits  
+GROUP BY categorie;  
 ```
 
 ---
@@ -499,8 +499,8 @@ SELECT JSON_AGG(
     JSON_BUILD_OBJECT('nom', nom, 'note', note)
     ORDER BY note DESC
 ) AS top_etudiants
-FROM etudiants
-LIMIT 10;
+FROM etudiants  
+LIMIT 10;  
 ```
 
 ### JSONB_AGG : JSON Binaire
@@ -535,8 +535,8 @@ SELECT JSON_BUILD_OBJECT(
         WHERE l.id_commande = c.id_commande
     )
 ) AS commande_json
-FROM commandes c
-WHERE c.id_commande = 12345;
+FROM commandes c  
+WHERE c.id_commande = 12345;  
 ```
 
 **Résultat :**
@@ -617,8 +617,8 @@ SELECT
     ) AS wishlist,
     ARRAY_AGG(produit_id ORDER BY priorite DESC) AS wishlist_ids,
     COUNT(*) AS nb_produits
-FROM wishlist
-GROUP BY user_id;
+FROM wishlist  
+GROUP BY user_id;  
 ```
 
 **Résultat théorique :**
@@ -639,9 +639,9 @@ SELECT
         ORDER BY date_consultation
     ) AS historique_medical,
     ARRAY_AGG(DISTINCT medicament ORDER BY medicament) AS medicaments_prescrits
-FROM consultations
-WHERE patient_id = 12345
-GROUP BY patient_id;
+FROM consultations  
+WHERE patient_id = 12345  
+GROUP BY patient_id;  
 ```
 
 **Résultat :**
@@ -671,10 +671,10 @@ SELECT
         E'\n'
         ORDER BY date_transaction
     ) AS detail_transactions
-FROM transactions
-WHERE date_transaction >= '2024-01-01'
-GROUP BY compte_id, DATE_TRUNC('month', date_transaction)
-ORDER BY compte_id, mois;
+FROM transactions  
+WHERE date_transaction >= '2024-01-01'  
+GROUP BY compte_id, DATE_TRUNC('month', date_transaction)  
+ORDER BY compte_id, mois;  
 ```
 
 ### 🌐 SaaS : Logs et Événements
@@ -691,11 +691,11 @@ SELECT
     ) AS parcours,
     EXTRACT(EPOCH FROM (MAX(timestamp) - MIN(timestamp)))::INT AS duree_session_sec,
     COUNT(*) AS nb_pages_vues
-FROM page_views
-WHERE date_visite = CURRENT_DATE
-GROUP BY session_id, user_id
-HAVING COUNT(*) > 5  -- Sessions actives uniquement
-ORDER BY duree_session_sec DESC;
+FROM page_views  
+WHERE date_visite = CURRENT_DATE  
+GROUP BY session_id, user_id  
+HAVING COUNT(*) > 5  -- Sessions actives uniquement  
+ORDER BY duree_session_sec DESC;  
 ```
 
 **Résultat théorique :**
@@ -720,10 +720,10 @@ SELECT
         E'\n---\n'
         ORDER BY nb_likes DESC, date_commentaire
     ) AS top_commentaires
-FROM commentaires
-WHERE post_id = 789
-GROUP BY post_id
-LIMIT 1;
+FROM commentaires  
+WHERE post_id = 789  
+GROUP BY post_id  
+LIMIT 1;  
 ```
 
 ### 🎓 Éducation : Bulletin Scolaire
@@ -755,10 +755,10 @@ SELECT
         )
         ORDER BY m.nom_matiere
     ) AS notes_json
-FROM etudiants e
-JOIN notes n ON e.etudiant_id = n.etudiant_id
-JOIN matieres m ON n.matiere_id = m.matiere_id
-WHERE e.etudiant_id = 12345
+FROM etudiants e  
+JOIN notes n ON e.etudiant_id = n.etudiant_id  
+JOIN matieres m ON n.matiere_id = m.matiere_id  
+WHERE e.etudiant_id = 12345  
   AND n.semestre = 1
   AND n.annee_scolaire = '2024-2025'
 GROUP BY e.etudiant_id, e.nom, e.prenom;
@@ -784,15 +784,15 @@ GROUP BY e.etudiant_id, e.nom, e.prenom;
 ### Recommandations
 
 **Utilisez STRING_AGG si :**
-- ✅ Résultat destiné à l'affichage ou export
-- ✅ Rapport pour humains
-- ✅ Export CSV, logs, emails
+- ✅ Résultat destiné à l'affichage ou export  
+- ✅ Rapport pour humains  
+- ✅ Export CSV, logs, emails  
 - ✅ Concaténation simple
 
 **Utilisez ARRAY_AGG si :**
-- ✅ Traitement ultérieur en SQL
-- ✅ Vérifications (contient X ?)
-- ✅ Indexation nécessaire (recherche)
+- ✅ Traitement ultérieur en SQL  
+- ✅ Vérifications (contient X ?)  
+- ✅ Indexation nécessaire (recherche)  
 - ✅ Application manipule les arrays
 
 ### Exemple de Décision
@@ -803,16 +803,16 @@ SELECT
     client_id,
     nom,
     STRING_AGG(produit, ', ' ORDER BY date_achat DESC) AS historique_achats
-FROM achats
-GROUP BY client_id, nom;
+FROM achats  
+GROUP BY client_id, nom;  
 
 -- Pour traitement applicatif : ARRAY_AGG
 SELECT
     client_id,
     nom,
     ARRAY_AGG(produit_id ORDER BY date_achat DESC) AS historique_produit_ids
-FROM achats
-GROUP BY client_id, nom;
+FROM achats  
+GROUP BY client_id, nom;  
 ```
 
 ---
@@ -843,8 +843,8 @@ CREATE INDEX idx_wishlist_user_date ON wishlist(user_id, date_ajout);
 SELECT
     user_id,
     STRING_AGG(produit_nom, ', ' ORDER BY date_ajout)
-FROM wishlist
-GROUP BY user_id;
+FROM wishlist  
+GROUP BY user_id;  
 ```
 
 #### 2. Limiter le Nombre d'Éléments
@@ -858,8 +858,8 @@ WITH top_produits AS (
     ORDER BY priorite DESC
     LIMIT 10
 )
-SELECT STRING_AGG(produit_nom, ', ') AS top_10
-FROM top_produits;
+SELECT STRING_AGG(produit_nom, ', ') AS top_10  
+FROM top_produits;  
 
 -- vs agréger tout puis tronquer (moins efficace)
 ```
@@ -868,13 +868,13 @@ FROM top_produits;
 
 ```sql
 -- Table de résumé mise à jour périodiquement
-CREATE TABLE produits_tags_cache AS
-SELECT
+CREATE TABLE produits_tags_cache AS  
+SELECT  
     produit_id,
     STRING_AGG(tag, ', ' ORDER BY tag) AS tags_str,
     ARRAY_AGG(tag ORDER BY tag) AS tags_array
-FROM produits_tags
-GROUP BY produit_id;
+FROM produits_tags  
+GROUP BY produit_id;  
 
 CREATE INDEX idx_produits_tags_cache ON produits_tags_cache(produit_id);
 ```
@@ -883,8 +883,8 @@ CREATE INDEX idx_produits_tags_cache ON produits_tags_cache(produit_id);
 
 ```sql
 -- Peut générer des chaînes très longues !
-SELECT STRING_AGG(description_longue, '\n')
-FROM articles;
+SELECT STRING_AGG(description_longue, '\n')  
+FROM articles;  
 
 -- Tronquer si nécessaire :
 SELECT STRING_AGG(
@@ -1021,8 +1021,8 @@ Les débutants confondent souvent les agrégations ordonnées (WITHIN GROUP) ave
 SELECT
     departement,
     STRING_AGG(nom, ', ' ORDER BY salaire DESC) AS employes_par_salaire
-FROM employes
-GROUP BY departement;
+FROM employes  
+GROUP BY departement;  
 ```
 
 **Résultat :** Une ligne par département
@@ -1059,15 +1059,15 @@ FROM employes;
 
 ## À Retenir
 
-1. **WITHIN GROUP (ORDER BY)** est utilisé pour les fonctions nécessitant un ordre (MODE, PERCENTILE, etc.)
-2. **STRING_AGG** concatène des valeurs textuelles avec un séparateur personnalisé
-3. **ARRAY_AGG** crée un tableau natif PostgreSQL pour traitement ultérieur
-4. **JSON_AGG/JSONB_AGG** génèrent des structures JSON directement
-5. **ORDER BY dans STRING_AGG** garantit un ordre déterministe
-6. **DISTINCT** élimine les doublons avant agrégation
-7. Les agrégations ordonnées sont **idéales pour les rapports et exports**
-8. **STRING_AGG** pour affichage, **ARRAY_AGG** pour traitement
-9. Toujours spécifier **ORDER BY** quand l'ordre importe
+1. **WITHIN GROUP (ORDER BY)** est utilisé pour les fonctions nécessitant un ordre (MODE, PERCENTILE, etc.)  
+2. **STRING_AGG** concatène des valeurs textuelles avec un séparateur personnalisé  
+3. **ARRAY_AGG** crée un tableau natif PostgreSQL pour traitement ultérieur  
+4. **JSON_AGG/JSONB_AGG** génèrent des structures JSON directement  
+5. **ORDER BY dans STRING_AGG** garantit un ordre déterministe  
+6. **DISTINCT** élimine les doublons avant agrégation  
+7. Les agrégations ordonnées sont **idéales pour les rapports et exports**  
+8. **STRING_AGG** pour affichage, **ARRAY_AGG** pour traitement  
+9. Toujours spécifier **ORDER BY** quand l'ordre importe  
 10. Ne pas confondre avec les **window functions** (section 10)
 
 ---
@@ -1076,8 +1076,8 @@ FROM employes;
 
 Vous avez terminé la section 8 sur les agrégations ! Prochains sujets majeurs :
 
-- **Section 9** : Techniques SQL Avancées (Sous-requêtes, CTEs, récursion)
-- **Section 10** : Window Functions (Fonctions de fenêtrage) - Le summum de l'analyse SQL !
+- **Section 9** : Techniques SQL Avancées (Sous-requêtes, CTEs, récursion)  
+- **Section 10** : Window Functions (Fonctions de fenêtrage) - Le summum de l'analyse SQL !  
 - **Section 11** : Modélisation Avancée (Normalisation, partitionnement, vues)
 
 Les **agrégations ordonnées** sont des outils puissants pour générer des rapports lisibles, construire des listes, et structurer les données pour l'export. STRING_AGG en particulier est l'une des fonctions les plus utilisées dans les requêtes de production PostgreSQL !

@@ -31,14 +31,14 @@ Le **DQL** se concentre exclusivement sur la **lecture** des données. Il ne mod
 ### Pourquoi le DQL est-il si important ?
 
 Dans la vie d'une application :
-- **Lecture (DQL)** : 80-95% des requêtes
+- **Lecture (DQL)** : 80-95% des requêtes  
 - **Écriture (DML)** : 5-20% des requêtes
 
 Les applications **lisent** beaucoup plus qu'elles n'écrivent. Voici pourquoi maîtriser le DQL est crucial :
 
-1. **Performance** : Des requêtes mal écrites peuvent ralentir toute une application
-2. **Précision** : Obtenir exactement les données dont vous avez besoin, ni plus ni moins
-3. **Efficacité** : Faire en SQL ce qui prendrait des dizaines de lignes de code applicatif
+1. **Performance** : Des requêtes mal écrites peuvent ralentir toute une application  
+2. **Précision** : Obtenir exactement les données dont vous avez besoin, ni plus ni moins  
+3. **Efficacité** : Faire en SQL ce qui prendrait des dizaines de lignes de code applicatif  
 4. **Analyse** : Extraire de l'intelligence métier de vos données
 
 ---
@@ -48,10 +48,10 @@ Les applications **lisent** beaucoup plus qu'elles n'écrivent. Voici pourquoi m
 ### L'instruction la plus importante de SQL
 
 ```sql
-SELECT colonnes
-FROM table
-WHERE conditions
-ORDER BY colonne;
+SELECT colonnes  
+FROM table  
+WHERE conditions  
+ORDER BY colonne;  
 ```
 
 Cette simple instruction est **la plus puissante** et **la plus utilisée** de tout SQL. Elle permet de :
@@ -99,8 +99,8 @@ SELECT * FROM clients;
 ```
 
 **Décortiquons cette requête :**
-- `SELECT` : Je veux lire des données
-- `*` : Toutes les colonnes (l'astérisque signifie "tout")
+- `SELECT` : Je veux lire des données  
+- `*` : Toutes les colonnes (l'astérisque signifie "tout")  
 - `FROM clients` : De la table nommée "clients"
 
 **Résultat hypothétique :**
@@ -126,11 +126,11 @@ SELECT nom, prenom, ville FROM clients;
 ```
 nom      | prenom  | ville
 ---------|---------|----------
-Dupont   | Jean    | Paris
-Martin   | Sophie  | Lyon
-Bernard  | Pierre  | Marseille
-Durand   | Marie   | Paris
-Petit    | Luc     | Toulouse
+Dupont   | Jean    | Paris  
+Martin   | Sophie  | Lyon  
+Bernard  | Pierre  | Marseille  
+Durand   | Marie   | Paris  
+Petit    | Luc     | Toulouse  
 ```
 
 Maintenant nous n'affichons que les colonnes qui nous intéressent. C'est plus lisible et plus performant.
@@ -151,17 +151,17 @@ FROM clients;
 ```
 nom_famille | prenom_client | ville_residence
 ------------|---------------|----------------
-Dupont      | Jean          | Paris
-Martin      | Sophie        | Lyon
-Bernard     | Pierre        | Marseille
+Dupont      | Jean          | Paris  
+Martin      | Sophie        | Lyon  
+Bernard     | Pierre        | Marseille  
 ```
 
 **Le mot-clé `AS` est optionnel** (mais recommandé pour la lisibilité) :
 
 ```sql
 -- Ces deux syntaxes sont équivalentes
-SELECT nom AS nom_famille FROM clients;
-SELECT nom nom_famille FROM clients;
+SELECT nom AS nom_famille FROM clients;  
+SELECT nom nom_famille FROM clients;  
 ```
 
 ---
@@ -192,17 +192,17 @@ FROM produits;
 ```
 nom_produit | prix | quantite_stock | valeur_stock
 ------------|------|----------------|-------------
-Laptop      | 999  | 10             | 9990
-Souris      | 25   | 150            | 3750
-Clavier     | 75   | 80             | 6000
+Laptop      | 999  | 10             | 9990  
+Souris      | 25   | 150            | 3750  
+Clavier     | 75   | 80             | 6000  
 ```
 
 **Opérateurs arithmétiques disponibles :**
-- `+` : Addition
-- `-` : Soustraction
-- `*` : Multiplication
-- `/` : Division
-- `%` : Modulo (reste de la division)
+- `+` : Addition  
+- `-` : Soustraction  
+- `*` : Multiplication  
+- `/` : Division  
+- `%` : Modulo (reste de la division)  
 - `^` : Puissance
 
 ### Concaténation de texte
@@ -219,9 +219,9 @@ FROM clients;
 ```
 nom_complet    | email
 ---------------|----------------------
-Jean Dupont    | jean.dupont@mail.com
-Sophie Martin  | sophie.m@mail.com
-Pierre Bernard | p.bernard@mail.com
+Jean Dupont    | jean.dupont@mail.com  
+Sophie Martin  | sophie.m@mail.com  
+Pierre Bernard | p.bernard@mail.com  
 ```
 
 **L'opérateur `||`** est utilisé pour concaténer (coller ensemble) des chaînes de caractères.
@@ -244,9 +244,9 @@ FROM clients;
 ```
 nom      | nom_majuscule | nom_minuscule | longueur_nom
 ---------|---------------|---------------|-------------
-Dupont   | DUPONT        | dupont        | 6
-Martin   | MARTIN        | martin        | 6
-Bernard  | BERNARD       | bernard       | 7
+Dupont   | DUPONT        | dupont        | 6  
+Martin   | MARTIN        | martin        | 6  
+Bernard  | BERNARD       | bernard       | 7  
 ```
 
 ```sql
@@ -289,16 +289,16 @@ FROM clients;
 ```
 nom      | prenom  | statut        | annee
 ---------|---------|---------------|------
-Dupont   | Jean    | Client actif  | 2024
-Martin   | Sophie  | Client actif  | 2024
-Bernard  | Pierre  | Client actif  | 2024
+Dupont   | Jean    | Client actif  | 2024  
+Martin   | Sophie  | Client actif  | 2024  
+Bernard  | Pierre  | Client actif  | 2024  
 ```
 
 **Types de valeurs littérales :**
-- **Texte** : Entre apostrophes `'Bonjour'`
-- **Nombres** : Sans délimiteurs `42`, `3.14`
-- **Booléens** : `TRUE`, `FALSE`
-- **Dates** : `'2024-11-19'`, `'2024-11-19 14:30:00'`
+- **Texte** : Entre apostrophes `'Bonjour'`  
+- **Nombres** : Sans délimiteurs `42`, `3.14`  
+- **Booléens** : `TRUE`, `FALSE`  
+- **Dates** : `'2024-11-19'`, `'2024-11-19 14:30:00'`  
 - **NULL** : Valeur inconnue/absente
 
 ---
@@ -323,13 +323,13 @@ FROM clients;
 ```
 nom      | age | categorie_age
 ---------|-----|---------------
-Dupont   | 34  | Adulte
-Martin   | 28  | Adulte
-Bernard  | 45  | Adulte
-Durand   | 31  | Adulte
-Petit    | 52  | Adulte
-Legrand  | 17  | Mineur
-Moreau   | 68  | Senior
+Dupont   | 34  | Adulte  
+Martin   | 28  | Adulte  
+Bernard  | 45  | Adulte  
+Durand   | 31  | Adulte  
+Petit    | 52  | Adulte  
+Legrand  | 17  | Mineur  
+Moreau   | 68  | Senior  
 ```
 
 **Syntaxe de CASE :**
@@ -364,8 +364,8 @@ Vous pouvez lire depuis plusieurs tables simultanément (nous verrons les jointu
 SELECT
     employes.nom,
     departements.nom_departement
-FROM employes, departements
-WHERE employes.departement_id = departements.id;
+FROM employes, departements  
+WHERE employes.departement_id = departements.id;  
 ```
 
 ### Sous-requêtes dans FROM
@@ -373,8 +373,8 @@ WHERE employes.departement_id = departements.id;
 Vous pouvez utiliser le résultat d'une autre requête comme source de données :
 
 ```sql
-SELECT nom, salaire_annuel
-FROM (
+SELECT nom, salaire_annuel  
+FROM (  
     SELECT nom, salaire * 12 AS salaire_annuel
     FROM employes
 ) AS employes_annuel
@@ -472,8 +472,8 @@ SELECT
     c.nom AS nom_client,
     c.email AS email_contact,
     v.ville AS ville_residence
-FROM clients c
-JOIN villes v ON c.ville_id = v.id;
+FROM clients c  
+JOIN villes v ON c.ville_id = v.id;  
 ```
 
 ### 3. Indentez et formatez vos requêtes
@@ -487,9 +487,9 @@ SELECT
     nom,
     prenom,
     email
-FROM clients
-WHERE ville = 'Paris'
-ORDER BY nom;
+FROM clients  
+WHERE ville = 'Paris'  
+ORDER BY nom;  
 ```
 
 ### 4. Commentez les requêtes complexes
@@ -501,15 +501,15 @@ SELECT
     region,
     COUNT(*) AS nb_ventes,
     SUM(montant) AS total_ventes
-FROM ventes
-WHERE date_vente >= '2024-01-01'
-GROUP BY region
-HAVING COUNT(*) > 10
-ORDER BY total_ventes DESC;
+FROM ventes  
+WHERE date_vente >= '2024-01-01'  
+GROUP BY region  
+HAVING COUNT(*) > 10  
+ORDER BY total_ventes DESC;  
 ```
 
 **Types de commentaires :**
-- `--` : Commentaire sur une ligne
+- `--` : Commentaire sur une ligne  
 - `/* ... */` : Commentaire sur plusieurs lignes
 
 ### 5. Testez sur un échantillon d'abord
@@ -521,8 +521,8 @@ Avant d'exécuter une requête complexe sur une grande table :
 SELECT
     nom,
     calcul_complexe(colonne) AS resultat
-FROM grande_table
-LIMIT 10;  -- Vérifier que ça marche sur 10 lignes
+FROM grande_table  
+LIMIT 10;  -- Vérifier que ça marche sur 10 lignes  
 
 -- Une fois validé, retirer le LIMIT si nécessaire
 ```
@@ -560,8 +560,8 @@ psql -U username -d nom_base
 
 ### Extensions pour éditeurs de code
 
-- **VS Code** : PostgreSQL, SQL Tools
-- **IntelliJ/DataGrip** : Support PostgreSQL complet
+- **VS Code** : PostgreSQL, SQL Tools  
+- **IntelliJ/DataGrip** : Support PostgreSQL complet  
 - **Sublime Text** : PostgreSQL Syntax
 
 ---
@@ -593,9 +593,9 @@ SELECT DISTINCT ville FROM clients ORDER BY ville;
 ```
 
 **Réponses :**
-1. Liste des noms et âges des clients ayant plus de 30 ans
-2. Liste complète avec une colonne calculée indiquant si majeur ou mineur
-3. Compte le nombre total d'employés
+1. Liste des noms et âges des clients ayant plus de 30 ans  
+2. Liste complète avec une colonne calculée indiquant si majeur ou mineur  
+3. Compte le nombre total d'employés  
 4. Liste des villes uniques (sans doublons), triée alphabétiquement
 
 Si vous avez compris ces exemples, vous êtes prêt à approfondir !
@@ -649,23 +649,23 @@ SELECT * FROM "Clients" WHERE "Nom" = 'Dupont';
 ```
 
 **Règle :**
-- **Apostrophes simples `'...'`** : pour les valeurs textuelles
+- **Apostrophes simples `'...'`** : pour les valeurs textuelles  
 - **Guillemets doubles `"..."`** : pour les identifiants (noms de tables/colonnes)
 
 ### 3. Casse des mots-clés
 
 ```sql
 -- Ces trois requêtes sont équivalentes
-SELECT nom FROM clients;
-select nom from clients;
-SeLeCt NoM fRoM cLiEnTs;
+SELECT nom FROM clients;  
+select nom from clients;  
+SeLeCt NoM fRoM cLiEnTs;  
 
 -- Mais par convention, on écrit les mots-clés en MAJUSCULES
 SELECT nom FROM clients;
 ```
 
 SQL est **insensible à la casse** pour les mots-clés, mais :
-- **Convention** : Mots-clés en MAJUSCULES (`SELECT`, `FROM`, `WHERE`)
+- **Convention** : Mots-clés en MAJUSCULES (`SELECT`, `FROM`, `WHERE`)  
 - **Noms de colonnes/tables** : en minuscules ou avec underscores (`nom_client`)
 
 ### 4. Espaces dans les noms
@@ -747,11 +747,11 @@ Essayez de comprendre chacune de ces requêtes avant de passer à la suite !
 
 Vous avez maintenant une **vue d'ensemble** solide de ce qu'est le DQL et de la clause SELECT. Vous comprenez :
 
-- ✅ Que SELECT permet d'interroger des données sans les modifier
-- ✅ La structure de base d'une requête SELECT
-- ✅ Comment sélectionner des colonnes spécifiques
-- ✅ Comment calculer de nouvelles valeurs
-- ✅ Comment utiliser des alias et des expressions conditionnelles
+- ✅ Que SELECT permet d'interroger des données sans les modifier  
+- ✅ La structure de base d'une requête SELECT  
+- ✅ Comment sélectionner des colonnes spécifiques  
+- ✅ Comment calculer de nouvelles valeurs  
+- ✅ Comment utiliser des alias et des expressions conditionnelles  
 - ✅ Les bonnes pratiques à adopter dès le début
 
 Dans les sections suivantes, nous allons approfondir chaque aspect de SELECT :

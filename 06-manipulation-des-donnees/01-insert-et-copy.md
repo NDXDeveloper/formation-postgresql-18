@@ -12,9 +12,9 @@ L'insertion de données est l'une des opérations fondamentales dans toute base 
 
 Avant de commencer, rappelons quelques notions essentielles :
 
-- **Une table** contient des lignes (enregistrements) et des colonnes (attributs)
-- **Une insertion** ajoute une ou plusieurs nouvelles lignes dans une table
-- **Les types de données** de chaque colonne doivent être respectés
+- **Une table** contient des lignes (enregistrements) et des colonnes (attributs)  
+- **Une insertion** ajoute une ou plusieurs nouvelles lignes dans une table  
+- **Les types de données** de chaque colonne doivent être respectés  
 - **Les contraintes** (NOT NULL, UNIQUE, CHECK, etc.) sont vérifiées à chaque insertion
 
 ---
@@ -26,8 +26,8 @@ Avant de commencer, rappelons quelques notions essentielles :
 La forme la plus simple de `INSERT` permet d'ajouter une seule ligne à la fois :
 
 ```sql
-INSERT INTO nom_table (colonne1, colonne2, colonne3)
-VALUES (valeur1, valeur2, valeur3);
+INSERT INTO nom_table (colonne1, colonne2, colonne3)  
+VALUES (valeur1, valeur2, valeur3);  
 ```
 
 ### Exemple concret
@@ -48,8 +48,8 @@ CREATE TABLE employes (
 Pour insérer un nouvel employé :
 
 ```sql
-INSERT INTO employes (nom, prenom, email, salaire, date_embauche)
-VALUES ('Dupont', 'Marie', 'marie.dupont@example.com', 45000.00, '2025-01-15');
+INSERT INTO employes (nom, prenom, email, salaire, date_embauche)  
+VALUES ('Dupont', 'Marie', 'marie.dupont@example.com', 45000.00, '2025-01-15');  
 ```
 
 ### Insertion sans spécifier toutes les colonnes
@@ -57,8 +57,8 @@ VALUES ('Dupont', 'Marie', 'marie.dupont@example.com', 45000.00, '2025-01-15');
 Vous n'êtes pas obligé de spécifier toutes les colonnes :
 
 ```sql
-INSERT INTO employes (nom, prenom, email)
-VALUES ('Martin', 'Pierre', 'pierre.martin@example.com');
+INSERT INTO employes (nom, prenom, email)  
+VALUES ('Martin', 'Pierre', 'pierre.martin@example.com');  
 ```
 
 Dans cet exemple :
@@ -71,8 +71,8 @@ Dans cet exemple :
 Si vous fournissez des valeurs pour **toutes** les colonnes dans le bon ordre, vous pouvez omettre la liste des colonnes :
 
 ```sql
-INSERT INTO employes
-VALUES (DEFAULT, 'Durand', 'Sophie', 'sophie.durand@example.com', 48000.00, '2025-02-01');
+INSERT INTO employes  
+VALUES (DEFAULT, 'Durand', 'Sophie', 'sophie.durand@example.com', 48000.00, '2025-02-01');  
 ```
 
 > **Note** : Cette syntaxe est déconseillée car elle rend le code fragile. Si la structure de la table change (ajout/suppression de colonne), votre requête pourrait échouer.
@@ -83,16 +83,16 @@ Plusieurs façons d'insérer des valeurs NULL ou par défaut :
 
 ```sql
 -- Utiliser NULL explicitement
-INSERT INTO employes (nom, prenom, email, salaire)
-VALUES ('Bernard', 'Luc', 'luc.bernard@example.com', NULL);
+INSERT INTO employes (nom, prenom, email, salaire)  
+VALUES ('Bernard', 'Luc', 'luc.bernard@example.com', NULL);  
 
 -- Utiliser DEFAULT pour invoquer la valeur par défaut
-INSERT INTO employes (nom, prenom, email, date_embauche)
-VALUES ('Petit', 'Anne', 'anne.petit@example.com', DEFAULT);
+INSERT INTO employes (nom, prenom, email, date_embauche)  
+VALUES ('Petit', 'Anne', 'anne.petit@example.com', DEFAULT);  
 
 -- Omettre les colonnes (elles prendront NULL ou DEFAULT)
-INSERT INTO employes (nom, prenom, email)
-VALUES ('Roux', 'Thomas', 'thomas.roux@example.com');
+INSERT INTO employes (nom, prenom, email)  
+VALUES ('Roux', 'Thomas', 'thomas.roux@example.com');  
 ```
 
 ---
@@ -103,16 +103,16 @@ VALUES ('Roux', 'Thomas', 'thomas.roux@example.com');
 
 L'insertion multiple présente plusieurs avantages :
 
-1. **Performance** : Beaucoup plus rapide que plusieurs INSERT séparés
-2. **Transactionnel** : Toutes les insertions réussissent ou échouent ensemble
-3. **Lisibilité** : Code plus compact et plus clair
+1. **Performance** : Beaucoup plus rapide que plusieurs INSERT séparés  
+2. **Transactionnel** : Toutes les insertions réussissent ou échouent ensemble  
+3. **Lisibilité** : Code plus compact et plus clair  
 4. **Économie réseau** : Un seul aller-retour avec le serveur
 
 ### Syntaxe de l'insertion multiple
 
 ```sql
-INSERT INTO nom_table (colonne1, colonne2, colonne3)
-VALUES
+INSERT INTO nom_table (colonne1, colonne2, colonne3)  
+VALUES  
     (valeur1a, valeur2a, valeur3a),
     (valeur1b, valeur2b, valeur3b),
     (valeur1c, valeur2c, valeur3c);
@@ -123,8 +123,8 @@ VALUES
 Insertion de plusieurs employés en une seule commande :
 
 ```sql
-INSERT INTO employes (nom, prenom, email, salaire, date_embauche)
-VALUES
+INSERT INTO employes (nom, prenom, email, salaire, date_embauche)  
+VALUES  
     ('Moreau', 'Julie', 'julie.moreau@example.com', 42000.00, '2025-03-01'),
     ('Simon', 'Marc', 'marc.simon@example.com', 51000.00, '2025-03-01'),
     ('Laurent', 'Emma', 'emma.laurent@example.com', 47000.00, '2025-03-15'),
@@ -137,16 +137,16 @@ Cette unique requête insère 4 employés en une seule transaction.
 
 **Méthode inefficace** (4 requêtes séparées) :
 ```sql
-INSERT INTO employes (nom, prenom) VALUES ('Moreau', 'Julie');
-INSERT INTO employes (nom, prenom) VALUES ('Simon', 'Marc');
-INSERT INTO employes (nom, prenom) VALUES ('Laurent', 'Emma');
-INSERT INTO employes (nom, prenom) VALUES ('Bertrand', 'Paul');
+INSERT INTO employes (nom, prenom) VALUES ('Moreau', 'Julie');  
+INSERT INTO employes (nom, prenom) VALUES ('Simon', 'Marc');  
+INSERT INTO employes (nom, prenom) VALUES ('Laurent', 'Emma');  
+INSERT INTO employes (nom, prenom) VALUES ('Bertrand', 'Paul');  
 ```
 
 **Méthode efficace** (1 seule requête) :
 ```sql
-INSERT INTO employes (nom, prenom)
-VALUES
+INSERT INTO employes (nom, prenom)  
+VALUES  
     ('Moreau', 'Julie'),
     ('Simon', 'Marc'),
     ('Laurent', 'Emma'),
@@ -159,8 +159,8 @@ VALUES
 
 Bien que PostgreSQL n'impose pas de limite stricte au nombre de lignes dans un INSERT multiple, il existe des considérations pratiques :
 
-- **Mémoire** : Chaque ligne consomme de la mémoire
-- **Lisibilité** : Au-delà de quelques dizaines de lignes, le code devient difficile à lire
+- **Mémoire** : Chaque ligne consomme de la mémoire  
+- **Lisibilité** : Au-delà de quelques dizaines de lignes, le code devient difficile à lire  
 - **Timeout** : Une très longue requête peut dépasser les timeouts réseau ou applicatifs
 
 Pour des volumes importants (milliers de lignes ou plus), préférez la commande `COPY` décrite plus loin.
@@ -180,10 +180,10 @@ PostgreSQL permet d'insérer des données en les sélectionnant depuis une autre
 ### Syntaxe
 
 ```sql
-INSERT INTO table_destination (colonne1, colonne2, colonne3)
-SELECT colonne_a, colonne_b, colonne_c
-FROM table_source
-WHERE condition;
+INSERT INTO table_destination (colonne1, colonne2, colonne3)  
+SELECT colonne_a, colonne_b, colonne_c  
+FROM table_source  
+WHERE condition;  
 ```
 
 ### Exemple : Création d'une table d'archive
@@ -201,10 +201,10 @@ CREATE TABLE employes_archives (
 );
 
 -- Archiver les employés dont le contrat se termine
-INSERT INTO employes_archives (id, nom, prenom, email)
-SELECT id, nom, prenom, email
-FROM employes
-WHERE date_fin_contrat < CURRENT_DATE;
+INSERT INTO employes_archives (id, nom, prenom, email)  
+SELECT id, nom, prenom, email  
+FROM employes  
+WHERE date_fin_contrat < CURRENT_DATE;  
 ```
 
 ### Exemple : Transformation de données
@@ -213,12 +213,12 @@ Vous pouvez transformer les données lors de l'insertion :
 
 ```sql
 -- Créer des noms d'utilisateur en combinant prénom et nom
-INSERT INTO utilisateurs (username, email)
-SELECT
+INSERT INTO utilisateurs (username, email)  
+SELECT  
     LOWER(prenom || '.' || nom) AS username,
     email
-FROM employes
-WHERE email IS NOT NULL;
+FROM employes  
+WHERE email IS NOT NULL;  
 ```
 
 Cette requête crée des noms d'utilisateur en minuscules du type "marie.dupont".
@@ -242,14 +242,14 @@ CREATE TABLE affectations (
 );
 
 -- Affecter tous les employés au département "Ventes"
-INSERT INTO affectations (employe_id, departement_id, date_affectation)
-SELECT
+INSERT INTO affectations (employe_id, departement_id, date_affectation)  
+SELECT  
     e.id,
     d.id,
     CURRENT_DATE
-FROM employes e
-CROSS JOIN departements d
-WHERE d.nom = 'Ventes';
+FROM employes e  
+CROSS JOIN departements d  
+WHERE d.nom = 'Ventes';  
 ```
 
 ---
@@ -260,16 +260,16 @@ WHERE d.nom = 'Ventes';
 
 `COPY` est une commande PostgreSQL spécialement conçue pour l'importation et l'exportation de données en masse. Elle est **beaucoup plus rapide** que des INSERT multiples pour les raisons suivantes :
 
-1. **Contournement du parseur SQL** : Les données sont traitées directement
-2. **Optimisation du WAL** : Écriture groupée dans les journaux de transactions
-3. **Moins de overhead** : Pas de préparation de requête pour chaque ligne
+1. **Contournement du parseur SQL** : Les données sont traitées directement  
+2. **Optimisation du WAL** : Écriture groupée dans les journaux de transactions  
+3. **Moins de overhead** : Pas de préparation de requête pour chaque ligne  
 4. **Format binaire optionnel** : Encore plus rapide que le format texte
 
 ### Quand utiliser COPY ?
 
-- **Import initial** : Chargement de millions de lignes lors de la création d'une base
-- **Migrations** : Transfert de données entre systèmes
-- **Chargements ETL** : Extraction, transformation, chargement de données
+- **Import initial** : Chargement de millions de lignes lors de la création d'une base  
+- **Migrations** : Transfert de données entre systèmes  
+- **Chargements ETL** : Extraction, transformation, chargement de données  
 - **Restaurations** : Rechargement de sauvegardes
 
 **Règle empirique** : À partir de quelques milliers de lignes, COPY devient significativement plus performant que INSERT.
@@ -281,9 +281,9 @@ Il existe deux variantes de COPY :
 #### 1. COPY côté serveur (depuis un fichier sur le serveur)
 
 ```sql
-COPY nom_table (colonne1, colonne2, colonne3)
-FROM '/chemin/vers/fichier.csv'
-WITH (FORMAT csv, HEADER true, DELIMITER ',');
+COPY nom_table (colonne1, colonne2, colonne3)  
+FROM '/chemin/vers/fichier.csv'  
+WITH (FORMAT csv, HEADER true, DELIMITER ',');  
 ```
 
 > **Important** : Le fichier doit être accessible par le processus PostgreSQL (droits de lecture). Cette commande nécessite généralement des privilèges superutilisateur.
@@ -292,8 +292,8 @@ WITH (FORMAT csv, HEADER true, DELIMITER ',');
 
 ```sql
 \copy nom_table (colonne1, colonne2, colonne3)
-FROM '/chemin/local/fichier.csv'
-WITH (FORMAT csv, HEADER true, DELIMITER ',');
+FROM '/chemin/local/fichier.csv'  
+WITH (FORMAT csv, HEADER true, DELIMITER ',');  
 ```
 
 > **Note** : `\copy` est une commande **psql** (l'outil en ligne de commande), pas une commande SQL. Elle transfère les données depuis le client vers le serveur.
@@ -305,23 +305,23 @@ WITH (FORMAT csv, HEADER true, DELIMITER ',');
 Exemple de fichier `employes.csv` :
 
 ```csv
-nom,prenom,email,salaire,date_embauche
-Dupont,Marie,marie.dupont@example.com,45000.00,2025-01-15
-Martin,Pierre,pierre.martin@example.com,52000.00,2025-01-20
-Durand,Sophie,sophie.durand@example.com,48000.00,2025-02-01
-Bernard,Luc,luc.bernard@example.com,41000.00,2025-02-10
+nom,prenom,email,salaire,date_embauche  
+Dupont,Marie,marie.dupont@example.com,45000.00,2025-01-15  
+Martin,Pierre,pierre.martin@example.com,52000.00,2025-01-20  
+Durand,Sophie,sophie.durand@example.com,48000.00,2025-02-01  
+Bernard,Luc,luc.bernard@example.com,41000.00,2025-02-10  
 ```
 
 #### Importation basique
 
 ```sql
-COPY employes (nom, prenom, email, salaire, date_embauche)
-FROM '/tmp/employes.csv'
-WITH (FORMAT csv, HEADER true);
+COPY employes (nom, prenom, email, salaire, date_embauche)  
+FROM '/tmp/employes.csv'  
+WITH (FORMAT csv, HEADER true);  
 ```
 
 Explications :
-- `FORMAT csv` : Indique que le fichier est au format CSV
+- `FORMAT csv` : Indique que le fichier est au format CSV  
 - `HEADER true` : La première ligne contient les noms de colonnes (elle sera ignorée)
 
 #### Options courantes de COPY
@@ -329,9 +329,9 @@ Explications :
 PostgreSQL offre de nombreuses options pour personnaliser l'importation :
 
 ```sql
-COPY employes (nom, prenom, email, salaire)
-FROM '/tmp/employes.csv'
-WITH (
+COPY employes (nom, prenom, email, salaire)  
+FROM '/tmp/employes.csv'  
+WITH (  
     FORMAT csv,              -- Format du fichier
     HEADER true,             -- Première ligne = en-têtes
     DELIMITER ',',           -- Séparateur (virgule par défaut)
@@ -349,9 +349,9 @@ WITH (
 Si votre fichier ne contient pas de ligne d'en-tête :
 
 ```sql
-COPY employes (nom, prenom, email, salaire)
-FROM '/tmp/employes_sans_entete.csv'
-WITH (FORMAT csv, HEADER false);
+COPY employes (nom, prenom, email, salaire)  
+FROM '/tmp/employes_sans_entete.csv'  
+WITH (FORMAT csv, HEADER false);  
 ```
 
 #### Séparateur personnalisé (TSV, pipe, etc.)
@@ -359,17 +359,17 @@ WITH (FORMAT csv, HEADER false);
 Pour un fichier délimité par des tabulations (TSV) :
 
 ```sql
-COPY employes (nom, prenom, email)
-FROM '/tmp/employes.tsv'
-WITH (FORMAT csv, DELIMITER E'\t');
+COPY employes (nom, prenom, email)  
+FROM '/tmp/employes.tsv'  
+WITH (FORMAT csv, DELIMITER E'\t');  
 ```
 
 Pour un fichier délimité par des pipes (|) :
 
 ```sql
-COPY employes (nom, prenom, email)
-FROM '/tmp/employes.txt'
-WITH (FORMAT csv, DELIMITER '|');
+COPY employes (nom, prenom, email)  
+FROM '/tmp/employes.txt'  
+WITH (FORMAT csv, DELIMITER '|');  
 ```
 
 #### Gestion des valeurs NULL
@@ -377,9 +377,9 @@ WITH (FORMAT csv, DELIMITER '|');
 Par défaut, une chaîne vide ('') dans un fichier CSV est importée comme chaîne vide, pas comme NULL. Pour traiter certaines valeurs comme NULL :
 
 ```sql
-COPY employes (nom, prenom, salaire)
-FROM '/tmp/employes.csv'
-WITH (FORMAT csv, NULL 'NULL');
+COPY employes (nom, prenom, salaire)  
+FROM '/tmp/employes.csv'  
+WITH (FORMAT csv, NULL 'NULL');  
 ```
 
 Dans le fichier, les cellules contenant exactement `NULL` seront importées comme NULL SQL.
@@ -398,9 +398,9 @@ et PostgreSQL"
 
 Import :
 ```sql
-COPY employes (nom, prenom, commentaire)
-FROM '/tmp/employes_complexe.csv'
-WITH (FORMAT csv, HEADER true, QUOTE '"');
+COPY employes (nom, prenom, commentaire)  
+FROM '/tmp/employes_complexe.csv'  
+WITH (FORMAT csv, HEADER true, QUOTE '"');  
 ```
 
 ### Format texte (format par défaut de PostgreSQL)
@@ -408,9 +408,9 @@ WITH (FORMAT csv, HEADER true, QUOTE '"');
 Le format texte est le format historique de PostgreSQL, moins courant que CSV mais toujours supporté :
 
 ```sql
-COPY employes (nom, prenom, email)
-FROM '/tmp/employes.txt'
-WITH (FORMAT text, DELIMITER E'\t', NULL '\N');
+COPY employes (nom, prenom, email)  
+FROM '/tmp/employes.txt'  
+WITH (FORMAT text, DELIMITER E'\t', NULL '\N');  
 ```
 
 Caractéristiques :
@@ -423,9 +423,9 @@ Caractéristiques :
 Pour des performances maximales, notamment avec des données volumineuses :
 
 ```sql
-COPY employes (nom, prenom, salaire)
-FROM '/tmp/employes.bin'
-WITH (FORMAT binary);
+COPY employes (nom, prenom, salaire)  
+FROM '/tmp/employes.bin'  
+WITH (FORMAT binary);  
 ```
 
 **Avantages** :
@@ -444,8 +444,8 @@ WITH (FORMAT binary);
 
 ```sql
 -- Exporter toute la table
-COPY employes TO '/tmp/export_employes.csv'
-WITH (FORMAT csv, HEADER true);
+COPY employes TO '/tmp/export_employes.csv'  
+WITH (FORMAT csv, HEADER true);  
 
 -- Exporter avec une requête
 COPY (
@@ -467,8 +467,8 @@ Dans les versions précédentes, le marqueur de fin `\.` (backslash point) utili
 
 ```sql
 -- Désormais plus robuste face au \. dans les données CSV
-COPY employes FROM '/tmp/data.csv'
-WITH (FORMAT csv);
+COPY employes FROM '/tmp/data.csv'  
+WITH (FORMAT csv);  
 ```
 
 Cette amélioration rend COPY plus fiable lors de l'importation de fichiers CSV contenant des caractères spéciaux.
@@ -501,15 +501,15 @@ Pour des imports très volumineux, recréer les index après l'import est souven
 
 ```sql
 -- Avant l'import
-DROP INDEX IF EXISTS idx_employes_email;
-DROP INDEX IF EXISTS idx_employes_nom;
+DROP INDEX IF EXISTS idx_employes_email;  
+DROP INDEX IF EXISTS idx_employes_nom;  
 
 -- Import massif
 COPY employes FROM '/tmp/gros_fichier.csv' WITH (FORMAT csv);
 
 -- Recréer les index
-CREATE INDEX idx_employes_email ON employes(email);
-CREATE INDEX idx_employes_nom ON employes(nom);
+CREATE INDEX idx_employes_email ON employes(email);  
+CREATE INDEX idx_employes_nom ON employes(nom);  
 ```
 
 #### 2. Désactiver temporairement les contraintes (avec précaution)
@@ -549,9 +549,9 @@ Encapsuler l'import dans une transaction pour garantir l'atomicité :
 ```sql
 BEGIN;
 
-COPY employes FROM '/tmp/data1.csv' WITH (FORMAT csv);
-COPY departements FROM '/tmp/data2.csv' WITH (FORMAT csv);
-COPY affectations FROM '/tmp/data3.csv' WITH (FORMAT csv);
+COPY employes FROM '/tmp/data1.csv' WITH (FORMAT csv);  
+COPY departements FROM '/tmp/data2.csv' WITH (FORMAT csv);  
+COPY affectations FROM '/tmp/data3.csv' WITH (FORMAT csv);  
 
 COMMIT;
 ```
@@ -568,13 +568,13 @@ Lors d'une insertion, PostgreSQL vérifie toutes les contraintes :
 
 ```sql
 -- Cette insertion échouera si l'email existe déjà (contrainte UNIQUE)
-INSERT INTO employes (nom, prenom, email)
-VALUES ('Test', 'Test', 'marie.dupont@example.com');
+INSERT INTO employes (nom, prenom, email)  
+VALUES ('Test', 'Test', 'marie.dupont@example.com');  
 -- ERROR: duplicate key value violates unique constraint "employes_email_key"
 
 -- Cette insertion échouera si nom est NULL (contrainte NOT NULL)
-INSERT INTO employes (prenom, email)
-VALUES ('Jean', 'jean@example.com');
+INSERT INTO employes (prenom, email)  
+VALUES ('Jean', 'jean@example.com');  
 -- ERROR: null value in column "nom" violates not-null constraint
 ```
 
@@ -596,9 +596,9 @@ Pour grouper plusieurs insertions dans une transaction :
 ```sql
 BEGIN;
 
-INSERT INTO employes (nom, prenom) VALUES ('Test1', 'Test1');
-INSERT INTO employes (nom, prenom) VALUES ('Test2', 'Test2');
-INSERT INTO employes (nom, prenom) VALUES ('Test3', 'Test3');
+INSERT INTO employes (nom, prenom) VALUES ('Test1', 'Test1');  
+INSERT INTO employes (nom, prenom) VALUES ('Test2', 'Test2');  
+INSERT INTO employes (nom, prenom) VALUES ('Test3', 'Test3');  
 
 -- Si tout s'est bien passé
 COMMIT;
@@ -631,14 +631,14 @@ CREATE TEMP TABLE employes_staging (
 COPY employes_staging FROM '/tmp/data.csv' WITH (FORMAT csv);
 
 -- 3. Valider et insérer dans la table finale
-INSERT INTO employes (nom, prenom, email, salaire)
-SELECT
+INSERT INTO employes (nom, prenom, email, salaire)  
+SELECT  
     nom,
     prenom,
     email,
     salaire::NUMERIC  -- Conversion avec gestion d'erreur
-FROM employes_staging
-WHERE email ~ '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}$'  -- Validation
+FROM employes_staging  
+WHERE email ~ '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}$'  -- Validation  
     AND salaire ~ '^[0-9]+\.?[0-9]*$';  -- Validation numérique
 ```
 
@@ -659,20 +659,20 @@ WHERE email ~ '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}$'  -- Validation
 
 ### Points clés à retenir
 
-1. **INSERT simple** : Pour des insertions ponctuelles, lisible et flexible
-2. **INSERT multiple** : Toujours préférer à plusieurs INSERT simples
-3. **INSERT ... SELECT** : Idéal pour dupliquer ou transformer des données existantes
-4. **COPY** : L'outil de référence pour les imports massifs
+1. **INSERT simple** : Pour des insertions ponctuelles, lisible et flexible  
+2. **INSERT multiple** : Toujours préférer à plusieurs INSERT simples  
+3. **INSERT ... SELECT** : Idéal pour dupliquer ou transformer des données existantes  
+4. **COPY** : L'outil de référence pour les imports massifs  
 5. **PostgreSQL 18** : Améliorations de COPY pour plus de robustesse
 
 ### Checklist avant un import massif
 
-- [ ] Les types de données correspondent-ils à la structure de la table ?
-- [ ] Les contraintes (PK, FK, UNIQUE) sont-elles compatibles avec les données ?
-- [ ] L'encodage du fichier est-il correct (UTF-8 recommandé) ?
-- [ ] Les index peuvent-ils être temporairement supprimés ?
-- [ ] Une table de staging est-elle nécessaire pour valider les données ?
-- [ ] Une transaction globale est-elle nécessaire ?
+- [ ] Les types de données correspondent-ils à la structure de la table ?  
+- [ ] Les contraintes (PK, FK, UNIQUE) sont-elles compatibles avec les données ?  
+- [ ] L'encodage du fichier est-il correct (UTF-8 recommandé) ?  
+- [ ] Les index peuvent-ils être temporairement supprimés ?  
+- [ ] Une table de staging est-elle nécessaire pour valider les données ?  
+- [ ] Une transaction globale est-elle nécessaire ?  
 - [ ] Les performances du système permettent-elles l'import (I/O, mémoire) ?
 
 ---
@@ -702,9 +702,9 @@ CREATE TEMP TABLE employes_staging (
 );
 
 -- 3. Importer les données brutes
-COPY employes_staging
-FROM '/tmp/employes.csv'
-WITH (FORMAT csv, HEADER true);
+COPY employes_staging  
+FROM '/tmp/employes.csv'  
+WITH (FORMAT csv, HEADER true);  
 
 -- 4. Analyser les données invalides
 SELECT
@@ -716,22 +716,22 @@ SELECT
         WHEN salaire !~ '^[0-9]+\.?[0-9]*$' THEN 'Salaire invalide'
         ELSE 'OK'
     END AS statut_validation
-FROM employes_staging
-WHERE nom IS NULL OR nom = ''
+FROM employes_staging  
+WHERE nom IS NULL OR nom = ''  
    OR prenom IS NULL OR prenom = ''
    OR email !~ '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}$'
    OR salaire !~ '^[0-9]+\.?[0-9]*$';
 
 -- 5. Insérer uniquement les données valides
-INSERT INTO employes (nom, prenom, email, salaire, date_embauche)
-SELECT
+INSERT INTO employes (nom, prenom, email, salaire, date_embauche)  
+SELECT  
     TRIM(nom),
     TRIM(prenom),
     LOWER(TRIM(email)),
     salaire::NUMERIC,
     COALESCE(date_embauche::DATE, CURRENT_DATE)
-FROM employes_staging
-WHERE nom IS NOT NULL AND nom != ''
+FROM employes_staging  
+WHERE nom IS NOT NULL AND nom != ''  
   AND prenom IS NOT NULL AND prenom != ''
   AND email ~ '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}$'
   AND salaire ~ '^[0-9]+\.?[0-9]*$';
@@ -749,9 +749,9 @@ SELECT
 
 L'insertion de données dans PostgreSQL offre une grande flexibilité :
 
-- **INSERT** pour les opérations courantes et les petits volumes
-- **INSERT multiple** pour améliorer les performances avec des volumes moyens
-- **INSERT ... SELECT** pour transformer et dupliquer des données
+- **INSERT** pour les opérations courantes et les petits volumes  
+- **INSERT multiple** pour améliorer les performances avec des volumes moyens  
+- **INSERT ... SELECT** pour transformer et dupliquer des données  
 - **COPY** pour les imports massifs avec des performances optimales
 
 Avec PostgreSQL 18, les améliorations apportées à COPY renforcent encore sa robustesse pour traiter des fichiers CSV complexes.

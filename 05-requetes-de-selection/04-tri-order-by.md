@@ -21,13 +21,13 @@ Comme nous l'avons vu dans le chapitre sur l'ordre d'exécution logique, **ORDER
 ### Syntaxe de base
 
 ```sql
-SELECT colonnes
-FROM table
-WHERE conditions
-ORDER BY colonne_de_tri [ASC|DESC];
+SELECT colonnes  
+FROM table  
+WHERE conditions  
+ORDER BY colonne_de_tri [ASC|DESC];  
 ```
 
-- `ASC` : Ordre **ascendant** (du plus petit au plus grand, de A à Z) - **par défaut**
+- `ASC` : Ordre **ascendant** (du plus petit au plus grand, de A à Z) - **par défaut**  
 - `DESC` : Ordre **descendant** (du plus grand au plus petit, de Z à A)
 
 ### Tri ascendant (ASC)
@@ -36,25 +36,25 @@ ORDER BY colonne_de_tri [ASC|DESC];
 
 ```sql
 -- Trier les employés par salaire croissant
-SELECT nom, salaire
-FROM employes
-ORDER BY salaire ASC;
+SELECT nom, salaire  
+FROM employes  
+ORDER BY salaire ASC;  
 
 -- ASC est optionnel (c'est le défaut)
-SELECT nom, salaire
-FROM employes
-ORDER BY salaire;  -- Équivalent à ORDER BY salaire ASC
+SELECT nom, salaire  
+FROM employes  
+ORDER BY salaire;  -- Équivalent à ORDER BY salaire ASC  
 ```
 
 **Résultat :**
 ```
 nom      | salaire
 ---------|--------
-Alice    | 30000
-Bob      | 35000
-Charlie  | 45000
-David    | 60000
-Eve      | 75000
+Alice    | 30000  
+Bob      | 35000  
+Charlie  | 45000  
+David    | 60000  
+Eve      | 75000  
 ```
 
 **Pour les nombres :** du plus petit au plus grand (30000 → 75000)
@@ -63,38 +63,38 @@ Eve      | 75000
 
 ```sql
 -- Trier les clients par nom alphabétique
-SELECT nom, prenom
-FROM clients
-ORDER BY nom ASC;
+SELECT nom, prenom  
+FROM clients  
+ORDER BY nom ASC;  
 ```
 
 **Résultat :**
 ```
 nom      | prenom
 ---------|--------
-Dupont   | Jean
-Durand   | Marie
-Martin   | Pierre
-Petit    | Sophie
+Dupont   | Jean  
+Durand   | Marie  
+Martin   | Pierre  
+Petit    | Sophie  
 ```
 
 **Pour les dates :** de la plus ancienne à la plus récente
 
 ```sql
 -- Trier les commandes de la plus ancienne à la plus récente
-SELECT numero_commande, date_commande
-FROM commandes
-ORDER BY date_commande ASC;
+SELECT numero_commande, date_commande  
+FROM commandes  
+ORDER BY date_commande ASC;  
 ```
 
 **Résultat :**
 ```
 numero_commande | date_commande
 ----------------|---------------
-CMD001          | 2024-01-15
-CMD002          | 2024-02-10
-CMD003          | 2024-03-05
-CMD004          | 2024-04-20
+CMD001          | 2024-01-15  
+CMD002          | 2024-02-10  
+CMD003          | 2024-03-05  
+CMD004          | 2024-04-20  
 ```
 
 ### Tri descendant (DESC)
@@ -103,20 +103,20 @@ CMD004          | 2024-04-20
 
 ```sql
 -- Trier les employés par salaire décroissant (les mieux payés en premier)
-SELECT nom, salaire
-FROM employes
-ORDER BY salaire DESC;
+SELECT nom, salaire  
+FROM employes  
+ORDER BY salaire DESC;  
 ```
 
 **Résultat :**
 ```
 nom      | salaire
 ---------|--------
-Eve      | 75000
-David    | 60000
-Charlie  | 45000
-Bob      | 35000
-Alice    | 30000
+Eve      | 75000  
+David    | 60000  
+Charlie  | 45000  
+Bob      | 35000  
+Alice    | 30000  
 ```
 
 **Pour les nombres :** du plus grand au plus petit (75000 → 30000)
@@ -125,38 +125,38 @@ Alice    | 30000
 
 ```sql
 -- Trier les clients par nom inverse
-SELECT nom, prenom
-FROM clients
-ORDER BY nom DESC;
+SELECT nom, prenom  
+FROM clients  
+ORDER BY nom DESC;  
 ```
 
 **Résultat :**
 ```
 nom      | prenom
 ---------|--------
-Petit    | Sophie
-Martin   | Pierre
-Durand   | Marie
-Dupont   | Jean
+Petit    | Sophie  
+Martin   | Pierre  
+Durand   | Marie  
+Dupont   | Jean  
 ```
 
 **Pour les dates :** de la plus récente à la plus ancienne
 
 ```sql
 -- Trier les commandes de la plus récente à la plus ancienne
-SELECT numero_commande, date_commande
-FROM commandes
-ORDER BY date_commande DESC;
+SELECT numero_commande, date_commande  
+FROM commandes  
+ORDER BY date_commande DESC;  
 ```
 
 **Résultat :**
 ```
 numero_commande | date_commande
 ----------------|---------------
-CMD004          | 2024-04-20
-CMD003          | 2024-03-05
-CMD002          | 2024-02-10
-CMD001          | 2024-01-15
+CMD004          | 2024-04-20  
+CMD003          | 2024-03-05  
+CMD002          | 2024-02-10  
+CMD001          | 2024-01-15  
 ```
 
 ---
@@ -175,52 +175,52 @@ ORDER BY colonne1 [ASC|DESC], colonne2 [ASC|DESC], colonne3 [ASC|DESC], ...
 
 ```sql
 -- Trier par département (A→Z), puis par salaire décroissant dans chaque département
-SELECT nom, departement, salaire
-FROM employes
-ORDER BY departement ASC, salaire DESC;
+SELECT nom, departement, salaire  
+FROM employes  
+ORDER BY departement ASC, salaire DESC;  
 ```
 
 **Résultat :**
 ```
 nom      | departement | salaire
 ---------|-------------|--------
-Eve      | Finance     | 75000    -- Finance trié par salaire DESC
-David    | Finance     | 60000
-Alice    | IT          | 55000    -- IT trié par salaire DESC
-Bob      | IT          | 45000
-Charlie  | IT          | 40000
-Sophie   | RH          | 50000    -- RH trié par salaire DESC
-Pierre   | RH          | 35000
+Eve      | Finance     | 75000    -- Finance trié par salaire DESC  
+David    | Finance     | 60000  
+Alice    | IT          | 55000    -- IT trié par salaire DESC  
+Bob      | IT          | 45000  
+Charlie  | IT          | 40000  
+Sophie   | RH          | 50000    -- RH trié par salaire DESC  
+Pierre   | RH          | 35000  
 ```
 
 **Comment ça fonctionne :**
-1. PostgreSQL trie d'abord par `departement` en ordre alphabétique (Finance, IT, RH)
+1. PostgreSQL trie d'abord par `departement` en ordre alphabétique (Finance, IT, RH)  
 2. **À l'intérieur de chaque département**, il trie par `salaire` décroissant
 
 ### Exemple avec trois colonnes
 
 ```sql
 -- Trier par pays, puis ville, puis nom
-SELECT nom, ville, pays
-FROM clients
-ORDER BY pays ASC, ville ASC, nom ASC;
+SELECT nom, ville, pays  
+FROM clients  
+ORDER BY pays ASC, ville ASC, nom ASC;  
 ```
 
 **Résultat :**
 ```
 nom      | ville      | pays
 ---------|------------|--------
-Dupont   | Lyon       | France
-Martin   | Lyon       | France
-Durand   | Paris      | France
-Petit    | Paris      | France
-Schmidt  | Berlin     | Allemagne
-Mueller  | Munich     | Allemagne
+Dupont   | Lyon       | France  
+Martin   | Lyon       | France  
+Durand   | Paris      | France  
+Petit    | Paris      | France  
+Schmidt  | Berlin     | Allemagne  
+Mueller  | Munich     | Allemagne  
 ```
 
 **Logique :**
-1. Trier par pays (Allemagne, France, ...)
-2. Dans chaque pays, trier par ville
+1. Trier par pays (Allemagne, France, ...)  
+2. Dans chaque pays, trier par ville  
 3. Dans chaque ville, trier par nom
 
 ### Mélanger ASC et DESC
@@ -229,14 +229,14 @@ Vous pouvez mélanger les ordres de tri pour chaque colonne :
 
 ```sql
 -- Départements A→Z, mais salaires du plus élevé au plus bas dans chaque département
-SELECT nom, departement, salaire
-FROM employes
-ORDER BY departement ASC, salaire DESC;
+SELECT nom, departement, salaire  
+FROM employes  
+ORDER BY departement ASC, salaire DESC;  
 
 -- Année récente en premier, mais dans chaque année, noms A→Z
-SELECT nom, annee_embauche
-FROM employes
-ORDER BY annee_embauche DESC, nom ASC;
+SELECT nom, annee_embauche  
+FROM employes  
+ORDER BY annee_embauche DESC, nom ASC;  
 ```
 
 ---
@@ -251,40 +251,40 @@ Les valeurs `NULL` posent une question particulière lors du tri : **où les pla
 - PostgreSQL place les `NULL` **en dernier** par défaut
 
 ```sql
-SELECT nom, salaire
-FROM employes
-ORDER BY salaire ASC;
+SELECT nom, salaire  
+FROM employes  
+ORDER BY salaire ASC;  
 ```
 
 **Résultat :**
 ```
 nom      | salaire
 ---------|--------
-Alice    | 30000
-Bob      | 40000
-Charlie  | 50000
-David    | NULL     -- NULL en dernier
-Eve      | NULL
+Alice    | 30000  
+Bob      | 40000  
+Charlie  | 50000  
+David    | NULL     -- NULL en dernier  
+Eve      | NULL  
 ```
 
 **En ordre descendant (DESC) :**
 - PostgreSQL place les `NULL` **en premier** par défaut
 
 ```sql
-SELECT nom, salaire
-FROM employes
-ORDER BY salaire DESC;
+SELECT nom, salaire  
+FROM employes  
+ORDER BY salaire DESC;  
 ```
 
 **Résultat :**
 ```
 nom      | salaire
 ---------|--------
-David    | NULL     -- NULL en premier
-Eve      | NULL
-Charlie  | 50000
-Bob      | 40000
-Alice    | 30000
+David    | NULL     -- NULL en premier  
+Eve      | NULL  
+Charlie  | 50000  
+Bob      | 40000  
+Alice    | 30000  
 ```
 
 ### NULLS FIRST et NULLS LAST
@@ -300,76 +300,76 @@ ORDER BY colonne [ASC|DESC] [NULLS FIRST|NULLS LAST]
 
 ```sql
 -- Tri ascendant avec NULL en premier
-SELECT nom, salaire
-FROM employes
-ORDER BY salaire ASC NULLS FIRST;
+SELECT nom, salaire  
+FROM employes  
+ORDER BY salaire ASC NULLS FIRST;  
 ```
 
 **Résultat :**
 ```
 nom      | salaire
 ---------|--------
-David    | NULL     -- NULL d'abord
-Eve      | NULL
-Alice    | 30000
-Bob      | 40000
-Charlie  | 50000
+David    | NULL     -- NULL d'abord  
+Eve      | NULL  
+Alice    | 30000  
+Bob      | 40000  
+Charlie  | 50000  
 ```
 
 ```sql
 -- Tri descendant avec NULL en premier (comportement par défaut DESC)
-SELECT nom, salaire
-FROM employes
-ORDER BY salaire DESC NULLS FIRST;
+SELECT nom, salaire  
+FROM employes  
+ORDER BY salaire DESC NULLS FIRST;  
 ```
 
 **Résultat :**
 ```
 nom      | salaire
 ---------|--------
-David    | NULL     -- NULL d'abord (c'est le défaut pour DESC)
-Eve      | NULL
-Charlie  | 50000
-Bob      | 40000
-Alice    | 30000
+David    | NULL     -- NULL d'abord (c'est le défaut pour DESC)  
+Eve      | NULL  
+Charlie  | 50000  
+Bob      | 40000  
+Alice    | 30000  
 ```
 
 ### NULLS LAST : NULL en dernier
 
 ```sql
 -- Tri ascendant avec NULL en dernier (comportement par défaut ASC)
-SELECT nom, salaire
-FROM employes
-ORDER BY salaire ASC NULLS LAST;
+SELECT nom, salaire  
+FROM employes  
+ORDER BY salaire ASC NULLS LAST;  
 ```
 
 **Résultat :**
 ```
 nom      | salaire
 ---------|--------
-Alice    | 30000
-Bob      | 40000
-Charlie  | 50000
-David    | NULL     -- NULL à la fin (c'est le défaut pour ASC)
-Eve      | NULL
+Alice    | 30000  
+Bob      | 40000  
+Charlie  | 50000  
+David    | NULL     -- NULL à la fin (c'est le défaut pour ASC)  
+Eve      | NULL  
 ```
 
 ```sql
 -- Tri descendant avec NULL en dernier
-SELECT nom, salaire
-FROM employes
-ORDER BY salaire DESC NULLS LAST;
+SELECT nom, salaire  
+FROM employes  
+ORDER BY salaire DESC NULLS LAST;  
 ```
 
 **Résultat :**
 ```
 nom      | salaire
 ---------|--------
-Charlie  | 50000
-Bob      | 40000
-Alice    | 30000
-David    | NULL     -- NULL à la fin
-Eve      | NULL
+Charlie  | 50000  
+Bob      | 40000  
+Alice    | 30000  
+David    | NULL     -- NULL à la fin  
+Eve      | NULL  
 ```
 
 ### Récapitulatif du comportement par défaut
@@ -386,28 +386,28 @@ Eve      | NULL
 ```sql
 -- Afficher les commandes en attente de livraison en premier
 -- (date_livraison = NULL signifie "pas encore livrée")
-SELECT numero_commande, date_commande, date_livraison
-FROM commandes
-ORDER BY date_livraison ASC NULLS FIRST;
+SELECT numero_commande, date_commande, date_livraison  
+FROM commandes  
+ORDER BY date_livraison ASC NULLS FIRST;  
 ```
 
 **Résultat :**
 ```
 numero_commande | date_commande | date_livraison
 ----------------|---------------|----------------
-CMD005          | 2024-11-15    | NULL           -- À traiter en priorité
-CMD006          | 2024-11-16    | NULL
-CMD001          | 2024-10-01    | 2024-10-05     -- Déjà livrées
-CMD002          | 2024-10-10    | 2024-10-15
+CMD005          | 2024-11-15    | NULL           -- À traiter en priorité  
+CMD006          | 2024-11-16    | NULL  
+CMD001          | 2024-10-01    | 2024-10-05     -- Déjà livrées  
+CMD002          | 2024-10-10    | 2024-10-15  
 ```
 
 #### 2. Données optionnelles à la fin
 
 ```sql
 -- Clients avec email renseigné en premier
-SELECT nom, email
-FROM clients
-ORDER BY email ASC NULLS LAST;
+SELECT nom, email  
+FROM clients  
+ORDER BY email ASC NULLS LAST;  
 ```
 
 #### 3. Tri avec plusieurs colonnes et gestion de NULL
@@ -416,9 +416,9 @@ ORDER BY email ASC NULLS LAST;
 -- Trier par département, puis par salaire
 -- Placer les employés sans département à la fin
 -- Placer les salaires inconnus à la fin
-SELECT nom, departement, salaire
-FROM employes
-ORDER BY
+SELECT nom, departement, salaire  
+FROM employes  
+ORDER BY  
     departement ASC NULLS LAST,
     salaire DESC NULLS LAST;
 ```
@@ -427,14 +427,14 @@ ORDER BY
 ```
 nom      | departement | salaire
 ---------|-------------|--------
-Charlie  | Finance     | 60000
-Alice    | Finance     | 50000
-Bob      | IT          | 55000
-David    | IT          | 45000
-Sophie   | IT          | NULL     -- Salaire inconnu à la fin du département
-Pierre   | RH          | 40000
-Marc     | NULL        | 70000    -- Département inconnu à la fin
-Julie    | NULL        | NULL     -- Les deux inconnus à la toute fin
+Charlie  | Finance     | 60000  
+Alice    | Finance     | 50000  
+Bob      | IT          | 55000  
+David    | IT          | 45000  
+Sophie   | IT          | NULL     -- Salaire inconnu à la fin du département  
+Pierre   | RH          | 40000  
+Marc     | NULL        | 70000    -- Département inconnu à la fin  
+Julie    | NULL        | NULL     -- Les deux inconnus à la toute fin  
 ```
 
 ---
@@ -447,38 +447,38 @@ Vous pouvez trier sur des **calculs** ou **fonctions**, pas seulement sur des co
 
 ```sql
 -- Trier par salaire annuel (salaire mensuel * 12)
-SELECT nom, salaire, salaire * 12 as salaire_annuel
-FROM employes
-ORDER BY salaire * 12 DESC;
+SELECT nom, salaire, salaire * 12 as salaire_annuel  
+FROM employes  
+ORDER BY salaire * 12 DESC;  
 
 -- Trier par prix après remise
-SELECT nom_produit, prix, remise, prix - remise as prix_final
-FROM produits
-ORDER BY prix - remise ASC;
+SELECT nom_produit, prix, remise, prix - remise as prix_final  
+FROM produits  
+ORDER BY prix - remise ASC;  
 
 -- Trier par valeur absolue (distance à zéro)
-SELECT nom, solde_compte
-FROM clients
-ORDER BY ABS(solde_compte) DESC;
+SELECT nom, solde_compte  
+FROM clients  
+ORDER BY ABS(solde_compte) DESC;  
 ```
 
 ### Exemples avec texte
 
 ```sql
 -- Trier par longueur du nom (du plus court au plus long)
-SELECT nom, LENGTH(nom) as longueur
-FROM clients
-ORDER BY LENGTH(nom) ASC;
+SELECT nom, LENGTH(nom) as longueur  
+FROM clients  
+ORDER BY LENGTH(nom) ASC;  
 
 -- Trier alphabétiquement sans tenir compte de la casse
-SELECT nom
-FROM clients
-ORDER BY LOWER(nom) ASC;
+SELECT nom  
+FROM clients  
+ORDER BY LOWER(nom) ASC;  
 
 -- Trier par nom de famille (après l'espace)
-SELECT nom_complet
-FROM clients
-ORDER BY SPLIT_PART(nom_complet, ' ', 2) ASC;
+SELECT nom_complet  
+FROM clients  
+ORDER BY SPLIT_PART(nom_complet, ' ', 2) ASC;  
 ```
 
 ### Exemples avec dates
@@ -487,19 +487,19 @@ ORDER BY SPLIT_PART(nom_complet, ' ', 2) ASC;
 -- Trier par ancienneté (différence avec aujourd'hui)
 SELECT nom, date_embauche,
        CURRENT_DATE - date_embauche as anciennete_jours
-FROM employes
-ORDER BY date_embauche ASC;  -- Les plus anciens en premier
+FROM employes  
+ORDER BY date_embauche ASC;  -- Les plus anciens en premier  
 
 -- Trier par âge
 SELECT nom, date_naissance,
        EXTRACT(YEAR FROM AGE(date_naissance)) as age
-FROM clients
-ORDER BY date_naissance ASC;  -- Les plus âgés en premier
+FROM clients  
+ORDER BY date_naissance ASC;  -- Les plus âgés en premier  
 
 -- Trier par mois (ignorer l'année)
-SELECT nom, date_naissance
-FROM clients
-ORDER BY EXTRACT(MONTH FROM date_naissance) ASC;
+SELECT nom, date_naissance  
+FROM clients  
+ORDER BY EXTRACT(MONTH FROM date_naissance) ASC;  
 ```
 
 ### Utiliser les alias dans ORDER BY
@@ -511,15 +511,15 @@ Une particularité importante : **ORDER BY peut utiliser les alias** définis da
 SELECT
     nom,
     salaire * 12 as salaire_annuel
-FROM employes
-ORDER BY salaire_annuel DESC;  -- Utilise l'alias
+FROM employes  
+ORDER BY salaire_annuel DESC;  -- Utilise l'alias  
 
 -- Équivalent (plus verbeux)
 SELECT
     nom,
     salaire * 12 as salaire_annuel
-FROM employes
-ORDER BY salaire * 12 DESC;  -- Répète l'expression
+FROM employes  
+ORDER BY salaire * 12 DESC;  -- Répète l'expression  
 ```
 
 **Pourquoi ça fonctionne ?**
@@ -534,22 +534,22 @@ PostgreSQL permet de trier en référençant la **position** d'une colonne dans 
 
 ```sql
 -- Trier par la 2ème colonne du SELECT
-SELECT nom, salaire, departement
-FROM employes
-ORDER BY 2 DESC;  -- 2 = salaire
+SELECT nom, salaire, departement  
+FROM employes  
+ORDER BY 2 DESC;  -- 2 = salaire  
 
 -- Équivalent
-SELECT nom, salaire, departement
-FROM employes
-ORDER BY salaire DESC;
+SELECT nom, salaire, departement  
+FROM employes  
+ORDER BY salaire DESC;  
 ```
 
 **Tri sur plusieurs colonnes par position :**
 
 ```sql
-SELECT nom, departement, salaire
-FROM employes
-ORDER BY 2 ASC, 3 DESC;  -- departement ASC, salaire DESC
+SELECT nom, departement, salaire  
+FROM employes  
+ORDER BY 2 ASC, 3 DESC;  -- departement ASC, salaire DESC  
 ```
 
 **⚠️ Attention :**
@@ -579,9 +579,9 @@ Parfois, vous voulez un ordre de tri qui ne suit pas l'ordre alphabétique ou nu
 
 ```sql
 -- Trier les tickets par priorité : critique > haute > moyenne > basse
-SELECT titre, priorite
-FROM tickets
-ORDER BY
+SELECT titre, priorite  
+FROM tickets  
+ORDER BY  
     CASE priorite
         WHEN 'critique' THEN 1
         WHEN 'haute' THEN 2
@@ -595,20 +595,20 @@ ORDER BY
 ```
 titre                | priorite
 ---------------------|----------
-Bug serveur          | critique
-Erreur paiement      | critique
-Lenteur application  | haute
-Demande nouvelle vue | moyenne
-Amélioration design  | basse
+Bug serveur          | critique  
+Erreur paiement      | critique  
+Lenteur application  | haute  
+Demande nouvelle vue | moyenne  
+Amélioration design  | basse  
 ```
 
 ### Exemple : Statuts personnalisés
 
 ```sql
 -- Trier les commandes par statut : en cours > en attente > livrée > annulée
-SELECT numero_commande, statut
-FROM commandes
-ORDER BY
+SELECT numero_commande, statut  
+FROM commandes  
+ORDER BY  
     CASE statut
         WHEN 'en cours' THEN 1
         WHEN 'en attente' THEN 2
@@ -622,9 +622,9 @@ ORDER BY
 
 ```sql
 -- Trier par jour de la semaine (lundi en premier)
-SELECT evenement, jour_semaine
-FROM calendrier
-ORDER BY
+SELECT evenement, jour_semaine  
+FROM calendrier  
+ORDER BY  
     CASE jour_semaine
         WHEN 'lundi' THEN 1
         WHEN 'mardi' THEN 2
@@ -640,9 +640,9 @@ ORDER BY
 
 ```sql
 -- Mettre les produits "featured" en premier, puis trier par prix
-SELECT nom_produit, est_featured, prix
-FROM produits
-ORDER BY
+SELECT nom_produit, est_featured, prix  
+FROM produits  
+ORDER BY  
     CASE
         WHEN est_featured = TRUE THEN 0  -- Featured en premier
         ELSE 1
@@ -674,10 +674,10 @@ Un **index** sur la colonne de tri peut considérablement améliorer les perform
 CREATE INDEX idx_employes_salaire ON employes(salaire);
 
 -- Cette requête sera beaucoup plus rapide
-SELECT nom, salaire
-FROM employes
-ORDER BY salaire DESC
-LIMIT 10;
+SELECT nom, salaire  
+FROM employes  
+ORDER BY salaire DESC  
+LIMIT 10;  
 ```
 
 **Comment ça fonctionne ?**
@@ -692,8 +692,8 @@ PostgreSQL peut utiliser un index dans les deux sens :
 CREATE INDEX idx_employes_salaire ON employes(salaire);
 
 -- Les deux requêtes peuvent utiliser l'index
-SELECT * FROM employes ORDER BY salaire ASC;   -- ✅ Index utilisable
-SELECT * FROM employes ORDER BY salaire DESC;  -- ✅ Index utilisable (sens inverse)
+SELECT * FROM employes ORDER BY salaire ASC;   -- ✅ Index utilisable  
+SELECT * FROM employes ORDER BY salaire DESC;  -- ✅ Index utilisable (sens inverse)  
 ```
 
 **Index composites pour tri multi-colonnes :**
@@ -703,8 +703,8 @@ SELECT * FROM employes ORDER BY salaire DESC;  -- ✅ Index utilisable (sens inv
 CREATE INDEX idx_employes_dept_salaire ON employes(departement, salaire DESC);
 
 -- Cette requête peut utiliser l'index efficacement
-SELECT * FROM employes
-ORDER BY departement ASC, salaire DESC;
+SELECT * FROM employes  
+ORDER BY departement ASC, salaire DESC;  
 ```
 
 ### Tri avec LIMIT : Optimisation majeure
@@ -713,10 +713,10 @@ Combiner `ORDER BY` avec `LIMIT` permet d'optimiser considérablement les perfor
 
 ```sql
 -- Top 10 des salaires (PostgreSQL n'a pas besoin de tout trier)
-SELECT nom, salaire
-FROM employes
-ORDER BY salaire DESC
-LIMIT 10;
+SELECT nom, salaire  
+FROM employes  
+ORDER BY salaire DESC  
+LIMIT 10;  
 ```
 
 PostgreSQL peut utiliser un algorithme de **top-N heap sort** qui est beaucoup plus efficace qu'un tri complet.
@@ -741,100 +741,100 @@ Si possible, évitez le tri sur :
 
 ```sql
 -- Top 10 des employés les mieux payés
-SELECT nom, salaire
-FROM employes
-ORDER BY salaire DESC
-LIMIT 10;
+SELECT nom, salaire  
+FROM employes  
+ORDER BY salaire DESC  
+LIMIT 10;  
 
 -- Top 5 des produits les plus chers
-SELECT nom_produit, prix
-FROM produits
-ORDER BY prix DESC
-LIMIT 5;
+SELECT nom_produit, prix  
+FROM produits  
+ORDER BY prix DESC  
+LIMIT 5;  
 ```
 
 ### 2. Bottom N (les plus petits)
 
 ```sql
 -- 10 produits les moins chers
-SELECT nom_produit, prix
-FROM produits
-ORDER BY prix ASC
-LIMIT 10;
+SELECT nom_produit, prix  
+FROM produits  
+ORDER BY prix ASC  
+LIMIT 10;  
 
 -- 5 employés les moins anciens
-SELECT nom, date_embauche
-FROM employes
-ORDER BY date_embauche DESC
-LIMIT 5;
+SELECT nom, date_embauche  
+FROM employes  
+ORDER BY date_embauche DESC  
+LIMIT 5;  
 ```
 
 ### 3. Pagination
 
 ```sql
 -- Page 1 (résultats 1-20)
-SELECT nom, email
-FROM clients
-ORDER BY nom ASC
-LIMIT 20 OFFSET 0;
+SELECT nom, email  
+FROM clients  
+ORDER BY nom ASC  
+LIMIT 20 OFFSET 0;  
 
 -- Page 2 (résultats 21-40)
-SELECT nom, email
-FROM clients
-ORDER BY nom ASC
-LIMIT 20 OFFSET 20;
+SELECT nom, email  
+FROM clients  
+ORDER BY nom ASC  
+LIMIT 20 OFFSET 20;  
 
 -- Page 3 (résultats 41-60)
-SELECT nom, email
-FROM clients
-ORDER BY nom ASC
-LIMIT 20 OFFSET 40;
+SELECT nom, email  
+FROM clients  
+ORDER BY nom ASC  
+LIMIT 20 OFFSET 40;  
 ```
 
 **⚠️ Important :** Pour la pagination, il est crucial d'avoir un **tri stable et reproductible**.
 
 ```sql
 -- ❌ Mauvais : l'ordre peut changer entre les pages si plusieurs personnes ont le même nom
-SELECT nom, email
-FROM clients
-ORDER BY nom ASC
-LIMIT 20 OFFSET 20;
+SELECT nom, email  
+FROM clients  
+ORDER BY nom ASC  
+LIMIT 20 OFFSET 20;  
 
 -- ✅ Bon : ajouter un tri secondaire sur l'ID (unique)
-SELECT nom, email
-FROM clients
-ORDER BY nom ASC, id ASC
-LIMIT 20 OFFSET 20;
+SELECT nom, email  
+FROM clients  
+ORDER BY nom ASC, id ASC  
+LIMIT 20 OFFSET 20;  
 ```
 
 ### 4. Dernières entrées
 
 ```sql
 -- 20 dernières commandes
-SELECT numero_commande, date_commande, montant
-FROM commandes
-ORDER BY date_commande DESC
-LIMIT 20;
+SELECT numero_commande, date_commande, montant  
+FROM commandes  
+ORDER BY date_commande DESC  
+LIMIT 20;  
 
 -- 10 derniers clients inscrits
-SELECT nom, date_inscription
-FROM clients
-ORDER BY date_inscription DESC
-LIMIT 10;
+SELECT nom, date_inscription  
+FROM clients  
+ORDER BY date_inscription DESC  
+LIMIT 10;  
 ```
 
 ### 5. Tri alphabétique avec accents
 
 ```sql
 -- Tri alphabétique en ignorant les accents (collation)
-SELECT nom
-FROM clients
-ORDER BY nom COLLATE "fr_FR";
+SELECT nom  
+FROM clients  
+ORDER BY nom COLLATE "fr_FR";  
 
 -- Tri insensible à la casse
-SELECT nom
-FROM clients
-ORDER BY LOWER(nom) ASC;
+SELECT nom  
+FROM clients  
+ORDER BY LOWER(nom) ASC;  
 ```
 
 ### 6. Tri par pertinence (recherche)
@@ -848,9 +848,9 @@ SELECT nom, description,
            WHEN description ILIKE '%ordinateur%' THEN 3 -- Dans description
            ELSE 4
        END as pertinence
-FROM produits
-WHERE nom ILIKE '%ordinateur%' OR description ILIKE '%ordinateur%'
-ORDER BY pertinence ASC, nom ASC;
+FROM produits  
+WHERE nom ILIKE '%ordinateur%' OR description ILIKE '%ordinateur%'  
+ORDER BY pertinence ASC, nom ASC;  
 ```
 
 ### 7. Tri géographique (distance)
@@ -859,9 +859,9 @@ ORDER BY pertinence ASC, nom ASC;
 -- Clients triés par distance à un point (nécessite PostGIS ou calcul manuel)
 SELECT nom, ville,
        SQRT(POW(latitude - 48.8566, 2) + POW(longitude - 2.3522, 2)) as distance
-FROM clients
-ORDER BY distance ASC
-LIMIT 10;
+FROM clients  
+ORDER BY distance ASC  
+LIMIT 10;  
 ```
 
 ---
@@ -872,16 +872,16 @@ PostgreSQL permet de trier de manière **aléatoire** avec `RANDOM()`.
 
 ```sql
 -- Sélectionner 10 produits au hasard
-SELECT nom_produit, prix
-FROM produits
-ORDER BY RANDOM()
-LIMIT 10;
+SELECT nom_produit, prix  
+FROM produits  
+ORDER BY RANDOM()  
+LIMIT 10;  
 
 -- Tirer un employé au sort
-SELECT nom
-FROM employes
-ORDER BY RANDOM()
-LIMIT 1;
+SELECT nom  
+FROM employes  
+ORDER BY RANDOM()  
+LIMIT 1;  
 ```
 
 **⚠️ Attention aux performances :**
@@ -892,13 +892,13 @@ LIMIT 1;
 
 ```sql
 -- Utiliser une sous-requête avec TABLESAMPLE
-SELECT nom_produit, prix
-FROM produits TABLESAMPLE SYSTEM (10);  -- ~10% de lignes aléatoires
+SELECT nom_produit, prix  
+FROM produits TABLESAMPLE SYSTEM (10);  -- ~10% de lignes aléatoires  
 
 -- Ou avec un ID aléatoire si vous avez des IDs séquentiels
-SELECT nom_produit, prix
-FROM produits
-WHERE id = (
+SELECT nom_produit, prix  
+FROM produits  
+WHERE id = (  
     SELECT id
     FROM produits
     ORDER BY RANDOM()
@@ -914,42 +914,42 @@ WHERE id = (
 
 ```sql
 -- Salaire moyen par département, trié du plus élevé au plus bas
-SELECT departement, AVG(salaire) as salaire_moyen
-FROM employes
-GROUP BY departement
-ORDER BY salaire_moyen DESC;
+SELECT departement, AVG(salaire) as salaire_moyen  
+FROM employes  
+GROUP BY departement  
+ORDER BY salaire_moyen DESC;  
 
 -- Nombre de commandes par client, trié par nombre décroissant
-SELECT client_id, COUNT(*) as nb_commandes
-FROM commandes
-GROUP BY client_id
-ORDER BY nb_commandes DESC
-LIMIT 10;
+SELECT client_id, COUNT(*) as nb_commandes  
+FROM commandes  
+GROUP BY client_id  
+ORDER BY nb_commandes DESC  
+LIMIT 10;  
 ```
 
 ### ORDER BY avec HAVING
 
 ```sql
 -- Départements avec plus de 5 employés, triés par nombre d'employés
-SELECT departement, COUNT(*) as nb_employes
-FROM employes
-GROUP BY departement
-HAVING COUNT(*) > 5
-ORDER BY nb_employes DESC;
+SELECT departement, COUNT(*) as nb_employes  
+FROM employes  
+GROUP BY departement  
+HAVING COUNT(*) > 5  
+ORDER BY nb_employes DESC;  
 ```
 
 ### ORDER BY avec DISTINCT
 
 ```sql
 -- Villes distinctes, triées alphabétiquement
-SELECT DISTINCT ville
-FROM clients
-ORDER BY ville ASC;
+SELECT DISTINCT ville  
+FROM clients  
+ORDER BY ville ASC;  
 
 -- Départements distincts avec tri personnalisé
-SELECT DISTINCT departement
-FROM employes
-ORDER BY
+SELECT DISTINCT departement  
+FROM employes  
+ORDER BY  
     CASE departement
         WHEN 'Direction' THEN 1
         WHEN 'IT' THEN 2
@@ -966,18 +966,18 @@ SELECT
     e.nom as employe,
     e.departement,
     m.nom as manager
-FROM employes e
-LEFT JOIN employes m ON e.manager_id = m.id
-ORDER BY e.departement ASC, e.nom ASC;
+FROM employes e  
+LEFT JOIN employes m ON e.manager_id = m.id  
+ORDER BY e.departement ASC, e.nom ASC;  
 
 -- Commandes avec client, triées par date décroissante
 SELECT
     c.numero_commande,
     c.date_commande,
     cl.nom as client
-FROM commandes c
-JOIN clients cl ON c.client_id = cl.id
-ORDER BY c.date_commande DESC;
+FROM commandes c  
+JOIN clients cl ON c.client_id = cl.id  
+ORDER BY c.date_commande DESC;  
 ```
 
 ---
@@ -1012,9 +1012,9 @@ Vous pouvez trier sur des colonnes qui ne sont pas dans le `SELECT` :
 
 ```sql
 -- ✅ Ceci est valide
-SELECT nom, email
-FROM clients
-ORDER BY date_inscription DESC;  -- date_inscription n'est pas dans SELECT
+SELECT nom, email  
+FROM clients  
+ORDER BY date_inscription DESC;  -- date_inscription n'est pas dans SELECT  
 
 -- Le tri fonctionne même si la colonne n'est pas affichée
 ```
@@ -1023,54 +1023,54 @@ ORDER BY date_inscription DESC;  -- date_inscription n'est pas dans SELECT
 
 ```sql
 -- ❌ ERREUR avec DISTINCT
-SELECT DISTINCT ville
-FROM clients
-ORDER BY nom ASC;  -- Erreur : nom n'est pas dans SELECT DISTINCT
+SELECT DISTINCT ville  
+FROM clients  
+ORDER BY nom ASC;  -- Erreur : nom n'est pas dans SELECT DISTINCT  
 
 -- ✅ Solution
-SELECT DISTINCT ville, nom
-FROM clients
-ORDER BY nom ASC;
+SELECT DISTINCT ville, nom  
+FROM clients  
+ORDER BY nom ASC;  
 ```
 
 ### 4. Tri sur des agrégations sans alias
 
 ```sql
 -- ✅ Avec alias (recommandé)
-SELECT departement, AVG(salaire) as salaire_moyen
-FROM employes
-GROUP BY departement
-ORDER BY salaire_moyen DESC;
+SELECT departement, AVG(salaire) as salaire_moyen  
+FROM employes  
+GROUP BY departement  
+ORDER BY salaire_moyen DESC;  
 
 -- ✅ Sans alias (plus verbeux)
-SELECT departement, AVG(salaire)
-FROM employes
-GROUP BY departement
-ORDER BY AVG(salaire) DESC;
+SELECT departement, AVG(salaire)  
+FROM employes  
+GROUP BY departement  
+ORDER BY AVG(salaire) DESC;  
 
 -- ❌ Erreur : ne pas répéter l'alias dans GROUP BY
-SELECT departement, AVG(salaire) as salaire_moyen
-FROM employes
-GROUP BY departement
-ORDER BY AVG(salaire_moyen) DESC;  -- Erreur : AVG(alias) n'existe pas
+SELECT departement, AVG(salaire) as salaire_moyen  
+FROM employes  
+GROUP BY departement  
+ORDER BY AVG(salaire_moyen) DESC;  -- Erreur : AVG(alias) n'existe pas  
 ```
 
 ### 5. NULL et pagination
 
 ```sql
 -- ⚠️ Attention : si vous ne gérez pas les NULL, ils peuvent perturber la pagination
-SELECT nom, date_derniere_connexion
-FROM clients
-ORDER BY date_derniere_connexion DESC  -- NULL en premier par défaut
-LIMIT 20;
+SELECT nom, date_derniere_connexion  
+FROM clients  
+ORDER BY date_derniere_connexion DESC  -- NULL en premier par défaut  
+LIMIT 20;  
 
 -- Les premières pages pourraient être remplies de NULL !
 
 -- ✅ Solution : mettre les NULL à la fin
-SELECT nom, date_derniere_connexion
-FROM clients
-ORDER BY date_derniere_connexion DESC NULLS LAST
-LIMIT 20;
+SELECT nom, date_derniere_connexion  
+FROM clients  
+ORDER BY date_derniere_connexion DESC NULLS LAST  
+LIMIT 20;  
 ```
 
 ---
@@ -1114,7 +1114,7 @@ LIMIT 20;
 6. **ORDER BY peut utiliser les alias**
    - Contrairement à WHERE et GROUP BY
 
-7. **Tri sur expressions et fonctions possible**
+7. **Tri sur expressions et fonctions possible**  
    - `ORDER BY LENGTH(nom)`, `ORDER BY salaire * 12`
 
 8. **Sans ORDER BY, l'ordre est imprévisible**

@@ -22,13 +22,13 @@ Dans ce chapitre, nous allons démystifier cet ordre d'exécution logique.
 Voici l'ordre dans lequel vous **écrivez** une requête SQL :
 
 ```sql
-SELECT      -- 1. Vous commencez par SELECT
-FROM        -- 2. Puis FROM
-WHERE       -- 3. Ensuite WHERE
-GROUP BY    -- 4. Suivi de GROUP BY
-HAVING      -- 5. Puis HAVING
-ORDER BY    -- 6. Et enfin ORDER BY
-LIMIT       -- 7. Terminé par LIMIT/OFFSET
+SELECT      -- 1. Vous commencez par SELECT  
+FROM        -- 2. Puis FROM  
+WHERE       -- 3. Ensuite WHERE  
+GROUP BY    -- 4. Suivi de GROUP BY  
+HAVING      -- 5. Puis HAVING  
+ORDER BY    -- 6. Et enfin ORDER BY  
+LIMIT       -- 7. Terminé par LIMIT/OFFSET  
 ```
 
 ### L'ordre logique (comment PostgreSQL exécute)
@@ -70,8 +70,8 @@ FROM employes
 
 **Avec une jointure :**
 ```sql
-FROM employes
-JOIN departements ON employes.dept_id = departements.id
+FROM employes  
+JOIN departements ON employes.dept_id = departements.id  
 ```
 
 PostgreSQL combine les deux tables selon la condition de jointure, créant un jeu de résultats temporaire contenant les colonnes des deux tables.
@@ -89,14 +89,14 @@ Une fois les données sources identifiées, PostgreSQL applique les **conditions
 
 **Exemple :**
 ```sql
-SELECT nom, salaire
-FROM employes
-WHERE salaire > 50000;
+SELECT nom, salaire  
+FROM employes  
+WHERE salaire > 50000;  
 ```
 
 **Ordre d'exécution :**
-1. PostgreSQL charge toutes les lignes de `employes` (FROM)
-2. PostgreSQL examine chaque ligne et ne garde que celles où `salaire > 50000` (WHERE)
+1. PostgreSQL charge toutes les lignes de `employes` (FROM)  
+2. PostgreSQL examine chaque ligne et ne garde que celles où `salaire > 50000` (WHERE)  
 3. Seulement maintenant, PostgreSQL sélectionne les colonnes `nom` et `salaire` (SELECT)
 
 **Important :** À ce stade, les fonctions d'agrégation comme `COUNT()`, `SUM()`, `AVG()` ne sont **pas encore** disponibles.
@@ -114,23 +114,23 @@ Si votre requête contient un `GROUP BY`, PostgreSQL **regroupe les lignes** aya
 
 **Exemple :**
 ```sql
-SELECT departement, COUNT(*) as nb_employes
-FROM employes
-WHERE salaire > 50000
-GROUP BY departement;
+SELECT departement, COUNT(*) as nb_employes  
+FROM employes  
+WHERE salaire > 50000  
+GROUP BY departement;  
 ```
 
 **Ordre d'exécution :**
-1. Charger toutes les lignes de `employes` (FROM)
-2. Garder seulement les employés avec `salaire > 50000` (WHERE)
-3. Regrouper ces employés par `departement` (GROUP BY)
+1. Charger toutes les lignes de `employes` (FROM)  
+2. Garder seulement les employés avec `salaire > 50000` (WHERE)  
+3. Regrouper ces employés par `departement` (GROUP BY)  
 4. Calculer `COUNT(*)` pour chaque groupe (SELECT)
 
 **Résultat conceptuel après GROUP BY :**
 ```
-Groupe 1 : departement = 'IT'     → 15 employés
-Groupe 2 : departement = 'RH'     → 8 employés
-Groupe 3 : departement = 'Ventes' → 12 employés
+Groupe 1 : departement = 'IT'     → 15 employés  
+Groupe 2 : departement = 'RH'     → 8 employés  
+Groupe 3 : departement = 'Ventes' → 12 employés  
 ```
 
 ---
@@ -146,37 +146,37 @@ La clause `HAVING` permet de **filtrer les groupes** (pas les lignes individuell
 
 **Exemple :**
 ```sql
-SELECT departement, COUNT(*) as nb_employes
-FROM employes
-WHERE salaire > 50000
-GROUP BY departement
-HAVING COUNT(*) > 10;
+SELECT departement, COUNT(*) as nb_employes  
+FROM employes  
+WHERE salaire > 50000  
+GROUP BY departement  
+HAVING COUNT(*) > 10;  
 ```
 
 **Ordre d'exécution :**
-1. Charger `employes` (FROM)
-2. Filtrer `salaire > 50000` (WHERE)
-3. Regrouper par `departement` (GROUP BY)
-4. **Éliminer les groupes ayant moins de 10 employés** (HAVING)
+1. Charger `employes` (FROM)  
+2. Filtrer `salaire > 50000` (WHERE)  
+3. Regrouper par `departement` (GROUP BY)  
+4. **Éliminer les groupes ayant moins de 10 employés** (HAVING)  
 5. Afficher le résultat (SELECT)
 
 **Différence WHERE vs HAVING :**
-- `WHERE` filtre les **lignes individuelles** AVANT le regroupement
+- `WHERE` filtre les **lignes individuelles** AVANT le regroupement  
 - `HAVING` filtre les **groupes** APRÈS le regroupement
 
 **Exemple illustratif :**
 ```sql
 -- WHERE : filtre les lignes avant regroupement
-SELECT departement, AVG(salaire)
-FROM employes
-WHERE salaire > 30000  -- ← Filtre les employés individuels
-GROUP BY departement;
+SELECT departement, AVG(salaire)  
+FROM employes  
+WHERE salaire > 30000  -- ← Filtre les employés individuels  
+GROUP BY departement;  
 
 -- HAVING : filtre les groupes après regroupement
-SELECT departement, AVG(salaire)
-FROM employes
-GROUP BY departement
-HAVING AVG(salaire) > 50000;  -- ← Filtre les départements entiers
+SELECT departement, AVG(salaire)  
+FROM employes  
+GROUP BY departement  
+HAVING AVG(salaire) > 50000;  -- ← Filtre les départements entiers  
 ```
 
 ---
@@ -198,30 +198,30 @@ SELECT
     COUNT(*) as nb_employes,
     AVG(salaire) as salaire_moyen,
     AVG(salaire) * 1.1 as salaire_moyen_augmente
-FROM employes
-GROUP BY departement;
+FROM employes  
+GROUP BY departement;  
 ```
 
 **Point important :** Les alias créés dans `SELECT` ne sont **pas disponibles** dans les clauses précédentes (FROM, WHERE, GROUP BY, HAVING), car elles sont exécutées AVANT le SELECT.
 
 **❌ Ceci génère une erreur :**
 ```sql
-SELECT salaire * 12 as salaire_annuel
-FROM employes
-WHERE salaire_annuel > 600000;  -- Erreur : salaire_annuel n'existe pas encore
+SELECT salaire * 12 as salaire_annuel  
+FROM employes  
+WHERE salaire_annuel > 600000;  -- Erreur : salaire_annuel n'existe pas encore  
 ```
 
 **✅ Solution correcte :**
 ```sql
-SELECT salaire * 12 as salaire_annuel
-FROM employes
-WHERE salaire * 12 > 600000;  -- Répéter l'expression
+SELECT salaire * 12 as salaire_annuel  
+FROM employes  
+WHERE salaire * 12 > 600000;  -- Répéter l'expression  
 ```
 
 Ou avec une sous-requête :
 ```sql
-SELECT *
-FROM (
+SELECT *  
+FROM (  
     SELECT salaire * 12 as salaire_annuel
     FROM employes
 ) sub
@@ -241,13 +241,13 @@ Si `DISTINCT` est présent, PostgreSQL élimine les lignes dupliquées.
 
 **Exemple :**
 ```sql
-SELECT DISTINCT departement
-FROM employes;
+SELECT DISTINCT departement  
+FROM employes;  
 ```
 
 **Ordre d'exécution :**
-1. Charger `employes` (FROM)
-2. Sélectionner la colonne `departement` (SELECT)
+1. Charger `employes` (FROM)  
+2. Sélectionner la colonne `departement` (SELECT)  
 3. Éliminer les doublons (DISTINCT)
 
 Si vous avez 100 employés répartis dans 5 départements, le résultat final ne contiendra que 5 lignes (une par département unique).
@@ -265,9 +265,9 @@ PostgreSQL trie maintenant les résultats selon les colonnes spécifiées.
 
 **Exemple :**
 ```sql
-SELECT nom, salaire
-FROM employes
-ORDER BY salaire DESC, nom ASC;
+SELECT nom, salaire  
+FROM employes  
+ORDER BY salaire DESC, nom ASC;  
 ```
 
 **Particularité importante :** `ORDER BY` peut utiliser les alias définis dans `SELECT`, car il est exécuté APRÈS :
@@ -277,8 +277,8 @@ SELECT
     nom,
     prenom,
     salaire * 12 as salaire_annuel
-FROM employes
-ORDER BY salaire_annuel DESC;  -- ✅ Fonctionne : l'alias existe déjà
+FROM employes  
+ORDER BY salaire_annuel DESC;  -- ✅ Fonctionne : l'alias existe déjà  
 ```
 
 **Ordre de tri avec plusieurs colonnes :**
@@ -294,37 +294,37 @@ Signifie : "Trier d'abord par département (A→Z), puis pour chaque départemen
 En dernier lieu, PostgreSQL applique les restrictions `LIMIT` et `OFFSET`.
 
 **Ce qui se passe :**
-- `LIMIT` : Restreint le nombre de lignes retournées
+- `LIMIT` : Restreint le nombre de lignes retournées  
 - `OFFSET` : Ignore un certain nombre de lignes avant de commencer à retourner des résultats
 - Très utile pour la pagination
 
 **Exemple :**
 ```sql
-SELECT nom, salaire
-FROM employes
-ORDER BY salaire DESC
-LIMIT 10;  -- Retourne les 10 employés les mieux payés
+SELECT nom, salaire  
+FROM employes  
+ORDER BY salaire DESC  
+LIMIT 10;  -- Retourne les 10 employés les mieux payés  
 ```
 
 **Avec OFFSET (pagination) :**
 ```sql
 -- Page 1 (lignes 1-10)
-SELECT nom, salaire
-FROM employes
-ORDER BY salaire DESC
-LIMIT 10 OFFSET 0;
+SELECT nom, salaire  
+FROM employes  
+ORDER BY salaire DESC  
+LIMIT 10 OFFSET 0;  
 
 -- Page 2 (lignes 11-20)
-SELECT nom, salaire
-FROM employes
-ORDER BY salaire DESC
-LIMIT 10 OFFSET 10;
+SELECT nom, salaire  
+FROM employes  
+ORDER BY salaire DESC  
+LIMIT 10 OFFSET 10;  
 
 -- Page 3 (lignes 21-30)
-SELECT nom, salaire
-FROM employes
-ORDER BY salaire DESC
-LIMIT 10 OFFSET 20;
+SELECT nom, salaire  
+FROM employes  
+ORDER BY salaire DESC  
+LIMIT 10 OFFSET 20;  
 ```
 
 **⚠️ Important :** `LIMIT` et `OFFSET` sont appliqués **après le tri**. L'ordre des lignes est donc prévisible et stable (si vous utilisez `ORDER BY`).
@@ -340,33 +340,33 @@ SELECT
     departement,
     COUNT(*) as nb_employes,
     AVG(salaire) as salaire_moyen
-FROM employes
-WHERE annee_embauche >= 2020
-GROUP BY departement
-HAVING COUNT(*) > 5
-ORDER BY salaire_moyen DESC
-LIMIT 3;
+FROM employes  
+WHERE annee_embauche >= 2020  
+GROUP BY departement  
+HAVING COUNT(*) > 5  
+ORDER BY salaire_moyen DESC  
+LIMIT 3;  
 ```
 
 ### Déroulement étape par étape :
 
 **Étape 1 : FROM**
 ```
-Action : Charger toutes les lignes de la table employes
-Résultat : 150 lignes disponibles
+Action : Charger toutes les lignes de la table employes  
+Résultat : 150 lignes disponibles  
 ```
 
 **Étape 2 : WHERE**
 ```
-Action : Garder seulement les employés embauchés depuis 2020
-Condition : annee_embauche >= 2020
-Résultat : 60 lignes restantes
+Action : Garder seulement les employés embauchés depuis 2020  
+Condition : annee_embauche >= 2020  
+Résultat : 60 lignes restantes  
 ```
 
 **Étape 3 : GROUP BY**
 ```
-Action : Regrouper les 60 employés par departement
-Résultat : 8 groupes créés
+Action : Regrouper les 60 employés par departement  
+Résultat : 8 groupes créés  
   - IT : 15 employés
   - RH : 4 employés
   - Ventes : 18 employés
@@ -379,9 +379,9 @@ Résultat : 8 groupes créés
 
 **Étape 4 : HAVING**
 ```
-Action : Éliminer les groupes avec moins de 6 employés
-Condition : COUNT(*) > 5
-Résultat : 5 groupes restants
+Action : Éliminer les groupes avec moins de 6 employés  
+Condition : COUNT(*) > 5  
+Résultat : 6 groupes restants  
   - IT : 15 employés
   - Ventes : 18 employés
   - Marketing : 12 employés
@@ -393,8 +393,8 @@ Résultat : 5 groupes restants
 
 **Étape 5 : SELECT**
 ```
-Action : Calculer les colonnes demandées pour chaque groupe
-Résultat :
+Action : Calculer les colonnes demandées pour chaque groupe  
+Résultat :  
   departement | nb_employes | salaire_moyen
   ------------|-------------|---------------
   IT          | 15          | 65000
@@ -412,8 +412,8 @@ Action : Pas de DISTINCT dans cette requête, étape ignorée
 
 **Étape 7 : ORDER BY**
 ```
-Action : Trier par salaire_moyen décroissant
-Résultat :
+Action : Trier par salaire_moyen décroissant  
+Résultat :  
   departement | nb_employes | salaire_moyen
   ------------|-------------|---------------
   R&D         | 7           | 72000
@@ -426,8 +426,8 @@ Résultat :
 
 **Étape 8 : LIMIT**
 ```
-Action : Garder seulement les 3 premières lignes
-Résultat final :
+Action : Garder seulement les 3 premières lignes  
+Résultat final :  
   departement | nb_employes | salaire_moyen
   ------------|-------------|---------------
   R&D         | 7           | 72000
@@ -443,34 +443,34 @@ Résultat final :
 
 **❌ Ne fonctionne pas :**
 ```sql
-SELECT nom, salaire * 12 as salaire_annuel
-FROM employes
-WHERE salaire_annuel > 600000;
+SELECT nom, salaire * 12 as salaire_annuel  
+FROM employes  
+WHERE salaire_annuel > 600000;  
 ```
 
 **Raison :** `WHERE` est exécuté AVANT `SELECT`, donc l'alias `salaire_annuel` n'existe pas encore.
 
 **✅ Solution :**
 ```sql
-SELECT nom, salaire * 12 as salaire_annuel
-FROM employes
-WHERE salaire * 12 > 600000;
+SELECT nom, salaire * 12 as salaire_annuel  
+FROM employes  
+WHERE salaire * 12 > 600000;  
 ```
 
 ### 2. Impossible d'utiliser un alias dans GROUP BY
 
 **❌ Ne fonctionne pas :**
 ```sql
-SELECT EXTRACT(YEAR FROM date_embauche) as annee, COUNT(*)
-FROM employes
-GROUP BY annee;  -- Erreur dans PostgreSQL < 9.6
+SELECT EXTRACT(YEAR FROM date_embauche) as annee, COUNT(*)  
+FROM employes  
+GROUP BY annee;  -- Erreur dans PostgreSQL < 9.6  
 ```
 
 **✅ Solution (compatible toutes versions) :**
 ```sql
-SELECT EXTRACT(YEAR FROM date_embauche) as annee, COUNT(*)
-FROM employes
-GROUP BY EXTRACT(YEAR FROM date_embauche);
+SELECT EXTRACT(YEAR FROM date_embauche) as annee, COUNT(*)  
+FROM employes  
+GROUP BY EXTRACT(YEAR FROM date_embauche);  
 ```
 
 > **Note PostgreSQL ≥ 9.6 :** Les versions récentes de PostgreSQL acceptent les alias dans `GROUP BY` par commodité, mais conceptuellement, `GROUP BY` est toujours exécuté avant `SELECT`.
@@ -479,9 +479,9 @@ GROUP BY EXTRACT(YEAR FROM date_embauche);
 
 **✅ Fonctionne :**
 ```sql
-SELECT nom, salaire * 12 as salaire_annuel
-FROM employes
-ORDER BY salaire_annuel DESC;  -- OK : ORDER BY est après SELECT
+SELECT nom, salaire * 12 as salaire_annuel  
+FROM employes  
+ORDER BY salaire_annuel DESC;  -- OK : ORDER BY est après SELECT  
 ```
 
 ### 4. WHERE vs HAVING : choisir le bon filtre
@@ -493,16 +493,16 @@ ORDER BY salaire_annuel DESC;  -- OK : ORDER BY est après SELECT
 **Exemple comparatif :**
 ```sql
 -- Trouver les départements où AU MOINS UN employé gagne > 100000
-SELECT departement, COUNT(*)
-FROM employes
-WHERE salaire > 100000  -- Filtre les individus
-GROUP BY departement;
+SELECT departement, COUNT(*)  
+FROM employes  
+WHERE salaire > 100000  -- Filtre les individus  
+GROUP BY departement;  
 
 -- Trouver les départements où le SALAIRE MOYEN > 100000
-SELECT departement, AVG(salaire)
-FROM employes
-GROUP BY departement
-HAVING AVG(salaire) > 100000;  -- Filtre les groupes
+SELECT departement, AVG(salaire)  
+FROM employes  
+GROUP BY departement  
+HAVING AVG(salaire) > 100000;  -- Filtre les groupes  
 ```
 
 ### 5. Performance : WHERE est plus rapide que HAVING
@@ -511,18 +511,18 @@ Si un filtre peut être appliqué avec `WHERE`, préférez-le à `HAVING` :
 
 **❌ Moins performant :**
 ```sql
-SELECT departement, COUNT(*)
-FROM employes
-GROUP BY departement
-HAVING departement = 'IT';  -- Filtre après regroupement
+SELECT departement, COUNT(*)  
+FROM employes  
+GROUP BY departement  
+HAVING departement = 'IT';  -- Filtre après regroupement  
 ```
 
 **✅ Plus performant :**
 ```sql
-SELECT departement, COUNT(*)
-FROM employes
-WHERE departement = 'IT'  -- Filtre avant regroupement (moins de données à traiter)
-GROUP BY departement;
+SELECT departement, COUNT(*)  
+FROM employes  
+WHERE departement = 'IT'  -- Filtre avant regroupement (moins de données à traiter)  
+GROUP BY departement;  
 ```
 
 **Raison :** `WHERE` élimine les données inutiles dès le début, réduisant le volume de données à regrouper.
@@ -581,8 +581,8 @@ GROUP BY departement;
 2. **FROM est toujours la première étape**
    - PostgreSQL doit d'abord savoir quelles tables utiliser
 
-3. **WHERE filtre les lignes, HAVING filtre les groupes**
-   - `WHERE` : avant agrégation → filtre individuel
+3. **WHERE filtre les lignes, HAVING filtre les groupes**  
+   - `WHERE` : avant agrégation → filtre individuel  
    - `HAVING` : après agrégation → filtre de groupes
 
 4. **SELECT n'est PAS la première étape**
@@ -604,9 +604,9 @@ GROUP BY departement;
 
 Comprendre l'ordre d'exécution logique d'une requête SQL est fondamental pour :
 
-- **Éviter les erreurs** : Savoir pourquoi un alias ne fonctionne pas dans une clause
-- **Écrire des requêtes correctes** : Placer les filtres au bon endroit
-- **Optimiser les performances** : Réduire les données à traiter dès le début
+- **Éviter les erreurs** : Savoir pourquoi un alias ne fonctionne pas dans une clause  
+- **Écrire des requêtes correctes** : Placer les filtres au bon endroit  
+- **Optimiser les performances** : Réduire les données à traiter dès le début  
 - **Anticiper les résultats** : Comprendre comment PostgreSQL traite vos données
 
 Dans les prochains chapitres, nous approfondirons chaque clause (WHERE, GROUP BY, HAVING, etc.) avec des exemples concrets et des cas d'usage avancés. Mais gardez toujours en tête cet ordre d'exécution : c'est la clé pour maîtriser SQL !

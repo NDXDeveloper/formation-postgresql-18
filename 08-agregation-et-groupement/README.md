@@ -8,10 +8,10 @@ Jusqu'à présent, nous avons appris à interroger, filtrer, trier et joindre de
 
 Imaginez une table contenant un million de transactions de vente. Personne ne veut consulter les un million de lignes ! Ce dont on a besoin, c'est de réponses à des questions comme :
 
-- **Combien** de ventes avons-nous réalisées ce mois-ci ?
-- **Quel est le montant total** des ventes ?
-- **Quelle est la vente moyenne** par client ?
-- **Quel produit** a généré le plus de revenus ?
+- **Combien** de ventes avons-nous réalisées ce mois-ci ?  
+- **Quel est le montant total** des ventes ?  
+- **Quelle est la vente moyenne** par client ?  
+- **Quel produit** a généré le plus de revenus ?  
 - **Quelle région** performe le mieux ?
 
 C'est exactement le rôle de l'**agrégation** : **transformer de nombreuses lignes en quelques résultats synthétiques et exploitables**.
@@ -36,10 +36,10 @@ Imaginez que vous avez une pile de factures papier sur votre bureau :
 - ...
 
 **Avec agrégation** : Vous utilisez une calculatrice pour obtenir :
-- **Total** : 725€
-- **Nombre de factures** : 4
-- **Montant moyen** : 181.25€
-- **Facture la plus élevée** : 300€
+- **Total** : 725€  
+- **Nombre de factures** : 4  
+- **Montant moyen** : 181.25€  
+- **Facture la plus élevée** : 300€  
 - **Facture la plus basse** : 75€
 
 L'agrégation SQL fait exactement cela, mais automatiquement et sur des millions de lignes !
@@ -53,8 +53,8 @@ L'agrégation SQL fait exactement cela, mais automatiquement et sur des millions
 Les décisions métier ne se prennent pas sur des lignes individuelles, mais sur des **tendances et des statistiques**.
 
 **Exemples :**
-- "Nos ventes ont augmenté de 15% ce trimestre" (agrégation temporelle)
-- "Le panier moyen est de 87€" (moyenne)
+- "Nos ventes ont augmenté de 15% ce trimestre" (agrégation temporelle)  
+- "Le panier moyen est de 87€" (moyenne)  
 - "Le produit le plus vendu est X" (comptage)
 
 ### 2. Rapports et Tableaux de Bord
@@ -81,7 +81,7 @@ L'agrégation révèle des patterns invisibles dans les données brutes.
 Transférer 1 million de lignes à une application est lent et coûteux. Agréger en base de données et transférer 10 résultats est **instantané** !
 
 **Comparaison :**
-- ❌ **Mauvais** : Récupérer 1M lignes → calculer en Python/Java
+- ❌ **Mauvais** : Récupérer 1M lignes → calculer en Python/Java  
 - ✅ **Bon** : Calculer en SQL → récupérer le résultat (1 ligne)
 
 ---
@@ -108,14 +108,14 @@ Calcule des statistiques **par catégorie**.
 **Exemple :**
 ```sql
 -- Combien de ventes par produit ?
-SELECT produit, COUNT(*) AS nb_ventes
-FROM ventes
-GROUP BY produit;
+SELECT produit, COUNT(*) AS nb_ventes  
+FROM ventes  
+GROUP BY produit;  
 -- Résultat : 1 ligne par produit
 ```
 
 **Métaphore :**
-- **Sans GROUP BY** : Une seule calculatrice pour tout le monde
+- **Sans GROUP BY** : Une seule calculatrice pour tout le monde  
 - **Avec GROUP BY** : Une calculatrice par groupe (produit, région, mois, etc.)
 
 ---
@@ -137,9 +137,9 @@ Ce sont les "opérations" que vous pouvez effectuer sur un ensemble de valeurs.
 | **MAX** | Maximum | Prix le plus élevé |
 
 **Fonctions statistiques avancées :**
-- **STDDEV** : Écart-type (dispersion)
-- **VARIANCE** : Variance
-- **PERCENTILE** : Médiane, quartiles
+- **STDDEV** : Écart-type (dispersion)  
+- **VARIANCE** : Variance  
+- **PERCENTILE** : Médiane, quartiles  
 - **CORR** : Corrélation entre variables
 
 ### 2. GROUP BY : Créer des Groupes
@@ -161,31 +161,31 @@ Vous avez cette table `ventes` :
 **Grouper par produit** crée 3 groupes :
 
 ```
-Groupe "Laptop":   [899, 899]
-Groupe "Souris":   [25, 25]
-Groupe "Clavier":  [75]
+Groupe "Laptop":   [899, 899]  
+Groupe "Souris":   [25, 25]  
+Groupe "Clavier":  [75]  
 ```
 
 Puis vous appliquez une agrégation sur chaque groupe :
 
 ```
-COUNT(*) sur "Laptop":  2
-COUNT(*) sur "Souris":  2
-COUNT(*) sur "Clavier": 1
+COUNT(*) sur "Laptop":  2  
+COUNT(*) sur "Souris":  2  
+COUNT(*) sur "Clavier": 1  
 ```
 
 ### 3. HAVING : Filtrer les Groupes
 
-**WHERE** filtre les **lignes** avant l'agrégation.
-**HAVING** filtre les **groupes** après l'agrégation.
+**WHERE** filtre les **lignes** avant l'agrégation.  
+**HAVING** filtre les **groupes** après l'agrégation.  
 
 **Exemple :**
 ```sql
 -- Produits ayant généré plus de 1000€ de CA
-SELECT produit, SUM(montant) AS ca
-FROM ventes
-GROUP BY produit
-HAVING SUM(montant) > 1000;
+SELECT produit, SUM(montant) AS ca  
+FROM ventes  
+GROUP BY produit  
+HAVING SUM(montant) > 1000;  
 ```
 
 ### 4. Extensions de Groupement (ROLLUP, CUBE, GROUPING SETS)
@@ -219,8 +219,8 @@ Pour **concaténer** ou **regrouper** des valeurs dans un ordre spécifique.
 SELECT
     client_id,
     STRING_AGG(produit, ', ' ORDER BY date_achat) AS historique
-FROM achats
-GROUP BY client_id;
+FROM achats  
+GROUP BY client_id;  
 ```
 
 ---
@@ -235,8 +235,8 @@ Comprendre l'ordre d'exécution est **crucial** pour écrire des requêtes corre
 SELECT      -- 5. Sélection finale
     colonne,
     SUM(valeur) AS total
-FROM table  -- 1. Chargement des données
-WHERE       -- 2. Filtrage des LIGNES
+FROM table  -- 1. Chargement des données  
+WHERE       -- 2. Filtrage des LIGNES  
     condition_ligne
 GROUP BY    -- 3. Création des GROUPES
     colonne
@@ -249,12 +249,12 @@ LIMIT 10;   -- 7. Limitation
 
 **Séquence détaillée :**
 
-1. **FROM** : PostgreSQL charge la table source
-2. **WHERE** : Filtre les lignes individuelles (AVANT agrégation)
-3. **GROUP BY** : Crée les groupes selon les colonnes spécifiées
-4. **HAVING** : Filtre les groupes (APRÈS agrégation)
-5. **SELECT** : Calcule les agrégations et sélectionne les colonnes
-6. **ORDER BY** : Trie les résultats
+1. **FROM** : PostgreSQL charge la table source  
+2. **WHERE** : Filtre les lignes individuelles (AVANT agrégation)  
+3. **GROUP BY** : Crée les groupes selon les colonnes spécifiées  
+4. **HAVING** : Filtre les groupes (APRÈS agrégation)  
+5. **SELECT** : Calcule les agrégations et sélectionne les colonnes  
+6. **ORDER BY** : Trie les résultats  
 7. **LIMIT** : Limite le nombre de lignes retournées
 
 **Point clé :**
@@ -288,14 +288,14 @@ SELECT
     COUNT(*) AS nb_ventes,
     SUM(montant) AS ca_total,
     AVG(montant) AS prix_moyen
-FROM ventes
-GROUP BY produit
-ORDER BY ca_total DESC;
+FROM ventes  
+GROUP BY produit  
+ORDER BY ca_total DESC;  
 ```
 
 **Processus :**
 
-1. **FROM ventes** : Charge les 8 lignes
+1. **FROM ventes** : Charge les 8 lignes  
 2. **GROUP BY produit** : Crée 4 groupes
    ```
    Groupe "Laptop":  [899, 899, 899]
@@ -303,7 +303,7 @@ ORDER BY ca_total DESC;
    Groupe "Clavier": [75]
    Groupe "Écran":   [250]
    ```
-3. **SELECT** : Calcule les agrégations pour chaque groupe
+3. **SELECT** : Calcule les agrégations pour chaque groupe  
 4. **ORDER BY** : Trie par CA décroissant
 
 **Résultat :**
@@ -377,53 +377,53 @@ ORDER BY ca_total DESC;
 
 ```sql
 -- ❌ ERREUR : montant n'est ni agrégé ni dans GROUP BY
-SELECT produit, montant, COUNT(*)
-FROM ventes
-GROUP BY produit;
+SELECT produit, montant, COUNT(*)  
+FROM ventes  
+GROUP BY produit;  
 
 -- ✅ CORRECT : Soit agréger montant...
-SELECT produit, SUM(montant), COUNT(*)
-FROM ventes
-GROUP BY produit;
+SELECT produit, SUM(montant), COUNT(*)  
+FROM ventes  
+GROUP BY produit;  
 
 -- ✅ ...soit l'inclure dans GROUP BY (si pertinent)
-SELECT produit, montant, COUNT(*)
-FROM ventes
-GROUP BY produit, montant;
+SELECT produit, montant, COUNT(*)  
+FROM ventes  
+GROUP BY produit, montant;  
 ```
 
 ### 2. Utiliser WHERE au lieu de HAVING
 
 ```sql
 -- ❌ ERREUR : WHERE ne peut pas filtrer sur une agrégation
-SELECT produit, SUM(montant) AS total
-FROM ventes
-WHERE SUM(montant) > 1000  -- ❌
-GROUP BY produit;
+SELECT produit, SUM(montant) AS total  
+FROM ventes  
+WHERE SUM(montant) > 1000  -- ❌  
+GROUP BY produit;  
 
 -- ✅ CORRECT : HAVING pour filtrer les groupes
-SELECT produit, SUM(montant) AS total
-FROM ventes
-GROUP BY produit
-HAVING SUM(montant) > 1000;
+SELECT produit, SUM(montant) AS total  
+FROM ventes  
+GROUP BY produit  
+HAVING SUM(montant) > 1000;  
 ```
 
 ### 3. Oublier GROUP BY avec les Agrégations
 
 ```sql
 -- ❌ Que voulez-vous vraiment ?
-SELECT produit, COUNT(*)
-FROM ventes;
+SELECT produit, COUNT(*)  
+FROM ventes;  
 -- Erreur : produit doit être dans GROUP BY
 
 -- ✅ Option 1 : Grouper
-SELECT produit, COUNT(*)
-FROM ventes
-GROUP BY produit;
+SELECT produit, COUNT(*)  
+FROM ventes  
+GROUP BY produit;  
 
 -- ✅ Option 2 : Tout agréger
-SELECT COUNT(DISTINCT produit) AS nb_produits_differents
-FROM ventes;
+SELECT COUNT(DISTINCT produit) AS nb_produits_differents  
+FROM ventes;  
 ```
 
 ### 4. Confondre COUNT(*) et COUNT(colonne)
@@ -458,12 +458,12 @@ SELECT AVG(COALESCE(montant, 0)) FROM ventes;
 **1. Réduction du Volume de Données Transférées**
 
 ```
-Sans agrégation :
-Base → Réseau → Application
+Sans agrégation :  
+Base → Réseau → Application  
 1M lignes × 100 octets = 100 MB
 
-Avec agrégation :
-Base → Réseau → Application
+Avec agrégation :  
+Base → Réseau → Application  
 10 lignes × 100 octets = 1 KB
 
 Gain : 100 000× moins de données !
@@ -487,8 +487,8 @@ Les bases de données sont **optimisées** pour les agrégations :
 
 ```python
 # ❌ Mauvais : Calculer en Python
-lignes = db.query("SELECT * FROM ventes")
-total = sum(ligne['montant'] for ligne in lignes)
+lignes = db.query("SELECT * FROM ventes")  
+total = sum(ligne['montant'] for ligne in lignes)  
 
 # ✅ Bon : Calculer en SQL
 total = db.query("SELECT SUM(montant) FROM ventes")[0]['sum']
@@ -508,8 +508,8 @@ Cette section 8 est structurée de manière progressive, du plus simple au plus 
 - AVG : Moyenne
 - MIN/MAX : Extrema
 
-**Niveau :** Débutant
-**Durée estimée :** 1-2 heures
+**Niveau :** Débutant  
+**Durée estimée :** 1-2 heures  
 
 ### 8.2. Fonctions d'Agrégation Statistiques
 
@@ -519,8 +519,8 @@ Cette section 8 est structurée de manière progressive, du plus simple au plus 
 - CORR : Corrélation
 - PERCENTILE : Médiane, quartiles
 
-**Niveau :** Intermédiaire
-**Durée estimée :** 2-3 heures
+**Niveau :** Intermédiaire  
+**Durée estimée :** 2-3 heures  
 
 ### 8.3. GROUP BY et HAVING
 
@@ -529,8 +529,8 @@ Cette section 8 est structurée de manière progressive, du plus simple au plus 
 - Filtrage avec HAVING
 - Différence WHERE vs HAVING
 
-**Niveau :** Intermédiaire
-**Durée estimée :** 2-3 heures
+**Niveau :** Intermédiaire  
+**Durée estimée :** 2-3 heures  
 
 ### 8.4. Extensions de Groupement
 
@@ -539,8 +539,8 @@ Cette section 8 est structurée de manière progressive, du plus simple au plus 
 - CUBE : Toutes les combinaisons
 - GROUPING SETS : Contrôle total
 
-**Niveau :** Avancé
-**Durée estimée :** 3-4 heures
+**Niveau :** Avancé  
+**Durée estimée :** 3-4 heures  
 
 ### 8.5. Filtres d'Agrégation (FILTER)
 
@@ -549,8 +549,8 @@ Cette section 8 est structurée de manière progressive, du plus simple au plus 
 - Remplacement de CASE WHEN
 - Agrégations multi-critères
 
-**Niveau :** Intermédiaire
-**Durée estimée :** 1-2 heures
+**Niveau :** Intermédiaire  
+**Durée estimée :** 1-2 heures  
 
 ### 8.6. Agrégations Ordonnées
 
@@ -560,8 +560,8 @@ Cette section 8 est structurée de manière progressive, du plus simple au plus 
 - JSON_AGG : Structures JSON
 - WITHIN GROUP
 
-**Niveau :** Intermédiaire
-**Durée estimée :** 2-3 heures
+**Niveau :** Intermédiaire  
+**Durée estimée :** 2-3 heures  
 
 **Durée totale estimée :** 12-18 heures
 
@@ -627,11 +627,11 @@ Avant d'aborder cette section, vous devriez être à l'aise avec :
 ### 1. Commencez Simple
 
 Ne cherchez pas à tout maîtriser d'un coup. Progression recommandée :
-1. COUNT et SUM (les plus simples)
-2. AVG, MIN, MAX
-3. GROUP BY simple (une colonne)
-4. GROUP BY multi-colonnes
-5. HAVING
+1. COUNT et SUM (les plus simples)  
+2. AVG, MIN, MAX  
+3. GROUP BY simple (une colonne)  
+4. GROUP BY multi-colonnes  
+5. HAVING  
 6. Fonctions avancées (STDDEV, PERCENTILE, etc.)
 
 ### 2. Visualisez Mentalement
@@ -646,11 +646,11 @@ Avant d'écrire une requête, visualisez :
 Utilisez LIMIT pour tester sur peu de données :
 ```sql
 -- Tester la logique sur 100 lignes
-SELECT produit, COUNT(*)
-FROM ventes
-WHERE date_vente >= '2024-01-01'
-GROUP BY produit
-LIMIT 100;
+SELECT produit, COUNT(*)  
+FROM ventes  
+WHERE date_vente >= '2024-01-01'  
+GROUP BY produit  
+LIMIT 100;  
 ```
 
 ### 4. Vérifiez Vos Résultats
@@ -660,9 +660,9 @@ Validez vos agrégations :
 -- Total doit correspondre à la somme des groupes
 SELECT SUM(montant) FROM ventes;  -- 10000
 
-SELECT produit, SUM(montant)
-FROM ventes
-GROUP BY produit;
+SELECT produit, SUM(montant)  
+FROM ventes  
+GROUP BY produit;  
 -- La somme de tous les SUM(montant) doit faire 10000 !
 ```
 
@@ -675,8 +675,8 @@ SELECT
     COUNT(*) AS nombre_ventes,
     SUM(montant) AS chiffre_affaires_total,
     AVG(montant) AS panier_moyen
-FROM ventes
-GROUP BY produit;
+FROM ventes  
+GROUP BY produit;  
 
 -- ❌ Obscur
 SELECT
@@ -684,23 +684,23 @@ SELECT
     COUNT(*),
     SUM(montant),
     AVG(montant)
-FROM ventes
-GROUP BY produit;
+FROM ventes  
+GROUP BY produit;  
 ```
 
 ---
 
 ## À Retenir
 
-1. **L'agrégation transforme beaucoup de lignes en quelques résultats synthétiques**
-2. **GROUP BY crée des groupes**, les agrégations calculent sur chaque groupe
-3. **WHERE filtre les lignes**, **HAVING filtre les groupes**
-4. **Ordre d'exécution** : FROM → WHERE → GROUP BY → HAVING → SELECT → ORDER BY
-5. Les agrégations **ignorent les NULL** (sauf COUNT(*))
-6. **COUNT(*)** compte les lignes, **COUNT(colonne)** compte les non-NULL
-7. Toujours **nommer vos colonnes agrégées** avec AS
-8. L'agrégation en SQL est **bien plus performante** qu'en application
-9. Les fonctions d'agrégation sont le **fondement de l'analyse de données**
+1. **L'agrégation transforme beaucoup de lignes en quelques résultats synthétiques**  
+2. **GROUP BY crée des groupes**, les agrégations calculent sur chaque groupe  
+3. **WHERE filtre les lignes**, **HAVING filtre les groupes**  
+4. **Ordre d'exécution** : FROM → WHERE → GROUP BY → HAVING → SELECT → ORDER BY  
+5. Les agrégations **ignorent les NULL** (sauf COUNT(*))  
+6. **COUNT(*)** compte les lignes, **COUNT(colonne)** compte les non-NULL  
+7. Toujours **nommer vos colonnes agrégées** avec AS  
+8. L'agrégation en SQL est **bien plus performante** qu'en application  
+9. Les fonctions d'agrégation sont le **fondement de l'analyse de données**  
 10. Commencez simple et progressez graduellement !
 
 ---

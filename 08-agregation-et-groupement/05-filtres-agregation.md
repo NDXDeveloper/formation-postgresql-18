@@ -58,9 +58,9 @@ FROM ventes;
 | 3           | 2           | 525       | 325       |
 
 **Problèmes avec cette approche :**
-- ❌ **Verbeux** : Beaucoup de répétition (CASE WHEN... THEN... END)
-- ❌ **Moins lisible** : La logique métier est noyée dans la syntaxe
-- ❌ **Erreurs fréquentes** : Facile d'oublier ELSE 0 dans SUM, ou de mettre ELSE NULL dans COUNT
+- ❌ **Verbeux** : Beaucoup de répétition (CASE WHEN... THEN... END)  
+- ❌ **Moins lisible** : La logique métier est noyée dans la syntaxe  
+- ❌ **Erreurs fréquentes** : Facile d'oublier ELSE 0 dans SUM, ou de mettre ELSE NULL dans COUNT  
 - ❌ **Difficile à maintenir** : Modifier une condition nécessite de toucher plusieurs endroits
 
 ---
@@ -104,9 +104,9 @@ FROM ventes;
 | 3           | 2           | 525       | 325       |
 
 **Avantages :**
-- ✅ **Clair et lisible** : L'intention est immédiatement visible
-- ✅ **Concis** : Moins de code répétitif
-- ✅ **Maintenable** : Conditions faciles à modifier
+- ✅ **Clair et lisible** : L'intention est immédiatement visible  
+- ✅ **Concis** : Moins de code répétitif  
+- ✅ **Maintenable** : Conditions faciles à modifier  
 - ✅ **SQL Standard** : Conforme à la norme SQL:2003
 
 ---
@@ -117,9 +117,9 @@ FROM ventes;
 
 Pour `SUM(montant) FILTER (WHERE statut = 'Validée')` :
 
-1. PostgreSQL examine chaque ligne
-2. Si `statut = 'Validée'` est vrai, la ligne est **incluse** dans le calcul
-3. Si faux, la ligne est **ignorée** (comme si elle n'existait pas pour cette agrégation)
+1. PostgreSQL examine chaque ligne  
+2. Si `statut = 'Validée'` est vrai, la ligne est **incluse** dans le calcul  
+3. Si faux, la ligne est **ignorée** (comme si elle n'existait pas pour cette agrégation)  
 4. La fonction SUM s'applique uniquement aux lignes sélectionnées
 
 **Visualisation :**
@@ -207,8 +207,8 @@ SELECT
     -- Gros paniers (> 200€)
     COUNT(*) FILTER (WHERE montant > 200) AS nb_gros_paniers,
     SUM(montant) FILTER (WHERE montant > 200) AS ca_gros_paniers
-FROM ventes
-WHERE statut = 'Validée';  -- Filtre global en amont
+FROM ventes  
+WHERE statut = 'Validée';  -- Filtre global en amont  
 ```
 
 ### Exemple 4 : Conditions Temporelles
@@ -268,9 +268,9 @@ SELECT
         100.0 * COUNT(*) FILTER (WHERE statut = 'Validée') / COUNT(*),
         2
     ) AS taux_validation_pct
-FROM ventes
-GROUP BY region
-ORDER BY ca_valide DESC;
+FROM ventes  
+GROUP BY region  
+ORDER BY ca_valide DESC;  
 ```
 
 **Résultat théorique :**
@@ -321,9 +321,9 @@ SELECT
               AND date_vente < DATE_TRUNC('month', CURRENT_DATE)), 0),
         2
     ) AS evolution_pct
-FROM ventes
-GROUP BY produit
-ORDER BY ca_mois_actuel DESC;
+FROM ventes  
+GROUP BY produit  
+ORDER BY ca_mois_actuel DESC;  
 ```
 
 ---
@@ -401,10 +401,10 @@ SELECT
 
     -- Revenus
     SUM(montant_achat) FILTER (WHERE a_achete = TRUE) AS ca_total
-FROM sessions_utilisateurs
-WHERE date_session >= CURRENT_DATE - INTERVAL '30 days'
-GROUP BY source_trafic
-ORDER BY nb_visites DESC;
+FROM sessions_utilisateurs  
+WHERE date_session >= CURRENT_DATE - INTERVAL '30 days'  
+GROUP BY source_trafic  
+ORDER BY nb_visites DESC;  
 ```
 
 ### 🏥 Santé : Statistiques Hospitalières
@@ -440,10 +440,10 @@ SELECT
         100.0 * COUNT(*) FILTER (WHERE hospitalise = TRUE) / COUNT(*),
         2
     ) AS taux_hospitalisation_pct
-FROM admissions_urgences
-WHERE date_admission >= CURRENT_DATE - INTERVAL '7 days'
-GROUP BY service
-ORDER BY total_admissions DESC;
+FROM admissions_urgences  
+WHERE date_admission >= CURRENT_DATE - INTERVAL '7 days'  
+GROUP BY service  
+ORDER BY total_admissions DESC;  
 ```
 
 ### 💰 Finance : Analyse de Transactions
@@ -474,10 +474,10 @@ SELECT
     -- Transactions internationales
     COUNT(*) FILTER (WHERE pays_transaction != 'FR') AS nb_internationales,
     SUM(montant) FILTER (WHERE pays_transaction != 'FR') AS montant_international
-FROM transactions
-WHERE date_transaction >= CURRENT_DATE - INTERVAL '30 days'
-GROUP BY compte_id
-HAVING COUNT(*) FILTER (
+FROM transactions  
+WHERE date_transaction >= CURRENT_DATE - INTERVAL '30 days'  
+GROUP BY compte_id  
+HAVING COUNT(*) FILTER (  
     WHERE montant > 10000
        OR (type_transaction = 'Débit' AND heure_transaction BETWEEN 2 AND 5)
 ) > 0  -- Seulement les comptes avec activité suspecte
@@ -522,11 +522,11 @@ SELECT
         100.0 * COUNT(*) FILTER (WHERE latence_ms > 1000) / COUNT(*),
         2
     ) AS pct_requetes_lentes
-FROM logs_api
-WHERE timestamp >= NOW() - INTERVAL '1 hour'
-GROUP BY endpoint
-HAVING COUNT(*) > 100  -- Minimum de volume
-ORDER BY taux_erreur_pct DESC, latence_moyenne DESC;
+FROM logs_api  
+WHERE timestamp >= NOW() - INTERVAL '1 hour'  
+GROUP BY endpoint  
+HAVING COUNT(*) > 100  -- Minimum de volume  
+ORDER BY taux_erreur_pct DESC, latence_moyenne DESC;  
 ```
 
 ### 🎓 Éducation : Analyse Pédagogique
@@ -560,11 +560,11 @@ SELECT
 
     -- Étudiants en difficulté (< 8/20)
     COUNT(DISTINCT etudiant_id) FILTER (WHERE note < 8) AS etudiants_difficulte
-FROM notes
-WHERE annee_scolaire = '2024-2025'
+FROM notes  
+WHERE annee_scolaire = '2024-2025'  
   AND semestre = 1
-GROUP BY matiere
-ORDER BY moyenne_generale DESC;
+GROUP BY matiere  
+ORDER BY moyenne_generale DESC;  
 ```
 
 ---
@@ -581,8 +581,8 @@ SELECT
     COUNT(*) AS nb_ventes,
     SUM(montant) AS ca_total,
     AVG(montant) AS panier_moyen
-FROM ventes
-WHERE statut = 'Validée';  -- Filtre global
+FROM ventes  
+WHERE statut = 'Validée';  -- Filtre global  
 ```
 
 **Résultat :** Statistiques uniquement sur les ventes validées.
@@ -628,14 +628,14 @@ SELECT
     COUNT(*) FILTER (WHERE statut = 'Annulée') AS annulees_2024,
 
     SUM(montant) FILTER (WHERE statut = 'Validée') AS ca_valide_2024
-FROM ventes
-WHERE EXTRACT(YEAR FROM date_vente) = 2024  -- Filtre global
-GROUP BY region;
+FROM ventes  
+WHERE EXTRACT(YEAR FROM date_vente) = 2024  -- Filtre global  
+GROUP BY region;  
 ```
 
 **Ordre d'exécution :**
-1. WHERE filtre les ventes de 2024
-2. GROUP BY crée les groupes par région
+1. WHERE filtre les ventes de 2024  
+2. GROUP BY crée les groupes par région  
 3. FILTER applique les conditions spécifiques à chaque agrégation
 
 ---
@@ -654,8 +654,8 @@ SELECT
     SUM(CASE WHEN statut = 'Validée' THEN montant ELSE 0 END) AS ca_valide,
     SUM(CASE WHEN statut = 'Annulée' THEN montant ELSE 0 END) AS ca_annule,
     AVG(CASE WHEN statut = 'Validée' THEN montant END) AS panier_moyen_valide
-FROM ventes
-GROUP BY region;
+FROM ventes  
+GROUP BY region;  
 ```
 
 **Avec FILTER (moderne) :**
@@ -668,23 +668,23 @@ SELECT
     SUM(montant) FILTER (WHERE statut = 'Validée') AS ca_valide,
     SUM(montant) FILTER (WHERE statut = 'Annulée') AS ca_annule,
     AVG(montant) FILTER (WHERE statut = 'Validée') AS panier_moyen_valide
-FROM ventes
-GROUP BY region;
+FROM ventes  
+GROUP BY region;  
 ```
 
 ### Avantages de FILTER
 
-1. **Lisibilité** : L'intention est immédiatement claire
-2. **Moins d'erreurs** : Pas besoin de gérer ELSE (NULL vs 0)
-3. **Maintenabilité** : Modification d'une condition = un seul endroit
-4. **Performance** : PostgreSQL peut optimiser FILTER plus facilement
+1. **Lisibilité** : L'intention est immédiatement claire  
+2. **Moins d'erreurs** : Pas besoin de gérer ELSE (NULL vs 0)  
+3. **Maintenabilité** : Modification d'une condition = un seul endroit  
+4. **Performance** : PostgreSQL peut optimiser FILTER plus facilement  
 5. **Standard SQL** : Conforme à SQL:2003
 
 ### Quand Utiliser CASE WHEN ?
 
 CASE WHEN reste utile pour :
-- **Transformations de valeurs** (non-agrégations)
-- **Compatibilité** avec d'autres SGBD qui ne supportent pas FILTER
+- **Transformations de valeurs** (non-agrégations)  
+- **Compatibilité** avec d'autres SGBD qui ne supportent pas FILTER  
 - **Logique complexe** avec plusieurs branches
 
 ```sql
@@ -708,20 +708,20 @@ FROM notes;
 ### FILTER est Généralement Plus Performant
 
 PostgreSQL peut optimiser FILTER plus efficacement que CASE WHEN car :
-1. L'intention est explicite
-2. Le planificateur peut réorganiser les calculs
+1. L'intention est explicite  
+2. Le planificateur peut réorganiser les calculs  
 3. Moins d'évaluations conditionnelles en interne
 
 ### Exemple de Plan d'Exécution
 
 ```sql
-EXPLAIN ANALYZE
-SELECT
+EXPLAIN ANALYZE  
+SELECT  
     region,
     COUNT(*) FILTER (WHERE statut = 'Validée') AS nb_validees,
     SUM(montant) FILTER (WHERE statut = 'Validée') AS ca_valide
-FROM ventes
-GROUP BY region;
+FROM ventes  
+GROUP BY region;  
 ```
 
 PostgreSQL génère un plan efficace qui évalue la condition une seule fois par ligne.
@@ -907,10 +907,10 @@ SELECT
         ) / COUNT(DISTINCT user_id),
         2
     ) AS retention_mois_3_pct
-FROM utilisateurs
-WHERE date_inscription >= '2024-01-01'
-GROUP BY DATE_TRUNC('month', date_inscription)
-ORDER BY cohorte;
+FROM utilisateurs  
+WHERE date_inscription >= '2024-01-01'  
+GROUP BY DATE_TRUNC('month', date_inscription)  
+ORDER BY cohorte;  
 ```
 
 ### Analyse de Distribution Multi-Critères
@@ -939,23 +939,23 @@ SELECT
     AVG(montant) FILTER (WHERE delai_livraison_jours <= 2) AS panier_moyen_livraison_rapide,
     AVG(note_satisfaction) FILTER (WHERE delai_livraison_jours <= 2) AS satisfaction_rapide,
     AVG(note_satisfaction) FILTER (WHERE delai_livraison_jours > 2) AS satisfaction_lente
-FROM commandes
-WHERE date_commande >= CURRENT_DATE - INTERVAL '30 days';
+FROM commandes  
+WHERE date_commande >= CURRENT_DATE - INTERVAL '30 days';  
 ```
 
 ---
 
 ## À Retenir
 
-1. **FILTER** applique une condition **spécifique à une agrégation**
-2. Syntaxe : `fonction_agregation(colonne) FILTER (WHERE condition)`
-3. **Plus lisible et maintenable** que CASE WHEN dans les agrégations
-4. Fonctionne avec **toutes les fonctions d'agrégation** (COUNT, SUM, AVG, STDDEV, PERCENTILE, etc.)
-5. **WHERE** = filtre global, **FILTER** = filtre par agrégation
-6. Combinez WHERE (réduire volume) et FILTER (conditions spécifiques)
-7. Utilisez **COALESCE** pour gérer les NULL dans les résultats
-8. FILTER est un **standard SQL** (depuis SQL:2003)
-9. **Performance** : Généralement meilleur que CASE WHEN
+1. **FILTER** applique une condition **spécifique à une agrégation**  
+2. Syntaxe : `fonction_agregation(colonne) FILTER (WHERE condition)`  
+3. **Plus lisible et maintenable** que CASE WHEN dans les agrégations  
+4. Fonctionne avec **toutes les fonctions d'agrégation** (COUNT, SUM, AVG, STDDEV, PERCENTILE, etc.)  
+5. **WHERE** = filtre global, **FILTER** = filtre par agrégation  
+6. Combinez WHERE (réduire volume) et FILTER (conditions spécifiques)  
+7. Utilisez **COALESCE** pour gérer les NULL dans les résultats  
+8. FILTER est un **standard SQL** (depuis SQL:2003)  
+9. **Performance** : Généralement meilleur que CASE WHEN  
 10. Idéal pour les **tableaux de bord** et **rapports multi-critères**
 
 ---
@@ -964,8 +964,8 @@ WHERE date_commande >= CURRENT_DATE - INTERVAL '30 days';
 
 Vous maîtrisez maintenant les filtres d'agrégation ! Prochains sujets :
 
-- **Section 8.6** : Agrégations ordonnées (WITHIN GROUP, string_agg) - Agréger avec tri
-- **Section 9** : Techniques SQL Avancées - Sous-requêtes, CTEs, récursion
+- **Section 8.6** : Agrégations ordonnées (WITHIN GROUP, string_agg) - Agréger avec tri  
+- **Section 9** : Techniques SQL Avancées - Sous-requêtes, CTEs, récursion  
 - **Section 10** : Window Functions - Le summum de l'analyse SQL !
 
 La clause **FILTER** est un outil moderne et puissant qui rend vos requêtes analytiques plus **claires, concises et performantes**. Elle est indispensable pour tout analyste de données travaillant avec PostgreSQL !

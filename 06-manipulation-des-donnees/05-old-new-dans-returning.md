@@ -22,15 +22,15 @@ Avant PostgreSQL 18, obtenir simultanément les anciennes et nouvelles valeurs n
 
 Les concepts `OLD` et `NEW` proviennent du monde des **triggers** (déclencheurs) dans les bases de données :
 
-- **`OLD`** représente la ligne **avant** la modification
+- **`OLD`** représente la ligne **avant** la modification  
 - **`NEW`** représente la ligne **après** la modification
 
 #### Dans un trigger (rappel)
 
 ```sql
-CREATE OR REPLACE FUNCTION audit_trigger()
-RETURNS TRIGGER AS $$
-BEGIN
+CREATE OR REPLACE FUNCTION audit_trigger()  
+RETURNS TRIGGER AS $$  
+BEGIN  
     -- OLD contient l'ancienne valeur
     -- NEW contient la nouvelle valeur
 
@@ -71,10 +71,10 @@ Avant PG 18, pour obtenir les anciennes et nouvelles valeurs lors d'un UPDATE, i
 
 ```sql
 -- PostgreSQL 17 : Calculer l'ancienne valeur à partir de la nouvelle
-UPDATE employes
-SET salaire = salaire * 1.10
-WHERE id = 42
-RETURNING
+UPDATE employes  
+SET salaire = salaire * 1.10  
+WHERE id = 42  
+RETURNING  
     id,
     nom,
     salaire AS nouveau_salaire,
@@ -82,9 +82,9 @@ RETURNING
 ```
 
 **Problèmes** :
-- ❌ Fonctionne seulement si la formule est simple et réversible
-- ❌ Erreurs d'arrondi possibles
-- ❌ Impossible avec des fonctions complexes (CASE, COALESCE, etc.)
+- ❌ Fonctionne seulement si la formule est simple et réversible  
+- ❌ Erreurs d'arrondi possibles  
+- ❌ Impossible avec des fonctions complexes (CASE, COALESCE, etc.)  
 - ❌ Ne fonctionne pas avec des valeurs conditionnelles
 
 #### Méthode 2 : Sélectionner avant de modifier (deux requêtes)
@@ -92,31 +92,31 @@ RETURNING
 ```sql
 -- PostgreSQL 17 : Deux requêtes nécessaires
 -- Étape 1 : Récupérer les anciennes valeurs
-SELECT id, nom, salaire AS ancien_salaire
-FROM employes
-WHERE id = 42;
+SELECT id, nom, salaire AS ancien_salaire  
+FROM employes  
+WHERE id = 42;  
 
 -- Étape 2 : Modifier et récupérer les nouvelles valeurs
-UPDATE employes
-SET salaire = salaire * 1.10
-WHERE id = 42
-RETURNING id, nom, salaire AS nouveau_salaire;
+UPDATE employes  
+SET salaire = salaire * 1.10  
+WHERE id = 42  
+RETURNING id, nom, salaire AS nouveau_salaire;  
 ```
 
 **Problèmes** :
-- ❌ Deux requêtes = deux allers-retours réseau
-- ⚠️ Race condition possible entre SELECT et UPDATE
-- ❌ Pas atomique
+- ❌ Deux requêtes = deux allers-retours réseau  
+- ⚠️ Race condition possible entre SELECT et UPDATE  
+- ❌ Pas atomique  
 - ❌ Code plus complexe
 
 ### La solution avec PostgreSQL 18 : OLD et NEW
 
 ```sql
 -- PostgreSQL 18 : Simple, direct et atomique
-UPDATE employes
-SET salaire = salaire * 1.10
-WHERE id = 42
-RETURNING
+UPDATE employes  
+SET salaire = salaire * 1.10  
+WHERE id = 42  
+RETURNING  
     id,
     nom,
     OLD.salaire AS ancien_salaire,
@@ -141,10 +141,10 @@ RETURNING
 #### Augmentation de salaire avec différence
 
 ```sql
-UPDATE employes
-SET salaire = salaire * 1.15
-WHERE poste = 'Développeur'
-RETURNING
+UPDATE employes  
+SET salaire = salaire * 1.15  
+WHERE poste = 'Développeur'  
+RETURNING  
     id,
     nom,
     prenom,
@@ -165,14 +165,14 @@ RETURNING
 #### Modification avec calcul du pourcentage
 
 ```sql
-UPDATE employes
-SET salaire = CASE
+UPDATE employes  
+SET salaire = CASE  
     WHEN salaire < 40000 THEN salaire * 1.20
     WHEN salaire < 50000 THEN salaire * 1.15
     ELSE salaire * 1.10
-END
-WHERE departement_id = 5
-RETURNING
+END  
+WHERE departement_id = 5  
+RETURNING  
     id,
     nom,
     OLD.salaire AS ancien_salaire,
@@ -192,13 +192,13 @@ RETURNING
 #### Modification de plusieurs colonnes
 
 ```sql
-UPDATE employes
-SET
+UPDATE employes  
+SET  
     salaire = salaire * 1.10,
     poste = 'Senior ' || poste,
     date_promotion = CURRENT_DATE
-WHERE anciennete >= 5
-RETURNING
+WHERE anciennete >= 5  
+RETURNING  
     id,
     nom,
     OLD.poste AS ancien_poste,
@@ -235,8 +235,8 @@ archived AS (
     SELECT * FROM to_delete
     RETURNING *
 )
-DELETE FROM employes
-WHERE date_embauche < '2020-01-01';
+DELETE FROM employes  
+WHERE date_embauche < '2020-01-01';  
 ```
 
 Cette approche avait des limitations et n'était pas vraiment atomique.
@@ -260,8 +260,8 @@ WITH deleted AS (
         CURRENT_TIMESTAMP AS date_suppression,
         CURRENT_USER AS supprime_par
 )
-INSERT INTO employes_archives
-SELECT * FROM deleted;
+INSERT INTO employes_archives  
+SELECT * FROM deleted;  
 ```
 
 > **Note** : Avec DELETE, seul `OLD` est disponible car il n'y a pas de "nouvelle" valeur après suppression.
@@ -271,9 +271,9 @@ SELECT * FROM deleted;
 #### Suppression avec statistiques
 
 ```sql
-DELETE FROM logs
-WHERE date_creation < CURRENT_DATE - INTERVAL '1 year'
-RETURNING
+DELETE FROM logs  
+WHERE date_creation < CURRENT_DATE - INTERVAL '1 year'  
+RETURNING  
     OLD.id,
     OLD.date_creation,
     OLD.niveau,
@@ -303,8 +303,8 @@ WITH deleted AS (
         CURRENT_TIMESTAMP AS date_nettoyage,
         OLD.date_expiration - OLD.date_creation AS duree_vie
 )
-INSERT INTO sessions_archives
-SELECT * FROM deleted;
+INSERT INTO sessions_archives  
+SELECT * FROM deleted;  
 ```
 
 ---
@@ -431,8 +431,8 @@ SELECT
     ancien_salaire,
     nouveau_salaire,
     ROUND(variation_ratio * 100, 2) AS variation_pct
-FROM updated
-WHERE variation_ratio > 0.20;  -- Plus de 20% de variation
+FROM updated  
+WHERE variation_ratio > 0.20;  -- Plus de 20% de variation  
 ```
 
 ---
@@ -495,8 +495,8 @@ SELECT
     ancien_salaire,
     nouveau_salaire,
     ratio
-FROM updated
-WHERE ratio > 0.50;
+FROM updated  
+WHERE ratio > 0.50;  
 
 -- Si des lignes sont retournées, l'augmentation est trop importante
 -- → ROLLBACK
@@ -546,8 +546,8 @@ SELECT
     c.salaire AS ancien_salaire,  -- Depuis le SELECT initial
     u.salaire AS nouveau_salaire,
     u.salaire - c.salaire AS difference
-FROM updated u
-JOIN current_values c ON u.id = c.id;
+FROM updated u  
+JOIN current_values c ON u.id = c.id;  
 ```
 
 **Problèmes** :
@@ -559,14 +559,14 @@ JOIN current_values c ON u.id = c.id;
 
 ```sql
 -- Code simple et direct
-UPDATE employes
-SET salaire = CASE
+UPDATE employes  
+SET salaire = CASE  
     WHEN salaire < 40000 THEN salaire * 1.20
     WHEN salaire < 50000 THEN salaire * 1.15
     ELSE salaire * 1.10
-END
-WHERE departement_id = 5
-RETURNING
+END  
+WHERE departement_id = 5  
+RETURNING  
     id,
     nom,
     OLD.salaire AS ancien_salaire,
@@ -575,9 +575,9 @@ RETURNING
 ```
 
 **Avantages** :
-- ✅ Simple et lisible
-- ✅ Atomique
-- ✅ Pas de JOIN nécessaire
+- ✅ Simple et lisible  
+- ✅ Atomique  
+- ✅ Pas de JOIN nécessaire  
 - ✅ Valeurs garanties cohérentes
 
 ---
@@ -589,9 +589,9 @@ PostgreSQL 18 introduit également la commande `MERGE`, et OLD/NEW sont disponib
 ### Syntaxe MERGE avec OLD et NEW
 
 ```sql
-MERGE INTO employes t
-USING employes_import s ON t.email = s.email
-WHEN MATCHED THEN
+MERGE INTO employes t  
+USING employes_import s ON t.email = s.email  
+WHEN MATCHED THEN  
     UPDATE SET
         salaire = s.salaire,
         poste = s.poste
@@ -627,10 +627,10 @@ Vous pouvez distinguer les INSERT des UPDATE grâce à `OLD.id IS NULL` !
 ### Calculs de différences
 
 ```sql
-UPDATE stocks
-SET quantite = quantite - ventes_du_jour
-WHERE date_vente = CURRENT_DATE
-RETURNING
+UPDATE stocks  
+SET quantite = quantite - ventes_du_jour  
+WHERE date_vente = CURRENT_DATE  
+RETURNING  
     produit_id,
     OLD.quantite AS stock_avant,
     NEW.quantite AS stock_apres,
@@ -645,10 +645,10 @@ RETURNING
 ### Calculs de ratios et pourcentages
 
 ```sql
-UPDATE metriques
-SET valeur = nouvelle_valeur_calculee
-WHERE date_mesure = CURRENT_DATE
-RETURNING
+UPDATE metriques  
+SET valeur = nouvelle_valeur_calculee  
+WHERE date_mesure = CURRENT_DATE  
+RETURNING  
     metrique_id,
     OLD.valeur AS valeur_precedente,
     NEW.valeur AS valeur_actuelle,
@@ -663,13 +663,13 @@ RETURNING
 ### Concaténations et transformations
 
 ```sql
-UPDATE employes
-SET
+UPDATE employes  
+SET  
     nom = UPPER(nom),
     prenom = INITCAP(prenom),
     email = LOWER(email)
-WHERE departement_id = 5
-RETURNING
+WHERE departement_id = 5  
+RETURNING  
     id,
     OLD.nom || ' -> ' || NEW.nom AS transformation_nom,
     OLD.prenom || ' -> ' || NEW.prenom AS transformation_prenom,
@@ -703,8 +703,8 @@ L'utilisation de OLD et NEW dans RETURNING a un impact minimal sur les performan
 
 PostgreSQL 18 optimise l'accès aux valeurs OLD et NEW :
 
-1. **Pas de copie supplémentaire** : Les valeurs OLD et NEW sont déjà présentes en mémoire pendant l'opération
-2. **Accès direct** : Pas de requête supplémentaire nécessaire
+1. **Pas de copie supplémentaire** : Les valeurs OLD et NEW sont déjà présentes en mémoire pendant l'opération  
+2. **Accès direct** : Pas de requête supplémentaire nécessaire  
 3. **MVCC friendly** : Compatible avec le système MVCC de PostgreSQL
 
 ### Recommandations
@@ -721,13 +721,13 @@ PostgreSQL 18 optimise l'accès aux valeurs OLD et NEW :
 
 ```sql
 -- ✅ Bon pour quelques milliers de lignes
-UPDATE employes
-SET salaire = salaire * 1.10
-RETURNING OLD.salaire, NEW.salaire;
+UPDATE employes  
+SET salaire = salaire * 1.10  
+RETURNING OLD.salaire, NEW.salaire;  
 
 -- ⚠️ Pour des millions de lignes, préférez par lots
-DO $$
-DECLARE
+DO $$  
+DECLARE  
     batch_size INTEGER := 10000;
 BEGIN
     LOOP
@@ -760,36 +760,36 @@ END $$;
 
 ```sql
 -- ❌ Erreur : OLD n'existe pas pour INSERT
-INSERT INTO employes (nom, prenom)
-VALUES ('Nouveau', 'Jean')
-RETURNING OLD.id, NEW.id;
+INSERT INTO employes (nom, prenom)  
+VALUES ('Nouveau', 'Jean')  
+RETURNING OLD.id, NEW.id;  
 -- ERROR: column "old" does not exist
 ```
 
 **Solution** : Utilisez simplement les noms de colonnes ou NEW :
 ```sql
 -- ✅ Correct
-INSERT INTO employes (nom, prenom)
-VALUES ('Nouveau', 'Jean')
-RETURNING id, nom, prenom;  -- ou NEW.id, NEW.nom, NEW.prenom
+INSERT INTO employes (nom, prenom)  
+VALUES ('Nouveau', 'Jean')  
+RETURNING id, nom, prenom;  -- ou NEW.id, NEW.nom, NEW.prenom  
 ```
 
 #### 2. Pas de NEW avec DELETE
 
 ```sql
 -- ❌ Erreur : NEW n'existe pas pour DELETE
-DELETE FROM employes
-WHERE id = 42
-RETURNING OLD.id, NEW.id;
+DELETE FROM employes  
+WHERE id = 42  
+RETURNING OLD.id, NEW.id;  
 -- ERROR: column "new" does not exist
 ```
 
 **Solution** : Utilisez OLD :
 ```sql
 -- ✅ Correct
-DELETE FROM employes
-WHERE id = 42
-RETURNING OLD.id, OLD.nom, OLD.prenom;
+DELETE FROM employes  
+WHERE id = 42  
+RETURNING OLD.id, OLD.nom, OLD.prenom;  
 ```
 
 #### 3. Ambiguïté possible
@@ -798,19 +798,19 @@ Si vous ne précisez ni OLD ni NEW, PostgreSQL utilise la valeur NEW par défaut
 
 ```sql
 -- Ces deux requêtes sont équivalentes
-UPDATE employes SET salaire = salaire * 1.10
-RETURNING salaire;  -- Retourne NEW.salaire (nouvelle valeur)
+UPDATE employes SET salaire = salaire * 1.10  
+RETURNING salaire;  -- Retourne NEW.salaire (nouvelle valeur)  
 
-UPDATE employes SET salaire = salaire * 1.10
-RETURNING NEW.salaire;  -- Explicite : nouvelle valeur
+UPDATE employes SET salaire = salaire * 1.10  
+RETURNING NEW.salaire;  -- Explicite : nouvelle valeur  
 ```
 
 **Recommandation** : Soyez explicite pour la clarté du code :
 
 ```sql
 -- ✅ Clair et sans ambiguïté
-UPDATE employes SET salaire = salaire * 1.10
-RETURNING
+UPDATE employes SET salaire = salaire * 1.10  
+RETURNING  
     OLD.salaire AS ancien_salaire,
     NEW.salaire AS nouveau_salaire;
 ```
@@ -927,28 +927,28 @@ FROM sync;
 
 ```sql
 -- UPDATE avec OLD et NEW
-UPDATE table
-SET colonne = nouvelle_valeur
-WHERE condition
-RETURNING
+UPDATE table  
+SET colonne = nouvelle_valeur  
+WHERE condition  
+RETURNING  
     OLD.colonne AS ancienne_valeur,
     NEW.colonne AS nouvelle_valeur,
     NEW.colonne - OLD.colonne AS difference;
 
 -- DELETE avec OLD
-DELETE FROM table
-WHERE condition
-RETURNING
+DELETE FROM table  
+WHERE condition  
+RETURNING  
     OLD.id,
     OLD.colonne1,
     OLD.colonne2;
 
 -- MERGE avec OLD et NEW
-MERGE INTO target t
-USING source s ON t.id = s.id
-WHEN MATCHED THEN UPDATE SET ...
-WHEN NOT MATCHED THEN INSERT ...
-RETURNING
+MERGE INTO target t  
+USING source s ON t.id = s.id  
+WHEN MATCHED THEN UPDATE SET ...  
+WHEN NOT MATCHED THEN INSERT ...  
+RETURNING  
     CASE WHEN OLD.id IS NULL THEN 'INSERT' ELSE 'UPDATE' END AS action,
     OLD.colonne AS ancienne_valeur,
     NEW.colonne AS nouvelle_valeur;
@@ -971,18 +971,18 @@ RETURNING
 
 Le support de OLD et NEW dans les clauses RETURNING est l'une des améliorations les plus significatives de PostgreSQL 18. Cette fonctionnalité :
 
-1. **Simplifie radicalement** de nombreux patterns courants (audit, historique, validation)
-2. **Améliore les performances** en éliminant les requêtes supplémentaires
-3. **Renforce la robustesse** en garantissant l'atomicité des opérations
+1. **Simplifie radicalement** de nombreux patterns courants (audit, historique, validation)  
+2. **Améliore les performances** en éliminant les requêtes supplémentaires  
+3. **Renforce la robustesse** en garantissant l'atomicité des opérations  
 4. **Enrichit le langage SQL** avec des capacités proches des triggers, mais plus simples
 
 **Points clés à retenir** :
 
-- ✅ OLD = valeurs avant modification
-- ✅ NEW = valeurs après modification
-- ✅ UPDATE : OLD et NEW disponibles
-- ✅ DELETE : seulement OLD
-- ✅ INSERT : seulement NEW (ou nom de colonne simple)
+- ✅ OLD = valeurs avant modification  
+- ✅ NEW = valeurs après modification  
+- ✅ UPDATE : OLD et NEW disponibles  
+- ✅ DELETE : seulement OLD  
+- ✅ INSERT : seulement NEW (ou nom de colonne simple)  
 - ✅ MERGE : OLD et NEW pour distinguer les opérations
 
 Cette fonctionnalité place PostgreSQL encore plus en avant comme base de données offrant les outils les plus avancés et élégants pour la manipulation de données.

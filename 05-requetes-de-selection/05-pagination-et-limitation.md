@@ -10,7 +10,7 @@ Lorsque vous interrogez une base de données, vous ne voulez pas toujours récup
 - Inutilisable pour l'utilisateur (impossible de tout parcourir)
 
 C'est là qu'interviennent **LIMIT** et **OFFSET**, deux clauses SQL qui permettent de :
-- **Limiter** le nombre de résultats retournés
+- **Limiter** le nombre de résultats retournés  
 - **Paginer** les résultats (afficher page par page)
 - Améliorer les performances en ne chargeant que ce qui est nécessaire
 
@@ -23,11 +23,11 @@ Dans ce chapitre, nous allons explorer en profondeur ces clauses, comprendre leu
 ### Syntaxe de base
 
 ```sql
-SELECT colonnes
-FROM table
-WHERE conditions
-ORDER BY colonne
-LIMIT nombre_lignes;
+SELECT colonnes  
+FROM table  
+WHERE conditions  
+ORDER BY colonne  
+LIMIT nombre_lignes;  
 ```
 
 **LIMIT** restreint le nombre de lignes retournées à `nombre_lignes`.
@@ -36,32 +36,32 @@ LIMIT nombre_lignes;
 
 ```sql
 -- Retourner uniquement les 10 premières lignes
-SELECT nom, prenom
-FROM clients
-LIMIT 10;
+SELECT nom, prenom  
+FROM clients  
+LIMIT 10;  
 
 -- Top 5 des produits les plus chers
-SELECT nom_produit, prix
-FROM produits
-ORDER BY prix DESC
-LIMIT 5;
+SELECT nom_produit, prix  
+FROM produits  
+ORDER BY prix DESC  
+LIMIT 5;  
 
 -- Les 3 employés les mieux payés
-SELECT nom, salaire
-FROM employes
-ORDER BY salaire DESC
-LIMIT 3;
+SELECT nom, salaire  
+FROM employes  
+ORDER BY salaire DESC  
+LIMIT 3;  
 ```
 
 **Résultat avec LIMIT 5 :**
 ```
 nom_produit          | prix
 ---------------------|-------
-MacBook Pro M3       | 2499
-iPhone 15 Pro Max    | 1299
-iPad Pro 13"         | 1199
-Apple Watch Ultra    | 899
-AirPods Max          | 599
+MacBook Pro M3       | 2499  
+iPhone 15 Pro Max    | 1299  
+iPad Pro 13"         | 1199  
+Apple Watch Ultra    | 899  
+AirPods Max          | 599  
 -- Les autres produits ne sont pas retournés
 ```
 
@@ -74,9 +74,9 @@ AirPods Max          | 599
 SELECT nom FROM clients LIMIT 10;
 
 -- ✅ Ordre déterministe
-SELECT nom FROM clients
-ORDER BY nom ASC
-LIMIT 10;
+SELECT nom FROM clients  
+ORDER BY nom ASC  
+LIMIT 10;  
 ```
 
 **Pourquoi c'est important ?**
@@ -86,28 +86,47 @@ LIMIT 10;
 
 **Règle d'or :** Utilisez **toujours** `ORDER BY` avec `LIMIT` pour des résultats prévisibles.
 
+### Syntaxe standard SQL : FETCH FIRST
+
+`LIMIT` est spécifique à PostgreSQL (et MySQL). Le standard SQL:2008 définit une syntaxe équivalente que PostgreSQL supporte également :
+
+```sql
+-- Syntaxe PostgreSQL (LIMIT)
+SELECT nom, salaire FROM employes ORDER BY salaire DESC LIMIT 10;
+
+-- Syntaxe standard SQL:2008 (FETCH FIRST)
+SELECT nom, salaire FROM employes ORDER BY salaire DESC  
+FETCH FIRST 10 ROWS ONLY;  
+
+-- Avec OFFSET (standard SQL:2008)
+SELECT nom, salaire FROM employes ORDER BY salaire DESC  
+OFFSET 20 ROWS FETCH FIRST 10 ROWS ONLY;  
+```
+
+Les deux syntaxes sont équivalentes. `LIMIT` est plus concis et très répandu, `FETCH FIRST` est conforme au standard SQL et portable entre SGBD.
+
 ### Cas d'usage de LIMIT
 
 #### 1. Top N (classements)
 
 ```sql
 -- Top 10 des ventes
-SELECT produit, montant_ventes
-FROM statistiques_ventes
-ORDER BY montant_ventes DESC
-LIMIT 10;
+SELECT produit, montant_ventes  
+FROM statistiques_ventes  
+ORDER BY montant_ventes DESC  
+LIMIT 10;  
 
 -- 5 articles de blog les plus récents
-SELECT titre, date_publication
-FROM articles
-ORDER BY date_publication DESC
-LIMIT 5;
+SELECT titre, date_publication  
+FROM articles  
+ORDER BY date_publication DESC  
+LIMIT 5;  
 
 -- 3 employés les plus anciens
-SELECT nom, date_embauche
-FROM employes
-ORDER BY date_embauche ASC
-LIMIT 3;
+SELECT nom, date_embauche  
+FROM employes  
+ORDER BY date_embauche ASC  
+LIMIT 3;  
 ```
 
 #### 2. Échantillonnage rapide
@@ -124,10 +143,10 @@ SELECT id, nom, email FROM clients LIMIT 100;
 
 ```sql
 -- Vérifier s'il existe au moins un produit en rupture
-SELECT nom_produit
-FROM produits
-WHERE stock = 0
-LIMIT 1;
+SELECT nom_produit  
+FROM produits  
+WHERE stock = 0  
+LIMIT 1;  
 
 -- S'il retourne une ligne, au moins un produit est en rupture
 ```
@@ -153,12 +172,12 @@ SELECT COUNT(*) FROM (
 ### Syntaxe de base
 
 ```sql
-SELECT colonnes
-FROM table
-WHERE conditions
-ORDER BY colonne
-LIMIT nombre_lignes
-OFFSET nombre_lignes_a_sauter;
+SELECT colonnes  
+FROM table  
+WHERE conditions  
+ORDER BY colonne  
+LIMIT nombre_lignes  
+OFFSET nombre_lignes_a_sauter;  
 ```
 
 **OFFSET** indique combien de lignes **ignorer** avant de commencer à retourner des résultats.
@@ -167,37 +186,37 @@ OFFSET nombre_lignes_a_sauter;
 
 ```sql
 -- Sauter les 10 premières lignes, retourner les 5 suivantes
-SELECT nom, prenom
-FROM clients
-ORDER BY nom ASC
-LIMIT 5 OFFSET 10;
+SELECT nom, prenom  
+FROM clients  
+ORDER BY nom ASC  
+LIMIT 5 OFFSET 10;  
 ```
 
 **Visualisation :**
 ```
-Lignes 1-10  : [ignorées par OFFSET 10]
-Lignes 11-15 : [retournées par LIMIT 5]
-Lignes 16+   : [ignorées car LIMIT atteint]
+Lignes 1-10  : [ignorées par OFFSET 10]  
+Lignes 11-15 : [retournées par LIMIT 5]  
+Lignes 16+   : [ignorées car LIMIT atteint]  
 ```
 
 ### Exemples pratiques
 
 ```sql
 -- Ignorer les 20 premières lignes, retourner les 10 suivantes
-SELECT * FROM produits
-ORDER BY nom ASC
-LIMIT 10 OFFSET 20;
+SELECT * FROM produits  
+ORDER BY nom ASC  
+LIMIT 10 OFFSET 20;  
 
 -- Sauter les 100 premières ventes, afficher les 50 suivantes
-SELECT * FROM ventes
-ORDER BY date_vente DESC
-LIMIT 50 OFFSET 100;
+SELECT * FROM ventes  
+ORDER BY date_vente DESC  
+LIMIT 50 OFFSET 100;  
 
 -- Ignorer le podium (top 3), afficher les places 4 à 10
-SELECT nom, score
-FROM classement
-ORDER BY score DESC
-LIMIT 7 OFFSET 3;
+SELECT nom, score  
+FROM classement  
+ORDER BY score DESC  
+LIMIT 7 OFFSET 3;  
 ```
 
 ### Syntaxe alternative (moins courante)
@@ -224,27 +243,27 @@ La **pagination** consiste à diviser un grand ensemble de résultats en plusieu
 
 **Formule générale :**
 ```
-LIMIT  = taille_page (nombre de résultats par page)
-OFFSET = (numero_page - 1) × taille_page
+LIMIT  = taille_page (nombre de résultats par page)  
+OFFSET = (numero_page - 1) × taille_page  
 ```
 
 **Exemple avec 20 résultats par page :**
 
 ```sql
 -- Page 1 (résultats 1-20)
-SELECT * FROM produits
-ORDER BY nom ASC
-LIMIT 20 OFFSET 0;
+SELECT * FROM produits  
+ORDER BY nom ASC  
+LIMIT 20 OFFSET 0;  
 
 -- Page 2 (résultats 21-40)
-SELECT * FROM produits
-ORDER BY nom ASC
-LIMIT 20 OFFSET 20;
+SELECT * FROM produits  
+ORDER BY nom ASC  
+LIMIT 20 OFFSET 20;  
 
 -- Page 3 (résultats 41-60)
-SELECT * FROM produits
-ORDER BY nom ASC
-LIMIT 20 OFFSET 40;
+SELECT * FROM produits  
+ORDER BY nom ASC  
+LIMIT 20 OFFSET 40;  
 
 -- Page N
 -- OFFSET = (N - 1) × 20
@@ -253,15 +272,15 @@ LIMIT 20 OFFSET 40;
 ### Implémentation pratique
 
 Dans une application, vous recevez généralement :
-- `page` : le numéro de page demandé (1, 2, 3, ...)
+- `page` : le numéro de page demandé (1, 2, 3, ...)  
 - `page_size` : le nombre d'éléments par page (10, 20, 50, ...)
 
 **Calcul de OFFSET :**
 
 ```python
 # Python (avec psycopg ou autre driver)
-page = 3          # Page demandée
-page_size = 20    # Résultats par page
+page = 3          # Page demandée  
+page_size = 20    # Résultats par page  
 
 offset = (page - 1) * page_size  # (3 - 1) × 20 = 40
 
@@ -275,9 +294,9 @@ cursor.execute(query, (page_size, offset))
 
 ```javascript
 // JavaScript/Node.js (avec pg)
-const page = 3;
-const pageSize = 20;
-const offset = (page - 1) * pageSize;
+const page = 3;  
+const pageSize = 20;  
+const offset = (page - 1) * pageSize;  
 
 const query = `
     SELECT * FROM produits
@@ -290,9 +309,9 @@ const result = await client.query(query, [pageSize, offset]);
 ```sql
 -- SQL direct pour la page 5 avec 20 résultats par page
 -- Page 5 : OFFSET = (5 - 1) × 20 = 80
-SELECT * FROM produits
-ORDER BY nom ASC
-LIMIT 20 OFFSET 80;
+SELECT * FROM produits  
+ORDER BY nom ASC  
+LIMIT 20 OFFSET 80;  
 ```
 
 ### Informations de pagination complètes
@@ -307,9 +326,9 @@ Pour une pagination complète, vous devez souvent fournir :
 SELECT COUNT(*) as total FROM produits;
 
 -- Requête 2 : Obtenir les résultats de la page
-SELECT * FROM produits
-ORDER BY nom ASC
-LIMIT 20 OFFSET 40;
+SELECT * FROM produits  
+ORDER BY nom ASC  
+LIMIT 20 OFFSET 40;  
 
 -- Calcul côté application :
 -- total_pages = CEIL(total / page_size)
@@ -368,9 +387,9 @@ Vous pouvez **sauter directement** à n'importe quelle page :
 
 ```sql
 -- Aller directement à la page 100
-SELECT * FROM produits
-ORDER BY nom
-LIMIT 20 OFFSET 1980;  -- (100 - 1) × 20
+SELECT * FROM produits  
+ORDER BY nom  
+LIMIT 20 OFFSET 1980;  -- (100 - 1) × 20  
 ```
 
 Idéal pour des interfaces avec :
@@ -423,10 +442,10 @@ SELECT * FROM produits ORDER BY id LIMIT 20 OFFSET 19980;
 
 ```sql
 -- Table avec 1 million de lignes
-EXPLAIN ANALYZE
-SELECT * FROM large_table
-ORDER BY id
-LIMIT 20 OFFSET 999980;
+EXPLAIN ANALYZE  
+SELECT * FROM large_table  
+ORDER BY id  
+LIMIT 20 OFFSET 999980;  
 
 -- Résultat possible :
 -- Execution Time: 2500 ms  (2.5 secondes juste pour ignorer 999980 lignes !)
@@ -435,10 +454,10 @@ LIMIT 20 OFFSET 999980;
 Comparé à :
 
 ```sql
-EXPLAIN ANALYZE
-SELECT * FROM large_table
-ORDER BY id
-LIMIT 20 OFFSET 0;
+EXPLAIN ANALYZE  
+SELECT * FROM large_table  
+ORDER BY id  
+LIMIT 20 OFFSET 0;  
 
 -- Résultat possible :
 -- Execution Time: 5 ms
@@ -466,8 +485,8 @@ Temps (ms)
 ### 2. Problème de cohérence : Données mouvantes
 
 Imaginez ce scénario :
-1. Un utilisateur consulte la page 1 (résultats 1-20)
-2. Pendant qu'il lit, 5 nouvelles lignes sont insérées au début
+1. Un utilisateur consulte la page 1 (résultats 1-20)  
+2. Pendant qu'il lit, 5 nouvelles lignes sont insérées au début  
 3. Il clique sur "Page 2" (résultats 21-40)
 
 **Résultat :** Il voit certains éléments **deux fois** (ceux qui ont "glissé" de la page 1 à la page 2).
@@ -501,8 +520,8 @@ Si votre tri n'est pas **unique** (plusieurs lignes ont la même valeur de tri),
 
 ```sql
 -- Tri par prix uniquement (plusieurs produits à 99€)
-SELECT * FROM produits ORDER BY prix LIMIT 10 OFFSET 0;  -- Page 1
-SELECT * FROM produits ORDER BY prix LIMIT 10 OFFSET 10; -- Page 2
+SELECT * FROM produits ORDER BY prix LIMIT 10 OFFSET 0;  -- Page 1  
+SELECT * FROM produits ORDER BY prix LIMIT 10 OFFSET 10; -- Page 2  
 
 -- L'ordre des produits à 99€ peut différer entre les deux requêtes
 -- Résultat : doublons ou éléments manqués
@@ -512,9 +531,9 @@ SELECT * FROM produits ORDER BY prix LIMIT 10 OFFSET 10; -- Page 2
 
 ```sql
 -- ✅ Tri stable
-SELECT * FROM produits
-ORDER BY prix ASC, id ASC  -- id est unique
-LIMIT 10 OFFSET 10;
+SELECT * FROM produits  
+ORDER BY prix ASC, id ASC  -- id est unique  
+LIMIT 10 OFFSET 10;  
 ```
 
 ### 4. Problème de mémoire : COUNT(*) coûteux
@@ -550,38 +569,38 @@ Au lieu d'utiliser OFFSET, on utilise une **clé** (généralement l'ID ou la co
 
 ```sql
 -- Page 1 : premiers 20 produits
-SELECT * FROM produits
-WHERE id > 0  -- Depuis le début
-ORDER BY id ASC
-LIMIT 20;
+SELECT * FROM produits  
+WHERE id > 0  -- Depuis le début  
+ORDER BY id ASC  
+LIMIT 20;  
 
 -- Résultat : IDs 1 à 20
 -- On retient : last_id = 20
 
 -- Page 2 : 20 produits suivants
-SELECT * FROM produits
-WHERE id > 20  -- Après le dernier ID de la page précédente
-ORDER BY id ASC
-LIMIT 20;
+SELECT * FROM produits  
+WHERE id > 20  -- Après le dernier ID de la page précédente  
+ORDER BY id ASC  
+LIMIT 20;  
 
 -- Résultat : IDs 21 à 40
 -- On retient : last_id = 40
 
 -- Page 3 : 20 produits suivants
-SELECT * FROM produits
-WHERE id > 40
-ORDER BY id ASC
-LIMIT 20;
+SELECT * FROM produits  
+WHERE id > 40  
+ORDER BY id ASC  
+LIMIT 20;  
 ```
 
 **Avantages :**
-- ✅ **Performances constantes** : toujours rapide, même pour les dernières pages
-- ✅ **Pas de problème de données mouvantes** : les insertions n'affectent pas la pagination
+- ✅ **Performances constantes** : toujours rapide, même pour les dernières pages  
+- ✅ **Pas de problème de données mouvantes** : les insertions n'affectent pas la pagination  
 - ✅ **Pas besoin de OFFSET**
 
 **Inconvénients :**
-- ❌ Impossible de sauter directement à une page arbitraire (pas de "page 50")
-- ❌ Uniquement navigation séquentielle (précédent/suivant)
+- ❌ Impossible de sauter directement à une page arbitraire (pas de "page 50")  
+- ❌ Uniquement navigation séquentielle (précédent/suivant)  
 - ❌ Plus complexe à implémenter
 
 **Exemple avec une colonne de tri :**
@@ -589,17 +608,17 @@ LIMIT 20;
 ```sql
 -- Tri par date de création, puis ID
 -- Page 1
-SELECT * FROM articles
-WHERE (date_creation, id) > ('1900-01-01', 0)  -- Depuis le début
-ORDER BY date_creation DESC, id DESC
-LIMIT 20;
+SELECT * FROM articles  
+WHERE (date_creation, id) > ('1900-01-01', 0)  -- Depuis le début  
+ORDER BY date_creation DESC, id DESC  
+LIMIT 20;  
 
 -- Dernière ligne : date_creation='2024-11-15', id=150
 -- Page 2
-SELECT * FROM articles
-WHERE (date_creation, id) < ('2024-11-15', 150)
-ORDER BY date_creation DESC, id DESC
-LIMIT 20;
+SELECT * FROM articles  
+WHERE (date_creation, id) < ('2024-11-15', 150)  
+ORDER BY date_creation DESC, id DESC  
+LIMIT 20;  
 ```
 
 **⚠️ Syntaxe avec tuple comparison :**
@@ -613,8 +632,8 @@ Les **cursors** permettent de "garder une position" côté serveur dans un ensem
 
 ```sql
 -- Déclarer un cursor
-BEGIN;
-DECLARE my_cursor CURSOR FOR
+BEGIN;  
+DECLARE my_cursor CURSOR FOR  
     SELECT * FROM produits ORDER BY id;
 
 -- Récupérer les 20 premières lignes
@@ -627,17 +646,17 @@ FETCH 20 FROM my_cursor;
 FETCH 20 FROM my_cursor;
 
 -- Fermer le cursor
-CLOSE my_cursor;
-COMMIT;
+CLOSE my_cursor;  
+COMMIT;  
 ```
 
 **Avantages :**
-- ✅ Performances constantes
+- ✅ Performances constantes  
 - ✅ État maintenu côté serveur
 
 **Inconvénients :**
-- ❌ Complexe à gérer avec HTTP (stateless)
-- ❌ Nécessite de maintenir une connexion ouverte
+- ❌ Complexe à gérer avec HTTP (stateless)  
+- ❌ Nécessite de maintenir une connexion ouverte  
 - ❌ Pas adapté aux applications web modernes
 
 ### 3. Pagination avec timestamp
@@ -646,18 +665,18 @@ Pour des flux chronologiques (fils d'actualité, logs, etc.) :
 
 ```sql
 -- Page 1 : les 20 derniers messages
-SELECT * FROM messages
-WHERE timestamp < NOW()
-ORDER BY timestamp DESC
-LIMIT 20;
+SELECT * FROM messages  
+WHERE timestamp < NOW()  
+ORDER BY timestamp DESC  
+LIMIT 20;  
 
 -- Dernier message : timestamp = '2024-11-19 10:30:00'
 
 -- Page 2 : les 20 messages précédents
-SELECT * FROM messages
-WHERE timestamp < '2024-11-19 10:30:00'
-ORDER BY timestamp DESC
-LIMIT 20;
+SELECT * FROM messages  
+WHERE timestamp < '2024-11-19 10:30:00'  
+ORDER BY timestamp DESC  
+LIMIT 20;  
 ```
 
 **Idéal pour :**
@@ -681,8 +700,8 @@ SELECT * FROM produits WHERE id > 100 ORDER BY id LIMIT 50;
 ```
 
 **Avantages :**
-- ✅ Expérience utilisateur fluide
-- ✅ Pas besoin de compter le total
+- ✅ Expérience utilisateur fluide  
+- ✅ Pas besoin de compter le total  
 - ✅ Peut utiliser keyset pagination (performant)
 
 ---
@@ -716,9 +735,9 @@ SELECT * FROM produits ORDER BY prix ASC, id ASC LIMIT 20 OFFSET 20;
 CREATE INDEX idx_produits_prix_id ON produits(prix, id);
 
 -- La requête suivante sera beaucoup plus rapide
-SELECT * FROM produits
-ORDER BY prix ASC, id ASC
-LIMIT 20 OFFSET 1000;
+SELECT * FROM produits  
+ORDER BY prix ASC, id ASC  
+LIMIT 20 OFFSET 1000;  
 ```
 
 ### 4. Limiter la valeur maximale d'OFFSET
@@ -727,8 +746,8 @@ Pour éviter les abus et les problèmes de performance :
 
 ```sql
 -- Côté application : limiter les pages accessibles
-max_page = 100
-max_offset = (max_page - 1) * page_size
+max_page = 100  
+max_offset = (max_page - 1) * page_size  
 
 if offset > max_offset:
     return error("Page trop élevée, utilisez les filtres de recherche")
@@ -742,10 +761,10 @@ if offset > max_offset:
 SELECT * FROM logs ORDER BY timestamp DESC LIMIT 100 OFFSET 900000;
 
 -- ✅ Rapide avec keyset
-SELECT * FROM logs
-WHERE timestamp < :last_timestamp
-ORDER BY timestamp DESC
-LIMIT 100;
+SELECT * FROM logs  
+WHERE timestamp < :last_timestamp  
+ORDER BY timestamp DESC  
+LIMIT 100;  
 ```
 
 ### 6. Cacher le nombre total de pages si coûteux
@@ -753,9 +772,9 @@ LIMIT 100;
 ```sql
 -- Au lieu de calculer COUNT(*) à chaque fois
 -- Utilisez une estimation
-SELECT reltuples::BIGINT as estimate
-FROM pg_class
-WHERE relname = 'produits';
+SELECT reltuples::BIGINT as estimate  
+FROM pg_class  
+WHERE relname = 'produits';  
 
 -- Ou ne montrez pas le total
 -- Interface : [Précédent] [Suivant] au lieu de "Page 5 sur 1000"
@@ -889,10 +908,10 @@ SELECT * FROM get_products_after(40, 20);
 
 ```sql
 -- Navigation par page (1, 2, 3, ..., 50)
-SELECT * FROM produits
-WHERE categorie = 'electronique'
-ORDER BY prix ASC, id ASC
-LIMIT 20 OFFSET :offset;
+SELECT * FROM produits  
+WHERE categorie = 'electronique'  
+ORDER BY prix ASC, id ASC  
+LIMIT 20 OFFSET :offset;  
 
 -- Avec index approprié
 CREATE INDEX idx_produits_cat_prix ON produits(categorie, prix, id);
@@ -904,10 +923,10 @@ CREATE INDEX idx_produits_cat_prix ON produits(categorie, prix, id);
 
 ```sql
 -- Charger les nouveaux posts
-SELECT * FROM posts
-WHERE timestamp < :last_seen_timestamp
-ORDER BY timestamp DESC
-LIMIT 50;
+SELECT * FROM posts  
+WHERE timestamp < :last_seen_timestamp  
+ORDER BY timestamp DESC  
+LIMIT 50;  
 ```
 
 ### 3. Tableau de bord analytique
@@ -916,11 +935,11 @@ LIMIT 50;
 
 ```sql
 -- Top 20 des vendeurs
-SELECT vendeur, SUM(montant) as total
-FROM ventes
-GROUP BY vendeur
-ORDER BY total DESC
-LIMIT 20;
+SELECT vendeur, SUM(montant) as total  
+FROM ventes  
+GROUP BY vendeur  
+ORDER BY total DESC  
+LIMIT 20;  
 
 -- Pas besoin de pagination, c'est un classement fixe
 ```
@@ -973,7 +992,7 @@ COPY (
    - Doublons/omissions si données mouvantes
    - COUNT(*) coûteux sur grandes tables
 
-5. **Keyset pagination : alternative performante**
+5. **Keyset pagination : alternative performante**  
    - `WHERE id > last_id` au lieu de OFFSET
    - Performance constante
    - Uniquement navigation séquentielle

@@ -7,9 +7,9 @@
 Après avoir appris à **créer** des structures de données (tables, colonnes, contraintes) avec le DDL (Data Definition Language), il est temps d'apprendre à **manipuler** les données elles-mêmes. C'est le rôle du **DML** : Data Manipulation Language.
 
 Le DML regroupe l'ensemble des commandes SQL qui permettent de :
-- **Insérer** de nouvelles données dans les tables
-- **Modifier** des données existantes
-- **Supprimer** des données
+- **Insérer** de nouvelles données dans les tables  
+- **Modifier** des données existantes  
+- **Supprimer** des données  
 - **Interroger** les données (bien que SELECT soit parfois classé dans le DQL - Data Query Language)
 
 Ces opérations constituent le cœur de l'utilisation quotidienne d'une base de données. Comprendre le DML est essentiel pour tout développeur ou administrateur de bases de données.
@@ -39,10 +39,10 @@ Le DML comprend quatre commandes principales, souvent appelées **CRUD** dans le
 
 Imaginez une base de données comme un classeur de fiches :
 
-- **DDL (CREATE TABLE)** : Créer un nouveau classeur avec des intercalaires et des colonnes prédéfinies
-- **DML INSERT** : Ajouter de nouvelles fiches dans le classeur
-- **DML SELECT** : Consulter les fiches pour lire les informations
-- **DML UPDATE** : Corriger ou mettre à jour une fiche existante
+- **DDL (CREATE TABLE)** : Créer un nouveau classeur avec des intercalaires et des colonnes prédéfinies  
+- **DML INSERT** : Ajouter de nouvelles fiches dans le classeur  
+- **DML SELECT** : Consulter les fiches pour lire les informations  
+- **DML UPDATE** : Corriger ou mettre à jour une fiche existante  
 - **DML DELETE** : Retirer une fiche du classeur
 
 ---
@@ -127,18 +127,18 @@ Une **transaction** est un groupe d'opérations qui doivent toutes réussir ou t
 ```sql
 BEGIN;  -- Début de la transaction
 
-INSERT INTO comptes (nom, solde) VALUES ('Alice', 1000);
-UPDATE comptes SET solde = solde - 100 WHERE nom = 'Alice';
-INSERT INTO operations (compte, montant) VALUES ('Alice', -100);
+INSERT INTO comptes (nom, solde) VALUES ('Alice', 1000);  
+UPDATE comptes SET solde = solde - 100 WHERE nom = 'Alice';  
+INSERT INTO operations (compte, montant) VALUES ('Alice', -100);  
 
 COMMIT;  -- Valider toutes les opérations
 -- Ou ROLLBACK; pour tout annuler
 ```
 
 **Propriétés ACID** :
-- **A**tomicité : Tout ou rien
-- **C**ohérence : Respect des contraintes
-- **I**solation : Les transactions ne s'interfèrent pas
+- **A**tomicité : Tout ou rien  
+- **C**ohérence : Respect des contraintes  
+- **I**solation : Les transactions ne s'interfèrent pas  
 - **D**urabilité : Les données committées sont permanentes
 
 ### 2. Les contraintes d'intégrité
@@ -221,18 +221,18 @@ PostgreSQL offre des fonctionnalités avancées qui distinguent sa gestion du DM
 
 ```sql
 -- Récupérer l'ID généré
-INSERT INTO utilisateurs (nom, email)
-VALUES ('Alice', 'alice@example.com')
-RETURNING id, nom, email;
+INSERT INTO utilisateurs (nom, email)  
+VALUES ('Alice', 'alice@example.com')  
+RETURNING id, nom, email;  
 
 -- Voir les valeurs modifiées
-UPDATE produits SET prix = prix * 1.1
-WHERE categorie = 'Premium'
-RETURNING id, nom, prix;
+UPDATE produits SET prix = prix * 1.1  
+WHERE categorie = 'Premium'  
+RETURNING id, nom, prix;  
 
 -- Archiver en supprimant
-DELETE FROM sessions WHERE date_expiration < NOW()
-RETURNING user_id, date_creation;
+DELETE FROM sessions WHERE date_expiration < NOW()  
+RETURNING user_id, date_creation;  
 ```
 
 Cette fonctionnalité sera détaillée dans la section 6.4.
@@ -242,17 +242,17 @@ Cette fonctionnalité sera détaillée dans la section 6.4.
 PostgreSQL permet d'insérer une ligne, et si elle existe déjà (conflit), de la mettre à jour ou l'ignorer :
 
 ```sql
-INSERT INTO statistiques (page, vues)
-VALUES ('accueil', 1)
-ON CONFLICT (page)
-DO UPDATE SET vues = statistiques.vues + 1;
+INSERT INTO statistiques (page, vues)  
+VALUES ('accueil', 1)  
+ON CONFLICT (page)  
+DO UPDATE SET vues = statistiques.vues + 1;  
 ```
 
 Une seule commande remplace :
 ```sql
 -- Traditionnel (2+ requêtes)
-SELECT ... FROM statistiques WHERE page = 'accueil';
-IF found THEN
+SELECT ... FROM statistiques WHERE page = 'accueil';  
+IF found THEN  
     UPDATE ...
 ELSE
     INSERT ...
@@ -277,12 +277,12 @@ Détaillé dans les sections 6.1 et 6.2.
 Synchronisation de tables avec INSERT, UPDATE et DELETE combinés :
 
 ```sql
-MERGE INTO produits_cible AS target
-USING produits_source AS source
-ON target.sku = source.sku
-WHEN MATCHED THEN UPDATE SET ...
-WHEN NOT MATCHED THEN INSERT ...
-WHEN NOT MATCHED BY SOURCE THEN DELETE;
+MERGE INTO produits_cible AS target  
+USING produits_source AS source  
+ON target.sku = source.sku  
+WHEN MATCHED THEN UPDATE SET ...  
+WHEN NOT MATCHED THEN INSERT ...  
+WHEN NOT MATCHED BY SOURCE THEN DELETE;  
 ```
 
 Nous l'explorerons dans la section 6.8.
@@ -292,10 +292,10 @@ Nous l'explorerons dans la section 6.8.
 Nouveauté majeure de PostgreSQL 18 :
 
 ```sql
-UPDATE employes
-SET salaire = salaire * 1.10
-WHERE departement = 'IT'
-RETURNING
+UPDATE employes  
+SET salaire = salaire * 1.10  
+WHERE departement = 'IT'  
+RETURNING  
     id,
     OLD.salaire AS ancien_salaire,
     NEW.salaire AS nouveau_salaire,
@@ -363,9 +363,9 @@ Avant de commencer, voici quelques règles d'or à toujours garder en tête.
 UPDATE clients SET statut = 'inactif' WHERE derniere_visite < '2024-01-01';
 
 -- ✅ Sécurisé : Vérifier d'abord
-SELECT id, nom, derniere_visite
-FROM clients
-WHERE derniere_visite < '2024-01-01';
+SELECT id, nom, derniere_visite  
+FROM clients  
+WHERE derniere_visite < '2024-01-01';  
 -- Vérifier les résultats, puis UPDATE
 ```
 
@@ -375,9 +375,9 @@ WHERE derniere_visite < '2024-01-01';
 BEGIN;
 
 -- Opérations DML
-UPDATE comptes SET solde = solde - 100 WHERE id = 1;
-UPDATE comptes SET solde = solde + 100 WHERE id = 2;
-INSERT INTO operations (type, montant) VALUES ('transfert', 100);
+UPDATE comptes SET solde = solde - 100 WHERE id = 1;  
+UPDATE comptes SET solde = solde + 100 WHERE id = 2;  
+INSERT INTO operations (type, montant) VALUES ('transfert', 100);  
 
 -- Vérifier que tout est OK
 SELECT * FROM comptes WHERE id IN (1, 2);
@@ -395,16 +395,16 @@ FOR i IN 1..1000 LOOP
 END LOOP;
 
 -- ✅ Rapide : 1 requête
-INSERT INTO logs (message)
-SELECT 'Log ' || generate_series(1, 1000);
+INSERT INTO logs (message)  
+SELECT 'Log ' || generate_series(1, 1000);  
 ```
 
 ### 4. Faire attention aux verrous
 
 ```sql
 -- ⚠️ Peut bloquer d'autres transactions
-BEGIN;
-UPDATE produits SET prix = prix * 1.1;  -- Verrouille toute la table
+BEGIN;  
+UPDATE produits SET prix = prix * 1.1;  -- Verrouille toute la table  
 -- ... longue opération ...
 COMMIT;
 
@@ -425,11 +425,11 @@ UPDATE employes SET departement_id = 5;
 -- MAINTENANCE 2025-11-19 : Réorganisation départements
 -- Responsable : Jean Dupont
 -- Ticket : JIRA-1234
-BEGIN;
-UPDATE employes SET departement_id = 5 WHERE departement_id = 3;
+BEGIN;  
+UPDATE employes SET departement_id = 5 WHERE departement_id = 3;  
 -- Vérification
-SELECT COUNT(*) FROM employes WHERE departement_id = 5;
-COMMIT;
+SELECT COUNT(*) FROM employes WHERE departement_id = 5;  
+COMMIT;  
 ```
 
 ---
@@ -438,15 +438,15 @@ COMMIT;
 
 Avant toute opération DML en production, vérifiez :
 
-- [ ] **Ai-je testé sur un environnement de développement/staging ?**
-- [ ] **Ai-je vérifié avec SELECT ce qui sera affecté ?**
-- [ ] **Ma clause WHERE est-elle correcte ?**
-- [ ] **Suis-je dans une transaction (BEGIN) si nécessaire ?**
-- [ ] **Ai-je une sauvegarde récente ?**
-- [ ] **Les contraintes d'intégrité seront-elles respectées ?**
-- [ ] **L'impact sur les performances est-il acceptable ?**
-- [ ] **Les autres utilisateurs/applications sont-ils informés ?**
-- [ ] **Ai-je un plan de rollback en cas de problème ?**
+- [ ] **Ai-je testé sur un environnement de développement/staging ?**  
+- [ ] **Ai-je vérifié avec SELECT ce qui sera affecté ?**  
+- [ ] **Ma clause WHERE est-elle correcte ?**  
+- [ ] **Suis-je dans une transaction (BEGIN) si nécessaire ?**  
+- [ ] **Ai-je une sauvegarde récente ?**  
+- [ ] **Les contraintes d'intégrité seront-elles respectées ?**  
+- [ ] **L'impact sur les performances est-il acceptable ?**  
+- [ ] **Les autres utilisateurs/applications sont-ils informés ?**  
+- [ ] **Ai-je un plan de rollback en cas de problème ?**  
 - [ ] **L'opération est-elle documentée (qui, quand, pourquoi) ?**
 
 ---
@@ -509,16 +509,16 @@ Si vous venez d'un autre système de gestion de bases de données, voici les pri
 
 À la fin de ce chapitre, vous serez capable de :
 
-- ✅ **Insérer** des données efficacement (simple, multiple, massif)
-- ✅ **Modifier** des données en toute sécurité avec UPDATE
-- ✅ **Supprimer** des données de manière contrôlée
-- ✅ **Utiliser RETURNING** pour récupérer les valeurs modifiées
-- ✅ **Comparer** les valeurs OLD et NEW (PostgreSQL 18)
-- ✅ **Choisir** entre DELETE et TRUNCATE selon le contexte
-- ✅ **Maîtriser UPSERT** avec ON CONFLICT
-- ✅ **Synchroniser** des tables avec MERGE
-- ✅ **Optimiser** les performances des opérations DML
-- ✅ **Éviter** les erreurs courantes et dangereuses
+- ✅ **Insérer** des données efficacement (simple, multiple, massif)  
+- ✅ **Modifier** des données en toute sécurité avec UPDATE  
+- ✅ **Supprimer** des données de manière contrôlée  
+- ✅ **Utiliser RETURNING** pour récupérer les valeurs modifiées  
+- ✅ **Comparer** les valeurs OLD et NEW (PostgreSQL 18)  
+- ✅ **Choisir** entre DELETE et TRUNCATE selon le contexte  
+- ✅ **Maîtriser UPSERT** avec ON CONFLICT  
+- ✅ **Synchroniser** des tables avec MERGE  
+- ✅ **Optimiser** les performances des opérations DML  
+- ✅ **Éviter** les erreurs courantes et dangereuses  
 - ✅ **Gérer** les transactions pour garantir l'intégrité
 
 ---
@@ -576,9 +576,9 @@ SELECT * FROM exemple;
 
 Avant de commencer ce chapitre, vous devriez :
 
-1. **Connaître les bases du SQL** : SELECT simple, types de données basiques
-2. **Avoir créé des tables** : Comprendre CREATE TABLE
-3. **Comprendre les contraintes** : PRIMARY KEY, UNIQUE, NOT NULL
+1. **Connaître les bases du SQL** : SELECT simple, types de données basiques  
+2. **Avoir créé des tables** : Comprendre CREATE TABLE  
+3. **Comprendre les contraintes** : PRIMARY KEY, UNIQUE, NOT NULL  
 4. **Avoir accès à PostgreSQL** : Version 13+ recommandée, 18 pour les dernières fonctionnalités
 
 Si vous n'êtes pas à l'aise avec ces prérequis, nous vous recommandons de réviser les chapitres précédents.
@@ -616,14 +616,14 @@ Chaque section s'appuie sur les connaissances des sections précédentes.
 Pour approfondir vos connaissances :
 
 **Documentation officielle PostgreSQL** :
-- [INSERT](https://www.postgresql.org/docs/current/sql-insert.html)
-- [UPDATE](https://www.postgresql.org/docs/current/sql-update.html)
-- [DELETE](https://www.postgresql.org/docs/current/sql-delete.html)
+- [INSERT](https://www.postgresql.org/docs/current/sql-insert.html)  
+- [UPDATE](https://www.postgresql.org/docs/current/sql-update.html)  
+- [DELETE](https://www.postgresql.org/docs/current/sql-delete.html)  
 - [MERGE](https://www.postgresql.org/docs/current/sql-merge.html)
 
 **Outils utiles** :
-- **psql** : Interface en ligne de commande
-- **pgAdmin** : Interface graphique
+- **psql** : Interface en ligne de commande  
+- **pgAdmin** : Interface graphique  
 - **DBeaver** : Client SQL universel
 
 ---
@@ -632,9 +632,9 @@ Pour approfondir vos connaissances :
 
 Le DML est le cœur battant de toute application utilisant une base de données. Maîtriser ces commandes est essentiel pour :
 
-- **Développer** des applications robustes et performantes
-- **Maintenir** l'intégrité des données
-- **Optimiser** les performances
+- **Développer** des applications robustes et performantes  
+- **Maintenir** l'intégrité des données  
+- **Optimiser** les performances  
 - **Éviter** les erreurs catastrophiques
 
 PostgreSQL offre des fonctionnalités DML parmi les plus avancées du marché, avec des innovations continues (comme OLD/NEW dans PostgreSQL 18). Ce chapitre vous donnera toutes les clés pour les maîtriser.

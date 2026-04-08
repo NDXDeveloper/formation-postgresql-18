@@ -27,10 +27,10 @@ Vous pourriez vous demander : "Pourquoi apprendre la théorie alors que je veux 
 Un **ensemble** est une collection d'éléments distincts, sans ordre ni duplication.
 
 ```
-Exemples d'ensembles :
-A = {1, 2, 3}
-B = {2, 3, 4, 5}
-C = {Alice, Bob, Charlie}
+Exemples d'ensembles :  
+A = {1, 2, 3}  
+B = {2, 3, 4, 5}  
+C = {Alice, Bob, Charlie}  
 ```
 
 ### Opérations de Base sur les Ensembles
@@ -40,17 +40,17 @@ C = {Alice, Bob, Charlie}
 L'**union** de deux ensembles contient tous les éléments présents dans **l'un OU l'autre** (ou les deux).
 
 ```
-A = {1, 2, 3}
-B = {3, 4, 5}
-A ∪ B = {1, 2, 3, 4, 5}
+A = {1, 2, 3}  
+B = {3, 4, 5}  
+A ∪ B = {1, 2, 3, 4, 5}  
 ```
 
 **En SQL** : Opérateur `UNION`
 
 ```sql
-SELECT id FROM table_a
-UNION
-SELECT id FROM table_b;
+SELECT id FROM table_a  
+UNION  
+SELECT id FROM table_b;  
 ```
 
 #### b) Intersection (∩)
@@ -58,17 +58,17 @@ SELECT id FROM table_b;
 L'**intersection** de deux ensembles contient les éléments présents dans **les deux** ensembles.
 
 ```
-A = {1, 2, 3}
-B = {3, 4, 5}
-A ∩ B = {3}
+A = {1, 2, 3}  
+B = {3, 4, 5}  
+A ∩ B = {3}  
 ```
 
 **En SQL** : Opérateur `INTERSECT`
 
 ```sql
-SELECT id FROM table_a
-INTERSECT
-SELECT id FROM table_b;
+SELECT id FROM table_a  
+INTERSECT  
+SELECT id FROM table_b;  
 ```
 
 #### c) Différence (−)
@@ -76,18 +76,18 @@ SELECT id FROM table_b;
 La **différence** A − B contient les éléments de A qui **ne sont pas** dans B.
 
 ```
-A = {1, 2, 3}
-B = {3, 4, 5}
-A − B = {1, 2}
-B − A = {4, 5}
+A = {1, 2, 3}  
+B = {3, 4, 5}  
+A − B = {1, 2}  
+B − A = {4, 5}  
 ```
 
 **En SQL** : Opérateur `EXCEPT`
 
 ```sql
-SELECT id FROM table_a
-EXCEPT
-SELECT id FROM table_b;
+SELECT id FROM table_a  
+EXCEPT  
+SELECT id FROM table_b;  
 ```
 
 ### Lien avec les Tables Relationnelles
@@ -120,8 +120,8 @@ Le **produit cartésien** de deux ensembles A et B, noté **A × B**, est l'ense
 ### Exemple Simple
 
 ```
-A = {1, 2}
-B = {x, y, z}
+A = {1, 2}  
+B = {x, y, z}  
 
 A × B = {
   (1, x), (1, y), (1, z),
@@ -169,13 +169,13 @@ Le produit cartésien en SQL s'écrit avec `CROSS JOIN` (ou une simple virgule e
 
 ```sql
 -- Syntaxe moderne (recommandée)
-SELECT *
-FROM couleurs
-CROSS JOIN formes;
+SELECT *  
+FROM couleurs  
+CROSS JOIN formes;  
 
 -- Syntaxe ancienne (équivalente)
-SELECT *
-FROM couleurs, formes;
+SELECT *  
+FROM couleurs, formes;  
 ```
 
 **Résultat** : Toutes les combinaisons possibles !
@@ -200,8 +200,8 @@ SELECT
     clients.nom AS client,
     produits.nom AS produit,
     produits.prix
-FROM clients
-CROSS JOIN produits;
+FROM clients  
+CROSS JOIN produits;  
 ```
 
 **Résultat** : 2 clients × 3 produits = **6 lignes**
@@ -220,13 +220,13 @@ CROSS JOIN produits;
 ⚠️ **Attention** : Le produit cartésien peut rapidement exploser en taille !
 
 ```
-Table A : 1 000 lignes
-Table B : 1 000 lignes
-A × B = 1 000 000 lignes !
+Table A : 1 000 lignes  
+Table B : 1 000 lignes  
+A × B = 1 000 000 lignes !  
 
-Table A : 10 000 lignes
-Table B : 10 000 lignes
-A × B = 100 000 000 lignes ! 💥
+Table A : 10 000 lignes  
+Table B : 10 000 lignes  
+A × B = 100 000 000 lignes ! 💥  
 ```
 
 **Conséquence** :
@@ -245,9 +245,9 @@ Le `CROSS JOIN` est rare mais utile dans certains cas :
 SELECT
     tailles.nom AS taille,
     couleurs.nom AS couleur
-FROM tailles
-CROSS JOIN couleurs
-ORDER BY tailles.ordre, couleurs.nom;
+FROM tailles  
+CROSS JOIN couleurs  
+ORDER BY tailles.ordre, couleurs.nom;  
 ```
 
 | taille | couleur |
@@ -267,8 +267,8 @@ ORDER BY tailles.ordre, couleurs.nom;
 SELECT
     magasins.id AS magasin_id,
     dates.jour
-FROM magasins
-CROSS JOIN generate_series(
+FROM magasins  
+CROSS JOIN generate_series(  
     '2025-01-01'::date,
     '2025-01-31'::date,
     '1 day'::interval
@@ -283,9 +283,9 @@ SELECT
     navigateurs.nom AS navigateur,
     os.nom AS systeme,
     resolutions.largeur || 'x' || resolutions.hauteur AS resolution
-FROM navigateurs
-CROSS JOIN systemes_exploitation AS os
-CROSS JOIN resolutions;
+FROM navigateurs  
+CROSS JOIN systemes_exploitation AS os  
+CROSS JOIN resolutions;  
 ```
 
 ### Le Produit Cartésien Accidentel
@@ -294,13 +294,13 @@ L'erreur la plus fréquente avec les débutants : **oublier la condition de join
 
 ```sql
 -- ❌ ERREUR : Produit cartésien accidentel !
-SELECT *
-FROM clients, commandes;
+SELECT *  
+FROM clients, commandes;  
 
 -- ✅ CORRECT : Jointure avec condition
-SELECT *
-FROM clients
-INNER JOIN commandes ON clients.id = commandes.client_id;
+SELECT *  
+FROM clients  
+INNER JOIN commandes ON clients.id = commandes.client_id;  
 ```
 
 **Symptôme** : Vous obtenez beaucoup plus de lignes que prévu !
@@ -344,9 +344,9 @@ Résultat :
 La sélection en algèbre relationnelle correspond à la clause `WHERE` en SQL.
 
 ```sql
-SELECT *
-FROM produits
-WHERE prix < 100;
+SELECT *  
+FROM produits  
+WHERE prix < 100;  
 ```
 
 **Principe** : On part d'une table, et on ne garde que les lignes qui satisfont la condition.
@@ -355,19 +355,19 @@ WHERE prix < 100;
 
 ```sql
 -- ET logique (AND)
-SELECT *
-FROM produits
-WHERE prix < 100 AND stock > 0;
+SELECT *  
+FROM produits  
+WHERE prix < 100 AND stock > 0;  
 
 -- OU logique (OR)
-SELECT *
-FROM produits
-WHERE categorie = 'Électronique' OR categorie = 'Informatique';
+SELECT *  
+FROM produits  
+WHERE categorie = 'Électronique' OR categorie = 'Informatique';  
 
 -- Négation (NOT)
-SELECT *
-FROM produits
-WHERE NOT (prix > 1000);
+SELECT *  
+FROM produits  
+WHERE NOT (prix > 1000);  
 ```
 
 ### Sélection sur une Jointure
@@ -376,18 +376,18 @@ La sélection peut s'appliquer **après** un produit cartésien pour filtrer les
 
 ```sql
 -- Produit cartésien + sélection = JOINTURE
-SELECT *
-FROM clients
-CROSS JOIN commandes
-WHERE clients.id = commandes.client_id;
+SELECT *  
+FROM clients  
+CROSS JOIN commandes  
+WHERE clients.id = commandes.client_id;  
 ```
 
 C'est exactement équivalent à :
 
 ```sql
-SELECT *
-FROM clients
-INNER JOIN commandes ON clients.id = commandes.client_id;
+SELECT *  
+FROM clients  
+INNER JOIN commandes ON clients.id = commandes.client_id;  
 ```
 
 ---
@@ -398,8 +398,8 @@ INNER JOIN commandes ON clients.id = commandes.client_id;
 
 Une jointure classique peut être vue comme :
 
-1. **Produit cartésien** : Générer toutes les combinaisons
-2. **Sélection** : Filtrer selon la condition de jointure
+1. **Produit cartésien** : Générer toutes les combinaisons  
+2. **Sélection** : Filtrer selon la condition de jointure  
 3. **Projection** : Sélectionner les colonnes désirées (optionnel)
 
 ### Exemple Pas à Pas
@@ -422,9 +422,9 @@ Une jointure classique peut être vue comme :
 #### Étape 1 : Produit Cartésien
 
 ```sql
-SELECT *
-FROM clients
-CROSS JOIN commandes;
+SELECT *  
+FROM clients  
+CROSS JOIN commandes;  
 ```
 
 **Résultat intermédiaire** : 2 × 3 = 6 lignes
@@ -443,10 +443,10 @@ CROSS JOIN commandes;
 On applique la condition : `clients.id = commandes.client_id`
 
 ```sql
-SELECT *
-FROM clients
-CROSS JOIN commandes
-WHERE clients.id = commandes.client_id;
+SELECT *  
+FROM clients  
+CROSS JOIN commandes  
+WHERE clients.id = commandes.client_id;  
 ```
 
 **Résultat après sélection** : 3 lignes
@@ -468,9 +468,9 @@ SELECT
     clients.nom,
     commandes.id AS commande_id,
     commandes.montant
-FROM clients
-CROSS JOIN commandes
-WHERE clients.id = commandes.client_id;
+FROM clients  
+CROSS JOIN commandes  
+WHERE clients.id = commandes.client_id;  
 ```
 
 **Résultat final** :
@@ -488,8 +488,8 @@ SELECT
     clients.nom,
     commandes.id AS commande_id,
     commandes.montant
-FROM clients
-INNER JOIN commandes ON clients.id = commandes.client_id;
+FROM clients  
+INNER JOIN commandes ON clients.id = commandes.client_id;  
 ```
 
 **Conclusion** : `INNER JOIN` = Produit cartésien + Sélection (optimisé) !
@@ -531,8 +531,8 @@ Résultat :
 ### En SQL : La Clause SELECT
 
 ```sql
-SELECT nom, prix
-FROM produits;
+SELECT nom, prix  
+FROM produits;  
 ```
 
 **Principe** : On ne garde que les colonnes spécifiées.
@@ -543,12 +543,12 @@ En théorie des ensembles, un ensemble ne peut contenir de doublons. Mais en SQL
 
 ```sql
 -- Peut retourner des doublons
-SELECT categorie
-FROM produits;
+SELECT categorie  
+FROM produits;  
 
 -- Élimine les doublons
-SELECT DISTINCT categorie
-FROM produits;
+SELECT DISTINCT categorie  
+FROM produits;  
 ```
 
 ---
@@ -564,8 +564,8 @@ Une jointure en algèbre relationnelle peut s'écrire :
 ```
 
 **En français** :
-1. Produit cartésien de A et B
-2. Sélection selon la condition
+1. Produit cartésien de A et B  
+2. Sélection selon la condition  
 3. Projection des colonnes désirées
 
 ### Exemple Complet
@@ -577,18 +577,18 @@ Une jointure en algèbre relationnelle peut s'écrire :
 SELECT
     clients.nom,
     SUM(commandes.montant) AS total
-FROM clients
-CROSS JOIN commandes
-WHERE clients.id = commandes.client_id
-GROUP BY clients.nom;
+FROM clients  
+CROSS JOIN commandes  
+WHERE clients.id = commandes.client_id  
+GROUP BY clients.nom;  
 
 -- Version standard (pratique)
 SELECT
     clients.nom,
     SUM(commandes.montant) AS total
-FROM clients
-INNER JOIN commandes ON clients.id = commandes.client_id
-GROUP BY clients.nom;
+FROM clients  
+INNER JOIN commandes ON clients.id = commandes.client_id  
+GROUP BY clients.nom;  
 ```
 
 **Résultat** :
@@ -607,9 +607,9 @@ GROUP BY clients.nom;
 Si SQL exécutait réellement un produit cartésien complet avant de filtrer, ce serait catastrophique :
 
 ```
-Table A : 1 000 000 lignes
-Table B : 1 000 000 lignes
-Produit cartésien : 1 000 000 000 000 lignes (1 trillion !)
+Table A : 1 000 000 lignes  
+Table B : 1 000 000 lignes  
+Produit cartésien : 1 000 000 000 000 lignes (1 trillion !)  
 ```
 
 ### Le Rôle de l'Optimiseur de Requêtes
@@ -654,10 +654,10 @@ Trier les deux tables, puis les parcourir en parallèle.
 ### Voir le Plan d'Exécution
 
 ```sql
-EXPLAIN ANALYZE
-SELECT *
-FROM clients
-INNER JOIN commandes ON clients.id = commandes.client_id;
+EXPLAIN ANALYZE  
+SELECT *  
+FROM clients  
+INNER JOIN commandes ON clients.id = commandes.client_id;  
 ```
 
 **Exemple de résultat** :
@@ -678,14 +678,14 @@ Hash Join  (cost=15.50..35.88 rows=320 width=68)
 
 ### En Théorie (Algèbre Relationnelle)
 
-1. **Pas d'ordre** : Les lignes n'ont pas d'ordre
-2. **Pas de doublons** : Les ensembles n'ont pas de doublons
+1. **Pas d'ordre** : Les lignes n'ont pas d'ordre  
+2. **Pas de doublons** : Les ensembles n'ont pas de doublons  
 3. **Pas de NULL** : NULL n'existe pas en théorie pure
 
 ### En Pratique (SQL)
 
-1. **Ordre possible** : `ORDER BY` définit un ordre
-2. **Doublons possibles** : Sauf si on utilise `DISTINCT`
+1. **Ordre possible** : `ORDER BY` définit un ordre  
+2. **Doublons possibles** : Sauf si on utilise `DISTINCT`  
 3. **NULL existe** : Avec une logique ternaire complexe
 
 ### Multiensembles (Bags)
@@ -719,9 +719,9 @@ Le produit cartésien et la sélection forment la base, mais SQL offre des joint
 ### INNER JOIN : Intersection
 
 ```sql
-SELECT *
-FROM clients
-INNER JOIN commandes ON clients.id = commandes.client_id;
+SELECT *  
+FROM clients  
+INNER JOIN commandes ON clients.id = commandes.client_id;  
 ```
 
 **Résultat** : Seulement les clients qui **ont** des commandes.
@@ -729,9 +729,9 @@ INNER JOIN commandes ON clients.id = commandes.client_id;
 ### LEFT JOIN : Inclusion de la Table de Gauche
 
 ```sql
-SELECT *
-FROM clients
-LEFT JOIN commandes ON clients.id = commandes.client_id;
+SELECT *  
+FROM clients  
+LEFT JOIN commandes ON clients.id = commandes.client_id;  
 ```
 
 **Résultat** : **Tous** les clients, même ceux sans commande (NULL pour les colonnes de commandes).
@@ -739,9 +739,9 @@ LEFT JOIN commandes ON clients.id = commandes.client_id;
 ### FULL JOIN : Union
 
 ```sql
-SELECT *
-FROM clients
-FULL OUTER JOIN commandes ON clients.id = commandes.client_id;
+SELECT *  
+FROM clients  
+FULL OUTER JOIN commandes ON clients.id = commandes.client_id;  
 ```
 
 **Résultat** : Tous les clients ET toutes les commandes (avec NULL si pas de correspondance).
@@ -767,16 +767,16 @@ CREATE TABLE couleurs (
     nom VARCHAR(20) NOT NULL
 );
 
-INSERT INTO tailles (nom) VALUES ('XS'), ('S'), ('M'), ('L'), ('XL');
-INSERT INTO couleurs (nom) VALUES ('Rouge'), ('Bleu'), ('Noir'), ('Blanc');
+INSERT INTO tailles (nom) VALUES ('XS'), ('S'), ('M'), ('L'), ('XL');  
+INSERT INTO couleurs (nom) VALUES ('Rouge'), ('Bleu'), ('Noir'), ('Blanc');  
 
 -- Générer toutes les combinaisons
 SELECT
     tailles.nom AS taille,
     couleurs.nom AS couleur
-FROM tailles
-CROSS JOIN couleurs
-ORDER BY tailles.id, couleurs.nom;
+FROM tailles  
+CROSS JOIN couleurs  
+ORDER BY tailles.id, couleurs.nom;  
 ```
 
 **Résultat** : 5 tailles × 4 couleurs = **20 combinaisons**
@@ -812,9 +812,9 @@ SELECT
     alice.jour,
     GREATEST(alice.heure_debut, bob.heure_debut) AS debut,
     LEAST(alice.heure_fin, bob.heure_fin) AS fin
-FROM disponibilites_alice alice
-CROSS JOIN disponibilites_bob bob
-WHERE alice.jour = bob.jour
+FROM disponibilites_alice alice  
+CROSS JOIN disponibilites_bob bob  
+WHERE alice.jour = bob.jour  
   AND alice.heure_debut < bob.heure_fin
   AND bob.heure_debut < alice.heure_fin;
 ```
@@ -840,10 +840,10 @@ SELECT
         POW(v1.latitude - v2.latitude, 2) +
         POW(v1.longitude - v2.longitude, 2)
     ) AS distance
-FROM villes v1
-CROSS JOIN villes v2
-WHERE v1.id < v2.id  -- Éviter les doublons (Paris->Lyon = Lyon->Paris)
-ORDER BY distance;
+FROM villes v1  
+CROSS JOIN villes v2  
+WHERE v1.id < v2.id  -- Éviter les doublons (Paris->Lyon = Lyon->Paris)  
+ORDER BY distance;  
 ```
 
 ---
@@ -854,8 +854,8 @@ ORDER BY distance;
 
 ```sql
 -- ❌ Produit cartésien accidentel
-SELECT *
-FROM clients, commandes;
+SELECT *  
+FROM clients, commandes;  
 
 -- Résultat : 1000 clients × 5000 commandes = 5 000 000 lignes !
 ```
@@ -866,17 +866,17 @@ FROM clients, commandes;
 
 ```sql
 -- ✅ Correct
-SELECT *
-FROM clients
-INNER JOIN commandes ON clients.id = commandes.client_id;
+SELECT *  
+FROM clients  
+INNER JOIN commandes ON clients.id = commandes.client_id;  
 ```
 
 ### Erreur 2 : Jointure sur Plusieurs Tables Sans Ordre
 
 ```sql
 -- ⚠️ Dangereux si mal écrit
-SELECT *
-FROM clients, commandes, produits;
+SELECT *  
+FROM clients, commandes, produits;  
 ```
 
 Si aucune condition n'est spécifiée, c'est un produit cartésien triple !
@@ -889,11 +889,11 @@ Si aucune condition n'est spécifiée, c'est un produit cartésien triple !
 
 ```sql
 -- ✅ Correct
-SELECT *
-FROM clients
-INNER JOIN commandes ON clients.id = commandes.client_id
-INNER JOIN lignes_commande ON commandes.id = lignes_commande.commande_id
-INNER JOIN produits ON lignes_commande.produit_id = produits.id;
+SELECT *  
+FROM clients  
+INNER JOIN commandes ON clients.id = commandes.client_id  
+INNER JOIN lignes_commande ON commandes.id = lignes_commande.commande_id  
+INNER JOIN produits ON lignes_commande.produit_id = produits.id;  
 ```
 
 ### Erreur 3 : Confusion entre INNER et CROSS JOIN
@@ -951,8 +951,8 @@ Table A (Clients)        Table B (Commandes)
 │ 3  │ Clara │    └─────→│ 30 │     2      │   100   │
 └────┴───────┘           └────┴────────────┴─────────┘
 
-Produit cartésien : 3 × 3 = 9 lignes
-Après sélection (id = client_id) : 3 lignes
+Produit cartésien : 3 × 3 = 9 lignes  
+Après sélection (id = client_id) : 3 lignes  
 ```
 
 ---
@@ -978,14 +978,14 @@ Après sélection (id = client_id) : 3 lignes
 
 ```sql
 -- ❌ À éviter (ancienne syntaxe)
-SELECT *
-FROM clients, commandes
-WHERE clients.id = commandes.client_id;
+SELECT *  
+FROM clients, commandes  
+WHERE clients.id = commandes.client_id;  
 
 -- ✅ Recommandé (syntaxe moderne)
-SELECT *
-FROM clients
-INNER JOIN commandes ON clients.id = commandes.client_id;
+SELECT *  
+FROM clients  
+INNER JOIN commandes ON clients.id = commandes.client_id;  
 ```
 
 **Pourquoi ?**
@@ -1000,8 +1000,8 @@ INNER JOIN commandes ON clients.id = commandes.client_id;
 SELECT
     c.nom AS client,
     cmd.montant
-FROM clients AS c
-INNER JOIN commandes AS cmd ON c.id = cmd.client_id;
+FROM clients AS c  
+INNER JOIN commandes AS cmd ON c.id = cmd.client_id;  
 ```
 
 **Avantages** :
@@ -1015,8 +1015,8 @@ Avant d'exécuter une jointure sur de grandes tables :
 
 ```sql
 -- Vérifier les tailles
-SELECT COUNT(*) FROM table_a;
-SELECT COUNT(*) FROM table_b;
+SELECT COUNT(*) FROM table_a;  
+SELECT COUNT(*) FROM table_b;  
 
 -- Estimer le résultat
 -- INNER JOIN : ≤ MIN(count_a, count_b)
@@ -1027,10 +1027,10 @@ SELECT COUNT(*) FROM table_b;
 ### 4. Utiliser EXPLAIN pour Comprendre
 
 ```sql
-EXPLAIN ANALYZE
-SELECT *
-FROM clients
-INNER JOIN commandes ON clients.id = commandes.client_id;
+EXPLAIN ANALYZE  
+SELECT *  
+FROM clients  
+INNER JOIN commandes ON clients.id = commandes.client_id;  
 ```
 
 Cela vous montrera la stratégie choisie par PostgreSQL.
@@ -1047,14 +1047,14 @@ Soit :
 
 Combien de lignes retournent les opérations suivantes ?
 
-a) `A CROSS JOIN B`
-b) `A INNER JOIN B ON A.id = B.a_id` (supposons 20 correspondances)
-c) `A LEFT JOIN B ON A.id = B.a_id`
+a) `A CROSS JOIN B`  
+b) `A INNER JOIN B ON A.id = B.a_id` (supposons 20 correspondances)  
+c) `A LEFT JOIN B ON A.id = B.a_id`  
 
 **Réponses** :
-a) 50 × 30 = **1500 lignes**
-b) **20 lignes** (seulement les correspondances)
-c) **50 lignes** (toutes les lignes de A)
+a) 50 × 30 = **1500 lignes**  
+b) **20 lignes** (seulement les correspondances)  
+c) **50 lignes** (toutes les lignes de A)  
 
 ### Question 2 : Opérations Algébriques
 
@@ -1065,19 +1065,19 @@ Traduire en SQL :
 
 **Réponse** :
 ```sql
-SELECT nom, prix
-FROM produits
-WHERE prix > 100;
+SELECT nom, prix  
+FROM produits  
+WHERE prix > 100;  
 ```
 
 ### Question 3 : Identifier le Type de Jointure
 
 Quelle opération algébrique correspond à :
 ```sql
-SELECT *
-FROM employes
-CROSS JOIN departements
-WHERE employes.dept_id = departements.id;
+SELECT *  
+FROM employes  
+CROSS JOIN departements  
+WHERE employes.dept_id = departements.id;  
 ```
 
 **Réponse** :
@@ -1091,10 +1091,10 @@ WHERE employes.dept_id = departements.id;
 
 ### Points Clés à Retenir
 
-1. **Produit cartésien** : Toutes les combinaisons possibles (A × B)
-2. **Sélection** : Filtre les lignes selon une condition (WHERE)
-3. **Projection** : Sélectionne les colonnes (SELECT)
-4. **INNER JOIN** = Produit cartésien + Sélection (optimisé)
+1. **Produit cartésien** : Toutes les combinaisons possibles (A × B)  
+2. **Sélection** : Filtre les lignes selon une condition (WHERE)  
+3. **Projection** : Sélectionne les colonnes (SELECT)  
+4. **INNER JOIN** = Produit cartésien + Sélection (optimisé)  
 5. **L'optimiseur** ne fait pas littéralement un produit cartésien complet
 
 ### La Magie de l'Algèbre Relationnelle
@@ -1113,10 +1113,10 @@ Vous permet de :
 ### Prochaines Étapes
 
 Dans la section suivante **(7.4 Types de jointures)**, nous explorerons en détail :
-- **INNER JOIN** : Intersection
-- **LEFT/RIGHT JOIN** : Jointures externes
-- **FULL OUTER JOIN** : Union complète
-- **CROSS JOIN** : Cas d'usage pratiques
+- **INNER JOIN** : Intersection  
+- **LEFT/RIGHT JOIN** : Jointures externes  
+- **FULL OUTER JOIN** : Union complète  
+- **CROSS JOIN** : Cas d'usage pratiques  
 - **SELF-JOIN** : Joindre une table à elle-même
 
 Vous verrez comment ces différentes jointures correspondent à des opérations ensemblistes et comment les utiliser efficacement dans vos applications.

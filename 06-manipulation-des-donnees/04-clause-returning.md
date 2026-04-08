@@ -11,8 +11,8 @@ Cette capacité distingue PostgreSQL de nombreux autres systèmes de gestion de 
 ### Qu'est-ce que RETURNING ?
 
 `RETURNING` est une clause optionnelle que vous pouvez ajouter à la fin des commandes :
-- `INSERT`
-- `UPDATE`
+- `INSERT`  
+- `UPDATE`  
 - `DELETE`
 
 Elle transforme ces commandes en requêtes qui **retournent des données**, à la manière d'un `SELECT`.
@@ -21,20 +21,20 @@ Elle transforme ces commandes en requêtes qui **retournent des données**, à l
 
 ```sql
 -- Avec INSERT
-INSERT INTO table (colonnes...)
-VALUES (valeurs...)
-RETURNING colonne1, colonne2, ...;
+INSERT INTO table (colonnes...)  
+VALUES (valeurs...)  
+RETURNING colonne1, colonne2, ...;  
 
 -- Avec UPDATE
-UPDATE table
-SET colonne = valeur
-WHERE condition
-RETURNING colonne1, colonne2, ...;
+UPDATE table  
+SET colonne = valeur  
+WHERE condition  
+RETURNING colonne1, colonne2, ...;  
 
 -- Avec DELETE
-DELETE FROM table
-WHERE condition
-RETURNING colonne1, colonne2, ...;
+DELETE FROM table  
+WHERE condition  
+RETURNING colonne1, colonne2, ...;  
 ```
 
 ---
@@ -49,29 +49,29 @@ Traditionnellement, lorsque vous insérez une ligne dans une table, vous devez e
 
 ```sql
 -- Étape 1 : Insérer
-INSERT INTO employes (nom, prenom, email)
-VALUES ('Dupont', 'Marie', 'marie.dupont@example.com');
+INSERT INTO employes (nom, prenom, email)  
+VALUES ('Dupont', 'Marie', 'marie.dupont@example.com');  
 
 -- Étape 2 : Récupérer l'ID généré (méthode problématique)
-SELECT id FROM employes
-WHERE nom = 'Dupont' AND prenom = 'Marie'
-ORDER BY id DESC
-LIMIT 1;
+SELECT id FROM employes  
+WHERE nom = 'Dupont' AND prenom = 'Marie'  
+ORDER BY id DESC  
+LIMIT 1;  
 ```
 
 **Problèmes de cette approche** :
-1. **Deux requêtes** au lieu d'une (moins performant)
-2. **Race condition** : Entre l'INSERT et le SELECT, une autre insertion pourrait survenir
-3. **Ambiguïté** : Si plusieurs "Marie Dupont" existent, laquelle est la bonne ?
+1. **Deux requêtes** au lieu d'une (moins performant)  
+2. **Race condition** : Entre l'INSERT et le SELECT, une autre insertion pourrait survenir  
+3. **Ambiguïté** : Si plusieurs "Marie Dupont" existent, laquelle est la bonne ?  
 4. **Complexité** : Code plus verbeux et plus fragile
 
 ### La solution avec RETURNING
 
 ```sql
 -- Une seule requête qui insère ET retourne l'ID
-INSERT INTO employes (nom, prenom, email)
-VALUES ('Dupont', 'Marie', 'marie.dupont@example.com')
-RETURNING id;
+INSERT INTO employes (nom, prenom, email)  
+VALUES ('Dupont', 'Marie', 'marie.dupont@example.com')  
+RETURNING id;  
 ```
 
 **Résultat immédiat** :
@@ -92,9 +92,9 @@ RETURNING id;
 Vous pouvez retourner n'importe quelle colonne, pas seulement l'ID :
 
 ```sql
-INSERT INTO employes (nom, prenom, email, salaire, date_embauche)
-VALUES ('Martin', 'Pierre', 'pierre.martin@example.com', 45000, CURRENT_DATE)
-RETURNING id, nom, prenom, date_embauche;
+INSERT INTO employes (nom, prenom, email, salaire, date_embauche)  
+VALUES ('Martin', 'Pierre', 'pierre.martin@example.com', 45000, CURRENT_DATE)  
+RETURNING id, nom, prenom, date_embauche;  
 ```
 
 **Résultat** :
@@ -109,9 +109,9 @@ RETURNING id, nom, prenom, date_embauche;
 Pour récupérer toutes les colonnes de la ligne insérée :
 
 ```sql
-INSERT INTO employes (nom, prenom, email)
-VALUES ('Durand', 'Sophie', 'sophie.durand@example.com')
-RETURNING *;
+INSERT INTO employes (nom, prenom, email)  
+VALUES ('Durand', 'Sophie', 'sophie.durand@example.com')  
+RETURNING *;  
 ```
 
 **Résultat** :
@@ -128,8 +128,8 @@ RETURNING *;
 `RETURNING` fonctionne aussi avec les insertions multiples :
 
 ```sql
-INSERT INTO employes (nom, prenom, email, salaire)
-VALUES
+INSERT INTO employes (nom, prenom, email, salaire)  
+VALUES  
     ('Petit', 'Anne', 'anne.petit@example.com', 42000),
     ('Roux', 'Thomas', 'thomas.roux@example.com', 44000),
     ('Bernard', 'Julie', 'julie.bernard@example.com', 46000)
@@ -160,9 +160,9 @@ CREATE TABLE commandes (
 );
 
 -- Insérer et récupérer immédiatement le montant TTC calculé
-INSERT INTO commandes (client_id, montant_ht)
-VALUES (123, 100.00)
-RETURNING id, montant_ht, tva_taux, montant_ttc, date_creation;
+INSERT INTO commandes (client_id, montant_ht)  
+VALUES (123, 100.00)  
+RETURNING id, montant_ht, tva_taux, montant_ttc, date_creation;  
 ```
 
 **Résultat** :
@@ -184,9 +184,9 @@ Après un UPDATE, vous devez souvent effectuer un SELECT pour vérifier les nouv
 
 ```sql
 -- Étape 1 : Modifier
-UPDATE employes
-SET salaire = salaire * 1.10
-WHERE id = 42;
+UPDATE employes  
+SET salaire = salaire * 1.10  
+WHERE id = 42;  
 
 -- Étape 2 : Vérifier
 SELECT id, nom, salaire FROM employes WHERE id = 42;
@@ -195,10 +195,10 @@ SELECT id, nom, salaire FROM employes WHERE id = 42;
 ### La solution avec RETURNING
 
 ```sql
-UPDATE employes
-SET salaire = salaire * 1.10
-WHERE id = 42
-RETURNING id, nom, prenom, salaire;
+UPDATE employes  
+SET salaire = salaire * 1.10  
+WHERE id = 42  
+RETURNING id, nom, prenom, salaire;  
 ```
 
 **Résultat** :
@@ -215,10 +215,10 @@ Vous voyez immédiatement la nouvelle valeur du salaire (45000 * 1.10 = 49500).
 Vous pouvez utiliser des expressions dans `RETURNING` :
 
 ```sql
-UPDATE employes
-SET salaire = salaire * 1.10
-WHERE id = 42
-RETURNING
+UPDATE employes  
+SET salaire = salaire * 1.10  
+WHERE id = 42  
+RETURNING  
     id,
     nom,
     salaire AS nouveau_salaire,
@@ -240,10 +240,10 @@ Lorsque vous modifiez plusieurs lignes, `RETURNING` retourne toutes les lignes m
 
 ```sql
 -- Augmenter tous les développeurs
-UPDATE employes
-SET salaire = salaire * 1.15
-WHERE poste = 'Développeur'
-RETURNING id, nom, prenom, salaire, poste;
+UPDATE employes  
+SET salaire = salaire * 1.15  
+WHERE poste = 'Développeur'  
+RETURNING id, nom, prenom, salaire, poste;  
 ```
 
 **Résultat** :
@@ -276,13 +276,13 @@ WITH modifications AS (
     WHERE poste = 'Développeur'
     RETURNING id, salaire / 1.10 AS ancien_salaire, salaire AS nouveau_salaire
 )
-INSERT INTO historique_salaires (employe_id, ancien_salaire, nouveau_salaire)
-SELECT id, ancien_salaire, nouveau_salaire
-FROM modifications;
+INSERT INTO historique_salaires (employe_id, ancien_salaire, nouveau_salaire)  
+SELECT id, ancien_salaire, nouveau_salaire  
+FROM modifications;  
 ```
 
 Cette requête fait deux choses en une seule transaction :
-1. Modifie les salaires
+1. Modifie les salaires  
 2. Enregistre l'historique des modifications
 
 ### Vérifier combien de lignes ont été modifiées
@@ -324,9 +324,9 @@ DELETE FROM employes WHERE date_embauche < '2020-01-01';
 ### La solution avec RETURNING
 
 ```sql
-DELETE FROM employes
-WHERE date_embauche < '2020-01-01'
-RETURNING *;
+DELETE FROM employes  
+WHERE date_embauche < '2020-01-01'  
+RETURNING *;  
 ```
 
 **Résultat** : Toutes les lignes supprimées sont retournées :
@@ -352,14 +352,14 @@ WITH deleted AS (
     WHERE date_embauche < '2020-01-01'
     RETURNING *
 )
-INSERT INTO employes_archives
-SELECT * FROM deleted;
+INSERT INTO employes_archives  
+SELECT * FROM deleted;  
 ```
 
 **Avantages** :
-- ✅ Opération atomique (tout réussit ou tout échoue)
-- ✅ Pas de fenêtre temporelle entre SELECT et DELETE
-- ✅ Garantit que les données archivées sont exactement celles supprimées
+- ✅ Opération atomique (tout réussit ou tout échoue)  
+- ✅ Pas de fenêtre temporelle entre SELECT et DELETE  
+- ✅ Garantit que les données archivées sont exactement celles supprimées  
 - ✅ Une seule transaction
 
 ### Vérifier ce qui va être supprimé
@@ -370,9 +370,9 @@ Vous pouvez utiliser RETURNING dans une transaction pour "simuler" une suppressi
 BEGIN;
 
 -- "Simuler" la suppression
-DELETE FROM employes
-WHERE salaire < 35000
-RETURNING id, nom, prenom, salaire;
+DELETE FROM employes  
+WHERE salaire < 35000  
+RETURNING id, nom, prenom, salaire;  
 
 -- Examiner le résultat
 -- Si c'est correct : COMMIT
@@ -413,9 +413,9 @@ FROM deleted;
 Vous pouvez effectuer des calculs directement dans `RETURNING` :
 
 ```sql
-INSERT INTO produits (nom, prix_ht, tva_taux)
-VALUES ('Ordinateur', 800.00, 20.00)
-RETURNING
+INSERT INTO produits (nom, prix_ht, tva_taux)  
+VALUES ('Ordinateur', 800.00, 20.00)  
+RETURNING  
     id,
     nom,
     prix_ht,
@@ -434,9 +434,9 @@ RETURNING
 ### Fonctions et conversions
 
 ```sql
-INSERT INTO utilisateurs (nom, prenom, email)
-VALUES ('DUPONT', 'marie', 'MARIE.DUPONT@EXAMPLE.COM')
-RETURNING
+INSERT INTO utilisateurs (nom, prenom, email)  
+VALUES ('DUPONT', 'marie', 'MARIE.DUPONT@EXAMPLE.COM')  
+RETURNING  
     id,
     INITCAP(nom) AS nom_formate,
     INITCAP(prenom) AS prenom_formate,
@@ -454,12 +454,12 @@ RETURNING
 ### Concaténations et transformations
 
 ```sql
-UPDATE employes
-SET
+UPDATE employes  
+SET  
     nom = UPPER(nom),
     prenom = UPPER(prenom)
-WHERE id = 42
-RETURNING
+WHERE id = 42  
+RETURNING  
     id,
     nom || ' ' || prenom AS nom_complet,
     LOWER(prenom || '.' || nom || '@company.com') AS email_genere,
@@ -469,10 +469,10 @@ RETURNING
 ### CASE expressions dans RETURNING
 
 ```sql
-UPDATE employes
-SET salaire = salaire * 1.10
-WHERE poste = 'Développeur'
-RETURNING
+UPDATE employes  
+SET salaire = salaire * 1.10  
+WHERE poste = 'Développeur'  
+RETURNING  
     id,
     nom,
     salaire,
@@ -500,8 +500,8 @@ CREATE TABLE job_queue (
 );
 
 -- Récupérer et marquer un job comme "en cours" en une seule opération atomique
-UPDATE job_queue
-SET
+UPDATE job_queue  
+SET  
     status = 'processing',
     processed_at = CURRENT_TIMESTAMP
 WHERE id = (
@@ -526,10 +526,10 @@ CREATE TABLE compteurs (
 );
 
 -- Incrémenter et récupérer la nouvelle valeur en une opération
-UPDATE compteurs
-SET valeur = valeur + 1
-WHERE id = 'facture'
-RETURNING valeur;
+UPDATE compteurs  
+SET valeur = valeur + 1  
+WHERE id = 'facture'  
+RETURNING valeur;  
 ```
 
 **Résultat** :
@@ -562,10 +562,10 @@ SELECT * FROM updated ORDER BY id;
 Combiner `INSERT ... ON CONFLICT` avec `RETURNING` :
 
 ```sql
-INSERT INTO statistiques (page, vues, derniere_visite)
-VALUES ('accueil', 1, CURRENT_TIMESTAMP)
-ON CONFLICT (page)
-DO UPDATE SET
+INSERT INTO statistiques (page, vues, derniere_visite)  
+VALUES ('accueil', 1, CURRENT_TIMESTAMP)  
+ON CONFLICT (page)  
+DO UPDATE SET  
     vues = statistiques.vues + 1,
     derniere_visite = CURRENT_TIMESTAMP
 RETURNING page, vues, derniere_visite;
@@ -617,8 +617,8 @@ La plupart des drivers PostgreSQL supportent `RETURNING` nativement.
 ```python
 import psycopg
 
-conn = psycopg.connect("dbname=mabase")
-cur = conn.cursor()
+conn = psycopg.connect("dbname=mabase")  
+cur = conn.cursor()  
 
 # Insérer et récupérer l'ID
 cur.execute("""
@@ -627,8 +627,8 @@ cur.execute("""
     RETURNING id, date_embauche
 """, ('Dupont', 'Marie', 'marie@example.com', 45000))
 
-resultat = cur.fetchone()
-print(f"ID créé : {resultat[0]}, Date : {resultat[1]}")
+resultat = cur.fetchone()  
+print(f"ID créé : {resultat[0]}, Date : {resultat[1]}")  
 
 conn.commit()
 ```
@@ -636,8 +636,8 @@ conn.commit()
 #### Node.js (node-postgres)
 
 ```javascript
-const { Pool } = require('pg');
-const pool = new Pool();
+const { Pool } = require('pg');  
+const pool = new Pool();  
 
 async function creerEmploye(nom, prenom, email, salaire) {
     const result = await pool.query(
@@ -657,14 +657,14 @@ async function creerEmploye(nom, prenom, email, salaire) {
 String sql = "INSERT INTO employes (nom, prenom, email, salaire) " +
              "VALUES (?, ?, ?, ?) RETURNING id, date_embauche";
 
-PreparedStatement stmt = conn.prepareStatement(sql);
-stmt.setString(1, "Dupont");
-stmt.setString(2, "Marie");
-stmt.setString(3, "marie@example.com");
-stmt.setBigDecimal(4, new BigDecimal("45000"));
+PreparedStatement stmt = conn.prepareStatement(sql);  
+stmt.setString(1, "Dupont");  
+stmt.setString(2, "Marie");  
+stmt.setString(3, "marie@example.com");  
+stmt.setBigDecimal(4, new BigDecimal("45000"));  
 
-ResultSet rs = stmt.executeQuery();
-if (rs.next()) {
+ResultSet rs = stmt.executeQuery();  
+if (rs.next()) {  
     int id = rs.getInt("id");
     Date dateEmbauche = rs.getDate("date_embauche");
     System.out.println("ID créé : " + id);
@@ -673,9 +673,9 @@ if (rs.next()) {
 
 ### Avantages pour les applications
 
-1. **Réduction des round-trips réseau** : Une seule requête au lieu de deux
-2. **Atomicité garantie** : Pas de risque de race condition
-3. **Code plus simple** : Moins de gestion d'état
+1. **Réduction des round-trips réseau** : Une seule requête au lieu de deux  
+2. **Atomicité garantie** : Pas de risque de race condition  
+3. **Code plus simple** : Moins de gestion d'état  
 4. **Meilleures performances** : Moins de latence réseau
 
 ---
@@ -753,9 +753,9 @@ TRUNCATE TABLE employes RETURNING *;
 
 ```sql
 -- Supprimer un département (avec ON DELETE CASCADE sur employes)
-DELETE FROM departements
-WHERE id = 5
-RETURNING *;
+DELETE FROM departements  
+WHERE id = 5  
+RETURNING *;  
 
 -- Retourne uniquement la ligne du département
 -- Ne retourne PAS les employés supprimés en cascade
@@ -769,9 +769,9 @@ RETURNING *;
 
 ```sql
 -- ⚠️ Attention : peut consommer beaucoup de mémoire
-UPDATE employes
-SET salaire = salaire * 1.10
-RETURNING *;
+UPDATE employes  
+SET salaire = salaire * 1.10  
+RETURNING *;  
 -- Si 1 million d'employés → 1 million de lignes en mémoire
 ```
 
@@ -779,9 +779,9 @@ Pour de très gros volumes, préférez traiter par lots :
 
 ```sql
 -- Traitement par lots de 1000
-UPDATE employes
-SET salaire = salaire * 1.10
-WHERE id IN (
+UPDATE employes  
+SET salaire = salaire * 1.10  
+WHERE id IN (  
     SELECT id FROM employes
     WHERE salaire < 50000
     LIMIT 1000
@@ -813,9 +813,9 @@ RETURNING id, salaire;
 
 ```sql
 -- SQL Server utilise OUTPUT au lieu de RETURNING
-INSERT INTO employes (nom, prenom)
-OUTPUT INSERTED.id, INSERTED.nom, INSERTED.prenom
-VALUES ('Dupont', 'Marie');
+INSERT INTO employes (nom, prenom)  
+OUTPUT INSERTED.id, INSERTED.nom, INSERTED.prenom  
+VALUES ('Dupont', 'Marie');  
 ```
 
 #### Oracle (RETURNING INTO)
@@ -835,8 +835,8 @@ END;
 
 ```sql
 -- MySQL nécessite deux requêtes
-INSERT INTO employes (nom, prenom)
-VALUES ('Dupont', 'Marie');
+INSERT INTO employes (nom, prenom)  
+VALUES ('Dupont', 'Marie');  
 
 SELECT LAST_INSERT_ID() AS id;
 ```
@@ -849,30 +849,30 @@ SELECT LAST_INSERT_ID() AS id;
 
 ```sql
 -- ✅ Bonne pratique
-INSERT INTO employes (nom, prenom)
-VALUES ('Dupont', 'Marie')
-RETURNING id;
+INSERT INTO employes (nom, prenom)  
+VALUES ('Dupont', 'Marie')  
+RETURNING id;  
 
 -- ❌ À éviter
-INSERT INTO employes (nom, prenom)
-VALUES ('Dupont', 'Marie');
-SELECT currval('employes_id_seq');  -- Fragile et non standard
+INSERT INTO employes (nom, prenom)  
+VALUES ('Dupont', 'Marie');  
+SELECT currval('employes_id_seq');  -- Fragile et non standard  
 ```
 
 ### 2. Retourner uniquement les colonnes nécessaires
 
 ```sql
 -- ✅ Efficace : Retourne seulement ce qui est nécessaire
-UPDATE employes
-SET salaire = salaire * 1.10
-WHERE id = 42
-RETURNING id, salaire;
+UPDATE employes  
+SET salaire = salaire * 1.10  
+WHERE id = 42  
+RETURNING id, salaire;  
 
 -- ⚠️ Moins efficace : Retourne tout alors qu'on n'en a pas besoin
-UPDATE employes
-SET salaire = salaire * 1.10
-WHERE id = 42
-RETURNING *;
+UPDATE employes  
+SET salaire = salaire * 1.10  
+WHERE id = 42  
+RETURNING *;  
 ```
 
 ### 3. Combiner avec des transactions pour la sécurité
@@ -885,12 +885,12 @@ WITH deleted AS (
     WHERE date_creation < '2024-01-01'
     RETURNING *
 )
-INSERT INTO logs_archives
-SELECT * FROM deleted;
+INSERT INTO logs_archives  
+SELECT * FROM deleted;  
 
 -- Vérifier le résultat avant de valider
-SELECT COUNT(*) FROM logs_archives
-WHERE date_creation < '2024-01-01';
+SELECT COUNT(*) FROM logs_archives  
+WHERE date_creation < '2024-01-01';  
 
 COMMIT;
 ```
@@ -905,9 +905,9 @@ WITH deleted AS (
     WHERE derniere_connexion < CURRENT_DATE - INTERVAL '2 years'
     RETURNING id, email, derniere_connexion
 )
-INSERT INTO audit_suppressions (utilisateur_id, email, date_suppression)
-SELECT id, email, CURRENT_TIMESTAMP
-FROM deleted;
+INSERT INTO audit_suppressions (utilisateur_id, email, date_suppression)  
+SELECT id, email, CURRENT_TIMESTAMP  
+FROM deleted;  
 ```
 
 ---
@@ -942,20 +942,20 @@ FROM deleted;
 
 ```sql
 -- INSERT
-INSERT INTO table (colonnes...)
-VALUES (valeurs...)
-RETURNING id, colonne1, colonne2;
+INSERT INTO table (colonnes...)  
+VALUES (valeurs...)  
+RETURNING id, colonne1, colonne2;  
 
 -- UPDATE
-UPDATE table
-SET colonne = valeur
-WHERE condition
-RETURNING id, colonne1, colonne2;
+UPDATE table  
+SET colonne = valeur  
+WHERE condition  
+RETURNING id, colonne1, colonne2;  
 
 -- DELETE
-DELETE FROM table
-WHERE condition
-RETURNING id, colonne1, colonne2;
+DELETE FROM table  
+WHERE condition  
+RETURNING id, colonne1, colonne2;  
 
 -- RETURNING avec expressions
 ... RETURNING
@@ -969,8 +969,8 @@ WITH operation AS (
     INSERT INTO table1 VALUES (...)
     RETURNING id
 )
-INSERT INTO table2
-SELECT id FROM operation;
+INSERT INTO table2  
+SELECT id FROM operation;  
 ```
 
 ---
@@ -981,10 +981,10 @@ La clause `RETURNING` est l'une des fonctionnalités qui font de PostgreSQL un s
 
 **Points clés à retenir** :
 
-1. `RETURNING` transforme INSERT, UPDATE et DELETE en requêtes qui retournent des données
-2. Permet de récupérer les valeurs générées automatiquement en une seule opération
-3. Supporte les expressions, fonctions et calculs
-4. Facilite l'implémentation de patterns avancés (queues, audit, archivage)
+1. `RETURNING` transforme INSERT, UPDATE et DELETE en requêtes qui retournent des données  
+2. Permet de récupérer les valeurs générées automatiquement en une seule opération  
+3. Supporte les expressions, fonctions et calculs  
+4. Facilite l'implémentation de patterns avancés (queues, audit, archivage)  
 5. Réduit la complexité du code applicatif et améliore les performances
 
 En maîtrisant `RETURNING`, vous écrirez du code PostgreSQL plus efficace, plus sûr et plus élégant.

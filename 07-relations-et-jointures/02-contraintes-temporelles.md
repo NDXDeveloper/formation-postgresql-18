@@ -26,10 +26,10 @@ Avec PostgreSQL 18, la gestion temporelle devient **native**, **simple** et **pe
 
 Imaginons ces scénarios courants :
 
-1. **Réservations de salles** : Une salle ne peut pas être réservée par deux personnes en même temps
-2. **Historique des prix** : Un produit ne peut avoir qu'un seul prix valide à une date donnée
-3. **Contrats d'emploi** : Un employé ne peut avoir qu'un seul contrat actif simultanément
-4. **Locations de véhicules** : Une voiture ne peut être louée par deux clients en même temps
+1. **Réservations de salles** : Une salle ne peut pas être réservée par deux personnes en même temps  
+2. **Historique des prix** : Un produit ne peut avoir qu'un seul prix valide à une date donnée  
+3. **Contrats d'emploi** : Un employé ne peut avoir qu'un seul contrat actif simultanément  
+4. **Locations de véhicules** : Une voiture ne peut être louée par deux clients en même temps  
 5. **Périodes de validité** : Une promotion ne peut pas avoir deux périodes qui se chevauchent
 
 ### Le défi avant PostgreSQL 18
@@ -50,8 +50,8 @@ CREATE TABLE reservations (
 
 ```sql
 -- ✅ Ces deux réservations se chevauchent, mais sont acceptées !
-INSERT INTO reservations (salle_id, utilisateur_id, date_debut, date_fin)
-VALUES
+INSERT INTO reservations (salle_id, utilisateur_id, date_debut, date_fin)  
+VALUES  
     (1, 100, '2025-01-10 14:00', '2025-01-10 16:00'),
     (1, 101, '2025-01-10 15:00', '2025-01-10 17:00');  -- Chevauchement !
 ```
@@ -87,9 +87,9 @@ CREATE TABLE reservations (
 #### Solution 2 : Triggers personnalisés
 
 ```sql
-CREATE OR REPLACE FUNCTION check_reservation_overlap()
-RETURNS TRIGGER AS $$
-BEGIN
+CREATE OR REPLACE FUNCTION check_reservation_overlap()  
+RETURNS TRIGGER AS $$  
+BEGIN  
     IF EXISTS (
         SELECT 1 FROM reservations
         WHERE salle_id = NEW.salle_id
@@ -102,9 +102,9 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE TRIGGER check_overlap_before_insert
-BEFORE INSERT OR UPDATE ON reservations
-FOR EACH ROW EXECUTE FUNCTION check_reservation_overlap();
+CREATE TRIGGER check_overlap_before_insert  
+BEFORE INSERT OR UPDATE ON reservations  
+FOR EACH ROW EXECUTE FUNCTION check_reservation_overlap();  
 ```
 
 **Inconvénients** :
@@ -192,9 +192,9 @@ CREATE TABLE nom_table (
 ```
 
 **Explication** :
-- `UNIQUE` : Garantit l'unicité
-- `colonne_identifiant` : La clé sur laquelle on vérifie l'unicité (ex : salle_id)
-- `PERIOD(debut, fin)` : Définit la période temporelle
+- `UNIQUE` : Garantit l'unicité  
+- `colonne_identifiant` : La clé sur laquelle on vérifie l'unicité (ex : salle_id)  
+- `PERIOD(debut, fin)` : Définit la période temporelle  
 - `WITHOUT OVERLAPS` : Empêche les chevauchements temporels pour une même valeur de `colonne_identifiant`
 
 ### Exemple complet : Réservations de salles
@@ -218,20 +218,20 @@ CREATE TABLE reservations_salles (
 
 ```sql
 -- ✅ Première réservation
-INSERT INTO reservations_salles (salle_id, utilisateur_id, date_debut, date_fin)
-VALUES (1, 100, '2025-01-10 14:00', '2025-01-10 16:00');
+INSERT INTO reservations_salles (salle_id, utilisateur_id, date_debut, date_fin)  
+VALUES (1, 100, '2025-01-10 14:00', '2025-01-10 16:00');  
 
 -- ✅ Réservation d'une autre salle (même créneau, mais salle différente)
-INSERT INTO reservations_salles (salle_id, utilisateur_id, date_debut, date_fin)
-VALUES (2, 101, '2025-01-10 14:00', '2025-01-10 16:00');
+INSERT INTO reservations_salles (salle_id, utilisateur_id, date_debut, date_fin)  
+VALUES (2, 101, '2025-01-10 14:00', '2025-01-10 16:00');  
 
 -- ✅ Réservation de la même salle, mais créneau adjacent (pas de chevauchement)
-INSERT INTO reservations_salles (salle_id, utilisateur_id, date_debut, date_fin)
-VALUES (1, 102, '2025-01-10 16:00', '2025-01-10 18:00');
+INSERT INTO reservations_salles (salle_id, utilisateur_id, date_debut, date_fin)  
+VALUES (1, 102, '2025-01-10 16:00', '2025-01-10 18:00');  
 
 -- ❌ ÉCHEC : Chevauchement détecté !
-INSERT INTO reservations_salles (salle_id, utilisateur_id, date_debut, date_fin)
-VALUES (1, 103, '2025-01-10 15:00', '2025-01-10 17:00');
+INSERT INTO reservations_salles (salle_id, utilisateur_id, date_debut, date_fin)  
+VALUES (1, 103, '2025-01-10 15:00', '2025-01-10 17:00');  
 -- ERROR: conflicting key value violates temporal exclusion constraint
 -- DETAIL: Key (salle_id, PERIOD(date_debut, date_fin))=(1, [2025-01-10 15:00, 2025-01-10 17:00))
 --         conflicts with existing key (salle_id, PERIOD(date_debut, date_fin))=(1, [2025-01-10 14:00, 2025-01-10 16:00))
@@ -264,20 +264,20 @@ CREATE TABLE historique_prix (
 
 ```sql
 -- ✅ Prix initial
-INSERT INTO historique_prix (produit_id, prix, date_debut, date_fin)
-VALUES (100, 19.99, '2024-01-01', '2024-06-30');
+INSERT INTO historique_prix (produit_id, prix, date_debut, date_fin)  
+VALUES (100, 19.99, '2024-01-01', '2024-06-30');  
 
 -- ✅ Nouveau prix à partir du 1er juillet
-INSERT INTO historique_prix (produit_id, prix, date_debut, date_fin)
-VALUES (100, 24.99, '2024-07-01', '2024-12-31');
+INSERT INTO historique_prix (produit_id, prix, date_debut, date_fin)  
+VALUES (100, 24.99, '2024-07-01', '2024-12-31');  
 
 -- ✅ Prix actuel (ouvert)
-INSERT INTO historique_prix (produit_id, prix, date_debut, date_fin)
-VALUES (100, 29.99, '2025-01-01', NULL);
+INSERT INTO historique_prix (produit_id, prix, date_debut, date_fin)  
+VALUES (100, 29.99, '2025-01-01', NULL);  
 
 -- ❌ ÉCHEC : Chevauchement avec le prix du 1er juillet
-INSERT INTO historique_prix (produit_id, prix, date_debut, date_fin)
-VALUES (100, 22.00, '2024-06-15', '2024-07-15');
+INSERT INTO historique_prix (produit_id, prix, date_debut, date_fin)  
+VALUES (100, 22.00, '2024-06-15', '2024-07-15');  
 ```
 
 ### 2. Contrats d'Emploi Sans Chevauchement
@@ -300,16 +300,16 @@ CREATE TABLE contrats_emploi (
 
 ```sql
 -- ✅ Premier contrat CDD
-INSERT INTO contrats_emploi (employe_id, type_contrat, date_debut, date_fin, salaire)
-VALUES (1, 'CDD', '2024-01-01', '2024-06-30', 2500.00);
+INSERT INTO contrats_emploi (employe_id, type_contrat, date_debut, date_fin, salaire)  
+VALUES (1, 'CDD', '2024-01-01', '2024-06-30', 2500.00);  
 
 -- ✅ CDI à partir du 1er juillet (pas de chevauchement)
-INSERT INTO contrats_emploi (employe_id, type_contrat, date_debut, date_fin, salaire)
-VALUES (1, 'CDI', '2024-07-01', NULL, 2800.00);
+INSERT INTO contrats_emploi (employe_id, type_contrat, date_debut, date_fin, salaire)  
+VALUES (1, 'CDI', '2024-07-01', NULL, 2800.00);  
 
 -- ❌ ÉCHEC : Impossible de créer un contrat qui chevauche le CDI
-INSERT INTO contrats_emploi (employe_id, type_contrat, date_debut, date_fin, salaire)
-VALUES (1, 'Stage', '2024-08-01', '2024-12-31', 1500.00);
+INSERT INTO contrats_emploi (employe_id, type_contrat, date_debut, date_fin, salaire)  
+VALUES (1, 'Stage', '2024-08-01', '2024-12-31', 1500.00);  
 ```
 
 ### 3. Locations de Véhicules
@@ -332,16 +332,16 @@ CREATE TABLE locations_vehicules (
 
 ```sql
 -- ✅ Location du véhicule 42 du 10 au 15 janvier
-INSERT INTO locations_vehicules (vehicule_id, client_id, date_heure_debut, date_heure_fin, prix_total)
-VALUES (42, 100, '2025-01-10 09:00', '2025-01-15 18:00', 350.00);
+INSERT INTO locations_vehicules (vehicule_id, client_id, date_heure_debut, date_heure_fin, prix_total)  
+VALUES (42, 100, '2025-01-10 09:00', '2025-01-15 18:00', 350.00);  
 
 -- ✅ Location du même véhicule après la première location
-INSERT INTO locations_vehicules (vehicule_id, client_id, date_heure_debut, date_heure_fin, prix_total)
-VALUES (42, 101, '2025-01-15 18:00', '2025-01-20 18:00', 400.00);
+INSERT INTO locations_vehicules (vehicule_id, client_id, date_heure_debut, date_heure_fin, prix_total)  
+VALUES (42, 101, '2025-01-15 18:00', '2025-01-20 18:00', 400.00);  
 
 -- ❌ ÉCHEC : Chevauchement avec la première location
-INSERT INTO locations_vehicules (vehicule_id, client_id, date_heure_debut, date_heure_fin, prix_total)
-VALUES (42, 102, '2025-01-12 09:00', '2025-01-17 18:00', 450.00);
+INSERT INTO locations_vehicules (vehicule_id, client_id, date_heure_debut, date_heure_fin, prix_total)  
+VALUES (42, 102, '2025-01-12 09:00', '2025-01-17 18:00', 450.00);  
 ```
 
 ### 4. Promotions Sans Chevauchement
@@ -365,16 +365,16 @@ CREATE TABLE promotions (
 
 ```sql
 -- ✅ Promotion de janvier
-INSERT INTO promotions (produit_id, code_promo, pourcentage_reduction, date_debut, date_fin)
-VALUES (200, 'WINTER2025', 20, '2025-01-01', '2025-01-31');
+INSERT INTO promotions (produit_id, code_promo, pourcentage_reduction, date_debut, date_fin)  
+VALUES (200, 'WINTER2025', 20, '2025-01-01', '2025-01-31');  
 
 -- ✅ Promotion de février (pas de chevauchement)
-INSERT INTO promotions (produit_id, code_promo, pourcentage_reduction, date_debut, date_fin)
-VALUES (200, 'SPRING2025', 15, '2025-02-01', '2025-02-28');
+INSERT INTO promotions (produit_id, code_promo, pourcentage_reduction, date_debut, date_fin)  
+VALUES (200, 'SPRING2025', 15, '2025-02-01', '2025-02-28');  
 
 -- ❌ ÉCHEC : Chevauchement avec la promotion de janvier
-INSERT INTO promotions (produit_id, code_promo, pourcentage_reduction, date_debut, date_fin)
-VALUES (200, 'MEGA2025', 30, '2025-01-15', '2025-02-15');
+INSERT INTO promotions (produit_id, code_promo, pourcentage_reduction, date_debut, date_fin)  
+VALUES (200, 'MEGA2025', 30, '2025-01-15', '2025-02-15');  
 ```
 
 ---
@@ -444,16 +444,16 @@ CREATE TABLE reservations_primaire (
 
 ```sql
 -- ✅ Insertion valide
-INSERT INTO reservations_primaire
-VALUES (1, '2025-01-10 14:00', '2025-01-10 16:00', 100);
+INSERT INTO reservations_primaire  
+VALUES (1, '2025-01-10 14:00', '2025-01-10 16:00', 100);  
 
 -- ✅ Autre période pour la même salle
-INSERT INTO reservations_primaire
-VALUES (1, '2025-01-10 16:00', '2025-01-10 18:00', 101);
+INSERT INTO reservations_primaire  
+VALUES (1, '2025-01-10 16:00', '2025-01-10 18:00', 101);  
 
 -- ❌ ÉCHEC : Duplication de la clé primaire temporelle
-INSERT INTO reservations_primaire
-VALUES (1, '2025-01-10 14:00', '2025-01-10 16:00', 102);
+INSERT INTO reservations_primaire  
+VALUES (1, '2025-01-10 14:00', '2025-01-10 16:00', 102);  
 ```
 
 ---
@@ -526,9 +526,9 @@ Les contraintes temporelles utilisent des **index GIST**, particulièrement effi
 
 ```sql
 -- Rechercher toutes les réservations d'une salle pour une période donnée
-EXPLAIN ANALYZE
-SELECT * FROM reservations_salles
-WHERE salle_id = 1
+EXPLAIN ANALYZE  
+SELECT * FROM reservations_salles  
+WHERE salle_id = 1  
   AND tsrange(date_debut, date_fin) && '[2025-01-10 12:00, 2025-01-10 18:00)';
 
 -- L'index GIST sera utilisé automatiquement
@@ -587,10 +587,10 @@ CREATE TABLE reservations_new (
 ```
 
 **Avantages** :
-- ✅ Plus lisible et intuitive
-- ✅ Standard SQL:2011 (Temporal Features)
-- ✅ Pas besoin d'extension externe
-- ✅ Meilleures performances
+- ✅ Plus lisible et intuitive  
+- ✅ Standard SQL:2011 (Temporal Features)  
+- ✅ Pas besoin d'extension externe  
+- ✅ Meilleures performances  
 - ✅ Meilleur support par les ORM et outils
 
 ### Processus de Migration
@@ -607,14 +607,14 @@ CREATE TABLE reservations_new (
 );
 
 -- 2. Copier les données
-INSERT INTO reservations_new
-SELECT * FROM reservations_old;
+INSERT INTO reservations_new  
+SELECT * FROM reservations_old;  
 
 -- 3. Renommer les tables
-BEGIN;
-ALTER TABLE reservations_old RENAME TO reservations_old_backup;
-ALTER TABLE reservations_new RENAME TO reservations;
-COMMIT;
+BEGIN;  
+ALTER TABLE reservations_old RENAME TO reservations_old_backup;  
+ALTER TABLE reservations_new RENAME TO reservations;  
+COMMIT;  
 
 -- 4. Vérifier et supprimer l'ancienne table
 DROP TABLE reservations_old_backup;
@@ -627,8 +627,8 @@ DROP TABLE reservations_old_backup;
 ### 1. Types de Données Supportés
 
 Les contraintes temporelles PostgreSQL 18 fonctionnent avec :
-- ✅ `TIMESTAMP` / `TIMESTAMPTZ`
-- ✅ `DATE`
+- ✅ `TIMESTAMP` / `TIMESTAMPTZ`  
+- ✅ `DATE`  
 - ✅ Types Range (`tsrange`, `tstzrange`, `daterange`)
 
 ### 2. NULL dans les Périodes
@@ -637,11 +637,11 @@ Si `date_debut` ou `date_fin` est `NULL`, la contrainte **ne s'applique pas** po
 
 ```sql
 -- ✅ Ces deux insertions sont acceptées (NULL ignore la contrainte)
-INSERT INTO reservations (salle_id, date_debut, date_fin)
-VALUES (1, NULL, NULL);
+INSERT INTO reservations (salle_id, date_debut, date_fin)  
+VALUES (1, NULL, NULL);  
 
-INSERT INTO reservations (salle_id, date_debut, date_fin)
-VALUES (1, NULL, NULL);
+INSERT INTO reservations (salle_id, date_debut, date_fin)  
+VALUES (1, NULL, NULL);  
 ```
 
 **Solution** : Utilisez `NOT NULL` sur les colonnes de période si vous voulez toujours valider :
@@ -669,17 +669,17 @@ Mettre à jour une période peut déclencher une violation si cela crée un chev
 
 ```sql
 -- Réservation initiale
-INSERT INTO reservations (salle_id, date_debut, date_fin)
-VALUES (1, '2025-01-10 14:00', '2025-01-10 16:00');
+INSERT INTO reservations (salle_id, date_debut, date_fin)  
+VALUES (1, '2025-01-10 14:00', '2025-01-10 16:00');  
 
 -- Autre réservation
-INSERT INTO reservations (salle_id, date_debut, date_fin)
-VALUES (1, '2025-01-10 16:00', '2025-01-10 18:00');
+INSERT INTO reservations (salle_id, date_debut, date_fin)  
+VALUES (1, '2025-01-10 16:00', '2025-01-10 18:00');  
 
 -- ❌ ÉCHEC : Étendre la première réservation crée un chevauchement
-UPDATE reservations
-SET date_fin = '2025-01-10 17:00'
-WHERE salle_id = 1 AND date_debut = '2025-01-10 14:00';
+UPDATE reservations  
+SET date_fin = '2025-01-10 17:00'  
+WHERE salle_id = 1 AND date_debut = '2025-01-10 14:00';  
 ```
 
 **Solution** : Vérifiez les chevauchements avant de modifier, ou utilisez des transactions.
@@ -688,15 +688,15 @@ WHERE salle_id = 1 AND date_debut = '2025-01-10 14:00';
 
 Sur des tables avec **millions de lignes**, les contraintes temporelles peuvent ralentir les insertions/modifications. Optimisations :
 
-1. **Partitionnement** : Partitionnez par période (par mois, par année)
-2. **Archivage** : Déplacez les anciennes réservations vers une table d'archive
+1. **Partitionnement** : Partitionnez par période (par mois, par année)  
+2. **Archivage** : Déplacez les anciennes réservations vers une table d'archive  
 3. **Index sélectifs** : Utilisez des index partiels si pertinent
 
 ```sql
 -- Index partiel : Seulement les réservations futures
-CREATE INDEX idx_reservations_futures
-ON reservations(salle_id, date_debut)
-WHERE date_fin >= CURRENT_TIMESTAMP;
+CREATE INDEX idx_reservations_futures  
+ON reservations(salle_id, date_debut)  
+WHERE date_fin >= CURRENT_TIMESTAMP;  
 ```
 
 ---
@@ -733,8 +733,8 @@ CREATE TABLE reservations (
 ### 3. Documentez vos Contraintes
 
 ```sql
-COMMENT ON CONSTRAINT uq_reservations_salle_periode ON reservations
-IS 'Empêche les réservations qui se chevauchent pour une même salle';
+COMMENT ON CONSTRAINT uq_reservations_salle_periode ON reservations  
+IS 'Empêche les réservations qui se chevauchent pour une même salle';  
 ```
 
 ### 4. Utilisez des Transactions pour les Opérations Complexes
@@ -746,11 +746,11 @@ BEGIN;
 DELETE FROM reservations WHERE id = 42;
 
 -- Créer deux nouvelles réservations dans le même créneau
-INSERT INTO reservations (salle_id, date_debut, date_fin)
-VALUES (1, '2025-01-10 14:00', '2025-01-10 15:30');
+INSERT INTO reservations (salle_id, date_debut, date_fin)  
+VALUES (1, '2025-01-10 14:00', '2025-01-10 15:30');  
 
-INSERT INTO reservations (salle_id, date_debut, date_fin)
-VALUES (1, '2025-01-10 15:30', '2025-01-10 17:00');
+INSERT INTO reservations (salle_id, date_debut, date_fin)  
+VALUES (1, '2025-01-10 15:30', '2025-01-10 17:00');  
 
 COMMIT;
 ```
@@ -761,12 +761,12 @@ COMMIT;
 
 ```sql
 -- Test 1 : Insertion normale
-INSERT INTO reservations (salle_id, date_debut, date_fin)
-VALUES (1, '2025-01-10 14:00', '2025-01-10 16:00');
+INSERT INTO reservations (salle_id, date_debut, date_fin)  
+VALUES (1, '2025-01-10 14:00', '2025-01-10 16:00');  
 
 -- Test 2 : Chevauchement (doit échouer)
-DO $$
-BEGIN
+DO $$  
+BEGIN  
     INSERT INTO reservations (salle_id, date_debut, date_fin)
     VALUES (1, '2025-01-10 15:00', '2025-01-10 17:00');
     RAISE EXCEPTION 'Test échoué : Chevauchement non détecté';
@@ -847,28 +847,28 @@ CREATE TABLE tarifs_zones (
 
 ### Points Clés
 
-1. **Nouveauté majeure** : Les contraintes temporelles sont natives dans PostgreSQL 18
-2. **Syntaxe simple** : `UNIQUE (col, PERIOD(debut, fin)) WITHOUT OVERLAPS`
-3. **Gestion automatique** : Détection et blocage des chevauchements
-4. **Performance optimisée** : Index GIST automatiques
+1. **Nouveauté majeure** : Les contraintes temporelles sont natives dans PostgreSQL 18  
+2. **Syntaxe simple** : `UNIQUE (col, PERIOD(debut, fin)) WITHOUT OVERLAPS`  
+3. **Gestion automatique** : Détection et blocage des chevauchements  
+4. **Performance optimisée** : Index GIST automatiques  
 5. **Standard SQL** : Conforme à SQL:2011 (Temporal Features)
 
 ### Avantages
 
-- ✅ **Simplicité** : Plus besoin d'extensions ou de triggers complexes
-- ✅ **Fiabilité** : Garantie au niveau de la base de données
-- ✅ **Performance** : Optimisé nativement
-- ✅ **Maintenabilité** : Code déclaratif et lisible
+- ✅ **Simplicité** : Plus besoin d'extensions ou de triggers complexes  
+- ✅ **Fiabilité** : Garantie au niveau de la base de données  
+- ✅ **Performance** : Optimisé nativement  
+- ✅ **Maintenabilité** : Code déclaratif et lisible  
 - ✅ **Portabilité** : Standard SQL (compatible avec d'autres SGBD modernes)
 
 ### Cas d'Usage Idéaux
 
-- 📅 Réservations (salles, véhicules, équipements)
-- 💰 Historiques de prix et tarifs
-- 📝 Contrats et périodes de validité
-- 🎟️ Promotions temporelles
-- 👤 Disponibilités de personnel
-- 📚 Versions de documents
+- 📅 Réservations (salles, véhicules, équipements)  
+- 💰 Historiques de prix et tarifs  
+- 📝 Contrats et périodes de validité  
+- 🎟️ Promotions temporelles  
+- 👤 Disponibilités de personnel  
+- 📚 Versions de documents  
 - 🏢 Locations et baux
 
 ---

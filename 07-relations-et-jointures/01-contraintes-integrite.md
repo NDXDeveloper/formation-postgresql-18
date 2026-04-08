@@ -10,10 +10,10 @@ En PostgreSQL, ces contraintes sont déclarées lors de la création ou de la mo
 
 ### Pourquoi utiliser des contraintes ?
 
-1. **Garantie de cohérence** : Les données restent valides et logiques
-2. **Prévention des erreurs** : Les bugs applicatifs sont détectés au niveau de la base
-3. **Documentation implicite** : Les contraintes documentent les règles métier
-4. **Performance** : Le planificateur peut optimiser certaines requêtes grâce aux contraintes
+1. **Garantie de cohérence** : Les données restent valides et logiques  
+2. **Prévention des erreurs** : Les bugs applicatifs sont détectés au niveau de la base  
+3. **Documentation implicite** : Les contraintes documentent les règles métier  
+4. **Performance** : Le planificateur peut optimiser certaines requêtes grâce aux contraintes  
 5. **Indépendance applicative** : Les règles s'appliquent quel que soit le client (web, mobile, API, etc.)
 
 ---
@@ -30,8 +30,8 @@ La contrainte `NOT NULL` garantit qu'une colonne **ne peut jamais contenir de va
 
 ```sql
 -- Exemple de NULL
-SELECT NULL = NULL;  -- Retourne NULL (pas TRUE !)
-SELECT NULL IS NULL; -- Retourne TRUE
+SELECT NULL = NULL;  -- Retourne NULL (pas TRUE !)  
+SELECT NULL IS NULL; -- Retourne TRUE  
 ```
 
 ### Syntaxe
@@ -50,17 +50,17 @@ CREATE TABLE utilisateurs (
 
 ```sql
 -- ✅ Insertion valide
-INSERT INTO utilisateurs (nom, prenom, email)
-VALUES ('Dupont', 'Marie', 'marie.dupont@example.com');
+INSERT INTO utilisateurs (nom, prenom, email)  
+VALUES ('Dupont', 'Marie', 'marie.dupont@example.com');  
 
 -- ❌ Échec : colonne 'nom' ne peut pas être NULL
-INSERT INTO utilisateurs (prenom, email)
-VALUES ('Jean', 'jean@example.com');
+INSERT INTO utilisateurs (prenom, email)  
+VALUES ('Jean', 'jean@example.com');  
 -- ERROR: null value in column "nom" violates not-null constraint
 
 -- ✅ Insertion valide avec NULL sur 'telephone' (autorisé)
-INSERT INTO utilisateurs (nom, prenom, email, telephone)
-VALUES ('Martin', 'Paul', 'paul@example.com', NULL);
+INSERT INTO utilisateurs (nom, prenom, email, telephone)  
+VALUES ('Martin', 'Paul', 'paul@example.com', NULL);  
 ```
 
 ### Quand utiliser NOT NULL ?
@@ -79,8 +79,8 @@ SELECT COUNT(*) FROM utilisateurs WHERE telephone IS NULL;
 UPDATE utilisateurs SET telephone = 'N/A' WHERE telephone IS NULL;
 
 -- Puis ajouter la contrainte
-ALTER TABLE utilisateurs
-ALTER COLUMN telephone SET NOT NULL;
+ALTER TABLE utilisateurs  
+ALTER COLUMN telephone SET NOT NULL;  
 ```
 
 ---
@@ -119,18 +119,18 @@ CREATE TABLE reservations (
 
 ```sql
 -- ✅ Première insertion
-INSERT INTO utilisateurs (email, nom)
-VALUES ('alice@example.com', 'Alice');
+INSERT INTO utilisateurs (email, nom)  
+VALUES ('alice@example.com', 'Alice');  
 
 -- ❌ Échec : email déjà existant
-INSERT INTO utilisateurs (email, nom)
-VALUES ('alice@example.com', 'Alice Bis');
+INSERT INTO utilisateurs (email, nom)  
+VALUES ('alice@example.com', 'Alice Bis');  
 -- ERROR: duplicate key value violates unique constraint
 -- DETAIL: Key (email)=(alice@example.com) already exists.
 
 -- ✅ Insertion valide avec un email différent
-INSERT INTO utilisateurs (email, nom)
-VALUES ('bob@example.com', 'Bob');
+INSERT INTO utilisateurs (email, nom)  
+VALUES ('bob@example.com', 'Bob');  
 ```
 
 ### Particularité : UNIQUE et NULL
@@ -145,12 +145,12 @@ CREATE TABLE produits (
 );
 
 -- ✅ Ces deux insertions sont valides (NULL ≠ NULL)
-INSERT INTO produits (nom, code_barre) VALUES ('Produit A', NULL);
-INSERT INTO produits (nom, code_barre) VALUES ('Produit B', NULL);
+INSERT INTO produits (nom, code_barre) VALUES ('Produit A', NULL);  
+INSERT INTO produits (nom, code_barre) VALUES ('Produit B', NULL);  
 
 -- ❌ Mais celle-ci échouera (duplication de '123456')
-INSERT INTO produits (nom, code_barre) VALUES ('Produit C', '123456');
-INSERT INTO produits (nom, code_barre) VALUES ('Produit D', '123456');
+INSERT INTO produits (nom, code_barre) VALUES ('Produit C', '123456');  
+INSERT INTO produits (nom, code_barre) VALUES ('Produit D', '123456');  
 ```
 
 ### UNIQUE vs UNIQUE avec NOT NULL
@@ -186,14 +186,14 @@ CREATE TABLE utilisateurs (
 La **clé primaire** (Primary Key) est une contrainte qui identifie de manière **unique** chaque ligne d'une table. C'est l'identifiant de référence absolu de l'entité.
 
 Une clé primaire est **automatiquement** :
-- `UNIQUE` : Pas de doublons
-- `NOT NULL` : Jamais de valeur nulle
+- `UNIQUE` : Pas de doublons  
+- `NOT NULL` : Jamais de valeur nulle  
 - **Indexée** : Un index B-Tree est créé automatiquement
 
 ### Règles fondamentales
 
-1. **Une seule clé primaire par table** (mais elle peut être composite)
-2. Une PK ne peut **jamais être NULL**
+1. **Une seule clé primaire par table** (mais elle peut être composite)  
+2. Une PK ne peut **jamais être NULL**  
 3. Une PK ne change **jamais** (stabilité dans le temps)
 
 ### Syntaxe : Clé primaire simple
@@ -289,8 +289,8 @@ CREATE TABLE pays (
 
 ### Bonnes pratiques
 
-1. **Privilégiez les clés surrogates** (SERIAL, IDENTITY, UUID) pour la plupart des tables
-2. **Ajoutez des contraintes UNIQUE** sur les identifiants métier (email, numéro client, etc.)
+1. **Privilégiez les clés surrogates** (SERIAL, IDENTITY, UUID) pour la plupart des tables  
+2. **Ajoutez des contraintes UNIQUE** sur les identifiants métier (email, numéro client, etc.)  
 3. **Nommez explicitement vos PK** si vous voulez contrôler le nom de l'index
 
 ```sql
@@ -315,8 +315,8 @@ C'est le mécanisme fondamental pour modéliser les **relations entre entités**
 
 ### Objectif
 
-- **Intégrité référentielle** : Empêcher les "orphelins" (références vers des enregistrements inexistants)
-- **Cohérence des données** : Garantir que les relations sont valides
+- **Intégrité référentielle** : Empêcher les "orphelins" (références vers des enregistrements inexistants)  
+- **Cohérence des données** : Garantir que les relations sont valides  
 - **Documentation** : Rendre explicites les liens entre tables
 
 ### Syntaxe de base
@@ -351,13 +351,13 @@ CREATE TABLE commandes (
 
 ```sql
 -- ✅ Insertion valide (client_id = 1 existe)
-INSERT INTO clients (nom) VALUES ('Alice');  -- id=1
-INSERT INTO commandes (client_id, date_commande)
-VALUES (1, '2025-01-15');
+INSERT INTO clients (nom) VALUES ('Alice');  -- id=1  
+INSERT INTO commandes (client_id, date_commande)  
+VALUES (1, '2025-01-15');  
 
 -- ❌ Échec : client_id = 999 n'existe pas
-INSERT INTO commandes (client_id, date_commande)
-VALUES (999, '2025-01-15');
+INSERT INTO commandes (client_id, date_commande)  
+VALUES (999, '2025-01-15');  
 -- ERROR: insert or update on table "commandes" violates foreign key constraint
 -- DETAIL: Key (client_id)=(999) is not present in table "clients".
 ```
@@ -503,9 +503,9 @@ INSERT INTO employes (nom, manager_id) VALUES ('Bob', 1);  -- id=2
    ```
    **Pourquoi ?** Pour accélérer les jointures et les vérifications de contraintes.
 
-3. **Choisissez ON DELETE avec soin** :
-   - `CASCADE` : Pour les relations de composition forte (ex : commande → lignes_commande)
-   - `RESTRICT` ou `NO ACTION` : Par défaut, pour éviter les suppressions accidentelles
+3. **Choisissez ON DELETE avec soin** :  
+   - `CASCADE` : Pour les relations de composition forte (ex : commande → lignes_commande)  
+   - `RESTRICT` ou `NO ACTION` : Par défaut, pour éviter les suppressions accidentelles  
    - `SET NULL` : Pour les relations optionnelles
 
 4. **Évitez de modifier les PK référencées** : Utilisez `ON UPDATE CASCADE` uniquement si nécessaire.
@@ -568,12 +568,12 @@ CREATE TABLE reservations (
 );
 
 -- ✅ Valide
-INSERT INTO reservations (date_debut, date_fin)
-VALUES ('2025-01-10', '2025-01-15');
+INSERT INTO reservations (date_debut, date_fin)  
+VALUES ('2025-01-10', '2025-01-15');  
 
 -- ❌ Échec : date_fin avant date_debut
-INSERT INTO reservations (date_debut, date_fin)
-VALUES ('2025-01-20', '2025-01-15');
+INSERT INTO reservations (date_debut, date_fin)  
+VALUES ('2025-01-20', '2025-01-15');  
 -- ERROR: new row violates check constraint "chk_dates_coherentes"
 ```
 
@@ -694,13 +694,13 @@ ALTER TABLE utilisateurs ADD CONSTRAINT uq_email UNIQUE (email);
 ALTER TABLE utilisateurs ADD PRIMARY KEY (id);
 
 -- FOREIGN KEY
-ALTER TABLE commandes
-ADD CONSTRAINT fk_client
-FOREIGN KEY (client_id) REFERENCES clients(id);
+ALTER TABLE commandes  
+ADD CONSTRAINT fk_client  
+FOREIGN KEY (client_id) REFERENCES clients(id);  
 
 -- CHECK
-ALTER TABLE produits
-ADD CONSTRAINT chk_prix_positif CHECK (prix > 0);
+ALTER TABLE produits  
+ADD CONSTRAINT chk_prix_positif CHECK (prix > 0);  
 ```
 
 ### Supprimer une contrainte
@@ -745,17 +745,17 @@ SELECT
         WHEN 'u' THEN 'UNIQUE'
         WHEN 'c' THEN 'CHECK'
     END AS type_contrainte
-FROM pg_constraint
-WHERE conrelid = 'nom_table'::regclass;
+FROM pg_constraint  
+WHERE conrelid = 'nom_table'::regclass;  
 ```
 
 ### Types de contraintes (contype)
 
-- `p` : PRIMARY KEY
-- `f` : FOREIGN KEY
-- `u` : UNIQUE
-- `c` : CHECK
-- `t` : TRIGGER constraint
+- `p` : PRIMARY KEY  
+- `f` : FOREIGN KEY  
+- `u` : UNIQUE  
+- `c` : CHECK  
+- `t` : TRIGGER constraint  
 - `x` : EXCLUSION constraint
 
 ---
@@ -806,13 +806,13 @@ CREATE TABLE departements (
 );
 
 -- Étape 2 : Ajouter les FK
-ALTER TABLE employes
-ADD CONSTRAINT fk_employes_departement
-FOREIGN KEY (departement_id) REFERENCES departements(id);
+ALTER TABLE employes  
+ADD CONSTRAINT fk_employes_departement  
+FOREIGN KEY (departement_id) REFERENCES departements(id);  
 
-ALTER TABLE departements
-ADD CONSTRAINT fk_departements_chef
-FOREIGN KEY (chef_id) REFERENCES employes(id);
+ALTER TABLE departements  
+ADD CONSTRAINT fk_departements_chef  
+FOREIGN KEY (chef_id) REFERENCES employes(id);  
 ```
 
 ---
@@ -830,8 +830,8 @@ ERROR: null value in column "email" violates not-null constraint
 ### Erreur 2 : Violation de UNIQUE
 
 ```
-ERROR: duplicate key value violates unique constraint "utilisateurs_email_key"
-DETAIL: Key (email)=(alice@example.com) already exists.
+ERROR: duplicate key value violates unique constraint "utilisateurs_email_key"  
+DETAIL: Key (email)=(alice@example.com) already exists.  
 ```
 
 **Solutions** :
@@ -842,8 +842,8 @@ DETAIL: Key (email)=(alice@example.com) already exists.
 ### Erreur 3 : Violation de FOREIGN KEY
 
 ```
-ERROR: insert or update on table "commandes" violates foreign key constraint "fk_client"
-DETAIL: Key (client_id)=(999) is not present in table "clients".
+ERROR: insert or update on table "commandes" violates foreign key constraint "fk_client"  
+DETAIL: Key (client_id)=(999) is not present in table "clients".  
 ```
 
 **Solutions** :
@@ -854,8 +854,8 @@ DETAIL: Key (client_id)=(999) is not present in table "clients".
 ### Erreur 4 : Violation de CHECK
 
 ```
-ERROR: new row for relation "produits" violates check constraint "chk_prix_positif"
-DETAIL: Failing row contains (10, Souris, -5.00, 20).
+ERROR: new row for relation "produits" violates check constraint "chk_prix_positif"  
+DETAIL: Failing row contains (10, Souris, -5.00, 20).  
 ```
 
 **Solution** : Corriger la valeur pour qu'elle respecte la règle métier.
@@ -892,11 +892,11 @@ DETAIL: Failing row contains (10, Souris, -5.00, 20).
 
 Lors de la création d'une table, posez-vous ces questions :
 
-- ✅ Quelle est la clé primaire ? (Préférez SERIAL ou IDENTITY)
-- ✅ Quelles colonnes sont obligatoires ? (NOT NULL)
-- ✅ Quelles colonnes doivent être uniques ? (UNIQUE)
-- ✅ Quelles sont les relations avec d'autres tables ? (FOREIGN KEY)
-- ✅ Quelles validations métier puis-je encoder ? (CHECK)
+- ✅ Quelle est la clé primaire ? (Préférez SERIAL ou IDENTITY)  
+- ✅ Quelles colonnes sont obligatoires ? (NOT NULL)  
+- ✅ Quelles colonnes doivent être uniques ? (UNIQUE)  
+- ✅ Quelles sont les relations avec d'autres tables ? (FOREIGN KEY)  
+- ✅ Quelles validations métier puis-je encoder ? (CHECK)  
 - ✅ Ai-je besoin d'index sur les FK pour les performances ?
 
 ### Exemple Complet
@@ -953,10 +953,10 @@ Les **contraintes d'intégrité** sont essentielles pour bâtir une base de donn
 
 ### Points clés à retenir
 
-1. **NOT NULL** : Rendez vos colonnes non nullables par défaut
-2. **UNIQUE** : Évitez les doublons sur les identifiants métier
-3. **PRIMARY KEY** : Chaque table doit avoir un identifiant unique
-4. **FOREIGN KEY** : Garantissez l'intégrité référentielle entre tables
+1. **NOT NULL** : Rendez vos colonnes non nullables par défaut  
+2. **UNIQUE** : Évitez les doublons sur les identifiants métier  
+3. **PRIMARY KEY** : Chaque table doit avoir un identifiant unique  
+4. **FOREIGN KEY** : Garantissez l'intégrité référentielle entre tables  
 5. **CHECK** : Encodez les règles métier au niveau de la base
 
 En combinant ces contraintes intelligemment, vous créez un **système de données auto-documenté** où les règles métier sont explicites, appliquées automatiquement, et indépendantes de votre code applicatif.

@@ -33,12 +33,12 @@ CREATE TABLE utilisateurs (
 );
 
 -- Première insertion : OK
-INSERT INTO utilisateurs (email, nom, prenom, derniere_connexion)
-VALUES ('alice@example.com', 'Dupont', 'Alice', CURRENT_TIMESTAMP);
+INSERT INTO utilisateurs (email, nom, prenom, derniere_connexion)  
+VALUES ('alice@example.com', 'Dupont', 'Alice', CURRENT_TIMESTAMP);  
 
 -- Deuxième insertion du même email : ERREUR !
-INSERT INTO utilisateurs (email, nom, prenom, derniere_connexion)
-VALUES ('alice@example.com', 'Dupont', 'Alice', CURRENT_TIMESTAMP);
+INSERT INTO utilisateurs (email, nom, prenom, derniere_connexion)  
+VALUES ('alice@example.com', 'Dupont', 'Alice', CURRENT_TIMESTAMP);  
 -- ERROR: duplicate key value violates unique constraint "utilisateurs_pkey"
 ```
 
@@ -63,18 +63,18 @@ END IF;
 ```
 
 **Problèmes** :
-- ❌ Deux requêtes minimum (SELECT + INSERT/UPDATE)
-- ⚠️ Race condition : Entre le SELECT et l'INSERT, un autre processus pourrait insérer la même ligne
-- ❌ Code complexe et verbeux
+- ❌ Deux requêtes minimum (SELECT + INSERT/UPDATE)  
+- ⚠️ Race condition : Entre le SELECT et l'INSERT, un autre processus pourrait insérer la même ligne  
+- ❌ Code complexe et verbeux  
 - ⚠️ Pas atomique
 
 #### Méthode 2 : UPDATE puis INSERT si échec
 
 ```sql
 -- Étape 1 : Tenter UPDATE
-UPDATE utilisateurs
-SET derniere_connexion = CURRENT_TIMESTAMP
-WHERE email = 'alice@example.com';
+UPDATE utilisateurs  
+SET derniere_connexion = CURRENT_TIMESTAMP  
+WHERE email = 'alice@example.com';  
 
 -- Étape 2 : Si aucune ligne modifiée, faire INSERT
 -- (nécessite vérifier le nombre de lignes affectées dans le code)
@@ -85,8 +85,8 @@ END IF;
 ```
 
 **Problèmes** :
-- ❌ Toujours deux requêtes
-- ⚠️ Race condition possible
+- ❌ Toujours deux requêtes  
+- ⚠️ Race condition possible  
 - ❌ Logique inversée (on met à jour ce qui n'existe peut-être pas)
 
 #### Méthode 3 : INSERT avec gestion d'exception
@@ -105,8 +105,8 @@ END;
 ```
 
 **Problèmes** :
-- ⚠️ Les exceptions sont coûteuses en performance
-- ❌ Syntaxe lourde
+- ⚠️ Les exceptions sont coûteuses en performance  
+- ❌ Syntaxe lourde  
 - ⚠️ Pas disponible en SQL pur (nécessite PL/pgSQL)
 
 ---
@@ -116,27 +116,27 @@ END;
 PostgreSQL propose une solution élégante, performante et atomique :
 
 ```sql
-INSERT INTO utilisateurs (email, nom, prenom, derniere_connexion)
-VALUES ('alice@example.com', 'Dupont', 'Alice', CURRENT_TIMESTAMP)
-ON CONFLICT (email) DO UPDATE
-SET derniere_connexion = CURRENT_TIMESTAMP;
+INSERT INTO utilisateurs (email, nom, prenom, derniere_connexion)  
+VALUES ('alice@example.com', 'Dupont', 'Alice', CURRENT_TIMESTAMP)  
+ON CONFLICT (email) DO UPDATE  
+SET derniere_connexion = CURRENT_TIMESTAMP;  
 ```
 
 **Avantages** :
-- ✅ Une seule requête (atomique)
-- ✅ Pas de race condition
-- ✅ Performance optimale
-- ✅ Code simple et lisible
+- ✅ Une seule requête (atomique)  
+- ✅ Pas de race condition  
+- ✅ Performance optimale  
+- ✅ Code simple et lisible  
 - ✅ SQL standard (pas de code procédural)
 
 ### Syntaxe générale
 
 ```sql
-INSERT INTO table_name (colonnes...)
-VALUES (valeurs...)
-ON CONFLICT (colonne_conflit)
-DO NOTHING | DO UPDATE SET ...
-RETURNING ...;
+INSERT INTO table_name (colonnes...)  
+VALUES (valeurs...)  
+ON CONFLICT (colonne_conflit)  
+DO NOTHING | DO UPDATE SET ...  
+RETURNING ...;  
 ```
 
 ---
@@ -150,9 +150,9 @@ RETURNING ...;
 ### Syntaxe basique
 
 ```sql
-INSERT INTO table_name (colonnes...)
-VALUES (valeurs...)
-ON CONFLICT (colonne_contrainte) DO NOTHING;
+INSERT INTO table_name (colonnes...)  
+VALUES (valeurs...)  
+ON CONFLICT (colonne_contrainte) DO NOTHING;  
 ```
 
 ### Exemple pratique
@@ -168,8 +168,8 @@ CREATE TABLE tags (
 INSERT INTO tags (nom) VALUES ('postgresql');
 
 -- Deuxième insertion du même tag : ignorée silencieusement
-INSERT INTO tags (nom) VALUES ('postgresql')
-ON CONFLICT (nom) DO NOTHING;
+INSERT INTO tags (nom) VALUES ('postgresql')  
+ON CONFLICT (nom) DO NOTHING;  
 
 -- Résultat : Le tag existe toujours une seule fois
 SELECT * FROM tags WHERE nom = 'postgresql';
@@ -196,18 +196,18 @@ SELECT * FROM tags ORDER BY nom;
 
 ```sql
 -- Importer une liste d'emails sans se soucier des doublons
-INSERT INTO newsletter_subscribers (email)
-SELECT email FROM imported_contacts
-ON CONFLICT (email) DO NOTHING;
+INSERT INTO newsletter_subscribers (email)  
+SELECT email FROM imported_contacts  
+ON CONFLICT (email) DO NOTHING;  
 ```
 
 #### 2. Enregistrement d'événements uniques
 
 ```sql
 -- Enregistrer qu'un utilisateur a visité une page (une fois maximum)
-INSERT INTO page_views (user_id, page_id, date_vue)
-VALUES (123, 456, CURRENT_DATE)
-ON CONFLICT (user_id, page_id, date_vue) DO NOTHING;
+INSERT INTO page_views (user_id, page_id, date_vue)  
+VALUES (123, 456, CURRENT_DATE)  
+ON CONFLICT (user_id, page_id, date_vue) DO NOTHING;  
 ```
 
 #### 3. Création de relations many-to-many sans doublons
@@ -220,9 +220,9 @@ CREATE TABLE utilisateur_roles (
 );
 
 -- Assigner un rôle, ignorer si déjà assigné
-INSERT INTO utilisateur_roles (utilisateur_id, role_id)
-VALUES (42, 1)
-ON CONFLICT (utilisateur_id, role_id) DO NOTHING;
+INSERT INTO utilisateur_roles (utilisateur_id, role_id)  
+VALUES (42, 1)  
+ON CONFLICT (utilisateur_id, role_id) DO NOTHING;  
 ```
 
 ### Vérifier ce qui a été inséré
@@ -235,8 +235,8 @@ INSERT INTO tags (nom) VALUES
     ('postgresql'),  -- Existe déjà
     ('rust'),        -- Nouveau
     ('go')           -- Nouveau
-ON CONFLICT (nom) DO NOTHING
-RETURNING *;
+ON CONFLICT (nom) DO NOTHING  
+RETURNING *;  
 ```
 
 **Résultat** :
@@ -260,10 +260,10 @@ Seules les lignes effectivement insérées sont retournées !
 ### Syntaxe basique
 
 ```sql
-INSERT INTO table_name (colonnes...)
-VALUES (valeurs...)
-ON CONFLICT (colonne_contrainte)
-DO UPDATE SET
+INSERT INTO table_name (colonnes...)  
+VALUES (valeurs...)  
+ON CONFLICT (colonne_contrainte)  
+DO UPDATE SET  
     colonne1 = valeur1,
     colonne2 = valeur2,
     ...;
@@ -280,10 +280,10 @@ CREATE TABLE statistiques (
 );
 
 -- Insérer ou incrémenter le compteur
-INSERT INTO statistiques (page, vues, derniere_mise_a_jour)
-VALUES ('accueil', 1, CURRENT_TIMESTAMP)
-ON CONFLICT (page)
-DO UPDATE SET
+INSERT INTO statistiques (page, vues, derniere_mise_a_jour)  
+VALUES ('accueil', 1, CURRENT_TIMESTAMP)  
+ON CONFLICT (page)  
+DO UPDATE SET  
     vues = statistiques.vues + 1,
     derniere_mise_a_jour = CURRENT_TIMESTAMP;
 ```
@@ -296,14 +296,14 @@ DO UPDATE SET
 
 Dans la clause `DO UPDATE`, vous avez accès à deux versions des données :
 
-- **`table_name.colonne`** : Valeur **actuelle** dans la table
+- **`table_name.colonne`** : Valeur **actuelle** dans la table  
 - **`EXCLUDED.colonne`** : Valeur **tentée** d'insertion (celle qui a causé le conflit)
 
 ```sql
-INSERT INTO statistiques (page, vues)
-VALUES ('accueil', 10)
-ON CONFLICT (page)
-DO UPDATE SET
+INSERT INTO statistiques (page, vues)  
+VALUES ('accueil', 10)  
+ON CONFLICT (page)  
+DO UPDATE SET  
     vues = statistiques.vues + EXCLUDED.vues;
     --     └─ Valeur actuelle   └─ Valeur tentée (10)
 ```
@@ -321,10 +321,10 @@ CREATE TABLE produits (
 );
 
 -- Insérer ou mettre à jour si plus récent
-INSERT INTO produits (sku, nom, prix, derniere_mise_a_jour)
-VALUES ('PROD-123', 'Ordinateur', 899.99, '2025-11-19 10:00:00')
-ON CONFLICT (sku)
-DO UPDATE SET
+INSERT INTO produits (sku, nom, prix, derniere_mise_a_jour)  
+VALUES ('PROD-123', 'Ordinateur', 899.99, '2025-11-19 10:00:00')  
+ON CONFLICT (sku)  
+DO UPDATE SET  
     nom = EXCLUDED.nom,
     prix = EXCLUDED.prix,
     derniere_mise_a_jour = EXCLUDED.derniere_mise_a_jour
@@ -343,10 +343,10 @@ CREATE TABLE meilleur_score (
 );
 
 -- Garder seulement le meilleur score
-INSERT INTO meilleur_score (joueur_id, score, date_record)
-VALUES (42, 1500, CURRENT_TIMESTAMP)
-ON CONFLICT (joueur_id)
-DO UPDATE SET
+INSERT INTO meilleur_score (joueur_id, score, date_record)  
+VALUES (42, 1500, CURRENT_TIMESTAMP)  
+ON CONFLICT (joueur_id)  
+DO UPDATE SET  
     score = GREATEST(meilleur_score.score, EXCLUDED.score),
     date_record = CASE
         WHEN EXCLUDED.score > meilleur_score.score THEN EXCLUDED.date_record
@@ -365,10 +365,10 @@ CREATE TABLE utilisateur_tags (
 );
 
 -- Ajouter des tags sans doublons
-INSERT INTO utilisateur_tags (user_id, tags)
-VALUES (42, ARRAY['postgresql', 'sql'])
-ON CONFLICT (user_id)
-DO UPDATE SET
+INSERT INTO utilisateur_tags (user_id, tags)  
+VALUES (42, ARRAY['postgresql', 'sql'])  
+ON CONFLICT (user_id)  
+DO UPDATE SET  
     tags = array(
         SELECT DISTINCT unnest(utilisateur_tags.tags || EXCLUDED.tags)
     );
@@ -385,8 +385,8 @@ Les tags existants et nouveaux sont fusionnés sans doublons.
 La forme la plus courante :
 
 ```sql
-ON CONFLICT (colonne)
-ON CONFLICT (colonne1, colonne2, ...)  -- Contrainte composite
+ON CONFLICT (colonne)  
+ON CONFLICT (colonne1, colonne2, ...)  -- Contrainte composite  
 ```
 
 **Exemple** :
@@ -400,10 +400,10 @@ CREATE TABLE evenements_uniques (
     PRIMARY KEY (user_id, event_type, event_date)
 );
 
-INSERT INTO evenements_uniques (user_id, event_type, event_date, count)
-VALUES (42, 'login', '2025-11-19', 1)
-ON CONFLICT (user_id, event_type, event_date)
-DO UPDATE SET count = evenements_uniques.count + 1;
+INSERT INTO evenements_uniques (user_id, event_type, event_date, count)  
+VALUES (42, 'login', '2025-11-19', 1)  
+ON CONFLICT (user_id, event_type, event_date)  
+DO UPDATE SET count = evenements_uniques.count + 1;  
 ```
 
 ### Syntaxe avec nom de contrainte
@@ -420,16 +420,16 @@ CREATE TABLE utilisateurs (
 );
 
 -- Conflit sur la contrainte email
-INSERT INTO utilisateurs (email, username)
-VALUES ('alice@example.com', 'alice42')
-ON CONFLICT ON CONSTRAINT unique_email
-DO UPDATE SET username = EXCLUDED.username;
+INSERT INTO utilisateurs (email, username)  
+VALUES ('alice@example.com', 'alice42')  
+ON CONFLICT ON CONSTRAINT unique_email  
+DO UPDATE SET username = EXCLUDED.username;  
 
 -- Conflit sur la contrainte username
-INSERT INTO utilisateurs (email, username)
-VALUES ('bob@example.com', 'alice42')
-ON CONFLICT ON CONSTRAINT unique_username
-DO NOTHING;
+INSERT INTO utilisateurs (email, username)  
+VALUES ('bob@example.com', 'alice42')  
+ON CONFLICT ON CONSTRAINT unique_username  
+DO NOTHING;  
 ```
 
 ### Contraintes partielles (index avec WHERE)
@@ -438,15 +438,15 @@ Si vous avez un index partiel (unique avec une clause WHERE) :
 
 ```sql
 -- Index unique partiel : email unique seulement pour les utilisateurs actifs
-CREATE UNIQUE INDEX unique_active_email
-ON utilisateurs (email)
-WHERE statut = 'actif';
+CREATE UNIQUE INDEX unique_active_email  
+ON utilisateurs (email)  
+WHERE statut = 'actif';  
 
 -- ON CONFLICT doit inclure la condition de l'index
-INSERT INTO utilisateurs (email, username, statut)
-VALUES ('alice@example.com', 'alice42', 'actif')
-ON CONFLICT (email) WHERE statut = 'actif'
-DO UPDATE SET username = EXCLUDED.username;
+INSERT INTO utilisateurs (email, username, statut)  
+VALUES ('alice@example.com', 'alice42', 'actif')  
+ON CONFLICT (email) WHERE statut = 'actif'  
+DO UPDATE SET username = EXCLUDED.username;  
 ```
 
 ---
@@ -463,10 +463,10 @@ CREATE TABLE cache (
 );
 
 -- Mettre en cache (ou rafraîchir si existe)
-INSERT INTO cache (key, value, expire_at)
-VALUES ('user:42:profile', '{"name": "Alice", "age": 30}', NOW() + INTERVAL '1 hour')
-ON CONFLICT (key)
-DO UPDATE SET
+INSERT INTO cache (key, value, expire_at)  
+VALUES ('user:42:profile', '{"name": "Alice", "age": 30}', NOW() + INTERVAL '1 hour')  
+ON CONFLICT (key)  
+DO UPDATE SET  
     value = EXCLUDED.value,
     expire_at = EXCLUDED.expire_at;
 ```
@@ -483,10 +483,10 @@ CREATE TABLE ventes_journalieres (
 );
 
 -- Enregistrer une vente
-INSERT INTO ventes_journalieres (produit_id, date_vente, quantite_vendue, montant_total)
-VALUES (123, CURRENT_DATE, 5, 249.95)
-ON CONFLICT (produit_id, date_vente)
-DO UPDATE SET
+INSERT INTO ventes_journalieres (produit_id, date_vente, quantite_vendue, montant_total)  
+VALUES (123, CURRENT_DATE, 5, 249.95)  
+ON CONFLICT (produit_id, date_vente)  
+DO UPDATE SET  
     quantite_vendue = ventes_journalieres.quantite_vendue + EXCLUDED.quantite_vendue,
     montant_total = ventes_journalieres.montant_total + EXCLUDED.montant_total;
 ```
@@ -506,11 +506,11 @@ CREATE TABLE contacts (
 );
 
 -- Synchroniser avec une source externe
-INSERT INTO contacts (email, nom, prenom, telephone, derniere_synchro)
-SELECT email, nom, prenom, telephone, CURRENT_TIMESTAMP
-FROM contacts_externes
-ON CONFLICT (email)
-DO UPDATE SET
+INSERT INTO contacts (email, nom, prenom, telephone, derniere_synchro)  
+SELECT email, nom, prenom, telephone, CURRENT_TIMESTAMP  
+FROM contacts_externes  
+ON CONFLICT (email)  
+DO UPDATE SET  
     nom = EXCLUDED.nom,
     prenom = EXCLUDED.prenom,
     telephone = EXCLUDED.telephone,
@@ -528,10 +528,10 @@ CREATE TABLE utilisateurs_en_ligne (
 );
 
 -- Mettre à jour la présence
-INSERT INTO utilisateurs_en_ligne (user_id, derniere_activite, ip_address, user_agent)
-VALUES (42, CURRENT_TIMESTAMP, '192.168.1.100', 'Mozilla/5.0...')
-ON CONFLICT (user_id)
-DO UPDATE SET
+INSERT INTO utilisateurs_en_ligne (user_id, derniere_activite, ip_address, user_agent)  
+VALUES (42, CURRENT_TIMESTAMP, '192.168.1.100', 'Mozilla/5.0...')  
+ON CONFLICT (user_id)  
+DO UPDATE SET  
     derniere_activite = EXCLUDED.derniere_activite,
     ip_address = EXCLUDED.ip_address,
     user_agent = EXCLUDED.user_agent;
@@ -549,10 +549,10 @@ CREATE TABLE sessions (
 );
 
 -- Créer ou mettre à jour une session
-INSERT INTO sessions (session_id, user_id, data, updated_at)
-VALUES ('abc123...', 42, '{"cart": ["item1", "item2"]}', CURRENT_TIMESTAMP)
-ON CONFLICT (session_id)
-DO UPDATE SET
+INSERT INTO sessions (session_id, user_id, data, updated_at)  
+VALUES ('abc123...', 42, '{"cart": ["item1", "item2"]}', CURRENT_TIMESTAMP)  
+ON CONFLICT (session_id)  
+DO UPDATE SET  
     data = EXCLUDED.data,
     updated_at = EXCLUDED.updated_at;
 ```
@@ -567,11 +567,11 @@ RETURNING fonctionne parfaitement avec ON CONFLICT et permet de distinguer les i
 
 ```sql
 -- Version sans distinction
-INSERT INTO statistiques (page, vues)
-VALUES ('accueil', 1)
-ON CONFLICT (page)
-DO UPDATE SET vues = statistiques.vues + 1
-RETURNING page, vues;
+INSERT INTO statistiques (page, vues)  
+VALUES ('accueil', 1)  
+ON CONFLICT (page)  
+DO UPDATE SET vues = statistiques.vues + 1  
+RETURNING page, vues;  
 
 -- Résultat : On voit la valeur finale mais pas l'action effectuée
 ```
@@ -581,10 +581,10 @@ RETURNING page, vues;
 Avec PostgreSQL 18 et le support de OLD/NEW :
 
 ```sql
-INSERT INTO statistiques (page, vues, derniere_maj)
-VALUES ('accueil', 1, CURRENT_TIMESTAMP)
-ON CONFLICT (page)
-DO UPDATE SET
+INSERT INTO statistiques (page, vues, derniere_maj)  
+VALUES ('accueil', 1, CURRENT_TIMESTAMP)  
+ON CONFLICT (page)  
+DO UPDATE SET  
     vues = statistiques.vues + 1,
     derniere_maj = CURRENT_TIMESTAMP
 RETURNING
@@ -621,9 +621,9 @@ WITH upserted AS (
         prix,
         CASE WHEN OLD.sku IS NULL THEN 'created' ELSE 'updated' END AS action
 )
-INSERT INTO audit_produits (sku, action, timestamp)
-SELECT sku, action, CURRENT_TIMESTAMP
-FROM upserted;
+INSERT INTO audit_produits (sku, action, timestamp)  
+SELECT sku, action, CURRENT_TIMESTAMP  
+FROM upserted;  
 ```
 
 ---
@@ -638,8 +638,8 @@ FROM upserted;
 -- Mesure de temps pour 10 000 opérations
 
 -- Approche 1 : SELECT puis INSERT ou UPDATE
-DO $$
-DECLARE
+DO $$  
+DECLARE  
     i INTEGER;
 BEGIN
     FOR i IN 1..10000 LOOP
@@ -662,8 +662,8 @@ END $$;
 ```sql
 -- Mesure de temps pour 10 000 opérations
 
-DO $$
-DECLARE
+DO $$  
+DECLARE  
     i INTEGER;
 BEGIN
     FOR i IN 1..10000 LOOP
@@ -684,10 +684,10 @@ END $$;
 
 ```sql
 -- Au lieu de 10 000 requêtes, une seule avec 10 000 lignes
-INSERT INTO stats (id, counter)
-SELECT generate_series(1, 10000), 1
-ON CONFLICT (id)
-DO UPDATE SET counter = stats.counter + 1;
+INSERT INTO stats (id, counter)  
+SELECT generate_series(1, 10000), 1  
+ON CONFLICT (id)  
+DO UPDATE SET counter = stats.counter + 1;  
 
 -- Durée : ~0.5 seconde (30× plus rapide que l'approche traditionnelle)
 ```
@@ -702,9 +702,9 @@ DO UPDATE SET counter = stats.counter + 1;
 -- ✅ Index unique obligatoire
 CREATE UNIQUE INDEX idx_email ON utilisateurs (email);
 
-INSERT INTO utilisateurs (email, nom)
-VALUES ('alice@example.com', 'Alice')
-ON CONFLICT (email) DO NOTHING;  -- Fonctionne
+INSERT INTO utilisateurs (email, nom)  
+VALUES ('alice@example.com', 'Alice')  
+ON CONFLICT (email) DO NOTHING;  -- Fonctionne  
 
 -- ❌ Sans index unique : erreur
 ON CONFLICT (nom) DO NOTHING;  -- ERROR: there is no unique constraint matching...
@@ -718,9 +718,9 @@ FOR each row IN data:
     INSERT ... ON CONFLICT ... DO UPDATE;
 
 -- ✅ Rapide : Une seule requête
-INSERT INTO table
-SELECT * FROM unnest(array_of_data)
-ON CONFLICT (key) DO UPDATE SET ...;
+INSERT INTO table  
+SELECT * FROM unnest(array_of_data)  
+ON CONFLICT (key) DO UPDATE SET ...;  
 ```
 
 #### 3. Utiliser des CTE pour la clarté
@@ -735,10 +735,10 @@ WITH data_to_upsert AS (
     FROM staging_table
     WHERE date_import = CURRENT_DATE
 )
-INSERT INTO utilisateurs (email, nom, prenom, derniere_connexion)
-SELECT * FROM data_to_upsert
-ON CONFLICT (email)
-DO UPDATE SET
+INSERT INTO utilisateurs (email, nom, prenom, derniere_connexion)  
+SELECT * FROM data_to_upsert  
+ON CONFLICT (email)  
+DO UPDATE SET  
     nom = EXCLUDED.nom,
     prenom = EXCLUDED.prenom,
     derniere_connexion = EXCLUDED.derniere_connexion;
@@ -758,9 +758,9 @@ CREATE TABLE logs (
     level VARCHAR(20)
 );
 
-INSERT INTO logs (message, level)
-VALUES ('Error occurred', 'ERROR')
-ON CONFLICT (level) DO NOTHING;
+INSERT INTO logs (message, level)  
+VALUES ('Error occurred', 'ERROR')  
+ON CONFLICT (level) DO NOTHING;  
 -- ERROR: there is no unique or exclusion constraint matching the ON CONFLICT specification
 
 -- ✅ Solution : Ajouter une contrainte unique
@@ -771,17 +771,17 @@ ALTER TABLE logs ADD CONSTRAINT unique_message_level UNIQUE (message, level);
 
 ```sql
 -- ❌ Impossible : WHERE référençant une autre table
-INSERT INTO produits (sku, prix)
-VALUES ('PROD-123', 99.99)
-ON CONFLICT (sku)
-DO UPDATE SET prix = EXCLUDED.prix
-WHERE EXCLUDED.prix < (SELECT prix_max FROM config);  -- Erreur
+INSERT INTO produits (sku, prix)  
+VALUES ('PROD-123', 99.99)  
+ON CONFLICT (sku)  
+DO UPDATE SET prix = EXCLUDED.prix  
+WHERE EXCLUDED.prix < (SELECT prix_max FROM config);  -- Erreur  
 
 -- ✅ Solution : Utiliser une sous-requête dans SET
-INSERT INTO produits (sku, prix)
-VALUES ('PROD-123', 99.99)
-ON CONFLICT (sku)
-DO UPDATE SET prix = CASE
+INSERT INTO produits (sku, prix)  
+VALUES ('PROD-123', 99.99)  
+ON CONFLICT (sku)  
+DO UPDATE SET prix = CASE  
     WHEN EXCLUDED.prix < (SELECT prix_max FROM config) THEN EXCLUDED.prix
     ELSE produits.prix
 END;
@@ -791,16 +791,16 @@ END;
 
 ```sql
 -- ❌ Erreur courante : Utiliser directement les valeurs
-INSERT INTO stats (page, vues)
-VALUES ('accueil', 100)
-ON CONFLICT (page)
-DO UPDATE SET vues = vues + 100;  -- Quelle variable "vues" ?
+INSERT INTO stats (page, vues)  
+VALUES ('accueil', 100)  
+ON CONFLICT (page)  
+DO UPDATE SET vues = vues + 100;  -- Quelle variable "vues" ?  
 
 -- ✅ Correct : Être explicite
-INSERT INTO stats (page, vues)
-VALUES ('accueil', 100)
-ON CONFLICT (page)
-DO UPDATE SET vues = stats.vues + EXCLUDED.vues;
+INSERT INTO stats (page, vues)  
+VALUES ('accueil', 100)  
+ON CONFLICT (page)  
+DO UPDATE SET vues = stats.vues + EXCLUDED.vues;  
 ```
 
 ### Piège 2 : Conflit sur la mauvaise contrainte
@@ -813,16 +813,16 @@ CREATE TABLE utilisateurs (
 );
 
 -- Conflit sur email, mais on spécifie username !
-INSERT INTO utilisateurs (email, username)
-VALUES ('alice@example.com', 'alice')
-ON CONFLICT (username) DO NOTHING;
+INSERT INTO utilisateurs (email, username)  
+VALUES ('alice@example.com', 'alice')  
+ON CONFLICT (username) DO NOTHING;  
 -- Si le conflit est sur email, l'erreur se produit quand même !
 
 -- ✅ Solution : Gérer les deux contraintes
-INSERT INTO utilisateurs (email, username)
-VALUES ('alice@example.com', 'alice')
-ON CONFLICT (email) DO UPDATE SET username = EXCLUDED.username
-ON CONFLICT (username) DO UPDATE SET email = EXCLUDED.email;
+INSERT INTO utilisateurs (email, username)  
+VALUES ('alice@example.com', 'alice')  
+ON CONFLICT (email) DO UPDATE SET username = EXCLUDED.username  
+ON CONFLICT (username) DO UPDATE SET email = EXCLUDED.email;  
 -- ERROR: syntax error (impossible d'avoir deux ON CONFLICT)
 
 -- ✅ Vraie solution : Deux requêtes ou logique métier
@@ -841,9 +841,9 @@ CREATE TABLE entite_complexe (
 );
 
 -- Chaque UPSERT doit vérifier tous les index
-INSERT INTO entite_complexe (code, ref_externe, email, telephone)
-VALUES ('C001', 'REF001', 'test@ex.com', '0102030405')
-ON CONFLICT (code) DO UPDATE SET ...;
+INSERT INTO entite_complexe (code, ref_externe, email, telephone)  
+VALUES ('C001', 'REF001', 'test@ex.com', '0102030405')  
+ON CONFLICT (code) DO UPDATE SET ...;  
 -- → Vérifie aussi ref_externe, email, telephone (surcoût)
 ```
 
@@ -855,10 +855,10 @@ ON CONFLICT (code) DO UPDATE SET ...;
 
 ```sql
 -- Mettre à jour seulement si les données sont plus récentes
-INSERT INTO produits (sku, nom, prix, maj_timestamp)
-VALUES ('PROD-123', 'Nouveau nom', 99.99, '2025-11-19 12:00:00')
-ON CONFLICT (sku)
-DO UPDATE SET
+INSERT INTO produits (sku, nom, prix, maj_timestamp)  
+VALUES ('PROD-123', 'Nouveau nom', 99.99, '2025-11-19 12:00:00')  
+ON CONFLICT (sku)  
+DO UPDATE SET  
     nom = CASE
         WHEN EXCLUDED.maj_timestamp > produits.maj_timestamp THEN EXCLUDED.nom
         ELSE produits.nom
@@ -886,10 +886,10 @@ CREATE TABLE metriques_horaires (
 );
 
 -- Intégrer une nouvelle mesure
-INSERT INTO metriques_horaires (metric_name, hour, count, sum_value, min_value, max_value)
-VALUES ('temperature', date_trunc('hour', CURRENT_TIMESTAMP), 1, 23.5, 23.5, 23.5)
-ON CONFLICT (metric_name, hour)
-DO UPDATE SET
+INSERT INTO metriques_horaires (metric_name, hour, count, sum_value, min_value, max_value)  
+VALUES ('temperature', date_trunc('hour', CURRENT_TIMESTAMP), 1, 23.5, 23.5, 23.5)  
+ON CONFLICT (metric_name, hour)  
+DO UPDATE SET  
     count = metriques_horaires.count + 1,
     sum_value = metriques_horaires.sum_value + EXCLUDED.sum_value,
     min_value = LEAST(metriques_horaires.min_value, EXCLUDED.min_value),
@@ -906,10 +906,10 @@ CREATE TABLE user_preferences (
 );
 
 -- Ajouter/mettre à jour des préférences
-INSERT INTO user_preferences (user_id, preferences)
-VALUES (42, '{"theme": "dark", "language": "fr"}'::jsonb)
-ON CONFLICT (user_id)
-DO UPDATE SET
+INSERT INTO user_preferences (user_id, preferences)  
+VALUES (42, '{"theme": "dark", "language": "fr"}'::jsonb)  
+ON CONFLICT (user_id)  
+DO UPDATE SET  
     preferences = user_preferences.preferences || EXCLUDED.preferences;
     -- L'opérateur || fusionne les JSONB
 ```
@@ -928,8 +928,8 @@ CREATE TABLE import_log (
 );
 
 -- Enregistrer l'import de manière idempotente
-INSERT INTO import_log (import_id, filename, imported_at, row_count)
-VALUES (
+INSERT INTO import_log (import_id, filename, imported_at, row_count)  
+VALUES (  
     'a1b2c3d4-...',  -- UUID fixe pour cet import
     'data_2025-11-19.csv',
     CURRENT_TIMESTAMP,
@@ -949,10 +949,10 @@ CREATE TABLE counters (
 );
 
 -- Incrémenter de manière atomique
-INSERT INTO counters (name, value)
-VALUES ('page_views', 1)
-ON CONFLICT (name)
-DO UPDATE SET value = counters.value + EXCLUDED.value;
+INSERT INTO counters (name, value)  
+VALUES ('page_views', 1)  
+ON CONFLICT (name)  
+DO UPDATE SET value = counters.value + EXCLUDED.value;  
 
 -- Peut être appelé en parallèle par plusieurs processus sans problème
 ```
@@ -977,16 +977,16 @@ PostgreSQL 18 introduit la commande `MERGE`, qui est une alternative SQL standar
 
 ```sql
 -- Avec ON CONFLICT
-INSERT INTO stats (page, vues)
-VALUES ('accueil', 1)
-ON CONFLICT (page)
-DO UPDATE SET vues = stats.vues + 1;
+INSERT INTO stats (page, vues)  
+VALUES ('accueil', 1)  
+ON CONFLICT (page)  
+DO UPDATE SET vues = stats.vues + 1;  
 
 -- Avec MERGE (PostgreSQL 18)
-MERGE INTO stats AS target
-USING (VALUES ('accueil', 1)) AS source (page, vues)
-ON target.page = source.page
-WHEN MATCHED THEN
+MERGE INTO stats AS target  
+USING (VALUES ('accueil', 1)) AS source (page, vues)  
+ON target.page = source.page  
+WHEN MATCHED THEN  
     UPDATE SET vues = target.vues + source.vues
 WHEN NOT MATCHED THEN
     INSERT (page, vues) VALUES (source.page, source.vues);
@@ -995,13 +995,13 @@ WHEN NOT MATCHED THEN
 ### Quand utiliser quoi ?
 
 **Utilisez ON CONFLICT** :
-- ✅ Pour des upserts simples et directs
-- ✅ Quand la syntaxe courte est préférable
+- ✅ Pour des upserts simples et directs  
+- ✅ Quand la syntaxe courte est préférable  
 - ✅ Pour de meilleures performances sur des cas simples
 
 **Utilisez MERGE** :
-- ✅ Pour de la synchronisation complexe (INSERT/UPDATE/DELETE)
-- ✅ Pour la portabilité SQL standard
+- ✅ Pour de la synchronisation complexe (INSERT/UPDATE/DELETE)  
+- ✅ Pour la portabilité SQL standard  
 - ✅ Quand plusieurs sources doivent être fusionnées
 
 ---
@@ -1012,31 +1012,31 @@ WHEN NOT MATCHED THEN
 
 ```sql
 -- DO NOTHING : Ignorer les doublons
-INSERT INTO table (colonnes)
-VALUES (valeurs)
-ON CONFLICT (colonne_unique) DO NOTHING;
+INSERT INTO table (colonnes)  
+VALUES (valeurs)  
+ON CONFLICT (colonne_unique) DO NOTHING;  
 
 -- DO UPDATE : Mettre à jour en cas de conflit
-INSERT INTO table (col1, col2, col3)
-VALUES (val1, val2, val3)
-ON CONFLICT (colonne_unique)
-DO UPDATE SET
+INSERT INTO table (col1, col2, col3)  
+VALUES (val1, val2, val3)  
+ON CONFLICT (colonne_unique)  
+DO UPDATE SET  
     col2 = EXCLUDED.col2,
     col3 = table.col3 + EXCLUDED.col3;
 
 -- Avec WHERE conditionnel
-INSERT INTO table (colonnes)
-VALUES (valeurs)
-ON CONFLICT (colonne_unique)
-DO UPDATE SET colonnes = valeurs
-WHERE condition;
+INSERT INTO table (colonnes)  
+VALUES (valeurs)  
+ON CONFLICT (colonne_unique)  
+DO UPDATE SET colonnes = valeurs  
+WHERE condition;  
 
 -- Avec RETURNING
-INSERT INTO table (colonnes)
-VALUES (valeurs)
-ON CONFLICT (colonne_unique)
-DO UPDATE SET colonnes = valeurs
-RETURNING *;
+INSERT INTO table (colonnes)  
+VALUES (valeurs)  
+ON CONFLICT (colonne_unique)  
+DO UPDATE SET colonnes = valeurs  
+RETURNING *;  
 
 -- Contrainte composite
 ON CONFLICT (col1, col2, col3) DO ...
@@ -1058,13 +1058,13 @@ ON CONFLICT ON CONSTRAINT nom_contrainte DO ...
 
 ### Points clés à retenir
 
-1. **UPSERT = INSERT or UPDATE** en une seule opération atomique
-2. **ON CONFLICT** nécessite un index UNIQUE ou PRIMARY KEY
-3. **DO NOTHING** ignore silencieusement les doublons
-4. **DO UPDATE** met à jour la ligne existante
-5. **EXCLUDED** référence les valeurs tentées d'insertion
-6. **WHERE** optionnel conditionne la mise à jour
-7. **RETURNING** fonctionne avec ON CONFLICT
+1. **UPSERT = INSERT or UPDATE** en une seule opération atomique  
+2. **ON CONFLICT** nécessite un index UNIQUE ou PRIMARY KEY  
+3. **DO NOTHING** ignore silencieusement les doublons  
+4. **DO UPDATE** met à jour la ligne existante  
+5. **EXCLUDED** référence les valeurs tentées d'insertion  
+6. **WHERE** optionnel conditionne la mise à jour  
+7. **RETURNING** fonctionne avec ON CONFLICT  
 8. Bien plus performant que SELECT puis INSERT/UPDATE
 
 ---
@@ -1074,10 +1074,10 @@ ON CONFLICT ON CONSTRAINT nom_contrainte DO ...
 La clause `ON CONFLICT` est l'une des fonctionnalités les plus utiles et élégantes de PostgreSQL moderne. Elle transforme des opérations qui nécessitaient auparavant plusieurs requêtes, de la logique applicative complexe et des risques de race conditions en une seule commande SQL simple, atomique et performante.
 
 **Bénéfices principaux** :
-- ✅ **Simplicité** : Une ligne de code au lieu de dizaines
-- ✅ **Atomicité** : Opération garantie sans race condition
-- ✅ **Performance** : 3× à 10× plus rapide que les approches traditionnelles
-- ✅ **Lisibilité** : Intent clair dans le code SQL
+- ✅ **Simplicité** : Une ligne de code au lieu de dizaines  
+- ✅ **Atomicité** : Opération garantie sans race condition  
+- ✅ **Performance** : 3× à 10× plus rapide que les approches traditionnelles  
+- ✅ **Lisibilité** : Intent clair dans le code SQL  
 - ✅ **Sécurité** : Pas besoin de gestion d'exception complexe
 
 Maîtriser `ON CONFLICT` est essentiel pour tout développeur travaillant avec PostgreSQL, que ce soit pour de l'import de données, de la synchronisation, du caching, ou de l'agrégation en temps réel.

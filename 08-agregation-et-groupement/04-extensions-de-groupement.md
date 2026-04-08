@@ -33,43 +33,43 @@ Imaginons une table `ventes` :
 | 6        | Est      | Vêtements      | 280     |
 
 **Besoin** : Un rapport avec :
-1. Ventes par région ET catégorie (détail)
-2. Sous-totaux par région (toutes catégories)
-3. Sous-totaux par catégorie (toutes régions)
+1. Ventes par région ET catégorie (détail)  
+2. Sous-totaux par région (toutes catégories)  
+3. Sous-totaux par catégorie (toutes régions)  
 4. Grand total général
 
 ### Solution Classique (Sans Extensions) : Fastidieuse !
 
 ```sql
 -- Niveau 1 : Détail région + catégorie
-SELECT region, categorie, SUM(montant) AS total
-FROM ventes
-GROUP BY region, categorie
+SELECT region, categorie, SUM(montant) AS total  
+FROM ventes  
+GROUP BY region, categorie  
 
 UNION ALL
 
 -- Niveau 2 : Sous-totaux par région
-SELECT region, NULL AS categorie, SUM(montant) AS total
-FROM ventes
-GROUP BY region
+SELECT region, NULL AS categorie, SUM(montant) AS total  
+FROM ventes  
+GROUP BY region  
 
 UNION ALL
 
 -- Niveau 3 : Sous-totaux par catégorie
-SELECT NULL AS region, categorie, SUM(montant) AS total
-FROM ventes
-GROUP BY categorie
+SELECT NULL AS region, categorie, SUM(montant) AS total  
+FROM ventes  
+GROUP BY categorie  
 
 UNION ALL
 
 -- Niveau 4 : Grand total
-SELECT NULL AS region, NULL AS categorie, SUM(montant) AS total
-FROM ventes;
+SELECT NULL AS region, NULL AS categorie, SUM(montant) AS total  
+FROM ventes;  
 ```
 
 **Problèmes** :
-- ❌ Requête longue et répétitive
-- ❌ PostgreSQL scanne la table **4 fois** (très inefficace)
+- ❌ Requête longue et répétitive  
+- ❌ PostgreSQL scanne la table **4 fois** (très inefficace)  
 - ❌ Difficile à maintenir
 
 ### Solution Moderne : Les Extensions de Groupement
@@ -92,17 +92,17 @@ SELECT
     colonne2,
     colonne3,
     SUM(valeur) AS total
-FROM table
-GROUP BY ROLLUP(colonne1, colonne2, colonne3);
+FROM table  
+GROUP BY ROLLUP(colonne1, colonne2, colonne3);  
 ```
 
 ### Comment ça Fonctionne ?
 
 ROLLUP génère automatiquement les groupements suivants (de gauche à droite) :
 
-1. `GROUP BY colonne1, colonne2, colonne3` (détail complet)
-2. `GROUP BY colonne1, colonne2` (sous-total niveau 2)
-3. `GROUP BY colonne1` (sous-total niveau 1)
+1. `GROUP BY colonne1, colonne2, colonne3` (détail complet)  
+2. `GROUP BY colonne1, colonne2` (sous-total niveau 2)  
+3. `GROUP BY colonne1` (sous-total niveau 1)  
 4. Grand total (aucun groupement)
 
 **Analogie** : Imaginez un organigramme d'entreprise :
@@ -118,9 +118,9 @@ SELECT
     region,
     categorie,
     SUM(montant) AS total_ventes
-FROM ventes
-GROUP BY ROLLUP(region, categorie)
-ORDER BY region NULLS LAST, categorie NULLS LAST;
+FROM ventes  
+GROUP BY ROLLUP(region, categorie)  
+ORDER BY region NULLS LAST, categorie NULLS LAST;  
 ```
 
 **Résultat :**
@@ -147,10 +147,10 @@ ORDER BY region NULLS LAST, categorie NULLS LAST;
 Pour `ROLLUP(A, B, C)`, PostgreSQL génère :
 
 ```
-GROUP BY A, B, C     -- Détail complet
-GROUP BY A, B        -- Sous-total niveau 1
-GROUP BY A           -- Sous-total niveau 2
-Grand total          -- Total général (aucun GROUP BY)
+GROUP BY A, B, C     -- Détail complet  
+GROUP BY A, B        -- Sous-total niveau 1  
+GROUP BY A           -- Sous-total niveau 2  
+Grand total          -- Total général (aucun GROUP BY)  
 ```
 
 **Nombre de niveaux** : N+1 (où N = nombre de colonnes dans ROLLUP)
@@ -166,8 +166,8 @@ SELECT
     EXTRACT(MONTH FROM date_vente) AS mois,
     EXTRACT(DAY FROM date_vente) AS jour,
     SUM(montant) AS ca
-FROM ventes
-GROUP BY ROLLUP(
+FROM ventes  
+GROUP BY ROLLUP(  
     EXTRACT(YEAR FROM date_vente),
     EXTRACT(MONTH FROM date_vente),
     EXTRACT(DAY FROM date_vente)
@@ -190,8 +190,8 @@ SELECT
     region,
     ville,
     SUM(montant) AS ca
-FROM ventes
-GROUP BY ROLLUP(pays, region, ville);
+FROM ventes  
+GROUP BY ROLLUP(pays, region, ville);  
 ```
 
 **Génère :**
@@ -210,8 +210,8 @@ SELECT
     poste,
     AVG(salaire) AS salaire_moyen,
     COUNT(*) AS nb_employes
-FROM employes
-GROUP BY ROLLUP(departement, equipe, poste);
+FROM employes  
+GROUP BY ROLLUP(departement, equipe, poste);  
 ```
 
 ---
@@ -224,7 +224,7 @@ GROUP BY ROLLUP(departement, equipe, poste);
 
 ### Différence avec ROLLUP
 
-- **ROLLUP** : Hiérarchique (gauche → droite)
+- **ROLLUP** : Hiérarchique (gauche → droite)  
 - **CUBE** : Exhaustif (toutes les combinaisons)
 
 ### Syntaxe
@@ -234,17 +234,17 @@ SELECT
     colonne1,
     colonne2,
     SUM(valeur) AS total
-FROM table
-GROUP BY CUBE(colonne1, colonne2);
+FROM table  
+GROUP BY CUBE(colonne1, colonne2);  
 ```
 
 ### Comment ça Fonctionne ?
 
 Pour `CUBE(A, B)`, PostgreSQL génère **2² = 4 groupements** :
 
-1. `GROUP BY A, B` (détail complet)
-2. `GROUP BY A` (sous-total sur A uniquement)
-3. `GROUP BY B` (sous-total sur B uniquement)
+1. `GROUP BY A, B` (détail complet)  
+2. `GROUP BY A` (sous-total sur A uniquement)  
+3. `GROUP BY B` (sous-total sur B uniquement)  
 4. Grand total (aucun groupement)
 
 Pour `CUBE(A, B, C)` : **2³ = 8 groupements**
@@ -258,9 +258,9 @@ SELECT
     region,
     categorie,
     SUM(montant) AS total_ventes
-FROM ventes
-GROUP BY CUBE(region, categorie)
-ORDER BY region NULLS LAST, categorie NULLS LAST;
+FROM ventes  
+GROUP BY CUBE(region, categorie)  
+ORDER BY region NULLS LAST, categorie NULLS LAST;  
 ```
 
 **Résultat :**
@@ -307,14 +307,14 @@ ORDER BY region NULLS LAST, categorie NULLS LAST;
 Pour `CUBE(A, B, C)` :
 
 ```
-GROUP BY A, B, C     -- Détail complet
-GROUP BY A, B        -- Sous-total AB
-GROUP BY A, C        -- Sous-total AC
-GROUP BY B, C        -- Sous-total BC
-GROUP BY A           -- Sous-total A
-GROUP BY B           -- Sous-total B
-GROUP BY C           -- Sous-total C
-Grand total          -- Total général
+GROUP BY A, B, C     -- Détail complet  
+GROUP BY A, B        -- Sous-total AB  
+GROUP BY A, C        -- Sous-total AC  
+GROUP BY B, C        -- Sous-total BC  
+GROUP BY A           -- Sous-total A  
+GROUP BY B           -- Sous-total B  
+GROUP BY C           -- Sous-total C  
+Grand total          -- Total général  
 ```
 
 **Total** : 2³ = 8 groupements
@@ -330,8 +330,8 @@ SELECT
     region,
     SUM(montant) AS ca,
     COUNT(*) AS nb_ventes
-FROM ventes
-GROUP BY CUBE(produit, region);
+FROM ventes  
+GROUP BY CUBE(produit, region);  
 ```
 
 **Génère :**
@@ -349,9 +349,9 @@ SELECT
     EXTRACT(QUARTER FROM date_vente) AS trimestre,
     SUM(montant) AS ca,
     COUNT(DISTINCT client_id) AS nb_clients
-FROM ventes
-WHERE EXTRACT(YEAR FROM date_vente) = 2024
-GROUP BY CUBE(vendeur_id, EXTRACT(QUARTER FROM date_vente));
+FROM ventes  
+WHERE EXTRACT(YEAR FROM date_vente) = 2024  
+GROUP BY CUBE(vendeur_id, EXTRACT(QUARTER FROM date_vente));  
 ```
 
 **Permet de répondre à :**
@@ -373,8 +373,8 @@ SELECT
         100.0 * SUM(CASE WHEN a_converti THEN 1 ELSE 0 END) / COUNT(*),
         2
     ) AS taux_conversion_pct
-FROM tests_ab
-GROUP BY CUBE(variante_test, segment_utilisateur);
+FROM tests_ab  
+GROUP BY CUBE(variante_test, segment_utilisateur);  
 ```
 
 ---
@@ -394,8 +394,8 @@ SELECT
     colonne1,
     colonne2,
     SUM(valeur) AS total
-FROM table
-GROUP BY GROUPING SETS (
+FROM table  
+GROUP BY GROUPING SETS (  
     (colonne1, colonne2),  -- Groupement 1
     (colonne1),            -- Groupement 2
     ()                     -- Grand total
@@ -412,14 +412,14 @@ Ces deux requêtes sont **identiques** :
 
 ```sql
 -- Avec ROLLUP
-SELECT region, categorie, SUM(montant) AS total
-FROM ventes
-GROUP BY ROLLUP(region, categorie);
+SELECT region, categorie, SUM(montant) AS total  
+FROM ventes  
+GROUP BY ROLLUP(region, categorie);  
 
 -- Équivalent avec GROUPING SETS
-SELECT region, categorie, SUM(montant) AS total
-FROM ventes
-GROUP BY GROUPING SETS (
+SELECT region, categorie, SUM(montant) AS total  
+FROM ventes  
+GROUP BY GROUPING SETS (  
     (region, categorie),  -- Détail
     (region),             -- Sous-total région
     ()                    -- Grand total
@@ -430,14 +430,14 @@ GROUP BY GROUPING SETS (
 
 ```sql
 -- Avec CUBE
-SELECT region, categorie, SUM(montant) AS total
-FROM ventes
-GROUP BY CUBE(region, categorie);
+SELECT region, categorie, SUM(montant) AS total  
+FROM ventes  
+GROUP BY CUBE(region, categorie);  
 
 -- Équivalent avec GROUPING SETS
-SELECT region, categorie, SUM(montant) AS total
-FROM ventes
-GROUP BY GROUPING SETS (
+SELECT region, categorie, SUM(montant) AS total  
+FROM ventes  
+GROUP BY GROUPING SETS (  
     (region, categorie),  -- Détail
     (region),             -- Sous-total région
     (categorie),          -- Sous-total catégorie
@@ -461,8 +461,8 @@ SELECT
     region,
     categorie,
     SUM(montant) AS total
-FROM ventes
-GROUP BY GROUPING SETS (
+FROM ventes  
+GROUP BY GROUPING SETS (  
     (region, categorie),  -- Détail
     (categorie),          -- Sous-total catégorie uniquement
     ()                    -- Grand total
@@ -482,8 +482,8 @@ SELECT
     produit,
     EXTRACT(MONTH FROM date_vente) AS mois,
     SUM(montant) AS ca
-FROM ventes
-GROUP BY GROUPING SETS (
+FROM ventes  
+GROUP BY GROUPING SETS (  
     (produit, EXTRACT(MONTH FROM date_vente)),
     (produit)
 );
@@ -499,8 +499,8 @@ SELECT
     EXTRACT(MONTH FROM date_vente) AS mois,
     region,
     SUM(montant) AS ca
-FROM ventes
-GROUP BY GROUPING SETS (
+FROM ventes  
+GROUP BY GROUPING SETS (  
     (EXTRACT(YEAR FROM date_vente), EXTRACT(MONTH FROM date_vente)),
     (region)
 );
@@ -519,8 +519,8 @@ SELECT
     produit,
     region,
     SUM(montant) AS ca
-FROM ventes
-GROUP BY GROUPING SETS (
+FROM ventes  
+GROUP BY GROUPING SETS (  
     (produit),
     (region),
     ()
@@ -549,7 +549,7 @@ Regardez ce résultat :
 ### La Solution : GROUPING()
 
 La fonction **GROUPING()** retourne :
-- **1** si la colonne est NULL **à cause d'un sous-total** (agrégation)
+- **1** si la colonne est NULL **à cause d'un sous-total** (agrégation)  
 - **0** si la colonne a sa valeur réelle (ou est NULL dans les données)
 
 ### Syntaxe
@@ -561,8 +561,8 @@ SELECT
     SUM(montant) AS total,
     GROUPING(region) AS est_subtotal_region,
     GROUPING(categorie) AS est_subtotal_categorie
-FROM ventes
-GROUP BY ROLLUP(region, categorie);
+FROM ventes  
+GROUP BY ROLLUP(region, categorie);  
 ```
 
 **Résultat :**
@@ -597,9 +597,9 @@ SELECT
         ELSE categorie
     END AS categorie_label,
     SUM(montant) AS total_ventes
-FROM ventes
-GROUP BY ROLLUP(region, categorie)
-ORDER BY
+FROM ventes  
+GROUP BY ROLLUP(region, categorie)  
+ORDER BY  
     GROUPING(region),
     region NULLS LAST,
     GROUPING(categorie),
@@ -635,8 +635,8 @@ SELECT
         WHEN GROUPING(region) = 1 AND GROUPING(categorie) = 0 THEN 'Sous-total catégorie'
         WHEN GROUPING(region) = 1 AND GROUPING(categorie) = 1 THEN 'Grand total'
     END AS niveau_agregation
-FROM ventes
-GROUP BY CUBE(region, categorie);
+FROM ventes  
+GROUP BY CUBE(region, categorie);  
 ```
 
 ---
@@ -654,9 +654,9 @@ SELECT
     COUNT(*) AS nb_ventes,
     SUM(montant) AS ca,
     ROUND(AVG(montant), 2) AS panier_moyen
-FROM ventes
-WHERE date_vente >= '2024-01-01'
-GROUP BY CUBE(
+FROM ventes  
+WHERE date_vente >= '2024-01-01'  
+GROUP BY CUBE(  
     produit,
     region,
     DATE_TRUNC('month', date_vente)
@@ -702,9 +702,9 @@ SELECT
     GROUPING(service) AS sub_service,
     GROUPING(niveau_gravite) AS sub_gravite,
     GROUPING(EXTRACT(QUARTER FROM date_admission)) AS sub_trimestre
-FROM admissions
-WHERE EXTRACT(YEAR FROM date_admission) = 2024
-GROUP BY ROLLUP(
+FROM admissions  
+WHERE EXTRACT(YEAR FROM date_admission) = 2024  
+GROUP BY ROLLUP(  
     service,
     niveau_gravite,
     EXTRACT(QUARTER FROM date_admission)
@@ -729,8 +729,8 @@ SELECT
     SUM(valeur_position) AS valeur_totale,
     ROUND(AVG(rendement_ytd_pct), 2) AS rendement_moyen_pct,
     ROUND(STDDEV(rendement_ytd_pct), 2) AS volatilite_pct
-FROM portefeuille
-GROUP BY GROUPING SETS (
+FROM portefeuille  
+GROUP BY GROUPING SETS (  
     (classe_actif, secteur),  -- Détail complet
     (classe_actif),           -- Par classe d'actifs
     ()                        -- Portefeuille global
@@ -767,10 +767,10 @@ SELECT
     ROUND(AVG(latence_moyenne), 2) AS latence_moy_ms,
     SUM(nb_erreurs) AS total_erreurs,
     ROUND(100.0 * SUM(nb_erreurs) / NULLIF(SUM(nb_requetes), 0), 2) AS taux_erreur_pct
-FROM usage_periode
-GROUP BY CUBE(client_id, endpoint, semaine)
-HAVING SUM(nb_requetes) > 0  -- Exclure les groupes vides
-ORDER BY
+FROM usage_periode  
+GROUP BY CUBE(client_id, endpoint, semaine)  
+HAVING SUM(nb_requetes) > 0  -- Exclure les groupes vides  
+ORDER BY  
     GROUPING(client_id),
     client_id NULLS LAST,
     GROUPING(endpoint),
@@ -796,20 +796,20 @@ ORDER BY
 ### Tableau de Décision
 
 **Utilisez ROLLUP si :**
-- ✅ Vos dimensions ont une hiérarchie naturelle (date, géographie, organisation)
-- ✅ Vous voulez des sous-totaux de gauche à droite
+- ✅ Vos dimensions ont une hiérarchie naturelle (date, géographie, organisation)  
+- ✅ Vous voulez des sous-totaux de gauche à droite  
 - ✅ Exemple : Pays → Région → Ville
 
 **Utilisez CUBE si :**
-- ✅ Vous voulez analyser toutes les relations possibles
-- ✅ Vos dimensions sont indépendantes (produit, région, période)
-- ✅ Vous créez un tableau de bord complet
+- ✅ Vous voulez analyser toutes les relations possibles  
+- ✅ Vos dimensions sont indépendantes (produit, région, période)  
+- ✅ Vous créez un tableau de bord complet  
 - ⚠️ Attention : Peut générer beaucoup de lignes !
 
 **Utilisez GROUPING SETS si :**
-- ✅ Vous avez besoin de combinaisons spécifiques uniquement
-- ✅ Vous optimisez les performances (éviter calculs inutiles)
-- ✅ ROLLUP ou CUBE généreraient trop de données
+- ✅ Vous avez besoin de combinaisons spécifiques uniquement  
+- ✅ Vous optimisez les performances (éviter calculs inutiles)  
+- ✅ ROLLUP ou CUBE généreraient trop de données  
 - ✅ Vous remplacez plusieurs UNION ALL
 
 ---
@@ -827,8 +827,8 @@ SELECT
     EXTRACT(MONTH FROM date_vente) AS mois,
     categorie,
     SUM(montant) AS ca
-FROM ventes
-GROUP BY
+FROM ventes  
+GROUP BY  
     ROLLUP(EXTRACT(YEAR FROM date_vente), EXTRACT(MONTH FROM date_vente)),
     categorie;
 ```
@@ -848,8 +848,8 @@ SELECT
     client_id,
     EXTRACT(MONTH FROM date_vente) AS mois,
     SUM(montant) AS ca
-FROM ventes
-GROUP BY GROUPING SETS (
+FROM ventes  
+GROUP BY GROUPING SETS (  
     (produit, region),
     (client_id, EXTRACT(MONTH FROM date_vente))
 );
@@ -866,29 +866,29 @@ Les extensions de groupement sont **plus efficaces** que plusieurs UNION ALL :
 
 **Approche Naïve (4 scans de table) :**
 ```sql
-SELECT region, SUM(montant) FROM ventes GROUP BY region
-UNION ALL
-SELECT categorie, SUM(montant) FROM ventes GROUP BY categorie
-UNION ALL
-SELECT NULL, SUM(montant) FROM ventes;
+SELECT region, SUM(montant) FROM ventes GROUP BY region  
+UNION ALL  
+SELECT categorie, SUM(montant) FROM ventes GROUP BY categorie  
+UNION ALL  
+SELECT NULL, SUM(montant) FROM ventes;  
 -- PostgreSQL scanne la table 3 fois !
 ```
 
 **Approche Optimisée (1 scan) :**
 ```sql
-SELECT region, categorie, SUM(montant)
-FROM ventes
-GROUP BY GROUPING SETS ((region), (categorie), ());
+SELECT region, categorie, SUM(montant)  
+FROM ventes  
+GROUP BY GROUPING SETS ((region), (categorie), ());  
 -- PostgreSQL scanne la table UNE SEULE fois !
 ```
 
 ### Plan d'Exécution
 
 ```sql
-EXPLAIN ANALYZE
-SELECT region, categorie, SUM(montant)
-FROM ventes
-GROUP BY ROLLUP(region, categorie);
+EXPLAIN ANALYZE  
+SELECT region, categorie, SUM(montant)  
+FROM ventes  
+GROUP BY ROLLUP(region, categorie);  
 ```
 
 **Résultat typique :**
@@ -951,9 +951,9 @@ SELECT
     COALESCE(region, '*** TOUTES RÉGIONS ***') AS region,
     COALESCE(categorie, '*** TOUTES CATÉGORIES ***') AS categorie,
     TO_CHAR(SUM(montant), 'FM999,999.00€') AS total_formate
-FROM ventes
-GROUP BY ROLLUP(region, categorie)
-ORDER BY
+FROM ventes  
+GROUP BY ROLLUP(region, categorie)  
+ORDER BY  
     region NULLS LAST,
     categorie NULLS LAST;
 ```
@@ -968,8 +968,8 @@ SELECT
         ELSE '    ' || region || ' - ' || categorie
     END AS libelle,
     SUM(montant) AS montant
-FROM ventes
-GROUP BY ROLLUP(region, categorie);
+FROM ventes  
+GROUP BY ROLLUP(region, categorie);  
 ```
 
 **Résultat :**
@@ -998,8 +998,8 @@ SELECT
         WHEN GROUPING(categorie) = 1 THEN '📊 Sous-total'
         ELSE '📍 Détail'
     END AS type_ligne
-FROM ventes
-GROUP BY ROLLUP(region, categorie);
+FROM ventes  
+GROUP BY ROLLUP(region, categorie);  
 ```
 
 ---
@@ -1083,15 +1083,15 @@ GROUP BY ROLLUP(region, categorie);
 
 ## À Retenir
 
-1. **ROLLUP** génère des sous-totaux **hiérarchiques** (gauche → droite)
-2. **CUBE** génère **toutes les combinaisons** de sous-totaux (2^N groupements)
-3. **GROUPING SETS** permet de spécifier **exactement** quels groupements vous voulez
-4. Les extensions sont **plus performantes** que plusieurs UNION ALL (un seul scan)
-5. **GROUPING()** identifie les lignes de sous-totaux (1 = agrégation, 0 = valeur réelle)
-6. Utilisez **COALESCE** ou **CASE** pour rendre les NULL lisibles
-7. **ROLLUP** : Hiérarchies naturelles (date, géographie)
-8. **CUBE** : Analyses croisées exhaustives
-9. **GROUPING SETS** : Optimisation et sur-mesure
+1. **ROLLUP** génère des sous-totaux **hiérarchiques** (gauche → droite)  
+2. **CUBE** génère **toutes les combinaisons** de sous-totaux (2^N groupements)  
+3. **GROUPING SETS** permet de spécifier **exactement** quels groupements vous voulez  
+4. Les extensions sont **plus performantes** que plusieurs UNION ALL (un seul scan)  
+5. **GROUPING()** identifie les lignes de sous-totaux (1 = agrégation, 0 = valeur réelle)  
+6. Utilisez **COALESCE** ou **CASE** pour rendre les NULL lisibles  
+7. **ROLLUP** : Hiérarchies naturelles (date, géographie)  
+8. **CUBE** : Analyses croisées exhaustives  
+9. **GROUPING SETS** : Optimisation et sur-mesure  
 10. Attention à l'explosion combinatoire avec **CUBE** sur beaucoup de colonnes
 
 ---
@@ -1100,8 +1100,8 @@ GROUP BY ROLLUP(region, categorie);
 
 Vous maîtrisez maintenant les extensions de groupement ! Prochains sujets :
 
-- **Section 8.5** : Filtres d'agrégation (FILTER clause) - Agrégations conditionnelles
-- **Section 8.6** : Agrégations ordonnées (WITHIN GROUP, string_agg)
+- **Section 8.5** : Filtres d'agrégation (FILTER clause) - Agrégations conditionnelles  
+- **Section 8.6** : Agrégations ordonnées (WITHIN GROUP, string_agg)  
 - **Section 10** : Window Functions - Le summum de l'analyse SQL !
 
 Les extensions de groupement (ROLLUP, CUBE, GROUPING SETS) sont des outils **extrêmement puissants** pour créer des rapports multi-niveaux et des tableaux de bord analytiques. Elles transforment des requêtes complexes avec multiples UNION ALL en requêtes élégantes et performantes !
