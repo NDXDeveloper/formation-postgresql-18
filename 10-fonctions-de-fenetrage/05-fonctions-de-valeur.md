@@ -7,16 +7,16 @@
 Les **fonctions de valeur** sont des window functions spécialisées qui permettent d'accéder à des **valeurs d'autres lignes** depuis la ligne courante, sans avoir besoin de jointures complexes ou de sous-requêtes.
 
 Elles sont essentielles pour :
-- **Calculer des variations** (différence avec le jour précédent, croissance)
-- **Comparer** une valeur avec la meilleure/pire du groupe
-- **Détecter des changements** (premier achat, dernier contact)
+- **Calculer des variations** (différence avec le jour précédent, croissance)  
+- **Comparer** une valeur avec la meilleure/pire du groupe  
+- **Détecter des changements** (premier achat, dernier contact)  
 - **Analyser des séquences** temporelles ou ordonnées
 
 PostgreSQL propose quatre fonctions principales :
 
-1. **LAG()** : Accède à une ligne **précédente**
-2. **LEAD()** : Accède à une ligne **suivante**
-3. **FIRST_VALUE()** : Accède à la **première** valeur de la fenêtre
+1. **LAG()** : Accède à une ligne **précédente**  
+2. **LEAD()** : Accède à une ligne **suivante**  
+3. **FIRST_VALUE()** : Accède à la **première** valeur de la fenêtre  
 4. **LAST_VALUE()** : Accède à la **dernière** valeur de la fenêtre
 
 ## LAG() : Regarder en Arrière
@@ -37,8 +37,8 @@ LAG(colonne [, offset [, valeur_par_defaut]]) OVER (
 ```
 
 **Paramètres** :
-- `colonne` : La colonne dont on veut récupérer la valeur
-- `offset` : Nombre de lignes en arrière (par défaut : 1)
+- `colonne` : La colonne dont on veut récupérer la valeur  
+- `offset` : Nombre de lignes en arrière (par défaut : 1)  
 - `valeur_par_defaut` : Valeur retournée s'il n'y a pas de ligne précédente (par défaut : NULL)
 
 ### Exemple de Base
@@ -51,8 +51,8 @@ SELECT
     temperature,
     LAG(temperature) OVER (ORDER BY date) AS temp_hier,
     temperature - LAG(temperature) OVER (ORDER BY date) AS variation
-FROM meteo
-ORDER BY date;
+FROM meteo  
+ORDER BY date;  
 ```
 
 **Données** :
@@ -94,12 +94,12 @@ SELECT
     LAG(ventes, 1) OVER (ORDER BY date) AS ventes_hier,
     LAG(ventes, 7) OVER (ORDER BY date) AS ventes_semaine_derniere,
     LAG(ventes, 30) OVER (ORDER BY date) AS ventes_mois_dernier
-FROM ventes_quotidiennes
-ORDER BY date;
+FROM ventes_quotidiennes  
+ORDER BY date;  
 ```
 
-- `LAG(ventes, 1)` : Hier (par défaut)
-- `LAG(ventes, 7)` : Il y a 7 jours
+- `LAG(ventes, 1)` : Hier (par défaut)  
+- `LAG(ventes, 7)` : Il y a 7 jours  
 - `LAG(ventes, 30)` : Il y a 30 jours
 
 ### Valeur par Défaut
@@ -133,8 +133,8 @@ SELECT
         PARTITION BY vendeur
         ORDER BY mois
     ) AS croissance
-FROM ventes_mensuelles
-ORDER BY vendeur, mois;
+FROM ventes_mensuelles  
+ORDER BY vendeur, mois;  
 ```
 
 **Données** :
@@ -178,8 +178,8 @@ SELECT
         / LAG(ca_journalier) OVER (ORDER BY date),
         2
     ) AS croissance_pct
-FROM ventes
-ORDER BY date;
+FROM ventes  
+ORDER BY date;  
 ```
 
 #### 2. Détecter les Changements de Statut
@@ -193,8 +193,8 @@ SELECT
         PARTITION BY client_id
         ORDER BY date_statut
     ) AS statut_precedent
-FROM historique_clients
-WHERE statut != LAG(statut) OVER (
+FROM historique_clients  
+WHERE statut != LAG(statut) OVER (  
     PARTITION BY client_id
     ORDER BY date_statut
 );  -- Ne garde que les changements
@@ -248,8 +248,8 @@ SELECT
         PARTITION BY client_id
         ORDER BY date_visite
     ) - date_visite AS jours_avant_prochaine_visite
-FROM visites
-ORDER BY client_id, date_visite;
+FROM visites  
+ORDER BY client_id, date_visite;  
 ```
 
 **Données** :
@@ -381,8 +381,8 @@ SELECT
         / FIRST_VALUE(cours_action) OVER (ORDER BY date),
         2
     ) AS evolution_pct
-FROM cours_bourse
-ORDER BY date;
+FROM cours_bourse  
+ORDER BY date;  
 ```
 
 **Données** :
@@ -426,8 +426,8 @@ SELECT
         PARTITION BY vendeur
         ORDER BY mois
     ) AS progression
-FROM ventes_mensuelles
-ORDER BY vendeur, mois;
+FROM ventes_mensuelles  
+ORDER BY vendeur, mois;  
 ```
 
 **Données** :
@@ -569,8 +569,8 @@ SELECT
     date,
     ventes,
     LAST_VALUE(ventes) OVER (ORDER BY date) AS derniere_vente
-FROM ventes
-ORDER BY date;
+FROM ventes  
+ORDER BY date;  
 ```
 
 **Données** :
@@ -609,8 +609,8 @@ SELECT
         ORDER BY date
         ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING
     ) AS derniere_vente
-FROM ventes
-ORDER BY date;
+FROM ventes  
+ORDER BY date;  
 ```
 
 **Résultat (correct)** :
@@ -652,8 +652,8 @@ SELECT
         ORDER BY mois
         ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING
     ) AS ventes_dernier_mois
-FROM ventes_mensuelles
-ORDER BY vendeur, mois;
+FROM ventes_mensuelles  
+ORDER BY vendeur, mois;  
 ```
 
 **Données** :
@@ -758,8 +758,8 @@ SELECT
         ORDER BY date
         ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING
     ) AS derniere_vente
-FROM ventes
-ORDER BY date;
+FROM ventes  
+ORDER BY date;  
 ```
 
 **Données** :
@@ -838,8 +838,8 @@ SELECT
     LAST_VALUE(temperature) OVER w - FIRST_VALUE(temperature) OVER w AS amplitude_semaine,
     MAX(temperature) OVER w AS max_semaine,
     MIN(temperature) OVER w AS min_semaine
-FROM meteo
-WINDOW w AS (
+FROM meteo  
+WINDOW w AS (  
     ORDER BY date
     ROWS BETWEEN 6 PRECEDING AND CURRENT ROW
 );
@@ -950,15 +950,15 @@ SELECT
     LAG(ventes) OVER w AS ventes_hier,
     LEAD(ventes) OVER w AS ventes_demain,
     AVG(ventes) OVER w AS moyenne
-FROM ventes
-WINDOW w AS (ORDER BY date);
+FROM ventes  
+WINDOW w AS (ORDER BY date);  
 ```
 
 ### Coût Relatif
 
 Ces fonctions sont généralement **très performantes** :
-1. `LAG()` / `LEAD()` : Accès direct, très rapide
-2. `FIRST_VALUE()` : Simple, rapide
+1. `LAG()` / `LEAD()` : Accès direct, très rapide  
+2. `FIRST_VALUE()` : Simple, rapide  
 3. `LAST_VALUE()` avec `UNBOUNDED FOLLOWING` : Plus coûteuse (doit regarder toute la partition)
 
 ## Erreurs Courantes
@@ -1002,8 +1002,8 @@ ventes - LEAD(ventes) OVER (ORDER BY date)  -- ❌ Différence avec demain
 
 ```sql
 -- ❌ ERREUR : Window function dans WHERE
-SELECT * FROM ventes
-WHERE LAG(ventes) OVER (ORDER BY date) < ventes;
+SELECT * FROM ventes  
+WHERE LAG(ventes) OVER (ORDER BY date) < ventes;  
 
 -- ✅ CORRECT : Sous-requête
 SELECT * FROM (
@@ -1045,8 +1045,8 @@ SELECT
         ORDER BY date
         ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING
     ) AS debut_annee
-FROM ventes_quotidiennes
-ORDER BY date;
+FROM ventes_quotidiennes  
+ORDER BY date;  
 ```
 
 ### 2. Analyse de Rétention Client
@@ -1072,8 +1072,8 @@ SELECT
         WHEN date_achat - achat_precedent <= 90 THEN 'Client régulier'
         ELSE 'Client réactivé'
     END AS type_achat
-FROM achats_numerotes
-ORDER BY client_id, date_achat;
+FROM achats_numerotes  
+ORDER BY client_id, date_achat;  
 ```
 
 ### 3. Détection d'Anomalies
@@ -1123,19 +1123,19 @@ SELECT
         ORDER BY semaine
         ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING
     ) AS meilleur_rang
-FROM classement
-ORDER BY semaine, rang;
+FROM classement  
+ORDER BY semaine, rang;  
 ```
 
 ## Points Clés à Retenir
 
-- ✅ **LAG()** accède à une ligne **précédente** (N lignes en arrière)
-- ✅ **LEAD()** accède à une ligne **suivante** (N lignes en avant)
-- ✅ **FIRST_VALUE()** accède à la **première** valeur de la fenêtre
-- ✅ **LAST_VALUE()** accède à la **dernière** valeur (⚠️ spécifier `UNBOUNDED FOLLOWING`)
-- ✅ Toutes nécessitent **ORDER BY** pour définir l'ordre
-- ✅ Utilisez des **valeurs par défaut** ou `COALESCE()` pour gérer les NULL
-- ✅ Combinez avec **PARTITION BY** pour des analyses par groupe
+- ✅ **LAG()** accède à une ligne **précédente** (N lignes en arrière)  
+- ✅ **LEAD()** accède à une ligne **suivante** (N lignes en avant)  
+- ✅ **FIRST_VALUE()** accède à la **première** valeur de la fenêtre  
+- ✅ **LAST_VALUE()** accède à la **dernière** valeur (⚠️ spécifier `UNBOUNDED FOLLOWING`)  
+- ✅ Toutes nécessitent **ORDER BY** pour définir l'ordre  
+- ✅ Utilisez des **valeurs par défaut** ou `COALESCE()` pour gérer les NULL  
+- ✅ Combinez avec **PARTITION BY** pour des analyses par groupe  
 - ✅ Créez des **index** sur les colonnes ORDER BY pour la performance
 
 ## Tableau de Choix Rapide

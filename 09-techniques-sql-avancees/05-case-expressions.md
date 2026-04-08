@@ -23,9 +23,9 @@ SELECT nom, salaire FROM employes;
 ```
 nom      | salaire
 ---------+---------
-Alice    | 35000
-Bob      | 55000
-Charlie  | 80000
+Alice    | 35000  
+Bob      | 55000  
+Charlie  | 80000  
 ```
 
 ### Avec CASE (puissant)
@@ -47,9 +47,9 @@ FROM employes;
 ```
 nom      | salaire | niveau
 ---------+---------+---------------
-Alice    | 35000   | Junior
-Bob      | 55000   | Intermédiaire
-Charlie  | 80000   | Senior
+Alice    | 35000   | Junior  
+Bob      | 55000   | Intermédiaire  
+Charlie  | 80000   | Senior  
 ```
 
 ---
@@ -57,7 +57,7 @@ Charlie  | 80000   | Senior
 ## Les deux syntaxes de CASE
 
 PostgreSQL supporte deux formes d'expression `CASE` :
-1. **CASE simple** (comparaison d'égalité)
+1. **CASE simple** (comparaison d'égalité)  
 2. **CASE recherché** (conditions complexes)
 
 ---
@@ -96,10 +96,10 @@ FROM employes;
 ```
 nom     | departement | departement_fr
 --------+-------------+---------------------
-Alice   | IT          | Informatique
-Bob     | HR          | Ressources Humaines
-Charlie | Sales       | Ventes
-Diana   | Legal       | Autre
+Alice   | IT          | Informatique  
+Bob     | HR          | Ressources Humaines  
+Charlie | Sales       | Ventes  
+Diana   | Legal       | Autre  
 ```
 
 ### Équivalent en logique
@@ -110,9 +110,9 @@ CASE departement
 END
 
 -- Est équivalent à :
-IF departement = 'IT' THEN ...
-ELSIF departement = 'HR' THEN ...
-ELSE ...
+IF departement = 'IT' THEN ...  
+ELSIF departement = 'HR' THEN ...  
+ELSE ...  
 ```
 
 ### Cas d'usage : Traduction / Mapping
@@ -166,9 +166,9 @@ FROM personnes;
 ```
 nom     | age | categorie_age
 --------+-----+--------------
-Alice   | 16  | Mineur
-Bob     | 35  | Adulte
-Charlie | 70  | Senior
+Alice   | 16  | Mineur  
+Bob     | 35  | Adulte  
+Charlie | 70  | Senior  
 ```
 
 ### Conditions multiples
@@ -249,9 +249,9 @@ FROM comptes;
 
 ```sql
 -- Filtrer selon une logique complexe
-SELECT nom, salaire, departement
-FROM employes
-WHERE
+SELECT nom, salaire, departement  
+FROM employes  
+WHERE  
     CASE departement
         WHEN 'IT' THEN salaire > 50000
         WHEN 'Sales' THEN salaire > 40000
@@ -265,9 +265,9 @@ WHERE
 
 ```sql
 -- Trier différemment selon une condition
-SELECT nom, statut, date_creation
-FROM utilisateurs
-ORDER BY
+SELECT nom, statut, date_creation  
+FROM utilisateurs  
+ORDER BY  
     CASE statut
         WHEN 'VIP' THEN 1
         WHEN 'Premium' THEN 2
@@ -281,9 +281,9 @@ ORDER BY
 
 ```sql
 -- Mettre certaines valeurs en premier
-SELECT nom, ville
-FROM clients
-ORDER BY
+SELECT nom, ville  
+FROM clients  
+ORDER BY  
     CASE ville
         WHEN 'Paris' THEN 1
         WHEN 'Lyon' THEN 2
@@ -305,8 +305,8 @@ SELECT
         ELSE '50+'
     END AS tranche_age,
     COUNT(*) AS nombre
-FROM utilisateurs
-GROUP BY
+FROM utilisateurs  
+GROUP BY  
     CASE
         WHEN age < 25 THEN '18-24'
         WHEN age < 35 THEN '25-34'
@@ -322,14 +322,14 @@ ORDER BY tranche_age;
 
 ```sql
 -- Mise à jour conditionnelle
-UPDATE employes
-SET salaire = CASE
+UPDATE employes  
+SET salaire = CASE  
     WHEN performance = 'Excellent' THEN salaire * 1.15
     WHEN performance = 'Bon' THEN salaire * 1.10
     WHEN performance = 'Satisfaisant' THEN salaire * 1.05
     ELSE salaire
-END
-WHERE evaluation_date = CURRENT_DATE;
+END  
+WHERE evaluation_date = CURRENT_DATE;  
 ```
 
 ### 6. Dans des agrégations
@@ -341,8 +341,8 @@ SELECT
     COUNT(*) AS total_employes,
     COUNT(CASE WHEN salaire > 50000 THEN 1 END) AS nb_salaire_eleve,
     COUNT(CASE WHEN salaire <= 50000 THEN 1 END) AS nb_salaire_bas
-FROM employes
-GROUP BY departement;
+FROM employes  
+GROUP BY departement;  
 ```
 
 **Astuce :** `COUNT(CASE WHEN condition THEN 1 END)` compte uniquement les lignes où la condition est vraie.
@@ -493,12 +493,12 @@ FROM clients;
 SELECT COALESCE(prenom, 'Anonyme') AS prenom FROM utilisateurs;
 
 -- Remplacement de NULL dans des calculs
-SELECT nom, salaire + COALESCE(bonus, 0) AS remuneration_totale
-FROM employes;
+SELECT nom, salaire + COALESCE(bonus, 0) AS remuneration_totale  
+FROM employes;  
 
 -- Chaînage de plusieurs colonnes
-SELECT COALESCE(email_pro, email_perso, telephone, 'Aucun contact') AS contact
-FROM personnes;
+SELECT COALESCE(email_pro, email_perso, telephone, 'Aucun contact') AS contact  
+FROM personnes;  
 ```
 
 ### 2. NULLIF : Convertir une valeur en NULL
@@ -569,8 +569,8 @@ FROM employes;
 ⚠️ Si **une seule valeur** est `NULL`, le résultat est `NULL`.
 
 ```sql
-SELECT GREATEST(10, NULL, 30);  -- Résultat : NULL
-SELECT LEAST(10, NULL, 30);     -- Résultat : NULL
+SELECT GREATEST(10, NULL, 30);  -- Résultat : NULL  
+SELECT LEAST(10, NULL, 30);     -- Résultat : NULL  
 ```
 
 ---
@@ -603,9 +603,9 @@ SELECT
     mois,
     SUM(CASE WHEN categorie = 'Électronique' THEN montant ELSE 0 END) AS electronique,
     SUM(CASE WHEN categorie = 'Mode' THEN montant ELSE 0 END) AS mode
-FROM ventes
-GROUP BY mois
-ORDER BY mois;
+FROM ventes  
+GROUP BY mois  
+ORDER BY mois;  
 ```
 
 **Résultat :**
@@ -629,8 +629,8 @@ SELECT
     COUNT(CASE WHEN age < 30 THEN 1 END) AS nb_jeunes,
     AVG(CASE WHEN sexe = 'F' THEN salaire END) AS salaire_moyen_femmes,
     AVG(CASE WHEN sexe = 'M' THEN salaire END) AS salaire_moyen_hommes
-FROM employes
-GROUP BY departement;
+FROM employes  
+GROUP BY departement;  
 ```
 
 ### 3. Scoring et notation
@@ -672,9 +672,9 @@ SELECT
     END AS tranche_horaire,
     COUNT(*) AS nb_commandes,
     SUM(montant) AS total_ventes
-FROM commandes
-WHERE date_commande >= CURRENT_DATE - INTERVAL '30 days'
-GROUP BY
+FROM commandes  
+WHERE date_commande >= CURRENT_DATE - INTERVAL '30 days'  
+GROUP BY  
     CASE
         WHEN EXTRACT(HOUR FROM date_commande) BETWEEN 0 AND 5 THEN 'Nuit (0h-5h)'
         WHEN EXTRACT(HOUR FROM date_commande) BETWEEN 6 AND 11 THEN 'Matin (6h-11h)'
@@ -724,15 +724,15 @@ FROM commandes;
 
 ```sql
 -- Normaliser des données incohérentes
-UPDATE clients
-SET pays = CASE
+UPDATE clients  
+SET pays = CASE  
     WHEN LOWER(pays) IN ('france', 'fr', 'fra', 'french') THEN 'FR'
     WHEN LOWER(pays) IN ('germany', 'de', 'deu', 'allemagne') THEN 'DE'
     WHEN LOWER(pays) IN ('uk', 'gb', 'united kingdom', 'royaume-uni') THEN 'GB'
     WHEN LOWER(pays) IN ('usa', 'us', 'united states', 'états-unis') THEN 'US'
     ELSE UPPER(LEFT(pays, 2))  -- Essayer de garder les 2 premières lettres
-END
-WHERE pays IS NOT NULL;
+END  
+WHERE pays IS NOT NULL;  
 ```
 
 ### 7. Indicateurs de qualité des données
@@ -788,15 +788,15 @@ Les expressions `CASE` dans `WHERE` peuvent empêcher l'utilisation d'index.
 
 ```sql
 -- ❌ Pas d'utilisation d'index possible
-SELECT * FROM employes
-WHERE CASE
+SELECT * FROM employes  
+WHERE CASE  
     WHEN departement = 'IT' THEN salaire > 50000
     ELSE salaire > 40000
 END;
 
 -- ✅ Réécriture pour utiliser les index
-SELECT * FROM employes
-WHERE (departement = 'IT' AND salaire > 50000)
+SELECT * FROM employes  
+WHERE (departement = 'IT' AND salaire > 50000)  
    OR (departement != 'IT' AND salaire > 40000);
 ```
 
@@ -811,8 +811,8 @@ SELECT
         ELSE 'Senior'
     END AS categorie,
     COUNT(*)
-FROM personnes
-GROUP BY
+FROM personnes  
+GROUP BY  
     CASE
         WHEN age < 18 THEN 'Mineur'
         WHEN age < 65 THEN 'Adulte'
@@ -830,9 +830,9 @@ WITH personnes_categorisees AS (
         END AS categorie
     FROM personnes
 )
-SELECT categorie, COUNT(*)
-FROM personnes_categorisees
-GROUP BY categorie;
+SELECT categorie, COUNT(*)  
+FROM personnes_categorisees  
+GROUP BY categorie;  
 ```
 
 ### 4. Court-circuit d'évaluation
@@ -865,8 +865,8 @@ CREATE INDEX idx_employes_categorie ON employes (
 );
 
 -- Requête qui utilisera l'index
-SELECT * FROM employes
-WHERE (CASE
+SELECT * FROM employes  
+WHERE (CASE  
     WHEN salaire < 40000 THEN 'Junior'
     WHEN salaire < 70000 THEN 'Intermédiaire'
     ELSE 'Senior'
@@ -998,8 +998,8 @@ En PL/pgSQL (fonctions stockées), vous avez aussi `IF` :
 SELECT CASE WHEN x > 10 THEN 'Grand' ELSE 'Petit' END;
 
 -- Avec IF (dans une fonction PL/pgSQL)
-CREATE FUNCTION test(x INTEGER) RETURNS TEXT AS $$
-BEGIN
+CREATE FUNCTION test(x INTEGER) RETURNS TEXT AS $$  
+BEGIN  
     IF x > 10 THEN
         RETURN 'Grand';
     ELSE
@@ -1010,7 +1010,7 @@ $$ LANGUAGE plpgsql;
 ```
 
 **Utiliser :**
-- `CASE` dans les requêtes SQL
+- `CASE` dans les requêtes SQL  
 - `IF` dans les fonctions/procédures stockées
 
 ### CASE vs FILTER (dans les agrégats)
@@ -1054,8 +1054,8 @@ SELECT
         WHEN e.salaire < s.q3 THEN 'Q3 (au-dessus médiane)'
         ELSE 'Q4 (25% les plus hauts)'
     END AS quartile
-FROM employes e
-CROSS JOIN stats s;
+FROM employes e  
+CROSS JOIN stats s;  
 ```
 
 ### 2. État de machine à états
@@ -1119,8 +1119,8 @@ SELECT
         WHEN ventes > moyenne_7j * 0.5 THEN '📉 En-dessous de la moyenne'
         ELSE '⚠️ Préoccupant'
     END AS performance
-FROM moyennes_mobiles
-ORDER BY date DESC;
+FROM moyennes_mobiles  
+ORDER BY date DESC;  
 ```
 
 ---
@@ -1212,29 +1212,29 @@ ORDER BY date DESC;
 
 ### Quand utiliser CASE ?
 
-- ✅ Catégorisation dynamique
-- ✅ Transformation de données
-- ✅ Pivot de données
-- ✅ Logique métier complexe
-- ✅ Agrégations conditionnelles
+- ✅ Catégorisation dynamique  
+- ✅ Transformation de données  
+- ✅ Pivot de données  
+- ✅ Logique métier complexe  
+- ✅ Agrégations conditionnelles  
 - ✅ Tri personnalisé
 
 ### Checklist
 
-- [ ] Ai-je inclus une clause ELSE ?
-- [ ] Mes conditions sont-elles dans le bon ordre ?
-- [ ] Les types de retour sont-ils compatibles ?
-- [ ] Ai-je évité les imbrications excessives ?
-- [ ] Pourrais-je utiliser COALESCE à la place ?
+- [ ] Ai-je inclus une clause ELSE ?  
+- [ ] Mes conditions sont-elles dans le bon ordre ?  
+- [ ] Les types de retour sont-ils compatibles ?  
+- [ ] Ai-je évité les imbrications excessives ?  
+- [ ] Pourrais-je utiliser COALESCE à la place ?  
 - [ ] Ai-je documenté la logique complexe ?
 
 ---
 
 ## Pour aller plus loin
 
-- **Window Functions** (Chapitre 10) : Combiner CASE avec des fonctions de fenêtrage
-- **CTE** (Chapitre 9.2) : Éviter la répétition de CASE avec des CTE
-- **PL/pgSQL** (Chapitre 15) : IF/ELSIF/ELSE dans les fonctions stockées
+- **Window Functions** (Chapitre 10) : Combiner CASE avec des fonctions de fenêtrage  
+- **CTE** (Chapitre 9.2) : Éviter la répétition de CASE avec des CTE  
+- **PL/pgSQL** (Chapitre 15) : IF/ELSIF/ELSE dans les fonctions stockées  
 - **Triggers** (Chapitre 15.4) : CASE dans les déclencheurs
 
 ---

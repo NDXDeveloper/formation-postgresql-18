@@ -52,8 +52,8 @@ CREATE TABLE produits (
 ```
 
 **Fonctionnement :**
-1. Lors d'un INSERT ou UPDATE, PostgreSQL calcule `prix_ttc`
-2. La valeur calculée est **stockée physiquement** dans la table
+1. Lors d'un INSERT ou UPDATE, PostgreSQL calcule `prix_ttc`  
+2. La valeur calculée est **stockée physiquement** dans la table  
 3. Lors d'un SELECT, la valeur est lue directement du disque
 
 ```
@@ -68,14 +68,14 @@ Processus :
 
 ### Avantages des Colonnes STORED
 
-✅ **Lecture ultra-rapide** : Valeur déjà calculée et stockée
-✅ **Indexable** : Possibilité de créer des index
+✅ **Lecture ultra-rapide** : Valeur déjà calculée et stockée  
+✅ **Indexable** : Possibilité de créer des index  
 ✅ **Cohérence garantie** : Toujours synchronisée avec les colonnes source
 
 ### Inconvénients des Colonnes STORED
 
-❌ **Espace disque** : Occupe de l'espace (duplication partielle de données)
-❌ **Écritures plus lentes** : Calcul et stockage à chaque INSERT/UPDATE
+❌ **Espace disque** : Occupe de l'espace (duplication partielle de données)  
+❌ **Écritures plus lentes** : Calcul et stockage à chaque INSERT/UPDATE  
 ❌ **Bloat potentiel** : Plus de données = plus de vacuum nécessaire
 
 ---
@@ -115,15 +115,15 @@ Processus de lecture :
 
 ### Avantages des Colonnes VIRTUAL
 
-✅ **Aucun espace disque** : Pas de stockage supplémentaire
-✅ **Écritures plus rapides** : Pas de calcul lors de l'INSERT/UPDATE
-✅ **Cohérence parfaite** : Toujours calculée avec les valeurs actuelles
+✅ **Aucun espace disque** : Pas de stockage supplémentaire  
+✅ **Écritures plus rapides** : Pas de calcul lors de l'INSERT/UPDATE  
+✅ **Cohérence parfaite** : Toujours calculée avec les valeurs actuelles  
 ✅ **Flexibilité** : Peut être ajoutée/modifiée sans réécriture de table
 
 ### Inconvénients des Colonnes VIRTUAL
 
-❌ **Calcul à chaque lecture** : Légère surcharge CPU à la lecture
-❌ **Non indexable directement** : Impossible de créer un index dessus
+❌ **Calcul à chaque lecture** : Légère surcharge CPU à la lecture  
+❌ **Non indexable directement** : Impossible de créer un index dessus  
 ❌ **Performance variable** : Dépend de la complexité du calcul
 
 ---
@@ -142,8 +142,8 @@ CREATE TABLE nom_table (
 ```
 
 **Points importants :**
-- `GENERATED ALWAYS` : Obligatoire
-- `AS (expression)` : Expression de calcul
+- `GENERATED ALWAYS` : Obligatoire  
+- `AS (expression)` : Expression de calcul  
 - `VIRTUAL` : Nouveau mot-clé de PostgreSQL 18
 
 ### Exemples de Base
@@ -201,8 +201,8 @@ CREATE TABLE produits (
 );
 
 -- Ajouter une colonne générée virtuelle
-ALTER TABLE produits
-ADD COLUMN prix_ttc NUMERIC(10,2) GENERATED ALWAYS AS (prix_ht * (1 + taux_tva / 100)) VIRTUAL;
+ALTER TABLE produits  
+ADD COLUMN prix_ttc NUMERIC(10,2) GENERATED ALWAYS AS (prix_ht * (1 + taux_tva / 100)) VIRTUAL;  
 ```
 
 **Avantage majeur :** L'ajout d'une colonne VIRTUAL est **quasi-instantané** car aucune donnée n'est stockée. Pas besoin de réécrire toute la table.
@@ -466,8 +466,8 @@ CREATE INDEX idx_nom_complet ON personnes(nom_complet);
 **Workaround :** Utiliser STORED ou créer un index sur l'expression directement
 ```sql
 -- ✅ Solution 1 : Changer en STORED
-ALTER TABLE personnes ALTER COLUMN nom_complet SET STORED;
-CREATE INDEX idx_nom_complet ON personnes(nom_complet);
+ALTER TABLE personnes ALTER COLUMN nom_complet SET STORED;  
+CREATE INDEX idx_nom_complet ON personnes(nom_complet);  
 
 -- ✅ Solution 2 : Index sur expression (sans colonne générée)
 CREATE INDEX idx_nom_complet ON personnes((prenom || ' ' || nom));
@@ -495,7 +495,7 @@ CREATE TABLE geometrie (
 ```
 
 **Fonctions interdites :**
-- `NOW()`, `CURRENT_TIMESTAMP`, `CURRENT_DATE`
+- `NOW()`, `CURRENT_TIMESTAMP`, `CURRENT_DATE`  
 - `RANDOM()`
 - Toute fonction marquée VOLATILE
 
@@ -577,8 +577,8 @@ CREATE TABLE factures (
 
 COMMENT ON COLUMN factures.montant_ttc IS
 'Colonne VIRTUAL : montant TTC calculé automatiquement (montant_ht * 1.20).
-Ne jamais insérer/modifier manuellement.
-Performance : calcul < 1ms, pas d''impact significatif sur lectures.';
+Ne jamais insérer/modifier manuellement.  
+Performance : calcul < 1ms, pas d''impact significatif sur lectures.';  
 ```
 
 ### 3. Tester les Performances
@@ -607,15 +607,15 @@ SELECT produit_id, prix_ht, prix_ht * 1.20 AS prix_ttc FROM produits;
    - Calculées à la demande (pas de stockage)
    - Complète les colonnes STORED (calculées et stockées)
 
-2. **Avantages de VIRTUAL**
-   - ✅ Aucun espace disque
-   - ✅ Écritures plus rapides
-   - ✅ Ajout/modification quasi-instantanés
+2. **Avantages de VIRTUAL**  
+   - ✅ Aucun espace disque  
+   - ✅ Écritures plus rapides  
+   - ✅ Ajout/modification quasi-instantanés  
    - ✅ Cohérence parfaite
 
-3. **Limitations de VIRTUAL**
-   - ❌ Pas d'indexation directe
-   - ❌ Légère surcharge à la lecture
+3. **Limitations de VIRTUAL**  
+   - ❌ Pas d'indexation directe  
+   - ❌ Légère surcharge à la lecture  
    - ❌ Performance dépend de la complexité du calcul
 
 4. **Quand utiliser VIRTUAL**
@@ -633,8 +633,8 @@ SELECT produit_id, prix_ht, prix_ht * 1.20 AS prix_ttc FROM produits;
 ### Recommandation Générale
 
 **Stratégie par défaut pour PostgreSQL 18 :**
-1. Commencer avec **VIRTUAL** (économie d'espace, flexibilité)
-2. Profiler les performances réelles en staging/production
+1. Commencer avec **VIRTUAL** (économie d'espace, flexibilité)  
+2. Profiler les performances réelles en staging/production  
 3. Migrer vers **STORED** seulement si nécessaire (après mesures)
 
 ---

@@ -18,7 +18,7 @@ Une CTE est une requête nommée définie au début d'une instruction SQL princi
 
 Imaginez que vous préparez un plat complexe :
 
-- **Sans CTE** : Vous faites tout en même temps dans une seule grande casserole
+- **Sans CTE** : Vous faites tout en même temps dans une seule grande casserole  
 - **Avec CTE** : Vous préparez chaque ingrédient dans un bol séparé et nommé, puis vous les combinez
 
 Les CTE sont les "bols préparatoires" de SQL.
@@ -33,9 +33,9 @@ WITH nom_cte AS (
     SELECT ...
 )
 -- Requête principale qui utilise la CTE
-SELECT ...
-FROM nom_cte
-WHERE ...;
+SELECT ...  
+FROM nom_cte  
+WHERE ...;  
 ```
 
 ### Premier exemple simple
@@ -48,8 +48,8 @@ SELECT
     e.nom,
     e.salaire,
     dept_avg.moyenne
-FROM employes e
-INNER JOIN (
+FROM employes e  
+INNER JOIN (  
     SELECT
         departement,
         AVG(salaire) AS moyenne
@@ -74,15 +74,15 @@ SELECT
     e.nom,
     e.salaire,
     sm.moyenne
-FROM employes e
-INNER JOIN salaires_moyens_dept sm ON e.departement = sm.departement
-WHERE e.salaire > sm.moyenne;
+FROM employes e  
+INNER JOIN salaires_moyens_dept sm ON e.departement = sm.departement  
+WHERE e.salaire > sm.moyenne;  
 ```
 
 **Avantages immédiats :**
-- ✅ Le code se lit de haut en bas (logique séquentielle)
-- ✅ La CTE a un nom descriptif (`salaires_moyens_dept`)
-- ✅ On peut facilement tester la CTE isolément
+- ✅ Le code se lit de haut en bas (logique séquentielle)  
+- ✅ La CTE a un nom descriptif (`salaires_moyens_dept`)  
+- ✅ On peut facilement tester la CTE isolément  
 - ✅ Pas de parenthèses imbriquées complexes
 
 ---
@@ -114,11 +114,11 @@ SELECT
     p.nom,
     vp.total_ventes,
     mv.moyenne
-FROM produits p
-INNER JOIN ventes_produits vp ON p.id = vp.produit_id
-CROSS JOIN moyenne_ventes mv
-WHERE vp.total_ventes > mv.moyenne
-ORDER BY vp.total_ventes DESC;
+FROM produits p  
+INNER JOIN ventes_produits vp ON p.id = vp.produit_id  
+CROSS JOIN moyenne_ventes mv  
+WHERE vp.total_ventes > mv.moyenne  
+ORDER BY vp.total_ventes DESC;  
 ```
 
 ### 2. Réutilisation dans la même requête
@@ -153,8 +153,8 @@ WITH donnees_filrees AS (
 SELECT
     categorie,
     SUM(montant) AS total
-FROM donnees_filrees
-GROUP BY categorie
+FROM donnees_filrees  
+GROUP BY categorie  
 
 UNION ALL
 
@@ -179,9 +179,9 @@ SELECT * FROM ventes_2024 LIMIT 10;
 WITH ventes_2024 AS (
     SELECT * FROM ventes WHERE annee = 2024
 )
-SELECT categorie, SUM(montant)
-FROM ventes_2024
-GROUP BY categorie;
+SELECT categorie, SUM(montant)  
+FROM ventes_2024  
+GROUP BY categorie;  
 ```
 
 ---
@@ -203,8 +203,8 @@ WITH
     cte3 AS (
         SELECT ... FROM cte1, cte2 ...  -- Peut utiliser cte1 et cte2
     )
-SELECT ...
-FROM cte3;
+SELECT ...  
+FROM cte3;  
 ```
 
 ### Exemple : Pipeline de transformation de données
@@ -251,8 +251,8 @@ SELECT
     nombre_clients,
     ROUND(age_moyen, 1) AS age_moyen,
     ROUND(100.0 * nombre_clients / SUM(nombre_clients) OVER (), 2) AS pourcentage
-FROM stats_par_tranche
-ORDER BY age_moyen;
+FROM stats_par_tranche  
+ORDER BY age_moyen;  
 ```
 
 **Avantage :** Chaque étape est claire et testable individuellement.
@@ -267,7 +267,7 @@ PostgreSQL offre un contrôle fin sur l'optimisation des CTE avec les mots-clés
 
 Par défaut, PostgreSQL décide automatiquement s'il faut matérialiser une CTE ou non, en fonction de son utilisation :
 
-- **Une seule utilisation** → La CTE est "inline" (fusionnée dans la requête principale)
+- **Une seule utilisation** → La CTE est "inline" (fusionnée dans la requête principale)  
 - **Multiples utilisations** → La CTE est matérialisée
 
 ### Qu'est-ce que la matérialisation ?
@@ -311,11 +311,11 @@ WITH stats_ventes AS (
     WHERE annee = 2024
     GROUP BY categorie
 )
-SELECT 'Catégorie A' AS type, * FROM stats_ventes WHERE categorie = 'A'
-UNION ALL
-SELECT 'Catégorie B' AS type, * FROM stats_ventes WHERE categorie = 'B'
-UNION ALL
-SELECT 'Toutes' AS type, * FROM stats_ventes;
+SELECT 'Catégorie A' AS type, * FROM stats_ventes WHERE categorie = 'A'  
+UNION ALL  
+SELECT 'Catégorie B' AS type, * FROM stats_ventes WHERE categorie = 'B'  
+UNION ALL  
+SELECT 'Toutes' AS type, * FROM stats_ventes;  
 ```
 
 **Avec MATERIALIZED (recommandé ici) :**
@@ -330,11 +330,11 @@ WITH stats_ventes AS MATERIALIZED (
     WHERE annee = 2024
     GROUP BY categorie
 )
-SELECT 'Catégorie A' AS type, * FROM stats_ventes WHERE categorie = 'A'
-UNION ALL
-SELECT 'Catégorie B' AS type, * FROM stats_ventes WHERE categorie = 'B'
-UNION ALL
-SELECT 'Toutes' AS type, * FROM stats_ventes;
+SELECT 'Catégorie A' AS type, * FROM stats_ventes WHERE categorie = 'A'  
+UNION ALL  
+SELECT 'Catégorie B' AS type, * FROM stats_ventes WHERE categorie = 'B'  
+UNION ALL  
+SELECT 'Toutes' AS type, * FROM stats_ventes;  
 ```
 
 **Résultat :** La requête `stats_ventes` est exécutée **1 fois** au lieu de 3.
@@ -351,9 +351,9 @@ WITH grands_clients AS MATERIALIZED (
     GROUP BY client_id
     HAVING SUM(montant) > 100000
 )
-SELECT c.nom, gc.client_id
-FROM grands_clients gc
-INNER JOIN clients c ON gc.client_id = c.id;
+SELECT c.nom, gc.client_id  
+FROM grands_clients gc  
+INNER JOIN clients c ON gc.client_id = c.id;  
 ```
 
 **Avantage :** Garantit que le filtrage coûteux (`HAVING SUM(montant) > 100000`) se fait avant la jointure.
@@ -381,9 +381,9 @@ SELECT
         WHEN v.prix < s.mediane_prix THEN 'Prix bas'
         ELSE 'Prix normal'
     END AS categorie_prix
-FROM ventes v
-INNER JOIN produits p ON v.produit_id = p.id
-INNER JOIN statistiques_complexes s ON v.produit_id = s.produit_id;
+FROM ventes v  
+INNER JOIN produits p ON v.produit_id = p.id  
+INNER JOIN statistiques_complexes s ON v.produit_id = s.produit_id;  
 ```
 
 ---
@@ -399,17 +399,17 @@ INNER JOIN statistiques_complexes s ON v.produit_id = s.produit_id;
 WITH tous_clients AS NOT MATERIALIZED (
     SELECT * FROM clients
 )
-SELECT nom, email
-FROM tous_clients
-WHERE ville = 'Paris';  -- Ce filtre peut être appliqué directement sur clients
+SELECT nom, email  
+FROM tous_clients  
+WHERE ville = 'Paris';  -- Ce filtre peut être appliqué directement sur clients  
 ```
 
 **Équivalent optimisé automatiquement :**
 
 ```sql
-SELECT nom, email
-FROM clients
-WHERE ville = 'Paris';
+SELECT nom, email  
+FROM clients  
+WHERE ville = 'Paris';  
 ```
 
 ### Cas d'usage 2 : CTE simple utilisée une seule fois
@@ -420,20 +420,20 @@ Si la CTE n'est qu'un alias pour clarifier le code et n'est utilisée qu'une foi
 WITH ventes_2024 AS NOT MATERIALIZED (
     SELECT * FROM ventes WHERE annee = 2024
 )
-SELECT categorie, SUM(montant)
-FROM ventes_2024
-WHERE region = 'Europe'  -- Filtre additionnel
-GROUP BY categorie;
+SELECT categorie, SUM(montant)  
+FROM ventes_2024  
+WHERE region = 'Europe'  -- Filtre additionnel  
+GROUP BY categorie;  
 ```
 
 L'optimiseur peut fusionner les conditions :
 
 ```sql
 -- Plan optimisé automatiquement
-SELECT categorie, SUM(montant)
-FROM ventes
-WHERE annee = 2024 AND region = 'Europe'
-GROUP BY categorie;
+SELECT categorie, SUM(montant)  
+FROM ventes  
+WHERE annee = 2024 AND region = 'Europe'  
+GROUP BY categorie;  
 ```
 
 ### Cas d'usage 3 : Éviter la matérialisation de grandes tables
@@ -444,9 +444,9 @@ Si une CTE produit des millions de lignes mais que la requête principale ne va 
 WITH toutes_transactions AS NOT MATERIALIZED (
     SELECT * FROM transactions  -- Table de 100M lignes
 )
-SELECT *
-FROM toutes_transactions
-WHERE id = 12345;  -- Ne récupère qu'1 ligne
+SELECT *  
+FROM toutes_transactions  
+WHERE id = 12345;  -- Ne récupère qu'1 ligne  
 ```
 
 **Avec NOT MATERIALIZED :** PostgreSQL peut utiliser l'index sur `id` directement.
@@ -520,8 +520,8 @@ WITH stats AS NOT MATERIALIZED (
 ```sql
 -- Scénario : Étapes séquentielles de nettoyage
 
-WITH
-etape1 AS MATERIALIZED (
+WITH  
+etape1 AS MATERIALIZED (  
     -- Première transformation lourde
     SELECT *, LOWER(TRIM(nom)) AS nom_clean
     FROM clients_brut
@@ -534,9 +534,9 @@ etape2 AS MATERIALIZED (
         CASE WHEN nom_clean LIKE '%corp%' THEN 'B2B' ELSE 'B2C' END AS type_client
     FROM etape1
 )
-SELECT type_client, COUNT(*)
-FROM etape2
-GROUP BY type_client;
+SELECT type_client, COUNT(*)  
+FROM etape2  
+GROUP BY type_client;  
 ```
 
 **Pourquoi MATERIALIZED ici ?**
@@ -574,15 +574,15 @@ La CTE est-elle utilisée plusieurs fois ?
 
 ```sql
 -- Tester avec MATERIALIZED
-EXPLAIN ANALYZE
-WITH ma_cte AS MATERIALIZED (
+EXPLAIN ANALYZE  
+WITH ma_cte AS MATERIALIZED (  
     SELECT * FROM grande_table WHERE condition
 )
 SELECT * FROM ma_cte WHERE autre_condition;
 
 -- Tester avec NOT MATERIALIZED
-EXPLAIN ANALYZE
-WITH ma_cte AS NOT MATERIALIZED (
+EXPLAIN ANALYZE  
+WITH ma_cte AS NOT MATERIALIZED (  
     SELECT * FROM grande_table WHERE condition
 )
 SELECT * FROM ma_cte WHERE autre_condition;
@@ -780,16 +780,16 @@ WITH deduplique AS (
         ROW_NUMBER() OVER (PARTITION BY email ORDER BY date_creation DESC) AS rn
     FROM clients
 )
-SELECT *
-FROM deduplique
-WHERE rn = 1;
+SELECT *  
+FROM deduplique  
+WHERE rn = 1;  
 ```
 
 ### 2. Calculs en cascade
 
 ```sql
-WITH
-ventes_journalieres AS (
+WITH  
+ventes_journalieres AS (  
     SELECT
         DATE(date_vente) AS jour,
         SUM(montant) AS total_jour
@@ -808,8 +808,8 @@ SELECT
     total_jour,
     cumul,
     cumul / (SELECT SUM(total_jour) FROM ventes_journalieres) * 100 AS pourcentage_cumul
-FROM ventes_cumulees
-ORDER BY jour;
+FROM ventes_cumulees  
+ORDER BY jour;  
 ```
 
 ### 3. Pivot de données
@@ -830,15 +830,15 @@ SELECT
     SUM(CASE WHEN mois = 2 THEN total ELSE 0 END) AS fevrier,
     SUM(CASE WHEN mois = 3 THEN total ELSE 0 END) AS mars
     -- ... autres mois
-FROM ventes_par_mois
-GROUP BY produit;
+FROM ventes_par_mois  
+GROUP BY produit;  
 ```
 
 ### 4. Comparaison avec période précédente
 
 ```sql
-WITH
-ventes_courantes AS (
+WITH  
+ventes_courantes AS (  
     SELECT
         categorie,
         SUM(montant) AS total
@@ -859,9 +859,9 @@ SELECT
     c.total AS mois_courant,
     p.total AS mois_precedent,
     ROUND((c.total - p.total) / p.total * 100, 2) AS evolution_pct
-FROM ventes_courantes c
-FULL OUTER JOIN ventes_precedentes p ON c.categorie = p.categorie
-ORDER BY evolution_pct DESC NULLS LAST;
+FROM ventes_courantes c  
+FULL OUTER JOIN ventes_precedentes p ON c.categorie = p.categorie  
+ORDER BY evolution_pct DESC NULLS LAST;  
 ```
 
 ---
@@ -876,10 +876,10 @@ Les CTE matérialisées sont des résultats temporaires en mémoire : impossible
 
 ```sql
 -- Alternative avec table temporaire
-CREATE TEMP TABLE stats_temp AS
-SELECT categorie, AVG(prix) AS prix_moyen
-FROM produits
-GROUP BY categorie;
+CREATE TEMP TABLE stats_temp AS  
+SELECT categorie, AVG(prix) AS prix_moyen  
+FROM produits  
+GROUP BY categorie;  
 
 CREATE INDEX idx_cat ON stats_temp(categorie);
 
@@ -895,8 +895,8 @@ Les CTE récursives (voir chapitre 9.3) ne peuvent pas être matérialisées exp
 Une CTE n'existe que dans la requête qui la définit.
 
 ```sql
-WITH ma_cte AS (SELECT * FROM t1)
-SELECT * FROM ma_cte;  -- ✅ OK
+WITH ma_cte AS (SELECT * FROM t1)  
+SELECT * FROM ma_cte;  -- ✅ OK  
 
 -- Nouvelle requête
 SELECT * FROM ma_cte;  -- ❌ ERREUR : ma_cte n'existe plus
@@ -908,11 +908,11 @@ SELECT * FROM ma_cte;  -- ❌ ERREUR : ma_cte n'existe plus
 
 ### Points clés à retenir
 
-1. **CTE = Clarté** : Décompose des requêtes complexes en étapes nommées
-2. **Réutilisable** : Une CTE peut être référencée plusieurs fois
-3. **MATERIALIZED** : Calcule une fois et stocke (bon pour réutilisation)
-4. **NOT MATERIALIZED** : Fusionne avec requête principale (bon pour optimisation)
-5. **PostgreSQL 12+** : Décision automatique intelligente par défaut
+1. **CTE = Clarté** : Décompose des requêtes complexes en étapes nommées  
+2. **Réutilisable** : Une CTE peut être référencée plusieurs fois  
+3. **MATERIALIZED** : Calcule une fois et stocke (bon pour réutilisation)  
+4. **NOT MATERIALIZED** : Fusionne avec requête principale (bon pour optimisation)  
+5. **PostgreSQL 12+** : Décision automatique intelligente par défaut  
 6. **Test avec EXPLAIN** : Toujours mesurer l'impact des choix
 
 ### Quand utiliser quoi ?
@@ -928,19 +928,19 @@ SELECT * FROM ma_cte;  -- ❌ ERREUR : ma_cte n'existe plus
 
 ### Checklist d'utilisation
 
-- [ ] La CTE améliore-t-elle vraiment la lisibilité ?
-- [ ] Ai-je testé la CTE indépendamment ?
-- [ ] Ai-je donné un nom descriptif ?
-- [ ] Ai-je vérifié avec EXPLAIN ANALYZE les performances ?
+- [ ] La CTE améliore-t-elle vraiment la lisibilité ?  
+- [ ] Ai-je testé la CTE indépendamment ?  
+- [ ] Ai-je donné un nom descriptif ?  
+- [ ] Ai-je vérifié avec EXPLAIN ANALYZE les performances ?  
 - [ ] Ai-je choisi MATERIALIZED ou NOT MATERIALIZED de façon éclairée ?
 
 ---
 
 ## Pour aller plus loin
 
-- **CTE Récursives** (Chapitre 9.3) : Parcourir hiérarchies et graphes
-- **Window Functions** (Chapitre 10) : Souvent combinées avec CTE
-- **Vues Matérialisées** (Chapitre 11.5) : Pour persister des résultats entre requêtes
+- **CTE Récursives** (Chapitre 9.3) : Parcourir hiérarchies et graphes  
+- **Window Functions** (Chapitre 10) : Souvent combinées avec CTE  
+- **Vues Matérialisées** (Chapitre 11.5) : Pour persister des résultats entre requêtes  
 - **Query Optimization** (Chapitre 13) : Approfondir l'analyse de performance
 
 ---

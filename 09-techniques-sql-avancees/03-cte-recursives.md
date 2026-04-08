@@ -76,9 +76,9 @@ INSERT INTO employes VALUES
 
 ### Questions typiques
 
-1. **Qui sont tous les subordonnés de Bob** (directs et indirects) ?
-2. **Quel est le chemin hiérarchique complet de Diana** jusqu'au PDG ?
-3. **Quelle est la profondeur de l'organigramme** ?
+1. **Qui sont tous les subordonnés de Bob** (directs et indirects) ?  
+2. **Quel est le chemin hiérarchique complet de Diana** jusqu'au PDG ?  
+3. **Quelle est la profondeur de l'organigramme** ?  
 4. **Quels sont tous les employés au niveau 3** de la hiérarchie ?
 
 **Sans CTE récursive**, ces requêtes sont très difficiles, voire impossibles en SQL standard.
@@ -233,8 +233,8 @@ SELECT
     niveau,
     nom,
     REPEAT('  ', niveau - 1) || '└─ ' || nom AS arborescence
-FROM hierarchie
-ORDER BY niveau DESC;  -- Du PDG vers Diana
+FROM hierarchie  
+ORDER BY niveau DESC;  -- Du PDG vers Diana  
 ```
 
 ### Résultat
@@ -287,8 +287,8 @@ SELECT
     niveau,
     REPEAT('  ', niveau - 1) || nom AS nom_indente,
     chemin
-FROM arbre
-ORDER BY ids_chemin;  -- Tri par chemin pour ordre hiérarchique
+FROM arbre  
+ORDER BY ids_chemin;  -- Tri par chemin pour ordre hiérarchique  
 ```
 
 ### Résultat
@@ -360,8 +360,8 @@ SELECT
     REPEAT('  ', profondeur) || '├─ ' || nom AS arborescence,
     profondeur,
     chemin_complet
-FROM arbre_categories
-ORDER BY chemin_complet;
+FROM arbre_categories  
+ORDER BY chemin_complet;  
 ```
 
 ### Résultat
@@ -386,7 +386,7 @@ arborescence                | profondeur | chemin_complet
 
 ### Différence entre arbre et graphe
 
-- **Arbre** : Chaque nœud a **un seul parent** (ou aucun)
+- **Arbre** : Chaque nœud a **un seul parent** (ou aucun)  
 - **Graphe** : Un nœud peut avoir **plusieurs parents** ou connexions
 
 ### Structure de données : Amis sur un réseau social
@@ -448,9 +448,9 @@ WITH RECURSIVE reseau AS (
 SELECT DISTINCT  -- Au cas où
     degre,
     nom
-FROM reseau
-WHERE degre > 0  -- Exclure Alice elle-même
-ORDER BY degre, nom;
+FROM reseau  
+WHERE degre > 0  -- Exclure Alice elle-même  
+ORDER BY degre, nom;  
 ```
 
 ### Résultat
@@ -466,8 +466,8 @@ degre | nom
 ```
 
 **Explication :**
-- **Degré 1** : Amis directs d'Alice → Bob, Eve
-- **Degré 2** : Amis des amis → Charlie (ami de Bob), Frank (ami d'Eve)
+- **Degré 1** : Amis directs d'Alice → Bob, Eve  
+- **Degré 2** : Amis des amis → Charlie (ami de Bob), Frank (ami d'Eve)  
 - **Degré 3** : Amis de degré 2 → Diana (ami de Charlie)
 
 ---
@@ -550,6 +550,38 @@ WITH RECURSIVE parcours AS (
 SELECT * FROM parcours;
 ```
 
+### Stratégie 4 : Clauses SEARCH et CYCLE (PostgreSQL 14+, standard SQL)
+
+Depuis **PostgreSQL 14**, vous pouvez utiliser les clauses standard SQL `SEARCH` et `CYCLE` pour un contrôle plus élégant :
+
+```sql
+-- Parcours en profondeur d'abord avec détection de cycle
+WITH RECURSIVE parcours AS (
+    SELECT id, nom, manager_id
+    FROM employes WHERE manager_id IS NULL
+
+    UNION ALL
+
+    SELECT e.id, e.nom, e.manager_id
+    FROM employes e
+    JOIN parcours p ON e.manager_id = p.id
+)
+SEARCH DEPTH FIRST BY id SET ordinal     -- Contrôle l'ordre de parcours  
+CYCLE id SET est_cycle USING chemin       -- Détecte automatiquement les cycles  
+SELECT * FROM parcours WHERE NOT est_cycle;  
+```
+
+**Options de SEARCH :**
+- `SEARCH DEPTH FIRST BY colonne SET ordinal` : Parcours en profondeur  
+- `SEARCH BREADTH FIRST BY colonne SET ordinal` : Parcours en largeur
+
+**CYCLE :**
+- `CYCLE colonne SET flag_col USING chemin_col` : Détecte les cycles automatiquement  
+- `flag_col` est un booléen (TRUE si cycle détecté)
+- Plus propre que la détection manuelle avec `ARRAY`
+
+> 💡 Les stratégies manuelles (ARRAY, profondeur max) restent utiles pour PostgreSQL < 14 ou pour un contrôle plus fin.
+
 ---
 
 ## Cas d'Usage Avancés
@@ -568,8 +600,8 @@ WITH RECURSIVE profondeurs AS (
     FROM employes e
     INNER JOIN profondeurs p ON e.manager_id = p.id
 )
-SELECT MAX(profondeur) AS profondeur_max
-FROM profondeurs;
+SELECT MAX(profondeur) AS profondeur_max  
+FROM profondeurs;  
 ```
 
 ### 2. Trouver toutes les feuilles d'un arbre
@@ -588,10 +620,10 @@ WITH RECURSIVE arbre AS (
     FROM employes e
     INNER JOIN arbre a ON e.manager_id = a.id
 )
-SELECT a.id, a.nom
-FROM arbre a
-LEFT JOIN employes e ON e.manager_id = a.id
-WHERE e.id IS NULL;  -- Pas d'enfants
+SELECT a.id, a.nom  
+FROM arbre a  
+LEFT JOIN employes e ON e.manager_id = a.id  
+WHERE e.id IS NULL;  -- Pas d'enfants  
 ```
 
 ### 3. Calculer des agrégats hiérarchiques
@@ -625,8 +657,8 @@ SELECT
     manager.id,
     manager.nom,
     SUM(subordonnes.salaire) AS masse_salariale_equipe
-FROM hierarchie manager
-LEFT JOIN hierarchie subordonnes
+FROM hierarchie manager  
+LEFT JOIN hierarchie subordonnes  
     ON subordonnes.chemin_ids @> ARRAY[manager.id]  -- Contient l'ID du manager
 GROUP BY manager.id, manager.nom;
 ```
@@ -634,8 +666,8 @@ GROUP BY manager.id, manager.nom;
 ### 4. Matérialiser un arbre dans une table dénormalisée
 
 ```sql
-CREATE TABLE employes_denormalises AS
-WITH RECURSIVE arbre AS (
+CREATE TABLE employes_denormalises AS  
+WITH RECURSIVE arbre AS (  
     SELECT
         id,
         nom,
@@ -661,8 +693,8 @@ WITH RECURSIVE arbre AS (
 SELECT * FROM arbre;
 
 -- Créer un index pour les requêtes rapides
-CREATE INDEX idx_niveau ON employes_denormalises(niveau);
-CREATE INDEX idx_chemin ON employes_denormalises USING GIN(chemin_ids);
+CREATE INDEX idx_niveau ON employes_denormalises(niveau);  
+CREATE INDEX idx_chemin ON employes_denormalises USING GIN(chemin_ids);  
 ```
 
 ---
@@ -744,9 +776,9 @@ SELECT
     prix_unitaire AS prix_unit,
     quantite_totale * prix_unitaire AS cout_total,
     chemin
-FROM bom
-WHERE niveau > 0  -- Exclure la pièce finale elle-même
-ORDER BY chemin;
+FROM bom  
+WHERE niveau > 0  -- Exclure la pièce finale elle-même  
+ORDER BY chemin;  
 ```
 
 ### Résultat
@@ -775,8 +807,8 @@ WITH RECURSIVE bom AS (
 SELECT
     'Vélo complet' AS article,
     SUM(quantite_totale * prix_unitaire) AS cout_total
-FROM bom
-WHERE niveau > 0;
+FROM bom  
+WHERE niveau > 0;  
 ```
 
 **Résultat :** `265.00 €`
@@ -797,8 +829,8 @@ SET max_recursion_depth = 1000;
 WITH RECURSIVE arbre AS (
     ...
 )
-OPTIONS (max_recursion_depth 500)
-SELECT * FROM arbre;
+OPTIONS (max_recursion_depth 500)  
+SELECT * FROM arbre;  
 ```
 
 **Attention :** Une limite trop élevée peut causer des problèmes de mémoire.
@@ -809,12 +841,12 @@ Les CTE récursives font de nombreuses jointures. Des index sur les colonnes cl�
 
 ```sql
 -- Pour une structure parent-enfant
-CREATE INDEX idx_manager ON employes(manager_id);
-CREATE INDEX idx_parent ON categories(parent_id);
+CREATE INDEX idx_manager ON employes(manager_id);  
+CREATE INDEX idx_parent ON categories(parent_id);  
 
 -- Pour un graphe
-CREATE INDEX idx_source ON liens(source);
-CREATE INDEX idx_destination ON liens(destination);
+CREATE INDEX idx_source ON liens(source);  
+CREATE INDEX idx_destination ON liens(destination);  
 ```
 
 ### 3. Éviter les colonnes inutiles
@@ -841,7 +873,7 @@ SELECT * FROM arbre;
 
 ### 4. Utiliser UNION vs UNION ALL intelligemment
 
-- **UNION ALL** : Plus rapide (pas de déduplication)
+- **UNION ALL** : Plus rapide (pas de déduplication)  
 - **UNION** : Empêche les cycles mais plus lent
 
 **Recommandation :** Utilisez `UNION ALL` avec détection de cycle manuelle (tableau de chemin).
@@ -851,14 +883,14 @@ SELECT * FROM arbre;
 Si vous utilisez le même arbre plusieurs fois, matérialisez-le dans une table temporaire :
 
 ```sql
-CREATE TEMP TABLE arbre_materialise AS
-WITH RECURSIVE arbre AS (
+CREATE TEMP TABLE arbre_materialise AS  
+WITH RECURSIVE arbre AS (  
     ...
 )
 SELECT * FROM arbre;
 
-CREATE INDEX ON arbre_materialise(id);
-CREATE INDEX ON arbre_materialise(parent_id);
+CREATE INDEX ON arbre_materialise(id);  
+CREATE INDEX ON arbre_materialise(parent_id);  
 
 -- Utilisez ensuite arbre_materialise dans vos requêtes
 SELECT * FROM arbre_materialise WHERE niveau = 3;
@@ -869,8 +901,8 @@ SELECT * FROM arbre_materialise WHERE niveau = 3;
 ## Analyse avec EXPLAIN
 
 ```sql
-EXPLAIN ANALYZE
-WITH RECURSIVE arbre AS (
+EXPLAIN ANALYZE  
+WITH RECURSIVE arbre AS (  
     SELECT id, nom, manager_id, 1 AS niveau
     FROM employes
     WHERE manager_id IS NULL
@@ -886,9 +918,9 @@ SELECT * FROM arbre;
 
 ### Éléments à surveiller dans le plan
 
-- **Recursive CTE** : Confirme que PostgreSQL utilise la récursion
-- **WorkTable Scan** : Scan de la table de travail temporaire (résultats intermédiaires)
-- **Nested Loop** ou **Hash Join** : Type de jointure utilisée à chaque itération
+- **Recursive CTE** : Confirme que PostgreSQL utilise la récursion  
+- **WorkTable Scan** : Scan de la table de travail temporaire (résultats intermédiaires)  
+- **Nested Loop** ou **Hash Join** : Type de jointure utilisée à chaque itération  
 - **Execution Time** : Temps total (attention aux arbres profonds)
 
 ---
@@ -931,8 +963,8 @@ CREATE TABLE employes_closure (
 );
 
 -- Pré-remplir avec toutes les relations
-INSERT INTO employes_closure
-WITH RECURSIVE ...;
+INSERT INTO employes_closure  
+WITH RECURSIVE ...;  
 ```
 
 | Approche | Avantages | Inconvénients |
@@ -941,7 +973,7 @@ WITH RECURSIVE ...;
 | **Closure Table** | Requêtes très rapides (simple SELECT) | Maintenance complexe (INSERT/UPDATE/DELETE) |
 
 **Recommandation :**
-- **CTE Récursive** : Données qui changent fréquemment, structures petites/moyennes
+- **CTE Récursive** : Données qui changent fréquemment, structures petites/moyennes  
 - **Closure Table** : Données stables, requêtes fréquentes, grandes hiérarchies
 
 ### CTE Récursive vs ltree (extension PostgreSQL)
@@ -960,8 +992,8 @@ CREATE TABLE categories_ltree (
 CREATE INDEX idx_chemin_gist ON categories_ltree USING GIST (chemin);
 
 -- Requête ultra-rapide
-SELECT * FROM categories_ltree
-WHERE chemin <@ 'Électronique.Informatique';  -- Tous les descendants
+SELECT * FROM categories_ltree  
+WHERE chemin <@ 'Électronique.Informatique';  -- Tous les descendants  
 ```
 
 **Avantage ltree :** Performance supérieure pour les requêtes hiérarchiques.
@@ -1003,19 +1035,19 @@ WHERE chemin <@ 'Électronique.Informatique';  -- Tous les descendants
 
 ### ❌ À éviter
 
-1. **Oublier la condition d'arrêt**
+1. **Oublier la condition d'arrêt**  
    → Risque de boucle infinie
 
-2. **Pas d'index sur parent_id / manager_id**
+2. **Pas d'index sur parent_id / manager_id**  
    → Performances catastrophiques
 
-3. **Sélectionner toutes les colonnes inutilement**
+3. **Sélectionner toutes les colonnes inutilement**  
    → Gaspillage mémoire
 
-4. **Utiliser UNION quand UNION ALL suffit**
+4. **Utiliser UNION quand UNION ALL suffit**  
    → Perte de performance inutile
 
-5. **Négliger les cycles dans les graphes**
+5. **Négliger les cycles dans les graphes**  
    → Boucles infinies garanties
 
 ---
@@ -1055,20 +1087,20 @@ SELECT * FROM nom;
 
 ### Checklist d'utilisation
 
-- [ ] Ai-je défini un terme d'ancrage clair ?
-- [ ] Ai-je une condition d'arrêt explicite ?
-- [ ] Ai-je géré les cycles potentiels (graphes) ?
-- [ ] Les colonnes de jointure sont-elles indexées ?
-- [ ] Ai-je testé avec un petit jeu de données ?
+- [ ] Ai-je défini un terme d'ancrage clair ?  
+- [ ] Ai-je une condition d'arrêt explicite ?  
+- [ ] Ai-je géré les cycles potentiels (graphes) ?  
+- [ ] Les colonnes de jointure sont-elles indexées ?  
+- [ ] Ai-je testé avec un petit jeu de données ?  
 - [ ] Ai-je vérifié avec EXPLAIN ANALYZE ?
 
 ---
 
 ## Pour aller plus loin
 
-- **ltree Extension** : Hiérarchies optimisées avec chemins matérialisés
-- **Closure Tables** : Pré-calcul de toutes les relations
-- **Graph Databases** : Neo4j, RedisGraph pour graphes complexes
+- **ltree Extension** : Hiérarchies optimisées avec chemins matérialisés  
+- **Closure Tables** : Pré-calcul de toutes les relations  
+- **Graph Databases** : Neo4j, RedisGraph pour graphes complexes  
 - **Window Functions** : Alternative pour certains calculs hiérarchiques
 
 ---

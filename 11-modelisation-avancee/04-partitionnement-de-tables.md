@@ -137,9 +137,9 @@ CREATE TABLE ventes_2024 (
 ```
 
 **Limitations de l'héritage :**
-- ❌ Contraintes d'intégrité (PK, FK) non propagées
-- ❌ Index non hérités automatiquement
-- ❌ Gestion manuelle complexe
+- ❌ Contraintes d'intégrité (PK, FK) non propagées  
+- ❌ Index non hérités automatiquement  
+- ❌ Gestion manuelle complexe  
 - ❌ Routage des données à gérer via triggers
 
 ### Partitionnement Déclaratif (PostgreSQL 10+)
@@ -160,11 +160,11 @@ CREATE TABLE ventes_2024 PARTITION OF ventes
 ```
 
 **Avantages du partitionnement déclaratif :**
-- ✅ Syntaxe simple et claire
-- ✅ Routage automatique des INSERT/UPDATE/DELETE
-- ✅ Index créés automatiquement sur les partitions
-- ✅ Partition pruning natif et optimisé
-- ✅ Support des contraintes (avec limitations)
+- ✅ Syntaxe simple et claire  
+- ✅ Routage automatique des INSERT/UPDATE/DELETE  
+- ✅ Index créés automatiquement sur les partitions  
+- ✅ Partition pruning natif et optimisé  
+- ✅ Support des contraintes (avec limitations)  
 - ✅ Maintenance simplifiée
 
 **Recommandation :** Utilisez toujours le **partitionnement déclaratif** pour les nouveaux projets. L'héritage de tables n'est plus recommandé pour le partitionnement.
@@ -190,8 +190,8 @@ CREATE TABLE ventes_2024 PARTITION OF ventes
 ```
 
 **Cas d'usage typiques :**
-- 📅 **Dates et timestamps** (le plus courant)
-- 🔢 **Séquences numériques** (IDs séquentiels)
+- 📅 **Dates et timestamps** (le plus courant)  
+- 🔢 **Séquences numériques** (IDs séquentiels)  
 - 📊 **Scores, notes, valeurs** (ex: 0-100, 100-200, etc.)
 
 **Exemple :** Logs d'application partitionnés par mois, données de ventes par année
@@ -211,9 +211,9 @@ CREATE TABLE commandes_asie PARTITION OF commandes
 ```
 
 **Cas d'usage typiques :**
-- 🌍 **Régions géographiques** (pays, continents)
-- 🏷️ **Catégories** (type de produit, statut)
-- 🎯 **Segments de clients** (B2B, B2C, etc.)
+- 🌍 **Régions géographiques** (pays, continents)  
+- 🏷️ **Catégories** (type de produit, statut)  
+- 🎯 **Segments de clients** (B2B, B2C, etc.)  
 - 📝 **États** (actif, archivé, supprimé)
 
 **Exemple :** Données utilisateurs par région, produits par catégorie
@@ -234,8 +234,8 @@ CREATE TABLE evenements_p1 PARTITION OF evenements
 ```
 
 **Cas d'usage typiques :**
-- ⚖️ **Distribution uniforme** (pas de critère naturel)
-- 🔥 **Éviter les hot spots** (répartir la charge)
+- ⚖️ **Distribution uniforme** (pas de critère naturel)  
+- 🔥 **Éviter les hot spots** (répartir la charge)  
 - 🚀 **Parallélisation** (traitement concurrent)
 
 **Exemple :** Données IoT, sessions utilisateurs, événements avec forte concurrence
@@ -307,8 +307,8 @@ Séparer données actives (hot) et anciennes (cold) :
 #### 6. Requêtes Ciblées sur Sous-ensemble
 
 Si vos requêtes ciblent toujours un sous-ensemble :
-- "Ventes du dernier mois"
-- "Commandes de la région EMEA"
+- "Ventes du dernier mois"  
+- "Commandes de la région EMEA"  
 - "Transactions du client X"
 
 **Bénéfice :** Partition pruning élimine les partitions inutiles
@@ -424,8 +424,8 @@ INSERT INTO nom_table VALUES (...);
 SELECT * FROM nom_table WHERE ...;
 
 -- Les UPDATE/DELETE fonctionnent normalement
-UPDATE nom_table SET ... WHERE ...;
-DELETE FROM nom_table WHERE ...;
+UPDATE nom_table SET ... WHERE ...;  
+DELETE FROM nom_table WHERE ...;  
 ```
 
 **Transparence totale :** L'application n'a pas besoin de connaître les partitions
@@ -475,9 +475,9 @@ CREATE TABLE ventes_2025 PARTITION OF ventes
 
 ```sql
 -- Index sur la table parent → créé automatiquement sur toutes les partitions
-CREATE INDEX idx_ventes_date ON ventes(date_vente);
-CREATE INDEX idx_ventes_client ON ventes(client_id);
-CREATE INDEX idx_ventes_montant ON ventes(montant);
+CREATE INDEX idx_ventes_date ON ventes(date_vente);  
+CREATE INDEX idx_ventes_client ON ventes(client_id);  
+CREATE INDEX idx_ventes_montant ON ventes(montant);  
 ```
 
 **Vérification :**
@@ -487,19 +487,19 @@ SELECT
     schemaname,
     tablename,
     indexname
-FROM pg_indexes
-WHERE tablename LIKE 'ventes%'
-ORDER BY tablename, indexname;
+FROM pg_indexes  
+WHERE tablename LIKE 'ventes%'  
+ORDER BY tablename, indexname;  
 ```
 
 **Résultat :**
 ```
 tablename    | indexname
 -------------+---------------------------
-ventes_2023  | ventes_2023_date_idx
-ventes_2023  | ventes_2023_client_idx
-ventes_2023  | ventes_2023_montant_idx
-ventes_2024  | ventes_2024_date_idx
+ventes_2023  | ventes_2023_date_idx  
+ventes_2023  | ventes_2023_client_idx  
+ventes_2023  | ventes_2023_montant_idx  
+ventes_2024  | ventes_2024_date_idx  
 ...
 ```
 
@@ -507,8 +507,8 @@ ventes_2024  | ventes_2024_date_idx
 
 ```sql
 -- Insertion dans la table parent
-INSERT INTO ventes (date_vente, client_id, produit_id, quantite, montant)
-VALUES
+INSERT INTO ventes (date_vente, client_id, produit_id, quantite, montant)  
+VALUES  
     ('2023-05-15', 1001, 501, 2, 150.00),
     ('2024-08-22', 1002, 502, 1, 200.00),
     ('2025-11-10', 1003, 503, 5, 350.00);
@@ -518,10 +518,10 @@ VALUES
 
 **Vérification du routage :**
 ```sql
-SELECT COUNT(*) FROM ventes_2023;  -- 1
-SELECT COUNT(*) FROM ventes_2024;  -- 1
-SELECT COUNT(*) FROM ventes_2025;  -- 1
-SELECT COUNT(*) FROM ventes;       -- 3 (total)
+SELECT COUNT(*) FROM ventes_2023;  -- 1  
+SELECT COUNT(*) FROM ventes_2024;  -- 1  
+SELECT COUNT(*) FROM ventes_2025;  -- 1  
+SELECT COUNT(*) FROM ventes;       -- 3 (total)  
 ```
 
 ### Étape 5 : Interroger les Données
@@ -588,7 +588,7 @@ CREATE TABLE ventes (
 ### 2. Clés Étrangères
 
 **Limitations :**
-- ✅ Une partition **peut** référencer une table normale (FK sortante)
+- ✅ Une partition **peut** référencer une table normale (FK sortante)  
 - ❌ Une table normale **ne peut pas** facilement référencer une table partitionnée (FK entrante)
 
 ```sql
@@ -636,23 +636,23 @@ CREATE TABLE ventes_autres PARTITION OF ventes DEFAULT;
 
 **Requêtes avec filtre sur colonne de partitionnement :**
 ```
-Sans partitionnement : 5000 ms (scan de 100M lignes)
-Avec partitionnement : 500 ms (scan de 10M lignes dans 1 partition)
-Gain : 10× plus rapide
+Sans partitionnement : 5000 ms (scan de 100M lignes)  
+Avec partitionnement : 500 ms (scan de 10M lignes dans 1 partition)  
+Gain : 10× plus rapide  
 ```
 
 **Maintenance :**
 ```
-VACUUM sur table de 100 GB : 2 heures
-VACUUM sur partition de 10 GB : 12 minutes × 10 = 2 heures au total
-Avantage : Peut être fait partition par partition sans tout bloquer
+VACUUM sur table de 100 GB : 2 heures  
+VACUUM sur partition de 10 GB : 12 minutes × 10 = 2 heures au total  
+Avantage : Peut être fait partition par partition sans tout bloquer  
 ```
 
 **Archivage :**
 ```
-DELETE FROM ventes WHERE date < '2020-01-01' : 30 minutes + bloat
-DROP TABLE ventes_2019 : < 1 seconde, pas de bloat
-Gain : Quasi-instantané
+DELETE FROM ventes WHERE date < '2020-01-01' : 30 minutes + bloat  
+DROP TABLE ventes_2019 : < 1 seconde, pas de bloat  
+Gain : Quasi-instantané  
 ```
 
 ### Overhead
@@ -683,12 +683,12 @@ SELECT
     parent.relname AS table_parent,
     child.relname AS partition,
     pg_get_expr(child.relpartbound, child.oid) AS limites
-FROM pg_inherits
-JOIN pg_class parent ON pg_inherits.inhparent = parent.oid
-JOIN pg_class child ON pg_inherits.inhrelid = child.oid
-JOIN pg_namespace nmsp_parent ON parent.relnamespace = nmsp_parent.oid
-WHERE parent.relname = 'ventes'
-ORDER BY limites;
+FROM pg_inherits  
+JOIN pg_class parent ON pg_inherits.inhparent = parent.oid  
+JOIN pg_class child ON pg_inherits.inhrelid = child.oid  
+JOIN pg_namespace nmsp_parent ON parent.relnamespace = nmsp_parent.oid  
+WHERE parent.relname = 'ventes'  
+ORDER BY limites;  
 ```
 
 ### Taille des Partitions
@@ -701,9 +701,9 @@ SELECT
     pg_size_pretty(pg_relation_size(schemaname||'.'||tablename)) AS taille_table,
     pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename) -
                    pg_relation_size(schemaname||'.'||tablename)) AS taille_index
-FROM pg_tables
-WHERE tablename LIKE 'ventes_%'
-ORDER BY tablename;
+FROM pg_tables  
+WHERE tablename LIKE 'ventes_%'  
+ORDER BY tablename;  
 ```
 
 ### Statistiques d'Utilisation
@@ -717,9 +717,9 @@ SELECT
     last_vacuum,
     last_autovacuum,
     last_analyze
-FROM pg_stat_user_tables
-WHERE tablename LIKE 'ventes_%'
-ORDER BY tablename;
+FROM pg_stat_user_tables  
+WHERE tablename LIKE 'ventes_%'  
+ORDER BY tablename;  
 ```
 
 ---
@@ -728,35 +728,35 @@ ORDER BY tablename;
 
 ### 1. Planification
 
-- ✅ Choisir la bonne stratégie (RANGE pour dates, LIST pour catégories, HASH pour distribution)
-- ✅ Définir une granularité appropriée (mensuelle > quotidienne pour la plupart des cas)
-- ✅ Créer les partitions à l'avance (3-6 mois dans le futur)
+- ✅ Choisir la bonne stratégie (RANGE pour dates, LIST pour catégories, HASH pour distribution)  
+- ✅ Définir une granularité appropriée (mensuelle > quotidienne pour la plupart des cas)  
+- ✅ Créer les partitions à l'avance (3-6 mois dans le futur)  
 - ✅ Définir une politique de rétention claire
 
 ### 2. Création
 
-- ✅ Utiliser des noms cohérents (ex: `table_2024_01`, `table_2024_02`)
-- ✅ Créer les index sur la table parent (propagation automatique)
-- ✅ Documenter la stratégie de partitionnement
+- ✅ Utiliser des noms cohérents (ex: `table_2024_01`, `table_2024_02`)  
+- ✅ Créer les index sur la table parent (propagation automatique)  
+- ✅ Documenter la stratégie de partitionnement  
 - ✅ Tester avec des données réalistes
 
 ### 3. Maintenance
 
-- ✅ Automatiser la création de nouvelles partitions
-- ✅ Automatiser l'archivage/suppression des anciennes partitions
-- ✅ ANALYZE régulièrement (surtout les partitions actives)
+- ✅ Automatiser la création de nouvelles partitions  
+- ✅ Automatiser l'archivage/suppression des anciennes partitions  
+- ✅ ANALYZE régulièrement (surtout les partitions actives)  
 - ✅ Surveiller la taille et l'utilisation des partitions
 
 ### 4. Requêtes
 
-- ✅ Toujours filtrer sur la colonne de partitionnement quand possible
-- ✅ Utiliser EXPLAIN pour vérifier le partition pruning
+- ✅ Toujours filtrer sur la colonne de partitionnement quand possible  
+- ✅ Utiliser EXPLAIN pour vérifier le partition pruning  
 - ✅ Éviter les fonctions sur la colonne de partitionnement dans WHERE
 
 ### 5. Monitoring
 
-- ✅ Alerter si une partition dépasse une taille cible
-- ✅ Monitorer l'équilibre entre partitions
+- ✅ Alerter si une partition dépasse une taille cible  
+- ✅ Monitorer l'équilibre entre partitions  
 - ✅ Vérifier régulièrement les statistiques
 
 ---
@@ -767,27 +767,27 @@ Avant de décider de partitionner, répondez à ces questions :
 
 ### Questions Techniques
 
-- [ ] Ma table dépasse (ou dépassera bientôt) **10 GB** ?
-- [ ] Mes requêtes scannent souvent **> 100 000 lignes** ?
-- [ ] Les index actuels sont **> 1 GB** ?
+- [ ] Ma table dépasse (ou dépassera bientôt) **10 GB** ?  
+- [ ] Mes requêtes scannent souvent **> 100 000 lignes** ?  
+- [ ] Les index actuels sont **> 1 GB** ?  
 - [ ] VACUUM/ANALYZE prend **> 30 minutes** ?
 
 ### Questions Métier
 
-- [ ] Les données ont une **dimension temporelle** claire ?
-- [ ] Je supprime régulièrement des **données anciennes** ?
-- [ ] Les requêtes ciblent généralement un **sous-ensemble** (ex: dernier mois) ?
+- [ ] Les données ont une **dimension temporelle** claire ?  
+- [ ] Je supprime régulièrement des **données anciennes** ?  
+- [ ] Les requêtes ciblent généralement un **sous-ensemble** (ex: dernier mois) ?  
 - [ ] J'ai besoin d'**isoler** certaines données (hot/cold, régions) ?
 
 ### Questions d'Infrastructure
 
-- [ ] Mon équipe peut gérer la **complexité supplémentaire** ?
-- [ ] J'ai les **ressources** pour automatiser la gestion ?
+- [ ] Mon équipe peut gérer la **complexité supplémentaire** ?  
+- [ ] J'ai les **ressources** pour automatiser la gestion ?  
 - [ ] Le gain de performance justifie l'**effort de mise en place** ?
 
 **Résultat :**
-- **6+ réponses "oui"** → Partitionnement fortement recommandé
-- **3-5 réponses "oui"** → Envisager sérieusement
+- **6+ réponses "oui"** → Partitionnement fortement recommandé  
+- **3-5 réponses "oui"** → Envisager sérieusement  
 - **< 3 réponses "oui"** → Probablement pas nécessaire pour l'instant
 
 ---

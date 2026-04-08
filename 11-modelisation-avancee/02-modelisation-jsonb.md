@@ -47,13 +47,13 @@ PostgreSQL propose **deux types** pour stocker du JSON :
 ### Pourquoi JSONB est-il si performant ?
 
 Lorsque vous insérez des données JSONB, PostgreSQL :
-1. **Parse** le JSON
-2. **Décompose** la structure en format binaire optimisé
+1. **Parse** le JSON  
+2. **Décompose** la structure en format binaire optimisé  
 3. **Stocke** de manière efficace pour un accès rapide
 
 Lors de la lecture :
-1. Pas besoin de parser à nouveau
-2. Accès direct aux éléments
+1. Pas besoin de parser à nouveau  
+2. Accès direct aux éléments  
 3. Opérations natives ultra-rapides
 
 ---
@@ -102,15 +102,15 @@ CREATE TABLE preferences_utilisateur (
 ```
 
 **Avantages du modèle relationnel :**
-- ✅ Structure rigide et validée
-- ✅ Intégrité référentielle garantie
-- ✅ Recherches et jointures optimisées
+- ✅ Structure rigide et validée  
+- ✅ Intégrité référentielle garantie  
+- ✅ Recherches et jointures optimisées  
 - ✅ Normalisation et absence de redondance
 
 **Inconvénients :**
-- ❌ Rigidité : ajout d'un champ = modification de schéma (ALTER TABLE)
-- ❌ Complexité pour données variables
-- ❌ Nombreuses jointures pour reconstituer un objet complet
+- ❌ Rigidité : ajout d'un champ = modification de schéma (ALTER TABLE)  
+- ❌ Complexité pour données variables  
+- ❌ Nombreuses jointures pour reconstituer un objet complet  
 - ❌ Inadapté pour données semi-structurées ou évolutives
 
 ### L'Approche JSONB
@@ -169,14 +169,14 @@ INSERT INTO utilisateurs (nom, email, profil) VALUES (
 ```
 
 **Avantages de JSONB :**
-- ✅ Flexibilité : structure évolutive sans migration
-- ✅ Simplicité : un seul objet, pas de jointures
-- ✅ Adapté aux données variables entre enregistrements
+- ✅ Flexibilité : structure évolutive sans migration  
+- ✅ Simplicité : un seul objet, pas de jointures  
+- ✅ Adapté aux données variables entre enregistrements  
 - ✅ Idéal pour APIs REST (JSON natif)
 
 **Inconvénients :**
-- ❌ Moins de contrôle sur la structure (validation à faire côté application)
-- ❌ Peut devenir un "fourre-tout" si mal utilisé
+- ❌ Moins de contrôle sur la structure (validation à faire côté application)  
+- ❌ Peut devenir un "fourre-tout" si mal utilisé  
 - ❌ Statistiques et index moins précis que sur colonnes dédiées
 
 ---
@@ -440,8 +440,8 @@ CREATE TABLE produits (
 );
 
 -- Recherche rapide avec index classique
-CREATE INDEX idx_produits_categorie ON produits(categorie);
-SELECT * FROM produits WHERE categorie = 'electronique';
+CREATE INDEX idx_produits_categorie ON produits(categorie);  
+SELECT * FROM produits WHERE categorie = 'electronique';  
 ```
 
 #### 3. **Calculs et agrégations fréquentes**
@@ -573,12 +573,12 @@ Vérifie si le JSONB de gauche contient le JSONB de droite.
 
 ```sql
 -- Trouver les utilisateurs qui ont Paris dans leur adresse
-SELECT * FROM utilisateurs
-WHERE profil @> '{"adresse": {"ville": "Paris"}}';
+SELECT * FROM utilisateurs  
+WHERE profil @> '{"adresse": {"ville": "Paris"}}';  
 
 -- Trouver ceux qui ont "lecture" dans leurs hobbies
-SELECT * FROM utilisateurs
-WHERE profil @> '{"hobbies": ["lecture"]}';
+SELECT * FROM utilisateurs  
+WHERE profil @> '{"hobbies": ["lecture"]}';  
 ```
 
 #### 2. Opérateur `<@` : Est contenu dans
@@ -605,14 +605,44 @@ SELECT * FROM utilisateurs WHERE profil ?| array['email', 'telephone'];
 SELECT * FROM utilisateurs WHERE profil ?& array['nom', 'adresse'];
 ```
 
+### SQL/JSON Path (PostgreSQL 12+, standard SQL:2016)
+
+PostgreSQL supporte également la syntaxe standard **SQL/JSON Path** pour interroger les données JSONB. Cette approche est plus portable et plus expressive pour les requêtes complexes :
+
+```sql
+-- Vérifier si un chemin existe
+SELECT * FROM utilisateurs  
+WHERE profil @? '$.adresse.ville';  
+
+-- Filtrer avec une condition sur le chemin
+SELECT * FROM utilisateurs  
+WHERE profil @@ '$.adresse.ville == "Paris"';  
+
+-- Extraire des valeurs avec jsonb_path_query
+SELECT jsonb_path_query(profil, '$.hobbies[*]') AS hobby  
+FROM utilisateurs;  
+
+-- Extraire une valeur unique
+SELECT jsonb_path_query_first(profil, '$.adresse.ville') AS ville  
+FROM utilisateurs;  
+```
+
+**Opérateurs SQL/JSON Path :**
+- `@?` : Le chemin existe-t-il ? (retourne booléen)  
+- `@@` : Le prédicat est-il vrai ? (retourne booléen)  
+- `jsonb_path_query()` : Extraire les valeurs correspondantes  
+- `jsonb_path_query_first()` : Extraire la première valeur
+
+> 💡 Les opérateurs traditionnels (`->`, `->>`, `@>`) restent plus concis pour les cas simples. SQL/JSON Path est préférable pour les requêtes complexes avec filtrage et pour la portabilité SQL standard.
+
 ### Fonctions de Manipulation
 
 #### 1. `jsonb_set` : Modifier ou ajouter une valeur
 
 ```sql
 -- Modifier la ville
-UPDATE utilisateurs
-SET profil = jsonb_set(
+UPDATE utilisateurs  
+SET profil = jsonb_set(  
     profil,
     '{adresse, ville}',  -- Chemin
     '"Lyon"',            -- Nouvelle valeur (format JSON)
@@ -621,8 +651,8 @@ SET profil = jsonb_set(
 WHERE utilisateur_id = 1;
 
 -- Ajouter un champ
-UPDATE utilisateurs
-SET profil = jsonb_set(
+UPDATE utilisateurs  
+SET profil = jsonb_set(  
     profil,
     '{telephone}',
     '"+33601020304"',
@@ -635,8 +665,8 @@ WHERE utilisateur_id = 1;
 
 ```sql
 -- Ajouter un hobby au début
-UPDATE utilisateurs
-SET profil = jsonb_insert(
+UPDATE utilisateurs  
+SET profil = jsonb_insert(  
     profil,
     '{hobbies, 0}',  -- Position 0
     '"photographie"',
@@ -656,13 +686,13 @@ SELECT jsonb_strip_nulls('{"a": 1, "b": null, "c": 3}'::jsonb);
 
 ```sql
 -- Supprimer la clé "telephone"
-UPDATE utilisateurs
-SET profil = profil - 'telephone'
-WHERE utilisateur_id = 1;
+UPDATE utilisateurs  
+SET profil = profil - 'telephone'  
+WHERE utilisateur_id = 1;  
 
 -- Supprimer plusieurs clés
-UPDATE utilisateurs
-SET profil = profil - array['telephone', 'fax'];
+UPDATE utilisateurs  
+SET profil = profil - array['telephone', 'fax'];  
 ```
 
 #### 5. Opérateur `||` : Fusion de JSONB
@@ -673,9 +703,9 @@ SELECT '{"a": 1, "b": 2}'::jsonb || '{"b": 3, "c": 4}'::jsonb;
 -- Résultat: {"a": 1, "b": 3, "c": 4}
 
 -- Ajouter des informations
-UPDATE utilisateurs
-SET profil = profil || '{"newsletter": true, "langue": "fr"}'::jsonb
-WHERE utilisateur_id = 1;
+UPDATE utilisateurs  
+SET profil = profil || '{"newsletter": true, "langue": "fr"}'::jsonb  
+WHERE utilisateur_id = 1;  
 ```
 
 #### 6. `jsonb_each` : Décomposer en lignes
@@ -695,18 +725,18 @@ SELECT * FROM jsonb_each('{"a": 1, "b": 2, "c": 3}'::jsonb);
 
 ```sql
 -- Extraire chaque élément d'un array
-SELECT jsonb_array_elements(profil->'hobbies') as hobby
-FROM utilisateurs
-WHERE profil->>'nom' = 'Bob';
+SELECT jsonb_array_elements(profil->'hobbies') as hobby  
+FROM utilisateurs  
+WHERE profil->>'nom' = 'Bob';  
 -- Résultat:
 -- "natation"
 -- "cyclisme"
 -- "lecture"
 
 -- Version TEXT
-SELECT jsonb_array_elements_text(profil->'hobbies') as hobby
-FROM utilisateurs
-WHERE profil->>'nom' = 'Bob';
+SELECT jsonb_array_elements_text(profil->'hobbies') as hobby  
+FROM utilisateurs  
+WHERE profil->>'nom' = 'Bob';  
 -- Résultat:
 -- natation
 -- cyclisme
@@ -761,8 +791,8 @@ SELECT * FROM utilisateurs WHERE profil @> '{"ville": "Paris"}';
 Version optimisée qui consomme moins d'espace mais ne supporte que `@>`.
 
 ```sql
-CREATE INDEX idx_utilisateurs_profil_ops ON utilisateurs
-USING GIN (profil jsonb_path_ops);
+CREATE INDEX idx_utilisateurs_profil_ops ON utilisateurs  
+USING GIN (profil jsonb_path_ops);  
 
 -- Supporte uniquement @>
 SELECT * FROM utilisateurs WHERE profil @> '{"adresse": {"ville": "Paris"}}';
@@ -772,9 +802,9 @@ SELECT * FROM utilisateurs WHERE profil @> '{"adresse": {"ville": "Paris"}}';
 ```
 
 **Quand utiliser `jsonb_path_ops` ?**
-- ✅ Si vous utilisez principalement des requêtes `@>` (contient)
-- ✅ Index plus compact (30-50% plus petit)
-- ✅ Légèrement plus rapide pour `@>`
+- ✅ Si vous utilisez principalement des requêtes `@>` (contient)  
+- ✅ Index plus compact (30-50% plus petit)  
+- ✅ Légèrement plus rapide pour `@>`  
 - ❌ Ne supporte pas les opérateurs `?`, `?|`, `?&`
 
 #### 3. Index sur une expression JSONB
@@ -789,17 +819,17 @@ CREATE INDEX idx_utilisateurs_email ON utilisateurs ((profil->>'email'));
 CREATE INDEX idx_utilisateurs_ville ON utilisateurs ((profil->'adresse'->>'ville'));
 
 -- Requête optimisée
-SELECT * FROM utilisateurs WHERE profil->>'email' = 'alice@example.com';
-SELECT * FROM utilisateurs WHERE profil->'adresse'->>'ville' = 'Paris';
+SELECT * FROM utilisateurs WHERE profil->>'email' = 'alice@example.com';  
+SELECT * FROM utilisateurs WHERE profil->'adresse'->>'ville' = 'Paris';  
 ```
 
 **Avantages :**
-- ✅ Index classique B-Tree (plus rapide pour égalité/comparaison)
-- ✅ Moins d'espace que GIN
+- ✅ Index classique B-Tree (plus rapide pour égalité/comparaison)  
+- ✅ Moins d'espace que GIN  
 - ✅ Supporte ORDER BY sur le champ
 
 **Inconvénients :**
-- ❌ Un index par champ nécessaire
+- ❌ Un index par champ nécessaire  
 - ❌ Ne supporte que les requêtes exactes sur ce champ
 
 ### Stratégie d'Indexation
@@ -817,8 +847,8 @@ CREATE TABLE produits (
 CREATE INDEX idx_produits_specs_gin ON produits USING GIN (specifications);
 
 -- Index sur champs fréquemment recherchés
-CREATE INDEX idx_produits_marque ON produits ((specifications->>'marque'));
-CREATE INDEX idx_produits_categorie ON produits ((specifications->>'categorie'));
+CREATE INDEX idx_produits_marque ON produits ((specifications->>'marque'));  
+CREATE INDEX idx_produits_categorie ON produits ((specifications->>'categorie'));  
 
 -- Index composé si nécessaire
 CREATE INDEX idx_produits_prix_marque ON produits (prix, (specifications->>'marque'));
@@ -880,13 +910,13 @@ INSERT INTO tenants (nom_entreprise, configuration) VALUES (
 );
 
 -- Récupérer les tenants avec module "inventory"
-SELECT nom_entreprise, configuration
-FROM tenants
-WHERE configuration @> '{"modules_actifs": ["inventory"]}';
+SELECT nom_entreprise, configuration  
+FROM tenants  
+WHERE configuration @> '{"modules_actifs": ["inventory"]}';  
 
 -- Augmenter la limite de stockage pour un tenant
-UPDATE tenants
-SET configuration = jsonb_set(
+UPDATE tenants  
+SET configuration = jsonb_set(  
     configuration,
     '{limites, stockage_gb}',
     '200'
@@ -910,9 +940,9 @@ CREATE TABLE produits (
 );
 
 -- Index pour recherches fréquentes
-CREATE INDEX idx_produits_categorie ON produits(categorie);
-CREATE INDEX idx_produits_attributs_gin ON produits USING GIN (attributs);
-CREATE INDEX idx_produits_marque ON produits ((attributs->>'marque'));
+CREATE INDEX idx_produits_categorie ON produits(categorie);  
+CREATE INDEX idx_produits_attributs_gin ON produits USING GIN (attributs);  
+CREATE INDEX idx_produits_marque ON produits ((attributs->>'marque'));  
 
 -- Livre
 INSERT INTO produits (nom, categorie, prix, stock, attributs) VALUES (
@@ -971,26 +1001,26 @@ INSERT INTO produits (nom, categorie, prix, stock, attributs) VALUES (
 -- Recherches complexes
 
 -- 1. Tous les smartphones Apple avec 256GB
-SELECT nom, prix, attributs
-FROM produits
-WHERE categorie = 'electronique'
+SELECT nom, prix, attributs  
+FROM produits  
+WHERE categorie = 'electronique'  
   AND attributs @> '{"marque": "Apple", "stockage": "256GB"}';
 
 -- 2. Livres en français
-SELECT nom, attributs->>'auteur' as auteur, prix
-FROM produits
-WHERE categorie = 'livre'
+SELECT nom, attributs->>'auteur' as auteur, prix  
+FROM produits  
+WHERE categorie = 'livre'  
   AND attributs->>'langue' = 'français';
 
 -- 3. Produits avec garantie de plus de 12 mois
-SELECT nom, categorie, attributs->>'garantie_mois' as garantie
-FROM produits
-WHERE (attributs->>'garantie_mois')::INTEGER > 12;
+SELECT nom, categorie, attributs->>'garantie_mois' as garantie  
+FROM produits  
+WHERE (attributs->>'garantie_mois')::INTEGER > 12;  
 
 -- 4. Recherche par marque (index optimisé)
-SELECT nom, categorie, prix
-FROM produits
-WHERE attributs->>'marque' = 'Apple';
+SELECT nom, categorie, prix  
+FROM produits  
+WHERE attributs->>'marque' = 'Apple';  
 ```
 
 ### Cas 3 : Logs d'Événements et Analytics
@@ -1008,14 +1038,14 @@ CREATE TABLE evenements (
 );
 
 -- Index pour analyses
-CREATE INDEX idx_evenements_type ON evenements(type_evenement);
-CREATE INDEX idx_evenements_timestamp ON evenements(timestamp);
-CREATE INDEX idx_evenements_utilisateur ON evenements(utilisateur_id);
-CREATE INDEX idx_evenements_props_gin ON evenements USING GIN (proprietes);
+CREATE INDEX idx_evenements_type ON evenements(type_evenement);  
+CREATE INDEX idx_evenements_timestamp ON evenements(timestamp);  
+CREATE INDEX idx_evenements_utilisateur ON evenements(utilisateur_id);  
+CREATE INDEX idx_evenements_props_gin ON evenements USING GIN (proprietes);  
 
 -- Partition par mois pour performance
-CREATE TABLE evenements_2025_11 PARTITION OF evenements
-FOR VALUES FROM ('2025-11-01') TO ('2025-12-01');
+CREATE TABLE evenements_2025_11 PARTITION OF evenements  
+FOR VALUES FROM ('2025-11-01') TO ('2025-12-01');  
 
 -- Page vue
 INSERT INTO evenements (utilisateur_id, session_id, type_evenement, proprietes) VALUES (
@@ -1072,20 +1102,20 @@ SELECT
         COUNT(DISTINCT CASE WHEN type_evenement = 'page_vue' THEN utilisateur_id END) * 100,
         2
     ) as taux_conversion_pct
-FROM evenements
-WHERE timestamp >= NOW() - INTERVAL '7 days';
+FROM evenements  
+WHERE timestamp >= NOW() - INTERVAL '7 days';  
 
 -- Produits les plus ajoutés au panier
 SELECT
     proprietes->>'produit_id' as produit_id,
     proprietes->>'nom_produit' as nom_produit,
     COUNT(*) as nb_ajouts
-FROM evenements
-WHERE type_evenement = 'ajout_panier'
+FROM evenements  
+WHERE type_evenement = 'ajout_panier'  
   AND timestamp >= NOW() - INTERVAL '30 days'
-GROUP BY proprietes->>'produit_id', proprietes->>'nom_produit'
-ORDER BY nb_ajouts DESC
-LIMIT 10;
+GROUP BY proprietes->>'produit_id', proprietes->>'nom_produit'  
+ORDER BY nb_ajouts DESC  
+LIMIT 10;  
 ```
 
 ### Cas 4 : Formulaires Dynamiques et Sondages
@@ -1169,10 +1199,10 @@ INSERT INTO reponses_sondage (sondage_id, utilisateur_id, reponses) VALUES (
 SELECT
     reponses->>'q2' as note,
     COUNT(*) as nb_reponses
-FROM reponses_sondage
-WHERE sondage_id = 1
-GROUP BY reponses->>'q2'
-ORDER BY note;
+FROM reponses_sondage  
+WHERE sondage_id = 1  
+GROUP BY reponses->>'q2'  
+ORDER BY note;  
 
 -- Analyse : Services les plus utilisés
 SELECT
@@ -1180,9 +1210,9 @@ SELECT
     COUNT(*) as nb_mentions
 FROM reponses_sondage,
      jsonb_array_elements_text(reponses->'q4') as service
-WHERE sondage_id = 1
-GROUP BY service
-ORDER BY nb_mentions DESC;
+WHERE sondage_id = 1  
+GROUP BY service  
+ORDER BY nb_mentions DESC;  
 ```
 
 ---
@@ -1231,11 +1261,11 @@ CREATE TABLE articles (
 );
 
 -- Index mixtes
-CREATE INDEX idx_articles_statut ON articles(statut);
-CREATE INDEX idx_articles_auteur ON articles(auteur_id);
-CREATE INDEX idx_articles_publication ON articles(date_publication);
-CREATE INDEX idx_articles_metadata_gin ON articles USING GIN (metadata);
-CREATE INDEX idx_articles_tags ON articles USING GIN ((metadata->'tags'));
+CREATE INDEX idx_articles_statut ON articles(statut);  
+CREATE INDEX idx_articles_auteur ON articles(auteur_id);  
+CREATE INDEX idx_articles_publication ON articles(date_publication);  
+CREATE INDEX idx_articles_metadata_gin ON articles USING GIN (metadata);  
+CREATE INDEX idx_articles_tags ON articles USING GIN ((metadata->'tags'));  
 
 -- Insérer un article
 INSERT INTO articles (
@@ -1285,22 +1315,22 @@ INSERT INTO articles (
 -- Requêtes efficaces
 
 -- 1. Articles publiés avec tag "postgresql" (utilise index GIN)
-SELECT article_id, titre, slug, date_publication
-FROM articles
-WHERE statut = 'publie'
+SELECT article_id, titre, slug, date_publication  
+FROM articles  
+WHERE statut = 'publie'  
   AND metadata @> '{"tags": ["postgresql"]}';
 
 -- 2. Articles d'un auteur spécifique (utilise index sur auteur_id)
-SELECT titre, metadata->>'categorie' as categorie, nb_vues
-FROM articles
-WHERE auteur_id = 1
+SELECT titre, metadata->>'categorie' as categorie, nb_vues  
+FROM articles  
+WHERE auteur_id = 1  
   AND statut = 'publie'
 ORDER BY date_publication DESC;
 
 -- 3. Articles de difficulté intermédiaire
-SELECT titre, metadata->>'duree_lecture_min' as duree
-FROM articles
-WHERE metadata->>'difficulte' = 'intermediaire'
+SELECT titre, metadata->>'duree_lecture_min' as duree  
+FROM articles  
+WHERE metadata->>'difficulte' = 'intermediaire'  
   AND statut = 'publie';
 
 -- 4. Top 10 des tags les plus utilisés
@@ -1309,16 +1339,16 @@ SELECT
     COUNT(*) as nb_articles
 FROM articles,
      jsonb_array_elements_text(metadata->'tags') as tag
-WHERE statut = 'publie'
-GROUP BY tag
-ORDER BY nb_articles DESC
-LIMIT 10;
+WHERE statut = 'publie'  
+GROUP BY tag  
+ORDER BY nb_articles DESC  
+LIMIT 10;  
 ```
 
 **Avantages de cette approche :**
-- ✅ **Performance** : Les requêtes fréquentes utilisent des index relationnels rapides
-- ✅ **Flexibilité** : Les métadonnées peuvent évoluer sans migration
-- ✅ **Intégrité** : Les relations (auteur, statut) restent sous contrôle de la base
+- ✅ **Performance** : Les requêtes fréquentes utilisent des index relationnels rapides  
+- ✅ **Flexibilité** : Les métadonnées peuvent évoluer sans migration  
+- ✅ **Intégrité** : Les relations (auteur, statut) restent sous contrôle de la base  
 - ✅ **Simplicité** : Pas besoin de tables supplémentaires pour chaque métadonnée
 
 ---
@@ -1350,9 +1380,9 @@ CREATE TABLE produits (
 
 ```sql
 -- Fonction pour valider la structure d'une adresse
-CREATE OR REPLACE FUNCTION valider_adresse(adresse JSONB)
-RETURNS BOOLEAN AS $$
-BEGIN
+CREATE OR REPLACE FUNCTION valider_adresse(adresse JSONB)  
+RETURNS BOOLEAN AS $$  
+BEGIN  
     -- Vérifier les champs obligatoires
     IF NOT (adresse ? 'rue' AND adresse ? 'ville' AND adresse ? 'code_postal') THEN
         RETURN FALSE;
@@ -1408,8 +1438,8 @@ CREATE TABLE produits (
 );
 
 -- Index sur colonnes virtuelles (très performant)
-CREATE INDEX idx_produits_marque ON produits(marque);
-CREATE INDEX idx_produits_prix ON produits(prix);
+CREATE INDEX idx_produits_marque ON produits(marque);  
+CREATE INDEX idx_produits_prix ON produits(prix);  
 
 -- Requête optimale
 SELECT * FROM produits WHERE marque = 'Apple' AND prix < 1000;
@@ -1502,13 +1532,13 @@ CREATE TABLE documents (
 
 ```sql
 -- Supprimer les clés inutiles périodiquement
-UPDATE produits
-SET specifications = specifications - 'temp_field'
-WHERE specifications ? 'temp_field';
+UPDATE produits  
+SET specifications = specifications - 'temp_field'  
+WHERE specifications ? 'temp_field';  
 
 -- Supprimer les NULL
-UPDATE produits
-SET specifications = jsonb_strip_nulls(specifications);
+UPDATE produits  
+SET specifications = jsonb_strip_nulls(specifications);  
 
 -- VACUUM après nettoyage important
 VACUUM ANALYZE produits;
@@ -1528,9 +1558,9 @@ SELECT
     produit_id,
     nom,
     pg_size_pretty(pg_column_size(specifications)) as taille
-FROM produits
-WHERE pg_column_size(specifications) > 50000
-ORDER BY pg_column_size(specifications) DESC;
+FROM produits  
+WHERE pg_column_size(specifications) > 50000  
+ORDER BY pg_column_size(specifications) DESC;  
 ```
 
 ---
@@ -1577,8 +1607,8 @@ CREATE TABLE produits_new (
 );
 
 -- Migration
-INSERT INTO produits_new (produit_id, nom, attributs)
-SELECT
+INSERT INTO produits_new (produit_id, nom, attributs)  
+SELECT  
     produit_id,
     nom,
     jsonb_build_object(
@@ -1593,9 +1623,9 @@ FROM produits_old;
 
 ```sql
 -- Ajouter "en_stock" par défaut
-UPDATE produits
-SET specifications = specifications || '{"en_stock": true}'::jsonb
-WHERE NOT specifications ? 'en_stock';
+UPDATE produits  
+SET specifications = specifications || '{"en_stock": true}'::jsonb  
+WHERE NOT specifications ? 'en_stock';  
 ```
 
 ---
@@ -1616,14 +1646,14 @@ WHERE NOT specifications ? 'en_stock';
 | **Écosystème** | ✅ Énorme | ✅ Très bon |
 
 **Quand choisir PostgreSQL JSONB :**
-- ✅ Besoin de transactions ACID rigoureuses
-- ✅ Requêtes complexes avec jointures
-- ✅ Modèle hybride (relationnel + flexible)
+- ✅ Besoin de transactions ACID rigoureuses  
+- ✅ Requêtes complexes avec jointures  
+- ✅ Modèle hybride (relationnel + flexible)  
 - ✅ Réduction du nombre de technologies (une seule base)
 
 **Quand choisir MongoDB :**
-- ✅ 100% document-oriented sans relationnel
-- ✅ Sharding horizontal massif intégré
+- ✅ 100% document-oriented sans relationnel  
+- ✅ Sharding horizontal massif intégré  
 - ✅ Équipe déjà experte MongoDB
 
 ### JSONB vs Colonnes Relationnelles Pures
@@ -1698,19 +1728,19 @@ Conclusion : JSONB approprié ✓
 
 ### Principes Clés à Retenir
 
-1. **JSONB n'est pas un remplacement du relationnel**, c'est un **complément**
-2. **Privilégiez le modèle hybride** : relationnel pour la structure, JSONB pour la flexibilité
-3. **Indexez intelligemment** : GIN pour flexibilité, colonnes dédiées pour performance
-4. **Validez côté application** : JSONB est flexible, mais la cohérence reste importante
+1. **JSONB n'est pas un remplacement du relationnel**, c'est un **complément**  
+2. **Privilégiez le modèle hybride** : relationnel pour la structure, JSONB pour la flexibilité  
+3. **Indexez intelligemment** : GIN pour flexibilité, colonnes dédiées pour performance  
+4. **Validez côté application** : JSONB est flexible, mais la cohérence reste importante  
 5. **Utilisez JSONB quand la flexibilité apporte une vraie valeur**
 
 ### Forces de JSONB dans PostgreSQL
 
-- ✅ **Flexibilité** sans sacrifier les transactions ACID
-- ✅ **Performance** avec indexation GIN optimisée
-- ✅ **Simplicité** pour stocker des données API
-- ✅ **Évolution** du schéma sans migration complexe
-- ✅ **Puissance** des opérateurs et fonctions natives
+- ✅ **Flexibilité** sans sacrifier les transactions ACID  
+- ✅ **Performance** avec indexation GIN optimisée  
+- ✅ **Simplicité** pour stocker des données API  
+- ✅ **Évolution** du schéma sans migration complexe  
+- ✅ **Puissance** des opérateurs et fonctions natives  
 - ✅ **Intégration** parfaite avec SQL relationnel
 
 ### Recommandations Finales
@@ -1737,20 +1767,20 @@ Conclusion : JSONB approprié ✓
 
 ### Documentation Officielle
 
-- [PostgreSQL JSON Types](https://www.postgresql.org/docs/current/datatype-json.html)
-- [JSON Functions and Operators](https://www.postgresql.org/docs/current/functions-json.html)
+- [PostgreSQL JSON Types](https://www.postgresql.org/docs/current/datatype-json.html)  
+- [JSON Functions and Operators](https://www.postgresql.org/docs/current/functions-json.html)  
 - [GIN Indexes](https://www.postgresql.org/docs/current/gin.html)
 
 ### Lectures Recommandées
 
-- "The Art of PostgreSQL" - Dimitri Fontaine (chapitre sur JSONB)
+- "The Art of PostgreSQL" - Dimitri Fontaine (chapitre sur JSONB)  
 - "Mastering PostgreSQL" - Hans-Jürgen Schönig
 - Blog PostgreSQL officiel : articles sur JSONB
 
 ### Outils Utiles
 
-- **pg_trgm** : Extension pour recherche floue dans JSONB
-- **jsquery** : Extension pour requêtes JSON avancées
+- **pg_trgm** : Extension pour recherche floue dans JSONB  
+- **jsquery** : Extension pour requêtes JSON avancées  
 - **pgAdmin** : Visualisation de structures JSONB
 
 ---

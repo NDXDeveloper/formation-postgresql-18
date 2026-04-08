@@ -8,7 +8,7 @@ Maintenant que vous maîtrisez toutes les briques des window functions, exploron
 
 Cette section se concentre sur deux patterns particulièrement utiles :
 
-1. **Top N par groupe** : Trouver les N meilleurs/pires éléments dans chaque catégorie
+1. **Top N par groupe** : Trouver les N meilleurs/pires éléments dans chaque catégorie  
 2. **Moyennes mobiles** : Calculer des moyennes glissantes pour détecter des tendances
 
 Nous verrons également d'autres cas d'usage avancés qui combinent plusieurs techniques de window functions.
@@ -39,10 +39,10 @@ WITH produits_classes AS (
         ) AS rang
     FROM produits
 )
-SELECT categorie, produit, ventes
-FROM produits_classes
-WHERE rang <= 3
-ORDER BY categorie, rang;
+SELECT categorie, produit, ventes  
+FROM produits_classes  
+WHERE rang <= 3  
+ORDER BY categorie, rang;  
 ```
 
 **Données** :
@@ -97,10 +97,10 @@ WITH produits_classes AS (
         ) AS rang
     FROM produits
 )
-SELECT categorie, produit, ventes, rang
-FROM produits_classes
-WHERE rang <= 3
-ORDER BY categorie, rang;
+SELECT categorie, produit, ventes, rang  
+FROM produits_classes  
+WHERE rang <= 3  
+ORDER BY categorie, rang;  
 ```
 
 **Données avec égalités** :
@@ -150,10 +150,10 @@ WITH produits_classes AS (
         ) AS rang
     FROM produits
 )
-SELECT categorie, produit, ventes, rang
-FROM produits_classes
-WHERE rang <= 3
-ORDER BY categorie, rang;
+SELECT categorie, produit, ventes, rang  
+FROM produits_classes  
+WHERE rang <= 3  
+ORDER BY categorie, rang;  
 ```
 
 Avec les mêmes données, le HP Pavilion aurait le rang **3** (pas 4).
@@ -185,10 +185,10 @@ WITH produits_classes AS (
         ) AS rang
     FROM produits
 )
-SELECT categorie, produit, ventes, prix
-FROM produits_classes
-WHERE rang <= 3
-ORDER BY categorie, rang;
+SELECT categorie, produit, ventes, prix  
+FROM produits_classes  
+WHERE rang <= 3  
+ORDER BY categorie, rang;  
 ```
 
 ### Bottom N (Les N Pires)
@@ -207,10 +207,10 @@ WITH produits_classes AS (
         ) AS rang
     FROM produits
 )
-SELECT categorie, produit, ventes
-FROM produits_classes
-WHERE rang <= 3
-ORDER BY categorie, rang;
+SELECT categorie, produit, ventes  
+FROM produits_classes  
+WHERE rang <= 3  
+ORDER BY categorie, rang;  
 ```
 
 ### Top N Global + Top N par Groupe
@@ -236,9 +236,9 @@ SELECT
     ventes,
     rang_global,
     rang_categorie
-FROM classements
-WHERE rang_global <= 10 OR rang_categorie <= 3
-ORDER BY ventes DESC;
+FROM classements  
+WHERE rang_global <= 10 OR rang_categorie <= 3  
+ORDER BY ventes DESC;  
 ```
 
 Cela retourne les produits qui sont :
@@ -273,8 +273,8 @@ SELECT
         ORDER BY date
         ROWS BETWEEN 29 PRECEDING AND CURRENT ROW
     ) AS mm30
-FROM ventes_quotidiennes
-ORDER BY date;
+FROM ventes_quotidiennes  
+ORDER BY date;  
 ```
 
 **Données** :
@@ -310,12 +310,12 @@ ORDER BY date;
 #### Visualisation de la Fenêtre Glissante
 
 ```
-Jour 1 : [100]                           → MM = 100
-Jour 2 : [100, 120]                      → MM = 110
-Jour 3 : [100, 120, 90]                  → MM = 103.3
+Jour 1 : [100]                           → MM = 100  
+Jour 2 : [100, 120]                      → MM = 110  
+Jour 3 : [100, 120, 90]                  → MM = 103.3  
 ...
-Jour 7 : [100, 120, 90, 110, 130, 105, 115] → MM = 110
-Jour 8 : [120, 90, 110, 130, 105, 115, 125] → MM = 113.6
+Jour 7 : [100, 120, 90, 110, 130, 105, 115] → MM = 110  
+Jour 8 : [120, 90, 110, 130, 105, 115, 125] → MM = 113.6  
          ↑ Le 100 du jour 1 est sorti de la fenêtre
 ```
 
@@ -333,8 +333,8 @@ SELECT
         ORDER BY date
         ROWS BETWEEN 6 PRECEDING AND CURRENT ROW
     ) AS mm7_vendeur
-FROM ventes
-ORDER BY vendeur, date;
+FROM ventes  
+ORDER BY vendeur, date;  
 ```
 
 Chaque vendeur a sa propre moyenne mobile indépendante.
@@ -351,8 +351,8 @@ SELECT
         ORDER BY date
         ROWS BETWEEN 3 PRECEDING AND 3 FOLLOWING
     ) AS mm7_centree
-FROM meteo
-ORDER BY date;
+FROM meteo  
+ORDER BY date;  
 ```
 
 **Utilité** : Lissage plus équilibré, mais nécessite de connaître les données futures (utile pour l'analyse historique, pas pour la prédiction en temps réel).
@@ -384,8 +384,8 @@ SELECT
         THEN 'Tendance haussière'
         ELSE 'Tendance baissière'
     END AS signal
-FROM cours_bourse
-ORDER BY date;
+FROM cours_bourse  
+ORDER BY date;  
 ```
 
 **Signal** :
@@ -482,8 +482,8 @@ SELECT
         THEN 'CHUTE ANORMALE'
         ELSE 'NORMAL'
     END AS alerte
-FROM ventes_quotidiennes
-ORDER BY date;
+FROM ventes_quotidiennes  
+ORDER BY date;  
 ```
 
 **Logique** : Si une valeur s'écarte de plus de 2 écarts-types de la moyenne mobile, c'est anormal.
@@ -511,8 +511,8 @@ SELECT
         THEN 'GAP SIGNIFICATIF'
         ELSE 'Normal'
     END AS analyse
-FROM cours_bourse
-ORDER BY date;
+FROM cours_bourse  
+ORDER BY date;  
 ```
 
 **Usage** : En bourse, les "gaps" (écarts d'ouverture) sont des signaux importants.
@@ -546,9 +546,9 @@ SELECT
     ventes,
     en_hausse,
     ROW_NUMBER() OVER (PARTITION BY groupe_sequence ORDER BY date) AS jours_consecutifs_hausse
-FROM sequences
-WHERE en_hausse = 1
-ORDER BY date;
+FROM sequences  
+WHERE en_hausse = 1  
+ORDER BY date;  
 ```
 
 **Résultat** : Combien de jours consécutifs de hausse pour chaque séquence.
@@ -598,9 +598,9 @@ SELECT
         WHEN numero_commande = total_commandes THEN 'Dernière commande'
         ELSE 'Commande intermédiaire'
     END AS type_commande
-FROM commandes_classees
-WHERE numero_commande = 1 OR numero_commande = total_commandes
-ORDER BY client_id, numero_commande;
+FROM commandes_classees  
+WHERE numero_commande = 1 OR numero_commande = total_commandes  
+ORDER BY client_id, numero_commande;  
 ```
 
 ### 5. Analyse de Cohorte Avancée
@@ -638,8 +638,8 @@ SELECT
         users_actifs * 100.0 / NULLIF(taille_cohorte_initiale, 0),
         2
     ) AS taux_retention_pct
-FROM retention
-ORDER BY mois_cohorte, mois_depuis_inscription;
+FROM retention  
+ORDER BY mois_cohorte, mois_depuis_inscription;  
 ```
 
 ### 6. Analyse RFM (Recency, Frequency, Monetary)
@@ -680,8 +680,8 @@ SELECT
         THEN 'À risque'
         ELSE 'Nécessite attention'
     END AS segment
-FROM rfm_scores
-ORDER BY score_rfm_total DESC;
+FROM rfm_scores  
+ORDER BY score_rfm_total DESC;  
 ```
 
 ### 7. Analyse de Saisonnalité
@@ -703,9 +703,9 @@ SELECT
         ORDER BY EXTRACT(MONTH FROM date)
         ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING
     ) AS moyenne_mois_tous_ans
-FROM ventes_mensuelles
-WHERE date >= CURRENT_DATE - INTERVAL '3 years'
-ORDER BY date;
+FROM ventes_mensuelles  
+WHERE date >= CURRENT_DATE - INTERVAL '3 years'  
+ORDER BY date;  
 ```
 
 ### 8. Détection de Changement de Niveau (Change Point Detection)
@@ -742,9 +742,9 @@ SELECT
         THEN 'CHANGEMENT SIGNIFICATIF'
         ELSE 'Stable'
     END AS alerte
-FROM stats_glissantes
-WHERE ecart_type_avant IS NOT NULL
-ORDER BY date;
+FROM stats_glissantes  
+WHERE ecart_type_avant IS NOT NULL  
+ORDER BY date;  
 ```
 
 ## Optimisations et Bonnes Pratiques
@@ -754,8 +754,8 @@ ORDER BY date;
 Pour des calculs coûteux répétés :
 
 ```sql
-CREATE MATERIALIZED VIEW ventes_avec_moyennes_mobiles AS
-SELECT
+CREATE MATERIALIZED VIEW ventes_avec_moyennes_mobiles AS  
+SELECT  
     date,
     ventes,
     AVG(ventes) OVER (
@@ -788,9 +788,9 @@ FROM ventes_quotidiennes;
 SELECT
     date,
     AVG(ventes) OVER (ORDER BY date ROWS BETWEEN 6 PRECEDING AND CURRENT ROW) AS mm7
-FROM ventes_quotidiennes
-WHERE date >= CURRENT_DATE - INTERVAL '1 year'
-ORDER BY date;
+FROM ventes_quotidiennes  
+WHERE date >= CURRENT_DATE - INTERVAL '1 year'  
+ORDER BY date;  
 ```
 
 ### 3. Pré-agréger les Données
@@ -799,14 +799,14 @@ Pour des analyses sur de très longues périodes :
 
 ```sql
 -- Pré-agrégation quotidienne
-CREATE TABLE ventes_quotidiennes_agg AS
-SELECT
+CREATE TABLE ventes_quotidiennes_agg AS  
+SELECT  
     date,
     SUM(montant) AS ventes_journalieres,
     COUNT(*) AS nb_transactions,
     AVG(montant) AS panier_moyen
-FROM transactions
-GROUP BY date;
+FROM transactions  
+GROUP BY date;  
 
 -- Ensuite, calcul de moyennes mobiles sur données agrégées
 SELECT
@@ -823,8 +823,8 @@ FROM ventes_quotidiennes_agg;
 
 ```sql
 -- Pour optimiser les window functions avec PARTITION BY et ORDER BY
-CREATE INDEX idx_ventes_categorie_date
-ON ventes(categorie, date);
+CREATE INDEX idx_ventes_categorie_date  
+ON ventes(categorie, date);  
 
 -- Permet d'accélérer :
 SELECT
@@ -844,8 +844,8 @@ SELECT
     STDDEV(ventes) OVER w AS volatilite_7j,
     MAX(ventes) OVER w AS max_7j,
     MIN(ventes) OVER w AS min_7j
-FROM ventes_quotidiennes
-WINDOW w AS (ORDER BY date ROWS BETWEEN 6 PRECEDING AND CURRENT ROW);
+FROM ventes_quotidiennes  
+WINDOW w AS (ORDER BY date ROWS BETWEEN 6 PRECEDING AND CURRENT ROW);  
 ```
 
 ## Pièges à Éviter
@@ -892,8 +892,8 @@ ROW_NUMBER() OVER (PARTITION BY categorie ORDER BY ventes DESC, produit_id)
 
 ```sql
 -- ❌ Calcul de la même window plusieurs fois
-ventes / SUM(ventes) OVER (PARTITION BY categorie),
-AVG(ventes) OVER (PARTITION BY categorie)
+ventes / SUM(ventes) OVER (PARTITION BY categorie),  
+AVG(ventes) OVER (PARTITION BY categorie)  
 
 -- ✅ Utiliser une CTE
 WITH stats AS (
@@ -977,9 +977,9 @@ SELECT
         THEN 'Mois difficile'
         ELSE 'Performance normale'
     END AS evaluation
-FROM metriques_enrichies m
-JOIN vendeurs v ON m.vendeur_id = v.id
-ORDER BY m.mois DESC, m.rang_mois;
+FROM metriques_enrichies m  
+JOIN vendeurs v ON m.vendeur_id = v.id  
+ORDER BY m.mois DESC, m.rang_mois;  
 ```
 
 ### Exemple 2 : Système de Recommandation Simple
@@ -1015,22 +1015,22 @@ SELECT
     pb.nom AS produit_recommande,
     pr.nb_achats_ensemble,
     pr.rang_recommandation
-FROM produits_recommandes pr
-JOIN produits pa ON pr.produit_a = pa.id
-JOIN produits pb ON pr.produit_b = pb.id
-WHERE pr.rang_recommandation <= 5  -- Top 5 recommandations
-ORDER BY pr.produit_a, pr.rang_recommandation;
+FROM produits_recommandes pr  
+JOIN produits pa ON pr.produit_a = pa.id  
+JOIN produits pb ON pr.produit_b = pb.id  
+WHERE pr.rang_recommandation <= 5  -- Top 5 recommandations  
+ORDER BY pr.produit_a, pr.rang_recommandation;  
 ```
 
 ## Points Clés à Retenir
 
-- ✅ **Top N par groupe** : Utilisez ROW_NUMBER() avec PARTITION BY puis filtrez sur le rang
-- ✅ **ROW_NUMBER vs RANK** : ROW_NUMBER pour exactement N lignes, RANK pour inclure les ex-aequo
-- ✅ **Moyenne mobile** : AVG() avec ROWS BETWEEN N PRECEDING AND CURRENT ROW
-- ✅ **Moyennes mobiles multiples** : Utiles pour détecter les croisements et tendances
-- ✅ **Optimisation** : Filtrez d'abord avec WHERE, utilisez des index, considérez les vues matérialisées
-- ✅ **CTE et WINDOW** : Améliorent la lisibilité et évitent la duplication
-- ✅ **Z-score** : (valeur - moyenne) / écart-type pour détecter les anomalies
+- ✅ **Top N par groupe** : Utilisez ROW_NUMBER() avec PARTITION BY puis filtrez sur le rang  
+- ✅ **ROW_NUMBER vs RANK** : ROW_NUMBER pour exactement N lignes, RANK pour inclure les ex-aequo  
+- ✅ **Moyenne mobile** : AVG() avec ROWS BETWEEN N PRECEDING AND CURRENT ROW  
+- ✅ **Moyennes mobiles multiples** : Utiles pour détecter les croisements et tendances  
+- ✅ **Optimisation** : Filtrez d'abord avec WHERE, utilisez des index, considérez les vues matérialisées  
+- ✅ **CTE et WINDOW** : Améliorent la lisibilité et évitent la duplication  
+- ✅ **Z-score** : (valeur - moyenne) / écart-type pour détecter les anomalies  
 - ✅ **Toujours un tri déterministe** : Ajoutez une colonne unique en cas d'égalité
 
 ## Tableau Récapitulatif

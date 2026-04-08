@@ -7,8 +7,8 @@
 Les opérations d'ensemble en SQL permettent de **combiner les résultats de plusieurs requêtes** en appliquant des opérations mathématiques sur des ensembles de données. Ces opérations sont directement inspirées de la **théorie des ensembles** en mathématiques.
 
 PostgreSQL supporte trois opérations d'ensemble principales :
-- **UNION** : Combine les résultats (union)
-- **INTERSECT** : Garde uniquement les éléments communs (intersection)
+- **UNION** : Combine les résultats (union)  
+- **INTERSECT** : Garde uniquement les éléments communs (intersection)  
 - **EXCEPT** : Soustrait un ensemble d'un autre (différence)
 
 Chacune existe en deux variantes : standard (élimine les doublons) et **ALL** (conserve les doublons).
@@ -21,8 +21,8 @@ Avant de plonger dans SQL, rappelons les concepts mathématiques de base.
 
 ### Visualisation avec diagrammes de Venn
 
-**Ensemble A** : {1, 2, 3, 4, 5}
-**Ensemble B** : {4, 5, 6, 7, 8}
+**Ensemble A** : {1, 2, 3, 4, 5}  
+**Ensemble B** : {4, 5, 6, 7, 8}  
 
 ```
     A              B
@@ -37,16 +37,16 @@ Avant de plonger dans SQL, rappelons les concepts mathématiques de base.
 
 **Opérations :**
 
-1. **A ∪ B (Union)** : {1, 2, 3, 4, 5, 6, 7, 8}
+1. **A ∪ B (Union)** : {1, 2, 3, 4, 5, 6, 7, 8}  
    → Tous les éléments de A **OU** B
 
-2. **A ∩ B (Intersection)** : {4, 5}
+2. **A ∩ B (Intersection)** : {4, 5}  
    → Éléments présents dans A **ET** B
 
-3. **A − B (Différence)** : {1, 2, 3}
+3. **A − B (Différence)** : {1, 2, 3}  
    → Éléments dans A mais **PAS** dans B
 
-4. **B − A (Différence)** : {6, 7, 8}
+4. **B − A (Différence)** : {6, 7, 8}  
    → Éléments dans B mais **PAS** dans A
 
 ---
@@ -56,32 +56,32 @@ Avant de plonger dans SQL, rappelons les concepts mathématiques de base.
 ### 1. Compatibilité des colonnes
 
 Les requêtes combinées doivent avoir :
-- **Même nombre de colonnes**
+- **Même nombre de colonnes**  
 - **Types de données compatibles** (dans le même ordre)
 
 ```sql
 -- ✅ CORRECT : 2 colonnes INTEGER et TEXT dans les deux requêtes
-SELECT id, nom FROM employes
-UNION
-SELECT id, nom FROM consultants;
+SELECT id, nom FROM employes  
+UNION  
+SELECT id, nom FROM consultants;  
 
 -- ❌ ERREUR : Nombre de colonnes différent
-SELECT id, nom FROM employes
-UNION
-SELECT id FROM consultants;  -- Manque une colonne
+SELECT id, nom FROM employes  
+UNION  
+SELECT id FROM consultants;  -- Manque une colonne  
 
 -- ❌ ERREUR : Types incompatibles
-SELECT id, nom FROM employes  -- INTEGER, TEXT
-UNION
-SELECT nom, id FROM consultants;  -- TEXT, INTEGER (ordre inversé)
+SELECT id, nom FROM employes  -- INTEGER, TEXT  
+UNION  
+SELECT nom, id FROM consultants;  -- TEXT, INTEGER (ordre inversé)  
 ```
 
 ### 2. Les noms de colonnes viennent de la première requête
 
 ```sql
-SELECT id AS employee_id, nom AS employee_name FROM employes
-UNION
-SELECT id, nom FROM consultants;
+SELECT id AS employee_id, nom AS employee_name FROM employes  
+UNION  
+SELECT id, nom FROM consultants;  
 
 -- Résultat : colonnes nommées "employee_id" et "employee_name"
 ```
@@ -91,15 +91,15 @@ SELECT id, nom FROM consultants;
 Le tri s'applique au résultat final de l'opération d'ensemble.
 
 ```sql
-SELECT nom FROM employes
-UNION
-SELECT nom FROM consultants
-ORDER BY nom;  -- ✅ Tri du résultat combiné
+SELECT nom FROM employes  
+UNION  
+SELECT nom FROM consultants  
+ORDER BY nom;  -- ✅ Tri du résultat combiné  
 
 -- ❌ ERREUR : ORDER BY dans une sous-requête
-SELECT nom FROM employes ORDER BY nom
-UNION
-SELECT nom FROM consultants;
+SELECT nom FROM employes ORDER BY nom  
+UNION  
+SELECT nom FROM consultants;  
 ```
 
 **Exception :** Vous pouvez utiliser ORDER BY dans une sous-requête si vous utilisez LIMIT :
@@ -134,9 +134,9 @@ ORDER BY nom;
 ### Syntaxe
 
 ```sql
-SELECT colonnes FROM table1
-UNION
-SELECT colonnes FROM table2
+SELECT colonnes FROM table1  
+UNION  
+SELECT colonnes FROM table2  
 [UNION
 SELECT colonnes FROM table3 ...]
 [ORDER BY colonnes];
@@ -171,10 +171,10 @@ INSERT INTO fournisseurs VALUES
 **Requête avec UNION :**
 
 ```sql
-SELECT nom FROM clients
-UNION
-SELECT nom FROM fournisseurs
-ORDER BY nom;
+SELECT nom FROM clients  
+UNION  
+SELECT nom FROM fournisseurs  
+ORDER BY nom;  
 ```
 
 **Résultat :**
@@ -182,11 +182,11 @@ ORDER BY nom;
 ```
 nom
 --------
-Alice
-Bob      ← Présent une seule fois (dédupliqué)
-Charlie
-Diana
-Eve
+Alice  
+Bob      ← Présent une seule fois (dédupliqué)  
+Charlie  
+Diana  
+Eve  
 ```
 
 **Analyse :** Bob apparaît dans les deux tables mais n'est listé qu'une fois grâce à `UNION`.
@@ -202,18 +202,18 @@ Eve
 ### Syntaxe
 
 ```sql
-SELECT colonnes FROM table1
-UNION ALL
-SELECT colonnes FROM table2;
+SELECT colonnes FROM table1  
+UNION ALL  
+SELECT colonnes FROM table2;  
 ```
 
 ### Exemple
 
 ```sql
-SELECT nom FROM clients
-UNION ALL
-SELECT nom FROM fournisseurs
-ORDER BY nom;
+SELECT nom FROM clients  
+UNION ALL  
+SELECT nom FROM fournisseurs  
+ORDER BY nom;  
 ```
 
 **Résultat :**
@@ -221,12 +221,12 @@ ORDER BY nom;
 ```
 nom
 --------
-Alice
-Bob      ← Apparaît 2 fois
-Bob
-Charlie
-Diana
-Eve
+Alice  
+Bob      ← Apparaît 2 fois  
+Bob  
+Charlie  
+Diana  
+Eve  
 ```
 
 ### UNION vs UNION ALL : Comparaison
@@ -274,17 +274,17 @@ Eve
 ### Syntaxe
 
 ```sql
-SELECT colonnes FROM table1
-INTERSECT
-SELECT colonnes FROM table2;
+SELECT colonnes FROM table1  
+INTERSECT  
+SELECT colonnes FROM table2;  
 ```
 
 ### Exemple : Clients qui sont aussi fournisseurs
 
 ```sql
-SELECT nom FROM clients
-INTERSECT
-SELECT nom FROM fournisseurs;
+SELECT nom FROM clients  
+INTERSECT  
+SELECT nom FROM fournisseurs;  
 ```
 
 **Résultat :**
@@ -300,8 +300,8 @@ Bob
 ### Visualisation
 
 ```
-Clients: {Alice, Bob, Charlie}
-Fournisseurs: {Bob, Diana, Eve}
+Clients: {Alice, Bob, Charlie}  
+Fournisseurs: {Bob, Diana, Eve}  
 
 Intersection: {Bob}
 ```
@@ -310,9 +310,9 @@ Intersection: {Bob}
 
 ```sql
 -- Employés actifs qui ont aussi été consultants
-SELECT email FROM employes WHERE statut = 'actif'
-INTERSECT
-SELECT email FROM historique_consultants;
+SELECT email FROM employes WHERE statut = 'actif'  
+INTERSECT  
+SELECT email FROM historique_consultants;  
 ```
 
 ---
@@ -338,9 +338,9 @@ INSERT INTO commandes_en_magasin (produit) VALUES
 **INTERSECT (standard) :**
 
 ```sql
-SELECT produit FROM commandes_en_ligne
-INTERSECT
-SELECT produit FROM commandes_en_magasin;
+SELECT produit FROM commandes_en_ligne  
+INTERSECT  
+SELECT produit FROM commandes_en_magasin;  
 ```
 
 **Résultat :**
@@ -348,16 +348,16 @@ SELECT produit FROM commandes_en_magasin;
 ```
 produit
 --------
-Laptop
-Souris
+Laptop  
+Souris  
 ```
 
 **INTERSECT ALL :**
 
 ```sql
-SELECT produit FROM commandes_en_ligne
-INTERSECT ALL
-SELECT produit FROM commandes_en_magasin;
+SELECT produit FROM commandes_en_ligne  
+INTERSECT ALL  
+SELECT produit FROM commandes_en_magasin;  
 ```
 
 **Résultat :**
@@ -365,8 +365,8 @@ SELECT produit FROM commandes_en_magasin;
 ```
 produit
 --------
-Laptop   ← 1 occurrence (min de 2 et 1)
-Souris   ← 1 occurrence (min de 1 et 2)
+Laptop   ← 1 occurrence (min de 2 et 1)  
+Souris   ← 1 occurrence (min de 1 et 2)  
 ```
 
 **Logique :**
@@ -387,17 +387,17 @@ Souris   ← 1 occurrence (min de 1 et 2)
 ### Syntaxe
 
 ```sql
-SELECT colonnes FROM table1
-EXCEPT
-SELECT colonnes FROM table2;
+SELECT colonnes FROM table1  
+EXCEPT  
+SELECT colonnes FROM table2;  
 ```
 
 ### Exemple : Clients qui ne sont pas fournisseurs
 
 ```sql
-SELECT nom FROM clients
-EXCEPT
-SELECT nom FROM fournisseurs;
+SELECT nom FROM clients  
+EXCEPT  
+SELECT nom FROM fournisseurs;  
 ```
 
 **Résultat :**
@@ -405,8 +405,8 @@ SELECT nom FROM fournisseurs;
 ```
 nom
 --------
-Alice
-Charlie
+Alice  
+Charlie  
 ```
 
 **Explication :** Bob est exclu car il est dans les deux tables.
@@ -414,9 +414,9 @@ Charlie
 ### Exemple inverse : Fournisseurs qui ne sont pas clients
 
 ```sql
-SELECT nom FROM fournisseurs
-EXCEPT
-SELECT nom FROM clients;
+SELECT nom FROM fournisseurs  
+EXCEPT  
+SELECT nom FROM clients;  
 ```
 
 **Résultat :**
@@ -424,18 +424,18 @@ SELECT nom FROM clients;
 ```
 nom
 -----
-Diana
-Eve
+Diana  
+Eve  
 ```
 
 ### Visualisation
 
 ```
-Clients: {Alice, Bob, Charlie}
-Fournisseurs: {Bob, Diana, Eve}
+Clients: {Alice, Bob, Charlie}  
+Fournisseurs: {Bob, Diana, Eve}  
 
-Clients EXCEPT Fournisseurs: {Alice, Charlie}
-Fournisseurs EXCEPT Clients: {Diana, Eve}
+Clients EXCEPT Fournisseurs: {Alice, Charlie}  
+Fournisseurs EXCEPT Clients: {Diana, Eve}  
 ```
 
 ---
@@ -459,9 +459,9 @@ INSERT INTO table_b (valeur) VALUES ('X'), ('X'), ('Z');
 **EXCEPT (standard) :**
 
 ```sql
-SELECT valeur FROM table_a
-EXCEPT
-SELECT valeur FROM table_b;
+SELECT valeur FROM table_a  
+EXCEPT  
+SELECT valeur FROM table_b;  
 ```
 
 **Résultat :**
@@ -475,9 +475,9 @@ Y      ← Seul Y n'est pas dans B
 **EXCEPT ALL :**
 
 ```sql
-SELECT valeur FROM table_a
-EXCEPT ALL
-SELECT valeur FROM table_b;
+SELECT valeur FROM table_a  
+EXCEPT ALL  
+SELECT valeur FROM table_b;  
 ```
 
 **Résultat :**
@@ -485,8 +485,8 @@ SELECT valeur FROM table_b;
 ```
 valeur
 ------
-X      ← 3 occurrences dans A - 2 dans B = 1
-Y      ← 1 occurrence dans A - 0 dans B = 1
+X      ← 3 occurrences dans A - 2 dans B = 1  
+Y      ← 1 occurrence dans A - 0 dans B = 1  
 ```
 
 **Logique :**
@@ -512,8 +512,8 @@ Y      ← 1 occurrence dans A - 0 dans B = 1
 ### Diagramme de Venn complet
 
 ```
-Ensemble A = {1, 2, 3, 4, 5}
-Ensemble B = {4, 5, 6, 7, 8}
+Ensemble A = {1, 2, 3, 4, 5}  
+Ensemble B = {4, 5, 6, 7, 8}  
 
 ┌─────────────────────────────────────┐
 │         A UNION B                   │
@@ -541,23 +541,23 @@ Ensemble B = {4, 5, 6, 7, 8}
 
 ```sql
 -- Base Europe
-SELECT client_id, nom, email, 'Europe' AS region
-FROM clients_europe
-WHERE actif = TRUE
+SELECT client_id, nom, email, 'Europe' AS region  
+FROM clients_europe  
+WHERE actif = TRUE  
 
 UNION
 
 -- Base USA
-SELECT client_id, nom, email, 'USA' AS region
-FROM clients_usa
-WHERE actif = TRUE
+SELECT client_id, nom, email, 'USA' AS region  
+FROM clients_usa  
+WHERE actif = TRUE  
 
 UNION
 
 -- Base Asie
-SELECT client_id, nom, email, 'Asie' AS region
-FROM clients_asie
-WHERE actif = TRUE
+SELECT client_id, nom, email, 'Asie' AS region  
+FROM clients_asie  
+WHERE actif = TRUE  
 
 ORDER BY nom;
 ```
@@ -567,15 +567,15 @@ ORDER BY nom;
 **Scénario :** Trouver les utilisateurs présents sur le site web ET l'application mobile.
 
 ```sql
-SELECT user_id
-FROM utilisateurs_web
-WHERE derniere_connexion > CURRENT_DATE - INTERVAL '30 days'
+SELECT user_id  
+FROM utilisateurs_web  
+WHERE derniere_connexion > CURRENT_DATE - INTERVAL '30 days'  
 
 INTERSECT
 
-SELECT user_id
-FROM utilisateurs_mobile
-WHERE derniere_connexion > CURRENT_DATE - INTERVAL '30 days';
+SELECT user_id  
+FROM utilisateurs_mobile  
+WHERE derniere_connexion > CURRENT_DATE - INTERVAL '30 days';  
 ```
 
 ### 3. Trouver les produits jamais commandés (EXCEPT)
@@ -583,14 +583,14 @@ WHERE derniere_connexion > CURRENT_DATE - INTERVAL '30 days';
 **Scénario :** Identifier les produits du catalogue qui n'ont jamais été achetés.
 
 ```sql
-SELECT produit_id, nom
-FROM catalogue_produits
+SELECT produit_id, nom  
+FROM catalogue_produits  
 
 EXCEPT
 
-SELECT DISTINCT produit_id, nom
-FROM commandes
-INNER JOIN catalogue_produits USING (produit_id);
+SELECT DISTINCT produit_id, nom  
+FROM commandes  
+INNER JOIN catalogue_produits USING (produit_id);  
 ```
 
 ### 4. Audit de synchronisation entre bases (EXCEPT)
@@ -599,14 +599,14 @@ INNER JOIN catalogue_produits USING (produit_id);
 
 ```sql
 -- Manquant dans la réplique
-SELECT id, hash_donnees FROM base_principale
-EXCEPT
-SELECT id, hash_donnees FROM base_replique;
+SELECT id, hash_donnees FROM base_principale  
+EXCEPT  
+SELECT id, hash_donnees FROM base_replique;  
 
 -- Manquant dans la principale (ne devrait pas arriver)
-SELECT id, hash_donnees FROM base_replique
-EXCEPT
-SELECT id, hash_donnees FROM base_principale;
+SELECT id, hash_donnees FROM base_replique  
+EXCEPT  
+SELECT id, hash_donnees FROM base_principale;  
 ```
 
 ### 5. Analyser des tendances temporelles (UNION ALL)
@@ -618,8 +618,8 @@ SELECT
     'Janvier 2024' AS periode,
     COUNT(*) AS nb_ventes,
     SUM(montant) AS total
-FROM ventes
-WHERE date_vente BETWEEN '2024-01-01' AND '2024-01-31'
+FROM ventes  
+WHERE date_vente BETWEEN '2024-01-01' AND '2024-01-31'  
 
 UNION ALL
 
@@ -627,8 +627,8 @@ SELECT
     'Février 2024',
     COUNT(*),
     SUM(montant)
-FROM ventes
-WHERE date_vente BETWEEN '2024-02-01' AND '2024-02-29'
+FROM ventes  
+WHERE date_vente BETWEEN '2024-02-01' AND '2024-02-29'  
 
 UNION ALL
 
@@ -636,8 +636,8 @@ SELECT
     'Mars 2024',
     COUNT(*),
     SUM(montant)
-FROM ventes
-WHERE date_vente BETWEEN '2024-03-01' AND '2024-03-31'
+FROM ventes  
+WHERE date_vente BETWEEN '2024-03-01' AND '2024-03-31'  
 
 ORDER BY periode;
 ```
@@ -665,7 +665,7 @@ Vous pouvez chaîner plusieurs opérations d'ensemble.
 ### Ordre de priorité
 
 **Sans parenthèses**, l'ordre d'évaluation est de gauche à droite, avec cette priorité :
-1. `INTERSECT` (priorité la plus haute)
+1. `INTERSECT` (priorité la plus haute)  
 2. `UNION` et `EXCEPT` (même priorité, gauche à droite)
 
 ### Exemple : Trois ensembles
@@ -694,8 +694,8 @@ ORDER BY email;
     UNION
     SELECT email FROM anciens_employes
 )
-EXCEPT
-SELECT email FROM liste_bannis
+EXCEPT  
+SELECT email FROM liste_bannis  
 
 ORDER BY email;
 ```
@@ -737,19 +737,19 @@ ORDER BY user_id;
 
 ```sql
 -- Test de performance
-EXPLAIN ANALYZE
-SELECT nom FROM grande_table_1
-UNION  -- Déduplication coûteuse
-SELECT nom FROM grande_table_2;
+EXPLAIN ANALYZE  
+SELECT nom FROM grande_table_1  
+UNION  -- Déduplication coûteuse  
+SELECT nom FROM grande_table_2;  
 
-EXPLAIN ANALYZE
-SELECT nom FROM grande_table_1
-UNION ALL  -- Simple concaténation
-SELECT nom FROM grande_table_2;
+EXPLAIN ANALYZE  
+SELECT nom FROM grande_table_1  
+UNION ALL  -- Simple concaténation  
+SELECT nom FROM grande_table_2;  
 ```
 
 **Observation typique :**
-- `UNION` : Unique + Sort (coûteux sur grandes tables)
+- `UNION` : Unique + Sort (coûteux sur grandes tables)  
 - `UNION ALL` : Append (très rapide)
 
 **Règle :** Si vous **savez** qu'il n'y a pas de doublons (tables partitionnées par date, par exemple), utilisez `UNION ALL`.
@@ -761,11 +761,11 @@ Les index sur les tables sources peuvent accélérer les requêtes individuelles
 **Optimisation :**
 ```sql
 -- ✅ Filtrer AVANT l'opération d'ensemble
-SELECT email FROM clients
-WHERE actif = TRUE  -- Index sur actif
-UNION
-SELECT email FROM prospects
-WHERE statut = 'qualifié';  -- Index sur statut
+SELECT email FROM clients  
+WHERE actif = TRUE  -- Index sur actif  
+UNION  
+SELECT email FROM prospects  
+WHERE statut = 'qualifié';  -- Index sur statut  
 
 -- ❌ Filtrer APRÈS (moins efficace)
 SELECT email FROM (
@@ -779,8 +779,8 @@ WHERE actif = TRUE;
 ### 3. Utiliser des CTE pour la lisibilité
 
 ```sql
-WITH
-clients_actifs AS (
+WITH  
+clients_actifs AS (  
     SELECT email FROM clients WHERE actif = TRUE
 ),
 prospects_qualifies AS (
@@ -790,12 +790,12 @@ liste_bannis AS (
     SELECT email FROM bannis
 )
 -- Opérations d'ensemble sur les CTE
-SELECT email FROM clients_actifs
-UNION
-SELECT email FROM prospects_qualifies
-EXCEPT
-SELECT email FROM liste_bannis
-ORDER BY email;
+SELECT email FROM clients_actifs  
+UNION  
+SELECT email FROM prospects_qualifies  
+EXCEPT  
+SELECT email FROM liste_bannis  
+ORDER BY email;  
 ```
 
 ### 4. Matérialiser les résultats coûteux
@@ -803,10 +803,10 @@ ORDER BY email;
 Si vous utilisez le même ensemble plusieurs fois :
 
 ```sql
-CREATE TEMP TABLE emails_actifs AS
-SELECT email FROM clients WHERE actif = TRUE
-UNION
-SELECT email FROM prospects WHERE statut = 'qualifié';
+CREATE TEMP TABLE emails_actifs AS  
+SELECT email FROM clients WHERE actif = TRUE  
+UNION  
+SELECT email FROM prospects WHERE statut = 'qualifié';  
 
 CREATE INDEX idx_email ON emails_actifs(email);
 
@@ -823,9 +823,9 @@ C'est une confusion courante pour les débutants.
 ### UNION : Combinaison verticale (lignes)
 
 ```sql
-SELECT nom FROM employes     -- Résultat : 100 lignes
-UNION
-SELECT nom FROM consultants  -- Résultat : 50 lignes
+SELECT nom FROM employes     -- Résultat : 100 lignes  
+UNION  
+SELECT nom FROM consultants  -- Résultat : 50 lignes  
 -- Total : ~150 lignes (moins si doublons)
 ```
 
@@ -834,9 +834,9 @@ SELECT nom FROM consultants  -- Résultat : 50 lignes
 ### JOIN : Combinaison horizontale (colonnes)
 
 ```sql
-SELECT e.nom, d.nom_departement
-FROM employes e
-INNER JOIN departements d ON e.dept_id = d.id
+SELECT e.nom, d.nom_departement  
+FROM employes e  
+INNER JOIN departements d ON e.dept_id = d.id  
 -- Total : 100 lignes avec plus de colonnes
 ```
 
@@ -845,20 +845,20 @@ INNER JOIN departements d ON e.dept_id = d.id
 ### Visualisation
 
 ```
-UNION (vertical) :
-Table 1    →    Résultat
-Alice            Alice
-Bob              Bob
+UNION (vertical) :  
+Table 1    →    Résultat  
+Alice            Alice  
+Bob              Bob  
                  Charlie  ← De Table 2
-Table 2          Diana    ← De Table 2
-Charlie
-Diana
+Table 2          Diana    ← De Table 2  
+Charlie  
+Diana  
 
 
-JOIN (horizontal) :
-Table 1    +    Table 2    →    Résultat
-Alice  1        1  IT           Alice  IT
-Bob    2        2  RH           Bob    RH
+JOIN (horizontal) :  
+Table 1    +    Table 2    →    Résultat  
+Alice  1        1  IT           Alice  IT  
+Bob    2        2  RH           Bob    RH  
 ```
 
 ---
@@ -869,42 +869,42 @@ Bob    2        2  RH           Bob    RH
 
 ```sql
 -- Avec UNION
-SELECT nom FROM clients
-UNION
-SELECT nom FROM fournisseurs;
+SELECT nom FROM clients  
+UNION  
+SELECT nom FROM fournisseurs;  
 
 -- Équivalent avec FULL OUTER JOIN (si clé commune)
-SELECT COALESCE(c.nom, f.nom) AS nom
-FROM clients c
-FULL OUTER JOIN fournisseurs f ON c.id = f.id;
+SELECT COALESCE(c.nom, f.nom) AS nom  
+FROM clients c  
+FULL OUTER JOIN fournisseurs f ON c.id = f.id;  
 ```
 
 ### INTERSECT → INNER JOIN
 
 ```sql
 -- Avec INTERSECT
-SELECT email FROM clients
-INTERSECT
-SELECT email FROM newsletter_subscribers;
+SELECT email FROM clients  
+INTERSECT  
+SELECT email FROM newsletter_subscribers;  
 
 -- Équivalent avec INNER JOIN
-SELECT DISTINCT c.email
-FROM clients c
-INNER JOIN newsletter_subscribers n ON c.email = n.email;
+SELECT DISTINCT c.email  
+FROM clients c  
+INNER JOIN newsletter_subscribers n ON c.email = n.email;  
 ```
 
 ### EXCEPT → NOT EXISTS
 
 ```sql
 -- Avec EXCEPT
-SELECT email FROM clients
-EXCEPT
-SELECT email FROM bannis;
+SELECT email FROM clients  
+EXCEPT  
+SELECT email FROM bannis;  
 
 -- Équivalent avec NOT EXISTS
-SELECT email
-FROM clients c
-WHERE NOT EXISTS (
+SELECT email  
+FROM clients c  
+WHERE NOT EXISTS (  
     SELECT 1 FROM bannis b WHERE b.email = c.email
 );
 ```
@@ -919,9 +919,9 @@ WHERE NOT EXISTS (
 
 ```sql
 -- ❌ ERREUR
-SELECT id, nom FROM employes
-UNION
-SELECT id FROM consultants;  -- Manque "nom"
+SELECT id, nom FROM employes  
+UNION  
+SELECT id FROM consultants;  -- Manque "nom"  
 ```
 
 **Erreur PostgreSQL :**
@@ -932,58 +932,58 @@ ERROR: each UNION query must have the same number of columns
 **Solution :**
 ```sql
 -- ✅ CORRECT
-SELECT id, nom FROM employes
-UNION
-SELECT id, nom FROM consultants;
+SELECT id, nom FROM employes  
+UNION  
+SELECT id, nom FROM consultants;  
 
 -- ✅ ALTERNATIVE : Ajouter NULL si colonne manquante
-SELECT id, nom FROM employes
-UNION
-SELECT id, NULL AS nom FROM consultants;
+SELECT id, nom FROM employes  
+UNION  
+SELECT id, NULL AS nom FROM consultants;  
 ```
 
 ### 2. Types de données incompatibles
 
 ```sql
 -- ❌ ERREUR
-SELECT id, nom FROM employes  -- INTEGER, TEXT
-UNION
-SELECT nom, id FROM consultants;  -- TEXT, INTEGER (ordre inversé)
+SELECT id, nom FROM employes  -- INTEGER, TEXT  
+UNION  
+SELECT nom, id FROM consultants;  -- TEXT, INTEGER (ordre inversé)  
 ```
 
 **Solution :**
 ```sql
 -- ✅ CORRECT : Même ordre
-SELECT id, nom FROM employes
-UNION
-SELECT id, nom FROM consultants;
+SELECT id, nom FROM employes  
+UNION  
+SELECT id, nom FROM consultants;  
 ```
 
 ### 3. Oublier ORDER BY à la fin
 
 ```sql
 -- ❌ ERREUR
-SELECT nom FROM employes ORDER BY nom
-UNION
-SELECT nom FROM consultants;
+SELECT nom FROM employes ORDER BY nom  
+UNION  
+SELECT nom FROM consultants;  
 ```
 
 **Solution :**
 ```sql
 -- ✅ CORRECT
-SELECT nom FROM employes
-UNION
-SELECT nom FROM consultants
-ORDER BY nom;  -- À la fin !
+SELECT nom FROM employes  
+UNION  
+SELECT nom FROM consultants  
+ORDER BY nom;  -- À la fin !  
 ```
 
 ### 4. Confondre EXCEPT et NOT IN avec NULL
 
 ```sql
 -- Piège avec NULL dans EXCEPT
-SELECT id FROM table_a  -- Contient 1, 2, 3, NULL
-EXCEPT
-SELECT id FROM table_b;  -- Contient 2, 3
+SELECT id FROM table_a  -- Contient 1, 2, 3, NULL  
+EXCEPT  
+SELECT id FROM table_b;  -- Contient 2, 3  
 
 -- Résultat : 1, NULL (NULL est conservé dans EXCEPT)
 ```
@@ -991,8 +991,8 @@ SELECT id FROM table_b;  -- Contient 2, 3
 **Avec NOT IN (différent) :**
 ```sql
 -- NULL pose problème avec NOT IN
-SELECT id FROM table_a
-WHERE id NOT IN (SELECT id FROM table_b);
+SELECT id FROM table_a  
+WHERE id NOT IN (SELECT id FROM table_b);  
 
 -- Résultat : 1 seulement (NULL est exclu à cause de la logique ternaire)
 ```
@@ -1001,14 +1001,14 @@ WHERE id NOT IN (SELECT id FROM table_b);
 
 ```sql
 -- ❌ LENT : Déduplication inutile
-SELECT * FROM ventes_2023
-UNION
-SELECT * FROM ventes_2024;  -- Pas de chevauchement possible !
+SELECT * FROM ventes_2023  
+UNION  
+SELECT * FROM ventes_2024;  -- Pas de chevauchement possible !  
 
 -- ✅ RAPIDE
-SELECT * FROM ventes_2023
-UNION ALL
-SELECT * FROM ventes_2024;
+SELECT * FROM ventes_2023  
+UNION ALL  
+SELECT * FROM ventes_2024;  
 ```
 
 ---
@@ -1105,8 +1105,8 @@ ORDER BY categorie, ventes DESC;
 SELECT
     departement,
     SUM(salaire) AS total
-FROM employes
-GROUP BY departement
+FROM employes  
+GROUP BY departement  
 
 UNION ALL
 
@@ -1128,9 +1128,9 @@ SELECT
     'Commande orpheline' AS anomalie,
     c.id,
     c.client_id
-FROM commandes c
-LEFT JOIN clients cl ON c.client_id = cl.id
-WHERE cl.id IS NULL
+FROM commandes c  
+LEFT JOIN clients cl ON c.client_id = cl.id  
+WHERE cl.id IS NULL  
 
 UNION ALL
 
@@ -1139,9 +1139,9 @@ SELECT
     'Client sans commande',
     cl.id,
     NULL
-FROM clients cl
-LEFT JOIN commandes c ON cl.id = c.client_id
-WHERE c.id IS NULL
+FROM clients cl  
+LEFT JOIN commandes c ON cl.id = c.client_id  
+WHERE c.id IS NULL  
 
 ORDER BY anomalie, id;
 ```
@@ -1193,7 +1193,7 @@ ORDER BY anomalie, id;
 
 ### ❌ À éviter
 
-1. **UNION quand UNION ALL suffit**
+1. **UNION quand UNION ALL suffit**  
    → Perte de performance inutile
 
 2. **Opérations d'ensemble sur de très grandes tables sans filtrage**
@@ -1232,36 +1232,36 @@ ORDER BY anomalie, id;
 
 ### Règles essentielles
 
-1. **Même nombre de colonnes** et types compatibles
-2. **ORDER BY à la fin** de toutes les opérations
-3. **UNION ALL plus rapide** que UNION (pas de tri)
-4. **EXCEPT n'est pas commutatif** : A EXCEPT B ≠ B EXCEPT A
+1. **Même nombre de colonnes** et types compatibles  
+2. **ORDER BY à la fin** de toutes les opérations  
+3. **UNION ALL plus rapide** que UNION (pas de tri)  
+4. **EXCEPT n'est pas commutatif** : A EXCEPT B ≠ B EXCEPT A  
 5. **Utiliser parenthèses** pour clarifier les combinaisons multiples
 
 ### Quand utiliser quoi ?
 
-- **Listes combinées uniques** → UNION
-- **Toutes les données** → UNION ALL
-- **Éléments présents partout** → INTERSECT
-- **Éléments absents du second ensemble** → EXCEPT
+- **Listes combinées uniques** → UNION  
+- **Toutes les données** → UNION ALL  
+- **Éléments présents partout** → INTERSECT  
+- **Éléments absents du second ensemble** → EXCEPT  
 - **Audit/comparaison** → EXCEPT des deux côtés
 
 ### Checklist
 
-- [ ] Mes requêtes ont-elles le même nombre de colonnes ?
-- [ ] Les types de données sont-ils compatibles ?
-- [ ] Ai-je besoin d'éliminer les doublons ou pas ?
-- [ ] Ai-je placé ORDER BY à la fin ?
-- [ ] Ai-je filtré les données AVANT l'opération d'ensemble ?
+- [ ] Mes requêtes ont-elles le même nombre de colonnes ?  
+- [ ] Les types de données sont-ils compatibles ?  
+- [ ] Ai-je besoin d'éliminer les doublons ou pas ?  
+- [ ] Ai-je placé ORDER BY à la fin ?  
+- [ ] Ai-je filtré les données AVANT l'opération d'ensemble ?  
 - [ ] Ai-je testé avec EXPLAIN ANALYZE ?
 
 ---
 
 ## Pour aller plus loin
 
-- **Jointures** (Chapitre 7) : Combinaisons horizontales vs verticales
-- **Sous-requêtes** (Chapitre 9.1) : Alternatives avec IN, EXISTS
-- **CTE** (Chapitre 9.2) : Améliorer la lisibilité des combinaisons complexes
+- **Jointures** (Chapitre 7) : Combinaisons horizontales vs verticales  
+- **Sous-requêtes** (Chapitre 9.1) : Alternatives avec IN, EXISTS  
+- **CTE** (Chapitre 9.2) : Améliorer la lisibilité des combinaisons complexes  
 - **Window Functions** (Chapitre 10) : Agrégations sans UNION
 
 ---

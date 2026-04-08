@@ -6,8 +6,8 @@
 
 Maintenant que vous comprenez la philosophie des window functions (agréger sans grouper), il est temps de maîtriser leur syntaxe. Les trois éléments clés sont :
 
-- **OVER** : La clause qui transforme une fonction d'agrégation en window function
-- **PARTITION BY** : Pour définir les groupes de calcul
+- **OVER** : La clause qui transforme une fonction d'agrégation en window function  
+- **PARTITION BY** : Pour définir les groupes de calcul  
 - **ORDER BY** : Pour définir l'ordre dans chaque fenêtre
 
 Explorons chacun de ces éléments en détail.
@@ -142,8 +142,8 @@ FROM ventes_regionales;
 Cela crée une partition unique pour chaque **combinaison** vendeur + région.
 
 **Exemple** :
-- (Alice, Paris) forme une partition
-- (Alice, Lyon) forme une autre partition
+- (Alice, Paris) forme une partition  
+- (Alice, Lyon) forme une autre partition  
 - (Bob, Paris) forme une troisième partition, etc.
 
 ### PARTITION BY vs GROUP BY : Rappel
@@ -163,7 +163,7 @@ Cela crée une partition unique pour chaque **combinaison** vendeur + région.
 
 Ajouter `ORDER BY` dans la clause `OVER` change fondamentalement le comportement de certaines fonctions. Cela définit :
 
-1. **L'ordre de traitement** des lignes dans chaque partition
+1. **L'ordre de traitement** des lignes dans chaque partition  
 2. **La portée de la fenêtre** (par défaut : du début jusqu'à la ligne courante)
 
 ### Syntaxe
@@ -206,8 +206,8 @@ SELECT
     produit,
     montant,
     SUM(montant) OVER (PARTITION BY vendeur ORDER BY date_vente) AS cumul_vendeur
-FROM ventes
-ORDER BY vendeur, date_vente;
+FROM ventes  
+ORDER BY vendeur, date_vente;  
 ```
 
 Supposons ces données :
@@ -255,8 +255,8 @@ Partition d'Alice (ordonnée par date) :
 │ (Souris)    │ (Ordi)  │
 └─────────────┴─────────┘
 
-Ligne 1 : Fenêtre = [Ligne 1]           → SUM = 25
-Ligne 2 : Fenêtre = [Ligne 1, Ligne 2]  → SUM = 25 + 1200 = 1225
+Ligne 1 : Fenêtre = [Ligne 1]           → SUM = 25  
+Ligne 2 : Fenêtre = [Ligne 1, Ligne 2]  → SUM = 25 + 1200 = 1225  
 ```
 
 ### ORDER BY Multiple
@@ -287,7 +287,7 @@ Cela calcule le cumul **depuis la date la plus récente**.
 SUM(montant) OVER ()
 ```
 
-- **Pas de partition** : Toutes les lignes ensemble
+- **Pas de partition** : Toutes les lignes ensemble  
 - **Pas d'ordre** : Le calcul porte sur tout l'ensemble
 
 **Usage** : Total global, pourcentage du total général
@@ -298,7 +298,7 @@ SUM(montant) OVER ()
 SUM(montant) OVER (PARTITION BY vendeur)
 ```
 
-- **Avec partitions** : Groupes séparés
+- **Avec partitions** : Groupes séparés  
 - **Sans ordre** : Le calcul porte sur toute la partition
 
 **Usage** : Total par groupe, moyenne par catégorie
@@ -309,7 +309,7 @@ SUM(montant) OVER (PARTITION BY vendeur)
 SUM(montant) OVER (ORDER BY date_vente)
 ```
 
-- **Pas de partition** : Toutes les lignes ensemble
+- **Pas de partition** : Toutes les lignes ensemble  
 - **Avec ordre** : Fenêtre glissante depuis le début
 
 **Usage** : Cumul global chronologique
@@ -320,7 +320,7 @@ SUM(montant) OVER (ORDER BY date_vente)
 SUM(montant) OVER (PARTITION BY vendeur ORDER BY date_vente)
 ```
 
-- **Avec partitions** : Groupes séparés
+- **Avec partitions** : Groupes séparés  
 - **Avec ordre** : Fenêtre glissante dans chaque groupe
 
 **Usage** : Cumul par groupe, classement par catégorie
@@ -349,8 +349,8 @@ SELECT
     produit,
     montant,
     SUM(montant) OVER (ORDER BY date_vente) AS cumul_chronologique
-FROM ventes
-ORDER BY date_vente;
+FROM ventes  
+ORDER BY date_vente;  
 ```
 
 Affiche le chiffre d'affaires cumulé au fil du temps.
@@ -421,8 +421,8 @@ SELECT
     vendeur,
     montant,
     SUM(montant) OVER (PARTITION BY vendeur) AS total
-FROM ventes
-ORDER BY vendeur, montant DESC;  -- ORDER BY final
+FROM ventes  
+ORDER BY vendeur, montant DESC;  -- ORDER BY final  
 ```
 
 - Définit **l'ordre d'affichage** des lignes dans le résultat
@@ -439,11 +439,11 @@ SELECT
     date_vente,
     montant,
     SUM(montant) OVER (PARTITION BY vendeur ORDER BY date_vente) AS cumul
-FROM ventes
-ORDER BY vendeur, date_vente;  -- Pour un affichage lisible
+FROM ventes  
+ORDER BY vendeur, date_vente;  -- Pour un affichage lisible  
 ```
 
-1. `ORDER BY date_vente` dans `OVER` : Définit le cumul chronologique
+1. `ORDER BY date_vente` dans `OVER` : Définit le cumul chronologique  
 2. `ORDER BY vendeur, date_vente` final : Affiche les résultats dans un ordre compréhensible
 
 ## Fonctions d'Agrégation Disponibles
@@ -463,8 +463,8 @@ Toutes les fonctions d'agrégation classiques fonctionnent dans `OVER` :
 ### Fonctions Spécifiques aux Window Functions
 
 Il existe aussi des fonctions qui **n'existent que** pour les window functions :
-- `ROW_NUMBER()`, `RANK()`, `DENSE_RANK()` : Classement (chapitre 10.4)
-- `LAG()`, `LEAD()` : Accès aux lignes précédentes/suivantes (chapitre 10.5)
+- `ROW_NUMBER()`, `RANK()`, `DENSE_RANK()` : Classement (chapitre 10.4)  
+- `LAG()`, `LEAD()` : Accès aux lignes précédentes/suivantes (chapitre 10.5)  
 - `FIRST_VALUE()`, `LAST_VALUE()` : Première/dernière valeur d'une fenêtre (chapitre 10.5)
 
 Nous les verrons en détail dans les sections suivantes.
@@ -474,12 +474,12 @@ Nous les verrons en détail dans les sections suivantes.
 ### Ordre d'Évaluation
 
 Les window functions sont évaluées **après** :
-1. `FROM` et `JOIN`
-2. `WHERE`
+1. `FROM` et `JOIN`  
+2. `WHERE`  
 3. `GROUP BY` et `HAVING`
 
 Et **avant** :
-- `ORDER BY` final
+- `ORDER BY` final  
 - `LIMIT` et `OFFSET`
 
 ### Utilisation des Index
@@ -512,21 +512,21 @@ Les trois fonctions utilisent la **même partition**, PostgreSQL ne parcourt les
 
 ```sql
 -- ❌ ERREUR : Mélange agrégation et colonnes individuelles
-SELECT vendeur, montant, SUM(montant)
-FROM ventes;
+SELECT vendeur, montant, SUM(montant)  
+FROM ventes;  
 
 -- ✅ CORRECT : Avec OVER
-SELECT vendeur, montant, SUM(montant) OVER ()
-FROM ventes;
+SELECT vendeur, montant, SUM(montant) OVER ()  
+FROM ventes;  
 ```
 
 ### 2. Utiliser Window Function dans WHERE
 
 ```sql
 -- ❌ ERREUR : Window functions après WHERE
-SELECT vendeur, montant
-FROM ventes
-WHERE SUM(montant) OVER (PARTITION BY vendeur) > 1000;
+SELECT vendeur, montant  
+FROM ventes  
+WHERE SUM(montant) OVER (PARTITION BY vendeur) > 1000;  
 
 -- ✅ CORRECT : Utiliser une sous-requête ou CTE
 SELECT * FROM (
@@ -548,18 +548,18 @@ FROM ventes;
 -- Mieux : Ajouter un ORDER BY final pour l'affichage
 SELECT vendeur, date_vente, montant,
        SUM(montant) OVER (ORDER BY date_vente) AS cumul
-FROM ventes
-ORDER BY date_vente;
+FROM ventes  
+ORDER BY date_vente;  
 ```
 
 ## Points Clés à Retenir
 
-- ✅ **OVER ()** transforme une fonction d'agrégation en window function
-- ✅ **PARTITION BY** divise les données en groupes sans éliminer les lignes
-- ✅ **ORDER BY dans OVER** crée une fenêtre glissante (par défaut : du début à la ligne courante)
-- ✅ On peut combiner PARTITION BY et ORDER BY : `OVER (PARTITION BY x ORDER BY y)`
-- ✅ ORDER BY dans OVER ≠ ORDER BY final de la requête
-- ✅ Toutes les fonctions d'agrégation (SUM, AVG, COUNT...) fonctionnent dans OVER
+- ✅ **OVER ()** transforme une fonction d'agrégation en window function  
+- ✅ **PARTITION BY** divise les données en groupes sans éliminer les lignes  
+- ✅ **ORDER BY dans OVER** crée une fenêtre glissante (par défaut : du début à la ligne courante)  
+- ✅ On peut combiner PARTITION BY et ORDER BY : `OVER (PARTITION BY x ORDER BY y)`  
+- ✅ ORDER BY dans OVER ≠ ORDER BY final de la requête  
+- ✅ Toutes les fonctions d'agrégation (SUM, AVG, COUNT...) fonctionnent dans OVER  
 - ✅ PostgreSQL optimise les calculs multiples sur la même partition
 
 ## Résumé Visuel
@@ -572,14 +572,14 @@ SELECT
         PARTITION BY colonne_groupe    -- Divise en groupes (optionnel)
         ORDER BY colonne_ordre         -- Définit l'ordre (optionnel)
     ) AS resultat
-FROM table
-ORDER BY colonne_affichage;            -- Ordre d'affichage (optionnel)
+FROM table  
+ORDER BY colonne_affichage;            -- Ordre d'affichage (optionnel)  
 ```
 
 **Composants** :
-- `FONCTION_AGREGATION` : SUM, AVG, COUNT, MIN, MAX, etc.
-- `PARTITION BY` : Crée des groupes séparés
-- `ORDER BY` (dans OVER) : Définit l'ordre de traitement, crée une fenêtre glissante
+- `FONCTION_AGREGATION` : SUM, AVG, COUNT, MIN, MAX, etc.  
+- `PARTITION BY` : Crée des groupes séparés  
+- `ORDER BY` (dans OVER) : Définit l'ordre de traitement, crée une fenêtre glissante  
 - `ORDER BY` (final) : Définit l'ordre d'affichage des résultats
 
 ---

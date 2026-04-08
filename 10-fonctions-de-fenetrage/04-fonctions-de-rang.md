@@ -14,9 +14,9 @@ Les **fonctions de rang** sont parmi les window functions les plus populaires et
 
 PostgreSQL propose quatre fonctions de rang principales, chacune avec un comportement spécifique face aux égalités :
 
-1. **ROW_NUMBER()** : Numérotation stricte, toujours unique
-2. **RANK()** : Classement avec "sauts" en cas d'égalité
-3. **DENSE_RANK()** : Classement sans "sauts" en cas d'égalité
+1. **ROW_NUMBER()** : Numérotation stricte, toujours unique  
+2. **RANK()** : Classement avec "sauts" en cas d'égalité  
+3. **DENSE_RANK()** : Classement sans "sauts" en cas d'égalité  
 4. **NTILE()** : Répartition en groupes (quantiles, quartiles, etc.)
 
 ## ROW_NUMBER() : Numérotation Simple
@@ -142,8 +142,8 @@ WHERE rang <= 3;
 Garder seulement la première occurrence de chaque doublon :
 
 ```sql
-DELETE FROM clients
-WHERE id IN (
+DELETE FROM clients  
+WHERE id IN (  
     SELECT id FROM (
         SELECT
             id,
@@ -236,7 +236,7 @@ FROM ventes;
 | **RANK()** | 1 | 1 | **3** | 4 | 4 |
 | **ROW_NUMBER()** | 1 | **2** | 3 | 4 | **5** |
 
-- `RANK()` : Égalités = même rang, puis **saut**
+- `RANK()` : Égalités = même rang, puis **saut**  
 - `ROW_NUMBER()` : Chaque ligne a un numéro **unique**
 
 ### Utilisation Pratique
@@ -248,8 +248,8 @@ SELECT
     joueur,
     score,
     RANK() OVER (ORDER BY score DESC) AS classement
-FROM resultats
-WHERE RANK() OVER (ORDER BY score DESC) = 1;  -- Tous les 1ers
+FROM resultats  
+WHERE RANK() OVER (ORDER BY score DESC) = 1;  -- Tous les 1ers  
 ```
 
 #### Top N avec Égalités Incluses
@@ -331,8 +331,8 @@ FROM ventes;
 | **DENSE_RANK()** | 1 | 1 | **2** | **3** | 3 |
 
 **Résumé** :
-- `ROW_NUMBER()` : 1, 2, 3, 4, 5 (toujours unique)
-- `RANK()` : 1, 1, **3**, 4, 4 (avec sauts)
+- `ROW_NUMBER()` : 1, 2, 3, 4, 5 (toujours unique)  
+- `RANK()` : 1, 1, **3**, 4, 4 (avec sauts)  
 - `DENSE_RANK()` : 1, 1, **2**, **3**, 3 (sans sauts)
 
 ### Quand Utiliser DENSE_RANK
@@ -546,9 +546,9 @@ FROM vendeurs;
 ```
 
 **Observations** :
-- `row_num` : 1, 2, 3, 4, 5, 6 (tous uniques)
-- `rank` : 1, 1, **3**, 4, 4, **6** (avec sauts)
-- `dense_rank` : 1, 1, **2**, 3, 3, **4** (sans sauts)
+- `row_num` : 1, 2, 3, 4, 5, 6 (tous uniques)  
+- `rank` : 1, 1, **3**, 4, 4, **6** (avec sauts)  
+- `dense_rank` : 1, 1, **2**, 3, 3, **4** (sans sauts)  
 - `tertile` : 1, 1, 2, 2, 3, 3 (6 lignes ÷ 3 groupes = 2 par groupe)
 
 ## Techniques Avancées
@@ -587,9 +587,9 @@ WITH classement AS (
         ) AS rang
     FROM produits
 )
-SELECT *
-FROM classement
-WHERE rang <= 3;
+SELECT *  
+FROM classement  
+WHERE rang <= 3;  
 ```
 
 **Important** : Vous ne pouvez pas filtrer directement dans `WHERE` avec une window function. Utilisez une sous-requête ou CTE.
@@ -618,8 +618,8 @@ Bien que PostgreSQL ait des fonctions dédiées (`PERCENTILE_CONT`), vous pouvez
 
 ```sql
 -- Trouver la valeur médiane (approximative)
-SELECT AVG(ventes) AS mediane
-FROM (
+SELECT AVG(ventes) AS mediane  
+FROM (  
     SELECT ventes,
            NTILE(2) OVER (ORDER BY ventes) AS moitie
     FROM produits
@@ -632,8 +632,8 @@ WHERE moitie = 1;  -- Première moitié
 Garder seulement la ligne avec le rang 1 pour chaque groupe de doublons :
 
 ```sql
-DELETE FROM commandes
-WHERE id NOT IN (
+DELETE FROM commandes  
+WHERE id NOT IN (  
     SELECT id
     FROM (
         SELECT
@@ -675,8 +675,8 @@ Maintenant, en cas d'égalité sur `ventes`, le `vendeur_id` départage.
 ### Importance en Production
 
 C'est **crucial** pour :
-- **Pagination** : Éviter que des lignes apparaissent deux fois ou disparaissent entre les pages
-- **Suppression de doublons** : Garantir que c'est toujours la même ligne qui est conservée
+- **Pagination** : Éviter que des lignes apparaissent deux fois ou disparaissent entre les pages  
+- **Suppression de doublons** : Garantir que c'est toujours la même ligne qui est conservée  
 - **Tests** : Résultats reproductibles
 
 ## Performances et Index
@@ -697,9 +697,9 @@ CREATE INDEX idx_produits_cat_prix ON produits(categorie, prix DESC);
 
 L'ordre de coût (du moins cher au plus cher) :
 
-1. `ROW_NUMBER()` : Simple compteur
-2. `DENSE_RANK()` : Détection des valeurs distinctes
-3. `RANK()` : Comptage de lignes précédentes à égalité
+1. `ROW_NUMBER()` : Simple compteur  
+2. `DENSE_RANK()` : Détection des valeurs distinctes  
+3. `RANK()` : Comptage de lignes précédentes à égalité  
 4. `NTILE()` : Division et distribution
 
 **Bonne pratique** : Toutes ces fonctions sont généralement très performantes. Privilégiez la **clarté** et la **justesse** du résultat plutôt que des micro-optimisations.
@@ -722,8 +722,8 @@ Sans `ORDER BY`, le rang n'a pas de sens.
 
 ```sql
 -- ❌ ERREUR : Window function dans WHERE
-SELECT * FROM produits
-WHERE RANK() OVER (ORDER BY prix DESC) <= 3;
+SELECT * FROM produits  
+WHERE RANK() OVER (ORDER BY prix DESC) <= 3;  
 
 -- ✅ CORRECT : Utiliser une sous-requête
 SELECT * FROM (
@@ -777,10 +777,10 @@ WITH produits_classes AS (
         ) AS rang
     FROM produits
 )
-SELECT categorie, nom_produit, ventes
-FROM produits_classes
-WHERE rang <= 3
-ORDER BY categorie, rang;
+SELECT categorie, nom_produit, ventes  
+FROM produits_classes  
+WHERE rang <= 3  
+ORDER BY categorie, rang;  
 ```
 
 ### 2. Pagination Performante
@@ -814,8 +814,8 @@ FROM clients;
 
 ```sql
 -- Garder l'email le plus récent de chaque personne
-DELETE FROM emails
-WHERE id IN (
+DELETE FROM emails  
+WHERE id IN (  
     SELECT id FROM (
         SELECT
             id,
@@ -846,20 +846,20 @@ SELECT
     AVG(ventes_totales) AS ventes_moyennes,
     MIN(ventes_totales) AS ventes_min,
     MAX(ventes_totales) AS ventes_max
-FROM vendeurs_quartiles
-GROUP BY quartile
-ORDER BY quartile;
+FROM vendeurs_quartiles  
+GROUP BY quartile  
+ORDER BY quartile;  
 ```
 
 ## Points Clés à Retenir
 
-- ✅ **ROW_NUMBER()** : Numérotation unique pour chaque ligne
-- ✅ **RANK()** : Classement avec sauts en cas d'égalité (1, 1, 3, 4, 4, 6)
-- ✅ **DENSE_RANK()** : Classement sans sauts (1, 1, 2, 3, 3, 4)
-- ✅ **NTILE(n)** : Répartition en n groupes de taille approximativement égale
-- ✅ Toutes nécessitent **ORDER BY** (sauf cas très rares)
-- ✅ Combinez avec **PARTITION BY** pour des rangs par groupe
-- ✅ Utilisez une **sous-requête ou CTE** pour filtrer sur les rangs
+- ✅ **ROW_NUMBER()** : Numérotation unique pour chaque ligne  
+- ✅ **RANK()** : Classement avec sauts en cas d'égalité (1, 1, 3, 4, 4, 6)  
+- ✅ **DENSE_RANK()** : Classement sans sauts (1, 1, 2, 3, 3, 4)  
+- ✅ **NTILE(n)** : Répartition en n groupes de taille approximativement égale  
+- ✅ Toutes nécessitent **ORDER BY** (sauf cas très rares)  
+- ✅ Combinez avec **PARTITION BY** pour des rangs par groupe  
+- ✅ Utilisez une **sous-requête ou CTE** pour filtrer sur les rangs  
 - ✅ Ajoutez un **tri secondaire unique** pour garantir le déterminisme
 
 ## Tableau de Choix Rapide

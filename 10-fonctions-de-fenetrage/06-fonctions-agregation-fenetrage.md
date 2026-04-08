@@ -22,9 +22,9 @@ Cette section couvre :
 
 **Agrégation classique (GROUP BY)** :
 ```sql
-SELECT vendeur, SUM(montant) AS total
-FROM ventes
-GROUP BY vendeur;
+SELECT vendeur, SUM(montant) AS total  
+FROM ventes  
+GROUP BY vendeur;  
 ```
 → Une ligne par vendeur, perte du détail
 
@@ -110,8 +110,8 @@ SELECT
     date,
     ventes,
     SUM(ventes) OVER (ORDER BY date) AS cumul
-FROM ventes_quotidiennes
-ORDER BY date;
+FROM ventes_quotidiennes  
+ORDER BY date;  
 ```
 
 **Données** :
@@ -145,8 +145,8 @@ SELECT
         PARTITION BY vendeur
         ORDER BY date
     ) AS cumul_vendeur
-FROM ventes
-ORDER BY vendeur, date;
+FROM ventes  
+ORDER BY vendeur, date;  
 ```
 
 #### Total Glissant (Rolling Sum)
@@ -231,8 +231,8 @@ SELECT
         ORDER BY date
         ROWS BETWEEN 49 PRECEDING AND CURRENT ROW
     ) AS moyenne_mobile_50j
-FROM cours_bourse
-ORDER BY date;
+FROM cours_bourse  
+ORDER BY date;  
 ```
 
 **Usage** : Détection de tendances (quand la MM20 croise la MM50, c'est un signal).
@@ -304,8 +304,8 @@ SELECT
     date,
     nouveau_client,
     COUNT(*) OVER (ORDER BY date) AS nb_clients_cumule
-FROM inscriptions
-ORDER BY date;
+FROM inscriptions  
+ORDER BY date;  
 ```
 
 Affiche le nombre total de clients acquis depuis le début.
@@ -387,8 +387,8 @@ SELECT
     cours,
     MAX(cours) OVER (ORDER BY date) AS record_historique,
     cours - MAX(cours) OVER (ORDER BY date) AS drawdown
-FROM cours_bourse
-ORDER BY date;
+FROM cours_bourse  
+ORDER BY date;  
 ```
 
 **Données** :
@@ -499,8 +499,8 @@ SELECT
 FROM produits;
 ```
 
-- **Corrélation positive** (+1) : Quand le prix augmente, les ventes augmentent
-- **Corrélation négative** (-1) : Quand le prix augmente, les ventes diminuent
+- **Corrélation positive** (+1) : Quand le prix augmente, les ventes augmentent  
+- **Corrélation négative** (-1) : Quand le prix augmente, les ventes diminuent  
 - **Pas de corrélation** (0) : Aucun lien
 
 #### COVAR_POP() et COVAR_SAMP() : Covariance
@@ -530,7 +530,7 @@ FROM produits;
 ```
 
 **Différence** :
-- `PERCENTILE_CONT` : Interpolation (valeur continue)
+- `PERCENTILE_CONT` : Interpolation (valeur continue)  
 - `PERCENTILE_DISC` : Valeur discrète (prend une valeur existante)
 
 ## Agrégations avec Frames Personnalisés
@@ -610,9 +610,9 @@ SELECT
     MIN(ventes) OVER w AS min,
     MAX(ventes) OVER w AS max,
     STDDEV(ventes) OVER w AS ecart_type
-FROM ventes
-WINDOW w AS (PARTITION BY vendeur)
-ORDER BY vendeur, date;
+FROM ventes  
+WINDOW w AS (PARTITION BY vendeur)  
+ORDER BY vendeur, date;  
 ```
 
 **Astuce** : La clause `WINDOW` évite la duplication de code.
@@ -644,8 +644,8 @@ SELECT
         SUM(ventes) OVER (),
         2
     ) AS pct_cumule
-FROM produits
-ORDER BY ventes DESC;
+FROM produits  
+ORDER BY ventes DESC;  
 ```
 
 **Usage** : Analyse de Pareto (règle des 80/20).
@@ -713,8 +713,8 @@ SELECT
         cours * 100.0 / FIRST_VALUE(cours) OVER (ORDER BY date),
         2
     ) AS indice_performance
-FROM cours_bourse
-ORDER BY date;
+FROM cours_bourse  
+ORDER BY date;  
 ```
 
 Si `indice_performance = 110`, le cours a progressé de 10% depuis le début.
@@ -737,9 +737,9 @@ SELECT
         THEN 'Survente'
         ELSE 'Neutre'
     END AS signal
-FROM cours_bourse
-WINDOW w AS (ORDER BY date ROWS BETWEEN 19 PRECEDING AND CURRENT ROW)
-ORDER BY date;
+FROM cours_bourse  
+WINDOW w AS (ORDER BY date ROWS BETWEEN 19 PRECEDING AND CURRENT ROW)  
+ORDER BY date;  
 ```
 
 ### 7. Taux de Croissance Composé (CAGR)
@@ -798,9 +798,9 @@ SELECT
         ca_mensuel * 100.0 / SUM(ca_mensuel) OVER (),
         2
     ) AS pct_annuel
-FROM ventes_mensuelles
-WHERE EXTRACT(YEAR FROM mois) = 2025
-ORDER BY mois;
+FROM ventes_mensuelles  
+WHERE EXTRACT(YEAR FROM mois) = 2025  
+ORDER BY mois;  
 ```
 
 ### 2. Analyse de Cohortes
@@ -831,9 +831,9 @@ SELECT
         ),
         2
     ) AS taux_retention_pct
-FROM cohortes
-GROUP BY mois_cohorte, DATE_TRUNC('month', date_achat)
-ORDER BY mois_cohorte, DATE_TRUNC('month', date_achat);
+FROM cohortes  
+GROUP BY mois_cohorte, DATE_TRUNC('month', date_achat)  
+ORDER BY mois_cohorte, DATE_TRUNC('month', date_achat);  
 ```
 
 ### 3. Détection d'Anomalies Statistiques
@@ -864,9 +864,9 @@ SELECT
         THEN 'ALERTE'
         ELSE 'NORMAL'
     END AS statut
-FROM stats
-WHERE date >= CURRENT_DATE - INTERVAL '90 days'
-ORDER BY date;
+FROM stats  
+WHERE date >= CURRENT_DATE - INTERVAL '90 days'  
+ORDER BY date;  
 ```
 
 ### 4. Analyse ABC avec Cumuls
@@ -890,8 +890,8 @@ SELECT
         WHEN ca_cumule * 100.0 / ca_total <= 95 THEN 'B'
         ELSE 'C'
     END AS classe_abc
-FROM produits_tries
-ORDER BY ca_annuel DESC;
+FROM produits_tries  
+ORDER BY ca_annuel DESC;  
 ```
 
 ### 5. Momentum et Tendances
@@ -919,8 +919,8 @@ SELECT
         THEN 'Tendance haussière'
         ELSE 'Tendance baissière'
     END AS signal_tendance
-FROM cours_bourse
-ORDER BY date;
+FROM cours_bourse  
+ORDER BY date;  
 ```
 
 ## Optimisation et Performance
@@ -965,8 +965,8 @@ SELECT
     AVG(ventes) OVER w AS moyenne,
     MAX(ventes) OVER w AS maximum,
     COUNT(*) OVER w AS nb
-FROM ventes
-WINDOW w AS (PARTITION BY EXTRACT(YEAR FROM date) ORDER BY date);
+FROM ventes  
+WINDOW w AS (PARTITION BY EXTRACT(YEAR FROM date) ORDER BY date);  
 ```
 
 ### Limiter les Frames Larges
@@ -1029,8 +1029,8 @@ SELECT
     categorie,
     SUM(ventes) AS total_categorie,  -- Agrégation GROUP BY
     SUM(ventes) OVER () AS total_global  -- Window function
-FROM ventes
-GROUP BY categorie;
+FROM ventes  
+GROUP BY categorie;  
 
 -- ✅ CORRECT : Utiliser une sous-requête ou CTE
 WITH totaux_cat AS (
@@ -1047,14 +1047,14 @@ FROM totaux_cat;
 
 ## Points Clés à Retenir
 
-- ✅ **SUM()** pour cumuls et totaux glissants
-- ✅ **AVG()** pour moyennes mobiles et comparaisons
-- ✅ **COUNT()** pour comptages et fréquences
-- ✅ **MIN()/MAX()** pour records et extremums
-- ✅ **STDDEV()/VARIANCE()** pour volatilité et dispersion
-- ✅ Utilisez **frames personnalisés** pour fenêtres glissantes
-- ✅ Combinez plusieurs agrégations avec la clause **WINDOW**
-- ✅ Protégez contre les **divisions par zéro** avec NULLIF
+- ✅ **SUM()** pour cumuls et totaux glissants  
+- ✅ **AVG()** pour moyennes mobiles et comparaisons  
+- ✅ **COUNT()** pour comptages et fréquences  
+- ✅ **MIN()/MAX()** pour records et extremums  
+- ✅ **STDDEV()/VARIANCE()** pour volatilité et dispersion  
+- ✅ Utilisez **frames personnalisés** pour fenêtres glissantes  
+- ✅ Combinez plusieurs agrégations avec la clause **WINDOW**  
+- ✅ Protégez contre les **divisions par zéro** avec NULLIF  
 - ✅ Les index sur **PARTITION BY et ORDER BY** améliorent les performances
 
 ## Tableau de Choix Rapide

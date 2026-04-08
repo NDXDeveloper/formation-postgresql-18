@@ -45,8 +45,8 @@ En PostgreSQL :
 ### Qu'est-ce que l'Héritage de Tables ?
 
 L'héritage de tables permet à une table enfant de :
-- **Hériter automatiquement** de toutes les colonnes de la table parent
-- **Ajouter ses propres colonnes** spécifiques
+- **Hériter automatiquement** de toutes les colonnes de la table parent  
+- **Ajouter ses propres colonnes** spécifiques  
 - **Être interrogée via la table parent** (requêtes automatiquement étendues aux enfants)
 
 **Note importante :** Cette fonctionnalité est **spécifique à PostgreSQL** et n'existe pas dans les autres bases de données relationnelles majeures (MySQL, Oracle, SQL Server).
@@ -106,20 +106,20 @@ animal_id | nom | age | date_arrivee | type_poil | declaws
 
 ```sql
 -- Insérer un chien
-INSERT INTO chiens (nom, age, race, dresse)
-VALUES ('Rex', 3, 'Berger Allemand', TRUE);
+INSERT INTO chiens (nom, age, race, dresse)  
+VALUES ('Rex', 3, 'Berger Allemand', TRUE);  
 
 -- Insérer un autre chien
-INSERT INTO chiens (nom, age, race, dresse)
-VALUES ('Max', 1, 'Golden Retriever', FALSE);
+INSERT INTO chiens (nom, age, race, dresse)  
+VALUES ('Max', 1, 'Golden Retriever', FALSE);  
 
 -- Insérer un chat
-INSERT INTO chats (nom, age, type_poil, declaws)
-VALUES ('Minou', 2, 'long', FALSE);
+INSERT INTO chats (nom, age, type_poil, declaws)  
+VALUES ('Minou', 2, 'long', FALSE);  
 
 -- Insérer un autre chat
-INSERT INTO chats (nom, age, type_poil, declaws)
-VALUES ('Felix', 4, 'court', TRUE);
+INSERT INTO chats (nom, age, type_poil, declaws)  
+VALUES ('Felix', 4, 'court', TRUE);  
 ```
 
 **Important :** Vous insérez directement dans les tables enfants. Les données **ne sont pas physiquement stockées** dans la table parent.
@@ -130,8 +130,8 @@ Oui, mais ce n'est généralement **pas recommandé** dans ce modèle :
 
 ```sql
 -- Possible mais inhabituel dans ce contexte
-INSERT INTO animaux (nom, age)
-VALUES ('Animal Générique', 5);
+INSERT INTO animaux (nom, age)  
+VALUES ('Animal Générique', 5);  
 ```
 
 Cette ligne sera dans `animaux` mais pas dans `chiens` ou `chats`. Cela crée un "animal" sans type spécifique.
@@ -226,11 +226,11 @@ FROM animaux;
 ```
 table_source | nom    | age
 -------------+--------+-----
-chiens       | Rex    | 3
-chiens       | Max    | 1
-chats        | Minou  | 2
-chats        | Felix  | 4
-animaux      | Animal | 5
+chiens       | Rex    | 3  
+chiens       | Max    | 1  
+chats        | Minou  | 2  
+chats        | Felix  | 4  
+animaux      | Animal | 5  
 ```
 
 Ceci est très utile pour distinguer les types d'entités dans une requête unifiée.
@@ -280,32 +280,32 @@ CREATE TABLE videos (
 **Avantages :**
 ```sql
 -- Lister TOUS les contenus, peu importe le type
-SELECT contenu_id, titre, date_creation, statut
-FROM contenus
-ORDER BY date_creation DESC
-LIMIT 10;
+SELECT contenu_id, titre, date_creation, statut  
+FROM contenus  
+ORDER BY date_creation DESC  
+LIMIT 10;  
 
 -- Rechercher dans tous les contenus
-SELECT tableoid::regclass as type, titre, auteur_id
-FROM contenus
-WHERE titre ILIKE '%PostgreSQL%';
+SELECT tableoid::regclass as type, titre, auteur_id  
+FROM contenus  
+WHERE titre ILIKE '%PostgreSQL%';  
 
 -- Statistiques globales
 SELECT
     tableoid::regclass AS type_contenu,
     COUNT(*) AS nombre,
     COUNT(*) * 100.0 / SUM(COUNT(*)) OVER () AS pourcentage
-FROM contenus
-GROUP BY tableoid::regclass;
+FROM contenus  
+GROUP BY tableoid::regclass;  
 ```
 
 **Résultat typique :**
 ```
 type_contenu | nombre | pourcentage
 -------------+--------+-------------
-articles     | 150    | 75.00
-pages        | 30     | 15.00
-videos       | 20     | 10.00
+articles     | 150    | 75.00  
+pages        | 30     | 15.00  
+videos       | 20     | 10.00  
 ```
 
 ### 2. Séparation Géographique ou Temporelle
@@ -385,9 +385,9 @@ SELECT
     montant,
     date_transaction,
     statut
-FROM transactions
-WHERE utilisateur_id = 1001
-ORDER BY date_transaction DESC;
+FROM transactions  
+WHERE utilisateur_id = 1001  
+ORDER BY date_transaction DESC;  
 ```
 
 ---
@@ -449,8 +449,8 @@ CREATE TABLE employes_temps_partiel (
 
 ```sql
 -- Solution : Ajouter manuellement les contraintes
-ALTER TABLE employes_temps_plein ADD PRIMARY KEY (employe_id);
-ALTER TABLE employes_temps_partiel ADD PRIMARY KEY (employe_id);
+ALTER TABLE employes_temps_plein ADD PRIMARY KEY (employe_id);  
+ALTER TABLE employes_temps_partiel ADD PRIMARY KEY (employe_id);  
 ```
 
 ### Problème : Foreign Keys et Héritage
@@ -552,8 +552,8 @@ SELECT * FROM animaux WHERE nom = 'Rex';
 **Solution :** Créer les index manuellement sur chaque table enfant.
 
 ```sql
-CREATE INDEX idx_chiens_nom ON chiens(nom);
-CREATE INDEX idx_chats_nom ON chats(nom);
+CREATE INDEX idx_chiens_nom ON chiens(nom);  
+CREATE INDEX idx_chats_nom ON chats(nom);  
 ```
 
 ### Automatisation avec une Fonction
@@ -565,8 +565,8 @@ CREATE OR REPLACE FUNCTION create_index_hierarchy(
     index_name TEXT,
     columns TEXT
 )
-RETURNS VOID AS $$
-DECLARE
+RETURNS VOID AS $$  
+DECLARE  
     child_table TEXT;
 BEGIN
     -- Index sur le parent
@@ -668,12 +668,12 @@ CREATE TABLE clients (
     nom VARCHAR(100)
 );
 
-CREATE TABLE clients_particuliers () INHERITS (clients);
-CREATE TABLE clients_entreprises () INHERITS (clients);
+CREATE TABLE clients_particuliers () INHERITS (clients);  
+CREATE TABLE clients_entreprises () INHERITS (clients);  
 
 -- PROBLÈME : On peut insérer le même email dans les deux tables enfants
-INSERT INTO clients_particuliers (email, nom) VALUES ('test@example.com', 'Jean');
-INSERT INTO clients_entreprises (email, nom) VALUES ('test@example.com', 'ACME Corp');
+INSERT INTO clients_particuliers (email, nom) VALUES ('test@example.com', 'Jean');  
+INSERT INTO clients_entreprises (email, nom) VALUES ('test@example.com', 'ACME Corp');  
 -- Ces deux insertions RÉUSSISSENT malgré UNIQUE sur la table parent !
 ```
 
@@ -739,8 +739,8 @@ SELECT COUNT(*) FROM ONLY animaux;  -- Non, seulement le parent
 ANALYZE animaux;
 
 -- Il faut aussi :
-ANALYZE chiens;
-ANALYZE chats;
+ANALYZE chiens;  
+ANALYZE chats;  
 ```
 
 Les statistiques ne sont pas agrégées automatiquement.
@@ -773,10 +773,10 @@ CREATE TABLE mesures_2025 PARTITION OF mesures
 ```
 
 **Avantages du partitionnement vs héritage :**
-- ✅ Contraintes d'intégrité fonctionnent correctement
-- ✅ Index hérités automatiquement
-- ✅ Partition pruning optimisé
-- ✅ Support natif et bien documenté
+- ✅ Contraintes d'intégrité fonctionnent correctement  
+- ✅ Index hérités automatiquement  
+- ✅ Partition pruning optimisé  
+- ✅ Support natif et bien documenté  
 - ✅ Meilleure intégration avec les outils
 
 **Voir :** Chapitre 11.4 pour les détails complets sur le partitionnement.
@@ -799,18 +799,18 @@ CREATE TABLE animaux (
 );
 
 -- Index partiel pour chaque type
-CREATE INDEX idx_animaux_chiens ON animaux(nom, race) WHERE type_animal = 'chien';
-CREATE INDEX idx_animaux_chats ON animaux(nom, type_poil) WHERE type_animal = 'chat';
+CREATE INDEX idx_animaux_chiens ON animaux(nom, race) WHERE type_animal = 'chien';  
+CREATE INDEX idx_animaux_chats ON animaux(nom, type_poil) WHERE type_animal = 'chat';  
 ```
 
 **Avantages :**
-- ✅ Une seule table = simplicité
-- ✅ Toutes les contraintes fonctionnent
-- ✅ Requêtes simples
+- ✅ Une seule table = simplicité  
+- ✅ Toutes les contraintes fonctionnent  
+- ✅ Requêtes simples  
 - ✅ Support ORM natif
 
 **Inconvénients :**
-- ❌ Beaucoup de colonnes potentiellement NULL
+- ❌ Beaucoup de colonnes potentiellement NULL  
 - ❌ Moins "propre" conceptuellement
 
 ### 3. Approche "Class Table Inheritance"
@@ -841,13 +841,13 @@ CREATE TABLE chats (
 ```
 
 **Avantages :**
-- ✅ Structure propre et normalisée
-- ✅ Intégrité référentielle complète
-- ✅ Pas de colonnes inutiles
+- ✅ Structure propre et normalisée  
+- ✅ Intégrité référentielle complète  
+- ✅ Pas de colonnes inutiles  
 - ✅ Bien supporté par les ORMs
 
 **Inconvénients :**
-- ❌ Nécessite des JOINs pour récupérer toutes les infos
+- ❌ Nécessite des JOINs pour récupérer toutes les infos  
 - ❌ Plus complexe à interroger
 
 ### 4. Utilisation de JSONB pour Polymorphisme
@@ -884,12 +884,12 @@ INSERT INTO animaux (type_animal, nom, age, attributs_specifiques) VALUES (
 ```
 
 **Avantages :**
-- ✅ Très flexible
-- ✅ Facile d'ajouter de nouveaux attributs
+- ✅ Très flexible  
+- ✅ Facile d'ajouter de nouveaux attributs  
 - ✅ Une seule table
 
 **Inconvénients :**
-- ❌ Moins de validation au niveau base de données
+- ❌ Moins de validation au niveau base de données  
 - ❌ Requêtes JSONB moins performantes que colonnes
 
 **Voir :** Chapitre 11.2 pour les détails sur JSONB.
@@ -914,10 +914,10 @@ Pour des preuves de concept où l'intégrité référentielle n'est pas critique
 
 ```sql
 -- Prototype : hiérarchie de documents
-CREATE TABLE documents (doc_id SERIAL, titre TEXT);
-CREATE TABLE articles () INHERITS (documents);
-CREATE TABLE pages () INHERITS (documents);
-CREATE TABLE fichiers () INHERITS (documents);
+CREATE TABLE documents (doc_id SERIAL, titre TEXT);  
+CREATE TABLE articles () INHERITS (documents);  
+CREATE TABLE pages () INHERITS (documents);  
+CREATE TABLE fichiers () INHERITS (documents);  
 ```
 
 #### 3. Logging et Données Non-Critiques
@@ -949,9 +949,9 @@ CREATE TABLE logs_2024_q2 (
 
 ```sql
 -- ❌ ÉVITER : Clients/Commandes avec héritage
-CREATE TABLE clients (...) ;
-CREATE TABLE clients_premium () INHERITS (clients);
-CREATE TABLE commandes (client_id REFERENCES clients...);  -- PROBLÈME FK
+CREATE TABLE clients (...) ;  
+CREATE TABLE clients_premium () INHERITS (clients);  
+CREATE TABLE commandes (client_id REFERENCES clients...);  -- PROBLÈME FK  
 ```
 
 **Alternative :** Class Table Inheritance ou Single Table.
@@ -1020,11 +1020,11 @@ CREATE TABLE chiens_new (
 );
 
 -- Migrer les données
-INSERT INTO animaux_new (animal_id, nom, age)
-SELECT animal_id, nom, age FROM chiens;
+INSERT INTO animaux_new (animal_id, nom, age)  
+SELECT animal_id, nom, age FROM chiens;  
 
-INSERT INTO chiens_new (chien_id, race)
-SELECT animal_id, race FROM chiens;
+INSERT INTO chiens_new (chien_id, race)  
+SELECT animal_id, race FROM chiens;  
 
 -- Basculer
 ```
@@ -1040,18 +1040,18 @@ SELECT animal_id, race FROM chiens;
 SELECT
     c.relname AS child_table,
     p.relname AS parent_table
-FROM pg_inherits i
-JOIN pg_class c ON i.inhrelid = c.oid
-JOIN pg_class p ON i.inhparent = p.oid
-WHERE p.relname = 'animaux';
+FROM pg_inherits i  
+JOIN pg_class c ON i.inhrelid = c.oid  
+JOIN pg_class p ON i.inhparent = p.oid  
+WHERE p.relname = 'animaux';  
 ```
 
 **Résultat :**
 ```
 child_table | parent_table
 ------------+--------------
-chiens      | animaux
-chats       | animaux
+chiens      | animaux  
+chats       | animaux  
 ```
 
 ### Hiérarchie Complète
@@ -1087,17 +1087,17 @@ SELECT
     REPEAT('  ', niveau) || relname AS hierarchie,
     niveau,
     chemin
-FROM hierarchy
-ORDER BY chemin;
+FROM hierarchy  
+ORDER BY chemin;  
 ```
 
 ### Compter les Lignes par Table
 
 ```sql
 -- Fonction pour compter les lignes dans toute une hiérarchie
-CREATE OR REPLACE FUNCTION count_hierarchy(parent_table TEXT)
-RETURNS TABLE(table_name TEXT, row_count BIGINT) AS $$
-DECLARE
+CREATE OR REPLACE FUNCTION count_hierarchy(parent_table TEXT)  
+RETURNS TABLE(table_name TEXT, row_count BIGINT) AS $$  
+DECLARE  
     child_table TEXT;
 BEGIN
     -- Compter dans la table parent (ONLY)
@@ -1130,9 +1130,9 @@ SELECT * FROM count_hierarchy('animaux');
 ```
 table_name | row_count
 -----------+-----------
-animaux    | 1
-chiens     | 2
-chats      | 2
+animaux    | 1  
+chiens     | 2  
+chats      | 2  
 ```
 
 ---
@@ -1147,8 +1147,8 @@ Si vous devez absolument utiliser l'héritage, suivez ces pratiques :
 -- Documenter la hiérarchie et ses limitations
 COMMENT ON TABLE animaux IS
 'Table parent de la hiérarchie animaux.
-ATTENTION : Les contraintes PK/FK ne traversent pas la hiérarchie.
-Utiliser tableoid::regclass pour identifier le type.';
+ATTENTION : Les contraintes PK/FK ne traversent pas la hiérarchie.  
+Utiliser tableoid::regclass pour identifier le type.';  
 
 COMMENT ON TABLE chiens IS
 'Hérite de animaux. Stocke les chiens spécifiquement.';
@@ -1158,8 +1158,8 @@ COMMENT ON TABLE chiens IS
 
 ```sql
 -- Ne pas oublier les PK sur les enfants
-ALTER TABLE chiens ADD PRIMARY KEY (animal_id);
-ALTER TABLE chats ADD PRIMARY KEY (animal_id);
+ALTER TABLE chiens ADD PRIMARY KEY (animal_id);  
+ALTER TABLE chats ADD PRIMARY KEY (animal_id);  
 
 -- Contraintes CHECK pour éviter les conflits
 ALTER TABLE chiens ADD CONSTRAINT chk_type CHECK (TRUE);
@@ -1169,9 +1169,9 @@ ALTER TABLE chiens ADD CONSTRAINT chk_type CHECK (TRUE);
 
 ```sql
 -- Script pour créer les index partout
-CREATE INDEX idx_animaux_nom ON animaux(nom);
-CREATE INDEX idx_chiens_nom ON chiens(nom);
-CREATE INDEX idx_chats_nom ON chats(nom);
+CREATE INDEX idx_animaux_nom ON animaux(nom);  
+CREATE INDEX idx_chiens_nom ON chiens(nom);  
+CREATE INDEX idx_chats_nom ON chats(nom);  
 ```
 
 ### 4. Utiliser tableoid Systématiquement
@@ -1183,16 +1183,16 @@ SELECT
     animal_id,
     nom,
     age
-FROM animaux
-ORDER BY tableoid, nom;
+FROM animaux  
+ORDER BY tableoid, nom;  
 ```
 
 ### 5. ANALYZE Régulièrement
 
 ```sql
 -- Script de maintenance
-DO $$
-DECLARE
+DO $$  
+DECLARE  
     tbl TEXT;
 BEGIN
     FOR tbl IN
@@ -1243,19 +1243,19 @@ ROLLBACK;  -- ou COMMIT si OK
 
 ### Points Clés à Retenir
 
-1. **L'héritage de tables est une fonctionnalité unique de PostgreSQL**, mais elle a des **limitations importantes**
-2. **Les contraintes PK, FK et UNIQUE ne traversent pas la hiérarchie** - c'est la limitation majeure
-3. **Le partitionnement déclaratif** est l'alternative moderne recommandée pour la plupart des cas
-4. **Les ORMs ne supportent pas bien l'héritage** - problème pour les applications modernes
+1. **L'héritage de tables est une fonctionnalité unique de PostgreSQL**, mais elle a des **limitations importantes**  
+2. **Les contraintes PK, FK et UNIQUE ne traversent pas la hiérarchie** - c'est la limitation majeure  
+3. **Le partitionnement déclaratif** est l'alternative moderne recommandée pour la plupart des cas  
+4. **Les ORMs ne supportent pas bien l'héritage** - problème pour les applications modernes  
 5. **L'héritage peut être utile dans des cas très spécifiques**, mais rarement en production
 
 ### Recommandations Générales
 
 **Pour les nouveaux projets :**
-- ❌ **Évitez l'héritage de tables** sauf cas très spécifique
-- ✅ Utilisez le **partitionnement déclaratif** pour partitionner
-- ✅ Utilisez **Class Table Inheritance** avec FK pour hiérarchies métier
-- ✅ Utilisez **Single Table** avec colonne discriminante pour types simples
+- ❌ **Évitez l'héritage de tables** sauf cas très spécifique  
+- ✅ Utilisez le **partitionnement déclaratif** pour partitionner  
+- ✅ Utilisez **Class Table Inheritance** avec FK pour hiérarchies métier  
+- ✅ Utilisez **Single Table** avec colonne discriminante pour types simples  
 - ✅ Utilisez **JSONB** pour données vraiment variables
 
 **Pour les projets existants :**
@@ -1278,8 +1278,8 @@ Cette phrase résume bien la position actuelle de la communauté PostgreSQL sur 
 
 ### Documentation Officielle
 
-- [PostgreSQL Table Inheritance](https://www.postgresql.org/docs/current/ddl-inherit.html)
-- [Declarative Partitioning](https://www.postgresql.org/docs/current/ddl-partitioning.html)
+- [PostgreSQL Table Inheritance](https://www.postgresql.org/docs/current/ddl-inherit.html)  
+- [Declarative Partitioning](https://www.postgresql.org/docs/current/ddl-partitioning.html)  
 - [Table Partitioning](https://www.postgresql.org/docs/current/ddl-partitioning.html)
 
 ### Articles et Discussions
@@ -1290,7 +1290,7 @@ Cette phrase résume bien la position actuelle de la communauté PostgreSQL sur 
 
 ### Prochains Chapitres
 
-- **11.4. Partitionnement de tables** : L'alternative moderne et recommandée
+- **11.4. Partitionnement de tables** : L'alternative moderne et recommandée  
 - **11.2. Modélisation JSONB** : Pour la flexibilité de schéma
 
 ---

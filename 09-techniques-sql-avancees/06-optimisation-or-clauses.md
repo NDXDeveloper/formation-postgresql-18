@@ -17,9 +17,9 @@ PostgreSQL 18 (septembre 2025) introduit une **optimisation intelligente** qui a
 Imaginez que vous devez rechercher des employés de plusieurs départements spécifiques :
 
 ```sql
-SELECT *
-FROM employes
-WHERE departement = 'IT'
+SELECT *  
+FROM employes  
+WHERE departement = 'IT'  
    OR departement = 'Sales'
    OR departement = 'Marketing'
    OR departement = 'Support'
@@ -67,14 +67,14 @@ Historiquement, les développeurs expérimentés réécrivaient leurs requêtes 
 
 ```sql
 -- ✅ VERSION OPTIMISÉE (manuelle)
-SELECT *
-FROM employes
-WHERE departement = ANY(ARRAY['IT', 'Sales', 'Marketing', 'Support', 'Finance']);
+SELECT *  
+FROM employes  
+WHERE departement = ANY(ARRAY['IT', 'Sales', 'Marketing', 'Support', 'Finance']);  
 
 -- Ou avec IN (équivalent)
-SELECT *
-FROM employes
-WHERE departement IN ('IT', 'Sales', 'Marketing', 'Support', 'Finance');
+SELECT *  
+FROM employes  
+WHERE departement IN ('IT', 'Sales', 'Marketing', 'Support', 'Finance');  
 ```
 
 ### Pourquoi ANY/IN est plus rapide ?
@@ -116,9 +116,9 @@ colonne = ANY(ARRAY[valeur1, valeur2, valeur3, ...])
 
 L'optimiseur de PostgreSQL 18 applique cette transformation si :
 
-1. ✅ Plusieurs conditions `OR` sur la **même colonne**
-2. ✅ Toutes les conditions utilisent l'opérateur d'égalité `=`
-3. ✅ Les valeurs sont des constantes (pas d'expressions complexes)
+1. ✅ Plusieurs conditions `OR` sur la **même colonne**  
+2. ✅ Toutes les conditions utilisent l'opérateur d'égalité `=`  
+3. ✅ Les valeurs sont des constantes (pas d'expressions complexes)  
 4. ✅ Pas de `NULL` dans les valeurs (comportement différent avec OR vs ANY)
 
 ---
@@ -130,9 +130,9 @@ L'optimiseur de PostgreSQL 18 applique cette transformation si :
 **Votre requête (code inchangé) :**
 
 ```sql
-SELECT nom, ville, statut
-FROM clients
-WHERE ville = 'Paris'
+SELECT nom, ville, statut  
+FROM clients  
+WHERE ville = 'Paris'  
    OR ville = 'Lyon'
    OR ville = 'Marseille'
    OR ville = 'Toulouse'
@@ -143,9 +143,9 @@ WHERE ville = 'Paris'
 
 ```sql
 -- Transformation interne (invisible pour vous)
-SELECT nom, ville, statut
-FROM clients
-WHERE ville = ANY(ARRAY['Paris', 'Lyon', 'Marseille', 'Toulouse', 'Nice']);
+SELECT nom, ville, statut  
+FROM clients  
+WHERE ville = ANY(ARRAY['Paris', 'Lyon', 'Marseille', 'Toulouse', 'Nice']);  
 ```
 
 **Bénéfice :** Utilisation optimale de l'index sur `ville` !
@@ -155,9 +155,9 @@ WHERE ville = ANY(ARRAY['Paris', 'Lyon', 'Marseille', 'Toulouse', 'Nice']);
 **Votre requête :**
 
 ```sql
-SELECT *
-FROM commandes
-WHERE client_id = 101
+SELECT *  
+FROM commandes  
+WHERE client_id = 101  
    OR client_id = 205
    OR client_id = 312
    OR client_id = 458
@@ -167,9 +167,9 @@ WHERE client_id = 101
 **Transformation automatique (PG 18) :**
 
 ```sql
-SELECT *
-FROM commandes
-WHERE client_id = ANY(ARRAY[101, 205, 312, 458, 789]);
+SELECT *  
+FROM commandes  
+WHERE client_id = ANY(ARRAY[101, 205, 312, 458, 789]);  
 ```
 
 **Bénéfice :** Index Scan efficace sur `client_id` !
@@ -179,9 +179,9 @@ WHERE client_id = ANY(ARRAY[101, 205, 312, 458, 789]);
 **Votre requête :**
 
 ```sql
-SELECT *
-FROM tickets_support
-WHERE statut = 'ouvert'
+SELECT *  
+FROM tickets_support  
+WHERE statut = 'ouvert'  
    OR statut = 'en_cours'
    OR statut = 'en_attente';
 ```
@@ -189,9 +189,9 @@ WHERE statut = 'ouvert'
 **Transformation automatique :**
 
 ```sql
-SELECT *
-FROM tickets_support
-WHERE statut = ANY(ARRAY['ouvert', 'en_cours', 'en_attente']);
+SELECT *  
+FROM tickets_support  
+WHERE statut = ANY(ARRAY['ouvert', 'en_cours', 'en_attente']);  
 ```
 
 ---
@@ -203,10 +203,10 @@ WHERE statut = ANY(ARRAY['ouvert', 'en_cours', 'en_attente']);
 Utilisez `EXPLAIN` pour voir le plan d'exécution :
 
 ```sql
-EXPLAIN (ANALYZE, BUFFERS)
-SELECT *
-FROM employes
-WHERE departement = 'IT'
+EXPLAIN (ANALYZE, BUFFERS)  
+SELECT *  
+FROM employes  
+WHERE departement = 'IT'  
    OR departement = 'Sales'
    OR departement = 'Marketing';
 ```
@@ -226,8 +226,8 @@ Bitmap Heap Scan on employes
         ->  Bitmap Index Scan on idx_dept
               Index Cond: (departement = 'Marketing')
 
-Planning Time: 0.5 ms
-Execution Time: 8.2 ms
+Planning Time: 0.5 ms  
+Execution Time: 8.2 ms  
 ```
 
 **Observation :** 3 scans d'index distincts (BitmapOr).
@@ -240,8 +240,8 @@ Execution Time: 8.2 ms
 Index Scan using idx_dept on employes
   Index Cond: (departement = ANY ('{IT,Sales,Marketing}'::text[]))
 
-Planning Time: 0.3 ms
-Execution Time: 2.1 ms  ← 4× plus rapide !
+Planning Time: 0.3 ms  
+Execution Time: 2.1 ms  ← 4× plus rapide !  
 ```
 
 **Observation :** Un seul Index Scan avec condition `ANY` !
@@ -277,8 +277,8 @@ Les gains varient selon :
 
 **Avant PG 18 :**
 ```sql
-SELECT * FROM produits
-WHERE categorie = 'Électronique'
+SELECT * FROM produits  
+WHERE categorie = 'Électronique'  
    OR categorie = 'Informatique'
    OR categorie = 'Téléphonie'
    OR categorie = 'Audio'
@@ -304,8 +304,8 @@ WHERE categorie = 'Électronique'
 
 ```sql
 -- ❌ Pas d'optimisation (colonnes différentes)
-SELECT * FROM employes
-WHERE departement = 'IT'
+SELECT * FROM employes  
+WHERE departement = 'IT'  
    OR ville = 'Paris';
 ```
 
@@ -315,8 +315,8 @@ WHERE departement = 'IT'
 
 ```sql
 -- ❌ Pas d'optimisation (utilise <, >, LIKE)
-SELECT * FROM produits
-WHERE prix < 100
+SELECT * FROM produits  
+WHERE prix < 100  
    OR prix > 1000
    OR nom LIKE 'iPhone%';
 ```
@@ -327,8 +327,8 @@ WHERE prix < 100
 
 ```sql
 -- ❌ Pas d'optimisation (expressions calculées)
-SELECT * FROM employes
-WHERE UPPER(nom) = 'ALICE'
+SELECT * FROM employes  
+WHERE UPPER(nom) = 'ALICE'  
    OR UPPER(nom) = 'BOB';
 ```
 
@@ -338,8 +338,8 @@ WHERE UPPER(nom) = 'ALICE'
 
 ```sql
 -- ❌ Pas d'optimisation (logique complexe)
-SELECT * FROM employes
-WHERE (departement = 'IT' AND salaire > 50000)
+SELECT * FROM employes  
+WHERE (departement = 'IT' AND salaire > 50000)  
    OR (departement = 'Sales' AND salaire > 60000);
 ```
 
@@ -349,8 +349,8 @@ WHERE (departement = 'IT' AND salaire > 50000)
 
 ```sql
 -- ❌ Comportement différent avec NULL
-SELECT * FROM employes
-WHERE departement = 'IT'
+SELECT * FROM employes  
+WHERE departement = 'IT'  
    OR departement = NULL;  -- NULL n'est jamais égal à NULL !
 ```
 
@@ -373,8 +373,8 @@ Vos requêtes existantes :
 
 **Si vous passez de PostgreSQL 15/16/17 à 18 :**
 
-1. ✅ Aucun changement de code requis
-2. ✅ Gains de performance immédiats
+1. ✅ Aucun changement de code requis  
+2. ✅ Gains de performance immédiats  
 3. ✅ Pas de régression (comportement identique)
 
 **Recommandation :**
@@ -394,11 +394,14 @@ SET enable_or_transformation = off;
 -- Réactiver
 SET enable_or_transformation = on;
 
--- Désactiver pour une requête spécifique
-SELECT /*+ Set(enable_or_transformation off) */ *
-FROM table
-WHERE col = 'a' OR col = 'b' OR col = 'c';
+-- Désactiver pour une transaction spécifique
+BEGIN;  
+SET LOCAL enable_or_transformation = off;  
+SELECT * FROM table WHERE col = 'a' OR col = 'b' OR col = 'c';  
+COMMIT;  
 ```
+
+> 💡 PostgreSQL ne supporte pas les hints SQL natifs (contrairement à Oracle). Pour modifier le comportement de l'optimiseur, utilisez `SET` ou `SET LOCAL` (dans une transaction).
 
 **Note :** En pratique, vous n'aurez presque jamais besoin de désactiver cette optimisation.
 
@@ -415,8 +418,8 @@ L'optimisation `OR` → `ANY` fonctionne mieux avec un index :
 CREATE INDEX idx_clients_ville ON clients(ville);
 
 -- La requête bénéficie de l'index + optimisation OR→ANY
-SELECT * FROM clients
-WHERE ville = 'Paris' OR ville = 'Lyon' OR ville = 'Marseille';
+SELECT * FROM clients  
+WHERE ville = 'Paris' OR ville = 'Lyon' OR ville = 'Marseille';  
 ```
 
 ### 2. Index partiels
@@ -425,12 +428,12 @@ Pour des valeurs fréquemment recherchées :
 
 ```sql
 -- Index partiel sur les villes principales
-CREATE INDEX idx_clients_villes_principales ON clients(ville)
-WHERE ville IN ('Paris', 'Lyon', 'Marseille', 'Toulouse', 'Nice');
+CREATE INDEX idx_clients_villes_principales ON clients(ville)  
+WHERE ville IN ('Paris', 'Lyon', 'Marseille', 'Toulouse', 'Nice');  
 
 -- Requête ultra-rapide
-SELECT * FROM clients
-WHERE ville = 'Paris' OR ville = 'Lyon' OR ville = 'Nice';
+SELECT * FROM clients  
+WHERE ville = 'Paris' OR ville = 'Lyon' OR ville = 'Nice';  
 ```
 
 ### 3. Statistiques à jour
@@ -442,8 +445,8 @@ PostgreSQL se base sur les statistiques pour choisir le meilleur plan :
 ANALYZE clients;
 
 -- Ou augmenter la précision des statistiques
-ALTER TABLE clients ALTER COLUMN ville SET STATISTICS 1000;
-ANALYZE clients;
+ALTER TABLE clients ALTER COLUMN ville SET STATISTICS 1000;  
+ANALYZE clients;  
 ```
 
 ---
@@ -491,8 +494,8 @@ WHERE id = ANY(SELECT user_id FROM temp_list)
 
 ```sql
 -- Ancienne requête (avant optimisation manuelle)
-SELECT * FROM documents
-WHERE acces_role = 'admin'
+SELECT * FROM documents  
+WHERE acces_role = 'admin'  
    OR acces_role = 'manager'
    OR acces_role = 'editor'
    OR acces_role = 'contributor'
@@ -508,8 +511,8 @@ WHERE acces_role = 'admin'
 
 ```sql
 -- Recherche d'articles avec certains tags
-SELECT * FROM articles
-WHERE tag_principal = 'promotion'
+SELECT * FROM articles  
+WHERE tag_principal = 'promotion'  
    OR tag_principal = 'nouveauté'
    OR tag_principal = 'top_ventes'
    OR tag_principal = 'recommandé'
@@ -525,8 +528,8 @@ WHERE tag_principal = 'promotion'
 
 ```sql
 -- Filtrer les événements critiques
-SELECT * FROM logs
-WHERE event_type = 'error'
+SELECT * FROM logs  
+WHERE event_type = 'error'  
    OR event_type = 'critical'
    OR event_type = 'alert'
    OR event_type = 'warning'
@@ -548,9 +551,9 @@ WHERE event_type = 'error'
 #### 1. Utiliser EXPLAIN
 
 ```sql
-EXPLAIN (ANALYZE, BUFFERS, VERBOSE)
-SELECT * FROM table
-WHERE col = 'a' OR col = 'b' OR col = 'c';
+EXPLAIN (ANALYZE, BUFFERS, VERBOSE)  
+SELECT * FROM table  
+WHERE col = 'a' OR col = 'b' OR col = 'c';  
 ```
 
 **Cherchez dans le plan :**
@@ -579,10 +582,10 @@ SELECT
     calls,
     mean_exec_time,
     total_exec_time
-FROM pg_stat_statements
-WHERE query LIKE '%OR%'
-ORDER BY mean_exec_time DESC
-LIMIT 10;
+FROM pg_stat_statements  
+WHERE query LIKE '%OR%'  
+ORDER BY mean_exec_time DESC  
+LIMIT 10;  
 ```
 
 ---
@@ -599,8 +602,8 @@ PostgreSQL 18 introduit aussi le **Skip Scan** sur les index multi-colonnes.
 CREATE INDEX idx_multi ON table(colonne1, colonne2);
 
 -- Requête optimisée doublement
-SELECT * FROM table
-WHERE colonne2 = 'a' OR colonne2 = 'b' OR colonne2 = 'c';
+SELECT * FROM table  
+WHERE colonne2 = 'a' OR colonne2 = 'b' OR colonne2 = 'c';  
 
 -- Bénéficie de : OR→ANY + Skip Scan !
 ```
@@ -611,9 +614,9 @@ Les requêtes avec `ANY` peuvent être parallélisées plus efficacement :
 
 ```sql
 -- Exécution parallèle possible
-SELECT * FROM huge_table
-WHERE status = ANY(ARRAY['pending', 'processing', 'queued'])
-AND created_at > '2024-01-01';
+SELECT * FROM huge_table  
+WHERE status = ANY(ARRAY['pending', 'processing', 'queued'])  
+AND created_at > '2024-01-01';  
 ```
 
 ### 3. JIT Compilation
@@ -622,9 +625,9 @@ L'optimisation `OR` → `ANY` produit des plans plus simples, mieux adaptés à 
 
 ```sql
 -- JIT peut compiler plus efficacement
-SET jit = on;
-SELECT * FROM table
-WHERE category = 'A' OR category = 'B' OR ... OR category = 'Z';
+SET jit = on;  
+SELECT * FROM table  
+WHERE category = 'A' OR category = 'B' OR ... OR category = 'Z';  
 ```
 
 ---
@@ -728,9 +731,9 @@ WHERE col IN ('a', 'b', 'c') OR col IS NULL
 
 ### Conditions pour l'optimisation
 
-- ✅ Même colonne
-- ✅ Opérateur `=` (égalité)
-- ✅ Valeurs constantes
+- ✅ Même colonne  
+- ✅ Opérateur `=` (égalité)  
+- ✅ Valeurs constantes  
 - ✅ Pas de NULL
 
 ### Impact typique
@@ -743,19 +746,19 @@ WHERE col IN ('a', 'b', 'c') OR col IS NULL
 
 ### Checklist
 
-- [ ] Mes requêtes avec OR multiples ont-elles un index sur la colonne ?
-- [ ] Ai-je testé avec EXPLAIN après migration vers PG 18 ?
-- [ ] Les statistiques de mes tables sont-elles à jour (ANALYZE) ?
-- [ ] Ai-je identifié les requêtes lentes avec OR multiples ?
+- [ ] Mes requêtes avec OR multiples ont-elles un index sur la colonne ?  
+- [ ] Ai-je testé avec EXPLAIN après migration vers PG 18 ?  
+- [ ] Les statistiques de mes tables sont-elles à jour (ANALYZE) ?  
+- [ ] Ai-je identifié les requêtes lentes avec OR multiples ?  
 - [ ] Ai-je mesuré le gain de performance ?
 
 ---
 
 ## Pour aller plus loin
 
-- **Indexation** (Chapitre 13) : Optimiser les index pour OR/ANY
-- **Skip Scan** (Chapitre 13.3) : Autre optimisation PG 18
-- **EXPLAIN** (Chapitre 13.7) : Analyser les plans d'exécution
+- **Indexation** (Chapitre 13) : Optimiser les index pour OR/ANY  
+- **Skip Scan** (Chapitre 13.3) : Autre optimisation PG 18  
+- **EXPLAIN** (Chapitre 13.7) : Analyser les plans d'exécution  
 - **Opérateurs d'ensemble** (Chapitre 9.4) : Alternatives à OR
 
 ---

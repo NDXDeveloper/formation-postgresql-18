@@ -148,12 +148,12 @@ CREATE TABLE nom_table (
 );
 
 -- Lors de l'ajout d'une contrainte
-ALTER TABLE nom_table
-ADD CONSTRAINT nom_contrainte CHECK (condition) DEFERRABLE INITIALLY DEFERRED;
+ALTER TABLE nom_table  
+ADD CONSTRAINT nom_contrainte CHECK (condition) DEFERRABLE INITIALLY DEFERRED;  
 ```
 
 **Deux mots-clés importants :**
-1. **DEFERRABLE** : La contrainte *peut* être différée (contrôlable)
+1. **DEFERRABLE** : La contrainte *peut* être différée (contrôlable)  
 2. **INITIALLY DEFERRED** : La contrainte *est* différée par défaut
 
 ---
@@ -319,8 +319,8 @@ CREATE TABLE employes (
 );
 
 -- Ajouter la contrainte FK après coup (sinon erreur circulaire)
-ALTER TABLE departements
-ADD CONSTRAINT fk_chef FOREIGN KEY (chef_id)
+ALTER TABLE departements  
+ADD CONSTRAINT fk_chef FOREIGN KEY (chef_id)  
     REFERENCES employes(employe_id)
     DEFERRABLE INITIALLY DEFERRED;
 
@@ -512,19 +512,19 @@ CREATE TABLE exemple4 (
 
 ```sql
 -- Ajouter FK différable
-ALTER TABLE produits
-ADD CONSTRAINT fk_categorie FOREIGN KEY (categorie_id)
+ALTER TABLE produits  
+ADD CONSTRAINT fk_categorie FOREIGN KEY (categorie_id)  
     REFERENCES categories(categorie_id)
     DEFERRABLE INITIALLY DEFERRED;
 
 -- Ajouter contrainte CHECK différable
-ALTER TABLE comptes
-ADD CONSTRAINT check_solde_positif CHECK (solde >= 0)
+ALTER TABLE comptes  
+ADD CONSTRAINT check_solde_positif CHECK (solde >= 0)  
     DEFERRABLE INITIALLY IMMEDIATE;
 
 -- Ajouter contrainte UNIQUE différable
-ALTER TABLE codes
-ADD CONSTRAINT unique_code UNIQUE (code)
+ALTER TABLE codes  
+ADD CONSTRAINT unique_code UNIQUE (code)  
     DEFERRABLE INITIALLY DEFERRED;
 ```
 
@@ -536,8 +536,8 @@ ADD CONSTRAINT unique_code UNIQUE (code)
 -- ✅ Solution : Supprimer et recréer
 ALTER TABLE produits DROP CONSTRAINT fk_categorie;
 
-ALTER TABLE produits
-ADD CONSTRAINT fk_categorie FOREIGN KEY (categorie_id)
+ALTER TABLE produits  
+ADD CONSTRAINT fk_categorie FOREIGN KEY (categorie_id)  
     REFERENCES categories(categorie_id)
     DEFERRABLE INITIALLY DEFERRED;
 ```
@@ -576,8 +576,8 @@ COMMIT;  -- ❌ ERREUR : violation de contrainte FK détectée ici
 
 **Message d'erreur typique :**
 ```
-ERROR: insert or update on table "employes" violates foreign key constraint "fk_manager"
-DETAIL: Key (manager_id)=(999) is not present in table "employes".
+ERROR: insert or update on table "employes" violates foreign key constraint "fk_manager"  
+DETAIL: Key (manager_id)=(999) is not present in table "employes".  
 ```
 
 ### ROLLBACK et Contraintes Différées
@@ -633,13 +633,13 @@ SQL Server a une approche différente avec `SET CHECK_CONSTRAINTS ON/OFF`, qui d
 ### Impact sur les Performances
 
 **Contraintes immédiates (NOT DEFERRABLE) :**
-- ✅ Vérification rapide après chaque instruction
-- ✅ Erreurs détectées immédiatement
+- ✅ Vérification rapide après chaque instruction  
+- ✅ Erreurs détectées immédiatement  
 - ❌ Peut ralentir les opérations massives
 
 **Contraintes différées (DEFERRABLE INITIALLY DEFERRED) :**
-- ✅ Pas de vérification pendant la transaction (plus rapide pour opérations massives)
-- ❌ Vérification groupée à la fin (peut être coûteuse si beaucoup de violations)
+- ✅ Pas de vérification pendant la transaction (plus rapide pour opérations massives)  
+- ❌ Vérification groupée à la fin (peut être coûteuse si beaucoup de violations)  
 - ❌ Erreurs découvertes tardivement
 
 ### Benchmark Typique
@@ -667,17 +667,17 @@ COMMIT;
 
 #### ✅ Utiliser DEFERRABLE Si...
 
-1. **Dépendances circulaires** entre tables ou lignes
-2. **Import de données** massif avec dépendances complexes
-3. **Réorganisation** de données existantes
-4. **Migrations** de schéma complexes
+1. **Dépendances circulaires** entre tables ou lignes  
+2. **Import de données** massif avec dépendances complexes  
+3. **Réorganisation** de données existantes  
+4. **Migrations** de schéma complexes  
 5. **Échange de valeurs** (swap) entre lignes
 
 #### ❌ Éviter DEFERRABLE Si...
 
-1. **Intégrité critique** en temps réel (ex: soldes bancaires)
-2. **Contraintes simples** sans dépendances circulaires
-3. **Performance** : vérification immédiate suffisamment rapide
+1. **Intégrité critique** en temps réel (ex: soldes bancaires)  
+2. **Contraintes simples** sans dépendances circulaires  
+3. **Performance** : vérification immédiate suffisamment rapide  
 4. **Simplicité** : pas de besoin de flexibilité
 
 ---
@@ -704,14 +704,14 @@ CREATE TABLE clients (
 
 ```sql
 -- ✅ Recommandé : immédiat par défaut, différable si besoin
-ALTER TABLE produits
-ADD CONSTRAINT fk_categorie FOREIGN KEY (categorie_id)
+ALTER TABLE produits  
+ADD CONSTRAINT fk_categorie FOREIGN KEY (categorie_id)  
     REFERENCES categories(categorie_id)
     DEFERRABLE INITIALLY IMMEDIATE;
 
 -- ⚠️ Moins sûr : différé par défaut (risque d'oublier les vérifications)
-ALTER TABLE produits
-ADD CONSTRAINT fk_categorie FOREIGN KEY (categorie_id)
+ALTER TABLE produits  
+ADD CONSTRAINT fk_categorie FOREIGN KEY (categorie_id)  
     REFERENCES categories(categorie_id)
     DEFERRABLE INITIALLY DEFERRED;
 ```
@@ -732,16 +732,16 @@ CREATE TABLE employes (
 
 COMMENT ON CONSTRAINT fk_manager ON employes IS
 'Contrainte FK vers employes (auto-référence).
-DEFERRABLE car permet l''échange de managers entre employés.
-Utiliser SET CONSTRAINTS fk_manager DEFERRED si nécessaire.';
+DEFERRABLE car permet l''échange de managers entre employés.  
+Utiliser SET CONSTRAINTS fk_manager DEFERRED si nécessaire.';  
 ```
 
 ### 4. Tester les Transactions Complexes
 
 ```sql
 -- Script de test
-DO $$
-BEGIN
+DO $$  
+BEGIN  
     -- Test de la logique avec contraintes différées
     SET CONSTRAINTS ALL DEFERRED;
 
@@ -787,13 +787,13 @@ except Exception as e:
 
 ```sql
 -- ❌ Mauvais : nom généré automatiquement
-ALTER TABLE produits
-ADD FOREIGN KEY (categorie_id) REFERENCES categories(categorie_id)
-DEFERRABLE;
+ALTER TABLE produits  
+ADD FOREIGN KEY (categorie_id) REFERENCES categories(categorie_id)  
+DEFERRABLE;  
 
 -- ✅ Bon : nom explicite
-ALTER TABLE produits
-ADD CONSTRAINT fk_produits_categories FOREIGN KEY (categorie_id)
+ALTER TABLE produits  
+ADD CONSTRAINT fk_produits_categories FOREIGN KEY (categorie_id)  
     REFERENCES categories(categorie_id)
     DEFERRABLE INITIALLY IMMEDIATE;
 
@@ -915,8 +915,8 @@ ROLLBACK;
 ```sql
 ALTER TABLE produits DROP CONSTRAINT fk_produit_categorie;
 
-ALTER TABLE produits
-ADD CONSTRAINT fk_produit_categorie FOREIGN KEY (categorie_id)
+ALTER TABLE produits  
+ADD CONSTRAINT fk_produit_categorie FOREIGN KEY (categorie_id)  
     REFERENCES categories(categorie_id)
     DEFERRABLE INITIALLY IMMEDIATE;
 ```
@@ -961,20 +961,20 @@ SELECT
     contype AS constraint_type,
     condeferrable AS is_deferrable,
     condeferred AS is_deferred_by_default
-FROM pg_constraint
-WHERE conrelid = 'employes'::regclass;
+FROM pg_constraint  
+WHERE conrelid = 'employes'::regclass;  
 ```
 
 **Résultat :**
 ```
 constraint_name | constraint_type | is_deferrable | is_deferred_by_default
 ----------------+-----------------+---------------+------------------------
-fk_manager      | f               | t             | f
-pk_employe_id   | p               | f             | f
+fk_manager      | f               | t             | f  
+pk_employe_id   | p               | f             | f  
 ```
 
-- `constraint_type` : 'f' = FK, 'p' = PK, 'u' = UNIQUE, 'c' = CHECK
-- `is_deferrable` : 't' = DEFERRABLE, 'f' = NOT DEFERRABLE
+- `constraint_type` : 'f' = FK, 'p' = PK, 'u' = UNIQUE, 'c' = CHECK  
+- `is_deferrable` : 't' = DEFERRABLE, 'f' = NOT DEFERRABLE  
 - `is_deferred_by_default` : 't' = INITIALLY DEFERRED, 'f' = INITIALLY IMMEDIATE
 
 ---
@@ -1012,18 +1012,18 @@ pk_employe_id   | p               | f             | f
 
 Avant d'utiliser une contrainte DEFERRABLE :
 
-- [ ] **Y a-t-il des dépendances circulaires ?** (auto-référence, FK croisées)
-- [ ] **L'ordre des opérations est-il contraint ?** (impossible de satisfaire immédiatement)
-- [ ] **Import de données** avec références complexes ?
-- [ ] **Réorganisation** nécessitant des états transitoires invalides ?
+- [ ] **Y a-t-il des dépendances circulaires ?** (auto-référence, FK croisées)  
+- [ ] **L'ordre des opérations est-il contraint ?** (impossible de satisfaire immédiatement)  
+- [ ] **Import de données** avec références complexes ?  
+- [ ] **Réorganisation** nécessitant des états transitoires invalides ?  
 - [ ] La contrainte peut-elle rester **NOT DEFERRABLE** ? (préférer si possible)
 
 ### Recommandation Générale
 
 **Stratégie par défaut :**
-1. Créer les contraintes **NOT DEFERRABLE** (défaut)
-2. Identifier les contraintes problématiques lors du développement
-3. Convertir en **DEFERRABLE INITIALLY IMMEDIATE** uniquement si nécessaire
+1. Créer les contraintes **NOT DEFERRABLE** (défaut)  
+2. Identifier les contraintes problématiques lors du développement  
+3. Convertir en **DEFERRABLE INITIALLY IMMEDIATE** uniquement si nécessaire  
 4. Utiliser `SET CONSTRAINTS ... DEFERRED` explicitement dans les transactions complexes
 
 Les contraintes différées sont un outil puissant mais à utiliser avec discernement. Elles ajoutent de la flexibilité au prix d'une complexité accrue et d'erreurs potentiellement détectées plus tard.

@@ -8,7 +8,7 @@ Les **vues** sont l'un des outils les plus puissants de PostgreSQL pour simplifi
 
 PostgreSQL propose **deux types de vues** :
 
-1. **Vues classiques (VIEWS)** : Requêtes nommées qui s'exécutent à chaque utilisation
+1. **Vues classiques (VIEWS)** : Requêtes nommées qui s'exécutent à chaque utilisation  
 2. **Vues matérialisées (MATERIALIZED VIEWS)** : Résultats pré-calculés et stockés physiquement
 
 ### Analogie Simple
@@ -62,10 +62,10 @@ Une **vue** est une **requête SQL nommée et stockée** dans la base de donnée
 ### Syntaxe de Base
 
 ```sql
-CREATE VIEW nom_vue AS
-SELECT ...
-FROM ...
-WHERE ...;
+CREATE VIEW nom_vue AS  
+SELECT ...  
+FROM ...  
+WHERE ...;  
 ```
 
 ### Exemple Simple
@@ -101,16 +101,16 @@ INSERT INTO employes (nom, prenom, departement_id, salaire, date_embauche) VALUE
     ('Rousseau', 'Emma', 3, 43000, '2022-05-18');
 
 -- Créer une vue
-CREATE VIEW v_employes_complet AS
-SELECT
+CREATE VIEW v_employes_complet AS  
+SELECT  
     e.employe_id,
     e.prenom || ' ' || e.nom AS nom_complet,
     e.salaire,
     e.date_embauche,
     d.nom_departement,
     d.localisation
-FROM employes e
-JOIN departements d ON e.departement_id = d.departement_id;
+FROM employes e  
+JOIN departements d ON e.departement_id = d.departement_id;  
 ```
 
 ### Utilisation de la Vue
@@ -147,18 +147,18 @@ SELECT
     e.salaire,
     d.nom_departement,
     d.localisation
-FROM employes e
-JOIN departements d ON e.departement_id = d.departement_id
-WHERE e.salaire > 45000
-ORDER BY e.salaire DESC;
+FROM employes e  
+JOIN departements d ON e.departement_id = d.departement_id  
+WHERE e.salaire > 45000  
+ORDER BY e.salaire DESC;  
 ```
 
 **Avec vue :**
 ```sql
 -- Requête simplifiée
-SELECT * FROM v_employes_complet
-WHERE salaire > 45000
-ORDER BY salaire DESC;
+SELECT * FROM v_employes_complet  
+WHERE salaire > 45000  
+ORDER BY salaire DESC;  
 ```
 
 #### 2. Abstraction et Encapsulation
@@ -167,8 +167,8 @@ Cacher la complexité de la structure sous-jacente :
 
 ```sql
 -- Vue qui masque la complexité d'une jointure multiple
-CREATE VIEW v_commandes_detaillees AS
-SELECT
+CREATE VIEW v_commandes_detaillees AS  
+SELECT  
     c.commande_id,
     c.date_commande,
     cl.nom AS client_nom,
@@ -176,10 +176,10 @@ SELECT
     cd.quantite,
     cd.prix_unitaire,
     cd.quantite * cd.prix_unitaire AS montant_ligne
-FROM commandes c
-JOIN clients cl ON c.client_id = cl.client_id
-JOIN commandes_details cd ON c.commande_id = cd.commande_id
-JOIN produits p ON cd.produit_id = p.produit_id;
+FROM commandes c  
+JOIN clients cl ON c.client_id = cl.client_id  
+JOIN commandes_details cd ON c.commande_id = cd.commande_id  
+JOIN produits p ON cd.produit_id = p.produit_id;  
 ```
 
 Les développeurs utilisent simplement `v_commandes_detaillees` sans connaître la structure interne.
@@ -190,8 +190,8 @@ Limiter l'accès à certaines colonnes ou lignes :
 
 ```sql
 -- Vue qui masque les informations sensibles
-CREATE VIEW v_employes_public AS
-SELECT
+CREATE VIEW v_employes_public AS  
+SELECT  
     employe_id,
     prenom,
     nom,
@@ -201,8 +201,8 @@ FROM v_employes_complet;
 -- La colonne 'salaire' n'est pas exposée
 
 -- Donner accès uniquement à la vue
-GRANT SELECT ON v_employes_public TO role_lecture;
-REVOKE SELECT ON employes FROM role_lecture;
+GRANT SELECT ON v_employes_public TO role_lecture;  
+REVOKE SELECT ON employes FROM role_lecture;  
 ```
 
 #### 4. Compatibilité lors de Migrations
@@ -214,8 +214,8 @@ Maintenir une interface stable même si la structure change :
 -- Nouveau schéma : colonnes séparées 'prenom' et 'nom'
 
 -- Vue pour compatibilité ascendante
-CREATE VIEW ancienne_interface AS
-SELECT
+CREATE VIEW ancienne_interface AS  
+SELECT  
     employe_id,
     prenom || ' ' || nom AS nom_complet,
     salaire
@@ -230,14 +230,14 @@ Les anciennes applications continuent de fonctionner via la vue.
 
 ```sql
 -- Vue avec agrégation coûteuse
-CREATE VIEW v_stats_ventes AS
-SELECT
+CREATE VIEW v_stats_ventes AS  
+SELECT  
     DATE_TRUNC('month', date_vente) AS mois,
     COUNT(*) AS nb_ventes,
     SUM(montant) AS ca_total,
     AVG(montant) AS montant_moyen
-FROM ventes
-GROUP BY DATE_TRUNC('month', date_vente);
+FROM ventes  
+GROUP BY DATE_TRUNC('month', date_vente);  
 
 -- Chaque SELECT sur cette vue recalcule tout
 SELECT * FROM v_stats_ventes;  -- Peut être lent si 'ventes' est grosse
@@ -269,14 +269,14 @@ Certaines vues simples peuvent être **modifiables** : vous pouvez faire INSERT/
 
 ```sql
 -- Vue simple (modifiable)
-CREATE VIEW v_employes_it AS
-SELECT employe_id, nom, prenom, salaire
-FROM employes
-WHERE departement_id = 1;
+CREATE VIEW v_employes_it AS  
+SELECT employe_id, nom, prenom, salaire  
+FROM employes  
+WHERE departement_id = 1;  
 
 -- INSERT sur la vue fonctionne
-INSERT INTO v_employes_it (nom, prenom, salaire)
-VALUES ('Nouveau', 'Jean', 50000);
+INSERT INTO v_employes_it (nom, prenom, salaire)  
+VALUES ('Nouveau', 'Jean', 50000);  
 
 -- UPDATE sur la vue fonctionne
 UPDATE v_employes_it SET salaire = salaire * 1.05;
@@ -293,31 +293,31 @@ Pour les vues complexes, utilisez des triggers `INSTEAD OF` :
 
 ```sql
 -- Vue complexe (non-modifiable naturellement)
-CREATE VIEW v_commandes_details_vue AS
-SELECT
+CREATE VIEW v_commandes_details_vue AS  
+SELECT  
     c.commande_id,
     c.date_commande,
     cl.nom AS client_nom,
     p.nom_produit,
     cd.quantite
-FROM commandes c
-JOIN clients cl ON c.client_id = cl.client_id
-JOIN commandes_details cd ON c.commande_id = cd.commande_id
-JOIN produits p ON cd.produit_id = p.produit_id;
+FROM commandes c  
+JOIN clients cl ON c.client_id = cl.client_id  
+JOIN commandes_details cd ON c.commande_id = cd.commande_id  
+JOIN produits p ON cd.produit_id = p.produit_id;  
 
 -- Trigger INSTEAD OF pour gérer les INSERT
-CREATE OR REPLACE FUNCTION insert_commande_detail()
-RETURNS TRIGGER AS $$
-BEGIN
+CREATE OR REPLACE FUNCTION insert_commande_detail()  
+RETURNS TRIGGER AS $$  
+BEGIN  
     -- Logique personnalisée d'insertion
     -- ...
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE TRIGGER trig_insert_commande
-INSTEAD OF INSERT ON v_commandes_details_vue
-FOR EACH ROW EXECUTE FUNCTION insert_commande_detail();
+CREATE TRIGGER trig_insert_commande  
+INSTEAD OF INSERT ON v_commandes_details_vue  
+FOR EACH ROW EXECUTE FUNCTION insert_commande_detail();  
 ```
 
 ---
@@ -343,40 +343,40 @@ Une **vue matérialisée** est une vue dont les **résultats sont stockés physi
 ### Syntaxe de Base
 
 ```sql
-CREATE MATERIALIZED VIEW nom_vue_materialisee AS
-SELECT ...
-FROM ...
-WHERE ...;
+CREATE MATERIALIZED VIEW nom_vue_materialisee AS  
+SELECT ...  
+FROM ...  
+WHERE ...;  
 ```
 
 ### Exemple Simple
 
 ```sql
 -- Vue matérialisée des statistiques de ventes
-CREATE MATERIALIZED VIEW vm_stats_ventes_mensuelles AS
-SELECT
+CREATE MATERIALIZED VIEW vm_stats_ventes_mensuelles AS  
+SELECT  
     DATE_TRUNC('month', date_vente) AS mois,
     COUNT(*) AS nb_ventes,
     SUM(montant) AS ca_total,
     AVG(montant) AS montant_moyen,
     MIN(montant) AS montant_min,
     MAX(montant) AS montant_max
-FROM ventes
-GROUP BY DATE_TRUNC('month', date_vente)
-ORDER BY mois;
+FROM ventes  
+GROUP BY DATE_TRUNC('month', date_vente)  
+ORDER BY mois;  
 ```
 
 **Ce qui se passe :**
-1. PostgreSQL exécute la requête **une seule fois**
-2. Les résultats sont **stockés physiquement** dans `vm_stats_ventes_mensuelles`
+1. PostgreSQL exécute la requête **une seule fois**  
+2. Les résultats sont **stockés physiquement** dans `vm_stats_ventes_mensuelles`  
 3. Les requêtes sur la vue matérialisée lisent directement ces résultats
 
 ### Interrogation
 
 ```sql
 -- Lecture ultra-rapide (données pré-calculées)
-SELECT * FROM vm_stats_ventes_mensuelles
-WHERE mois >= '2024-01-01';
+SELECT * FROM vm_stats_ventes_mensuelles  
+WHERE mois >= '2024-01-01';  
 ```
 
 **Performance :**
@@ -393,17 +393,17 @@ WHERE mois >= '2024-01-01';
 
 ```sql
 -- Calculs complexes qui prennent des minutes
-CREATE MATERIALIZED VIEW vm_dashboard_executif AS
-SELECT
+CREATE MATERIALIZED VIEW vm_dashboard_executif AS  
+SELECT  
     DATE_TRUNC('day', created_at) AS jour,
     COUNT(DISTINCT user_id) AS utilisateurs_actifs,
     COUNT(DISTINCT session_id) AS sessions,
     SUM(revenue) AS revenue_journalier,
     AVG(session_duration) AS duree_moyenne_session,
     PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY page_load_time) AS p95_load_time
-FROM evenements
-WHERE created_at >= NOW() - INTERVAL '90 days'
-GROUP BY DATE_TRUNC('day', created_at);
+FROM evenements  
+WHERE created_at >= NOW() - INTERVAL '90 days'  
+GROUP BY DATE_TRUNC('day', created_at);  
 
 -- Rafraîchir une fois par jour (par exemple à minuit)
 ```
@@ -412,8 +412,8 @@ GROUP BY DATE_TRUNC('day', created_at);
 
 ```sql
 -- Rapport mensuel complexe
-CREATE MATERIALIZED VIEW vm_rapport_ventes AS
-SELECT
+CREATE MATERIALIZED VIEW vm_rapport_ventes AS  
+SELECT  
     v.mois,
     v.region,
     v.categorie_produit,
@@ -422,8 +422,8 @@ SELECT
     SUM(v.montant) AS ca_total,
     SUM(v.montant) / COUNT(DISTINCT v.commande_id) AS panier_moyen,
     RANK() OVER (PARTITION BY v.region ORDER BY SUM(v.montant) DESC) AS rang_categorie
-FROM ventes_enrichies v
-GROUP BY v.mois, v.region, v.categorie_produit;
+FROM ventes_enrichies v  
+GROUP BY v.mois, v.region, v.categorie_produit;  
 ```
 
 Rafraîchir une fois par jour ou semaine selon les besoins.
@@ -432,8 +432,8 @@ Rafraîchir une fois par jour ou semaine selon les besoins.
 
 ```sql
 -- Données dénormalisées pour analytics
-CREATE MATERIALIZED VIEW vm_commandes_enrichies AS
-SELECT
+CREATE MATERIALIZED VIEW vm_commandes_enrichies AS  
+SELECT  
     c.commande_id,
     c.date_commande,
     cl.client_id,
@@ -448,19 +448,19 @@ SELECT
     cd.quantite * cd.prix_unitaire AS montant_ligne,
     f.montant_fidelite,
     f.points_accumules
-FROM commandes c
-JOIN clients cl ON c.client_id = cl.client_id
-JOIN commandes_details cd ON c.commande_id = cd.commande_id
-JOIN produits p ON cd.produit_id = p.produit_id
-LEFT JOIN programme_fidelite f ON cl.client_id = f.client_id;
+FROM commandes c  
+JOIN clients cl ON c.client_id = cl.client_id  
+JOIN commandes_details cd ON c.commande_id = cd.commande_id  
+JOIN produits p ON cd.produit_id = p.produit_id  
+LEFT JOIN programme_fidelite f ON cl.client_id = f.client_id;  
 ```
 
 **4. Données de Référence Peu Volatiles**
 
 ```sql
 -- Catalogue produits enrichi (change rarement)
-CREATE MATERIALIZED VIEW vm_catalogue_complet AS
-SELECT
+CREATE MATERIALIZED VIEW vm_catalogue_complet AS  
+SELECT  
     p.produit_id,
     p.nom_produit,
     p.description,
@@ -472,12 +472,12 @@ SELECT
     i.entrepot_principal,
     AVG(r.note) AS note_moyenne,
     COUNT(r.review_id) AS nb_avis
-FROM produits p
-JOIN categories c ON p.categorie_id = c.categorie_id
-JOIN fournisseurs f ON p.fournisseur_id = f.fournisseur_id
-LEFT JOIN inventaire i ON p.produit_id = i.produit_id
-LEFT JOIN reviews r ON p.produit_id = r.produit_id
-GROUP BY p.produit_id, p.nom_produit, p.description,
+FROM produits p  
+JOIN categories c ON p.categorie_id = c.categorie_id  
+JOIN fournisseurs f ON p.fournisseur_id = f.fournisseur_id  
+LEFT JOIN inventaire i ON p.produit_id = i.produit_id  
+LEFT JOIN reviews r ON p.produit_id = r.produit_id  
+GROUP BY p.produit_id, p.nom_produit, p.description,  
          c.nom_categorie, c.departement, f.nom_fournisseur,
          f.pays_origine, i.stock_disponible, i.entrepot_principal;
 ```
@@ -508,8 +508,8 @@ Les vues matérialisées contiennent un **snapshot** (instantané) des données 
 
 ```sql
 -- État initial
-CREATE MATERIALIZED VIEW vm_compteur_ventes AS
-SELECT COUNT(*) AS total_ventes FROM ventes;
+CREATE MATERIALIZED VIEW vm_compteur_ventes AS  
+SELECT COUNT(*) AS total_ventes FROM ventes;  
 
 SELECT * FROM vm_compteur_ventes;
 -- Résultat: total_ventes = 10000
@@ -531,9 +531,9 @@ REFRESH MATERIALIZED VIEW vm_stats_ventes_mensuelles;
 ```
 
 **Ce qui se passe :**
-1. PostgreSQL ré-exécute la requête de la vue
-2. Supprime les anciennes données
-3. Insère les nouvelles données
+1. PostgreSQL ré-exécute la requête de la vue  
+2. Supprime les anciennes données  
+3. Insère les nouvelles données  
 4. Pendant ce temps, la vue est **verrouillée** (ACCESS EXCLUSIVE)
 
 **Problème :** Les lectures sont **bloquées** pendant le refresh (peut prendre des secondes/minutes).
@@ -559,8 +559,8 @@ REFRESH MATERIALIZED VIEW CONCURRENTLY vm_stats_ventes_mensuelles;
 ```
 
 **Avantages :**
-- ✅ Les lectures continuent pendant le refresh
-- ✅ Pas d'interruption de service
+- ✅ Les lectures continuent pendant le refresh  
+- ✅ Pas d'interruption de service  
 - ✅ Transparent pour les utilisateurs
 
 **Processus :**
@@ -582,18 +582,18 @@ Fin du refresh (nouvelles données disponibles)
 
 ```sql
 -- Créer la vue matérialisée
-CREATE MATERIALIZED VIEW vm_stats_ventes AS
-SELECT
+CREATE MATERIALIZED VIEW vm_stats_ventes AS  
+SELECT  
     DATE_TRUNC('month', date_vente) AS mois,
     region,
     COUNT(*) AS nb_ventes,
     SUM(montant) AS ca_total
-FROM ventes
-GROUP BY DATE_TRUNC('month', date_vente), region;
+FROM ventes  
+GROUP BY DATE_TRUNC('month', date_vente), region;  
 
 -- Créer un index UNIQUE (requis pour CONCURRENTLY)
-CREATE UNIQUE INDEX idx_vm_stats_mois_region
-ON vm_stats_ventes (mois, region);
+CREATE UNIQUE INDEX idx_vm_stats_mois_region  
+ON vm_stats_ventes (mois, region);  
 
 -- Maintenant le refresh concurrent fonctionne
 REFRESH MATERIALIZED VIEW CONCURRENTLY vm_stats_ventes;
@@ -658,9 +658,9 @@ Utiliser des triggers pour rafraîchir automatiquement.
 
 ```sql
 -- Fonction de refresh
-CREATE OR REPLACE FUNCTION refresh_vm_stats()
-RETURNS TRIGGER AS $$
-BEGIN
+CREATE OR REPLACE FUNCTION refresh_vm_stats()  
+RETURNS TRIGGER AS $$  
+BEGIN  
     -- Refresh asynchrone via NOTIFY/LISTEN ou job
     PERFORM pg_notify('refresh_vm_stats', '');
     RETURN NEW;
@@ -668,10 +668,10 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Trigger sur INSERT/UPDATE/DELETE
-CREATE TRIGGER trig_refresh_vm_stats
-AFTER INSERT OR UPDATE OR DELETE ON ventes
-FOR EACH STATEMENT
-EXECUTE FUNCTION refresh_vm_stats();
+CREATE TRIGGER trig_refresh_vm_stats  
+AFTER INSERT OR UPDATE OR DELETE ON ventes  
+FOR EACH STATEMENT  
+EXECUTE FUNCTION refresh_vm_stats();  
 ```
 
 **Note :** Le refresh reste coûteux, cette approche n'est viable que si les modifications sont peu fréquentes.
@@ -682,12 +682,12 @@ PostgreSQL ne supporte pas nativement le refresh incrémental, mais on peut le s
 
 ```sql
 -- Vue matérialisée avec timestamp de dernière mise à jour
-CREATE MATERIALIZED VIEW vm_ventes_recentes AS
-SELECT
+CREATE MATERIALIZED VIEW vm_ventes_recentes AS  
+SELECT  
     *,
     NOW() AS last_refresh
-FROM ventes
-WHERE created_at >= NOW() - INTERVAL '7 days';
+FROM ventes  
+WHERE created_at >= NOW() - INTERVAL '7 days';  
 
 -- Refresh uniquement les nouvelles données (simulation)
 -- Nécessite logique applicative ou procédure stockée complexe
@@ -701,13 +701,13 @@ WHERE created_at >= NOW() - INTERVAL '7 days';
 
 ```sql
 -- Ajouter une colonne de tracking
-CREATE MATERIALIZED VIEW vm_stats AS
-SELECT
+CREATE MATERIALIZED VIEW vm_stats AS  
+SELECT  
     DATE_TRUNC('day', date_vente) AS jour,
     COUNT(*) AS nb_ventes,
     NOW() AS refreshed_at  -- Timestamp du refresh
-FROM ventes
-GROUP BY DATE_TRUNC('day', date_vente);
+FROM ventes  
+GROUP BY DATE_TRUNC('day', date_vente);  
 
 -- Vérifier quand la vue a été rafraîchie
 SELECT MAX(refreshed_at) AS derniere_maj FROM vm_stats;
@@ -727,9 +727,9 @@ CREATE TABLE refresh_log (
 );
 
 -- Fonction de refresh avec logging
-CREATE OR REPLACE FUNCTION refresh_with_log(view_name TEXT)
-RETURNS VOID AS $$
-DECLARE
+CREATE OR REPLACE FUNCTION refresh_with_log(view_name TEXT)  
+RETURNS VOID AS $$  
+DECLARE  
     start_time TIMESTAMPTZ;
     end_time TIMESTAMPTZ;
     row_count BIGINT;
@@ -764,12 +764,12 @@ Les vues matérialisées stockent des données physiquement, comme des tables. S
 
 ```sql
 -- Vue matérialisée sans index
-CREATE MATERIALIZED VIEW vm_logs AS
-SELECT * FROM logs WHERE log_level = 'ERROR';
+CREATE MATERIALIZED VIEW vm_logs AS  
+SELECT * FROM logs WHERE log_level = 'ERROR';  
 
 -- Requête lente (scan séquentiel de toute la vue)
-EXPLAIN ANALYZE
-SELECT * FROM vm_logs WHERE timestamp > '2024-01-01';
+EXPLAIN ANALYZE  
+SELECT * FROM vm_logs WHERE timestamp > '2024-01-01';  
 -- Seq Scan on vm_logs (cost=0.00..1000.00 rows=500 width=100) (actual time=50.123..150.456)
 ```
 
@@ -782,8 +782,8 @@ SELECT * FROM vm_logs WHERE timestamp > '2024-01-01';
 CREATE INDEX idx_vm_logs_timestamp ON vm_logs(timestamp);
 
 -- Même requête avec index
-EXPLAIN ANALYZE
-SELECT * FROM vm_logs WHERE timestamp > '2024-01-01';
+EXPLAIN ANALYZE  
+SELECT * FROM vm_logs WHERE timestamp > '2024-01-01';  
 -- Index Scan using idx_vm_logs_timestamp (actual time=0.015..5.234)
 ```
 
@@ -796,12 +796,12 @@ SELECT * FROM vm_logs WHERE timestamp > '2024-01-01';
 Pour égalité et plages.
 
 ```sql
-CREATE INDEX idx_vm_stats_mois ON vm_stats_ventes(mois);
-CREATE INDEX idx_vm_stats_region ON vm_stats_ventes(region);
+CREATE INDEX idx_vm_stats_mois ON vm_stats_ventes(mois);  
+CREATE INDEX idx_vm_stats_region ON vm_stats_ventes(region);  
 
 -- Requête optimisée
-SELECT * FROM vm_stats_ventes
-WHERE mois = '2024-06-01' AND region = 'EMEA';
+SELECT * FROM vm_stats_ventes  
+WHERE mois = '2024-06-01' AND region = 'EMEA';  
 ```
 
 #### 2. Index Composite
@@ -812,25 +812,25 @@ Pour requêtes avec plusieurs colonnes.
 CREATE INDEX idx_vm_stats_mois_region ON vm_stats_ventes(mois, region);
 
 -- Très efficace pour cette requête
-SELECT * FROM vm_stats_ventes
-WHERE mois = '2024-06-01' AND region = 'EMEA';
+SELECT * FROM vm_stats_ventes  
+WHERE mois = '2024-06-01' AND region = 'EMEA';  
 ```
 
 #### 3. Index UNIQUE (Obligatoire pour CONCURRENTLY)
 
 ```sql
 -- Vue matérialisée avec clé naturelle
-CREATE MATERIALIZED VIEW vm_produits_stocks AS
-SELECT
+CREATE MATERIALIZED VIEW vm_produits_stocks AS  
+SELECT  
     produit_id,
     nom_produit,
     SUM(quantite) AS stock_total
-FROM inventaire
-GROUP BY produit_id, nom_produit;
+FROM inventaire  
+GROUP BY produit_id, nom_produit;  
 
 -- Index UNIQUE pour refresh concurrent
-CREATE UNIQUE INDEX idx_vm_produits_id
-ON vm_produits_stocks(produit_id);
+CREATE UNIQUE INDEX idx_vm_produits_id  
+ON vm_produits_stocks(produit_id);  
 ```
 
 #### 4. Index Partiel
@@ -839,33 +839,33 @@ Pour requêtes fréquentes sur sous-ensemble.
 
 ```sql
 -- Vue matérialisée de commandes
-CREATE MATERIALIZED VIEW vm_commandes AS
-SELECT * FROM commandes;
+CREATE MATERIALIZED VIEW vm_commandes AS  
+SELECT * FROM commandes;  
 
 -- Index uniquement sur commandes récentes
-CREATE INDEX idx_vm_commandes_recentes
-ON vm_commandes(date_commande)
-WHERE date_commande >= NOW() - INTERVAL '30 days';
+CREATE INDEX idx_vm_commandes_recentes  
+ON vm_commandes(date_commande)  
+WHERE date_commande >= NOW() - INTERVAL '30 days';  
 ```
 
 #### 5. Index GIN (Pour JSONB, Arrays)
 
 ```sql
 -- Vue matérialisée avec données JSONB
-CREATE MATERIALIZED VIEW vm_evenements AS
-SELECT
+CREATE MATERIALIZED VIEW vm_evenements AS  
+SELECT  
     evenement_id,
     user_id,
     proprietes::JSONB AS props
 FROM evenements;
 
 -- Index GIN pour recherche dans JSONB
-CREATE INDEX idx_vm_evenements_props
-ON vm_evenements USING GIN(props);
+CREATE INDEX idx_vm_evenements_props  
+ON vm_evenements USING GIN(props);  
 
 -- Requête optimisée
-SELECT * FROM vm_evenements
-WHERE props @> '{"action": "achat"}';
+SELECT * FROM vm_evenements  
+WHERE props @> '{"action": "achat"}';  
 ```
 
 ### Stratégie d'Indexation
@@ -879,10 +879,10 @@ SELECT
     calls,
     mean_exec_time,
     total_exec_time
-FROM pg_stat_statements
-WHERE query LIKE '%vm_stats_ventes%'
-ORDER BY total_exec_time DESC
-LIMIT 10;
+FROM pg_stat_statements  
+WHERE query LIKE '%vm_stats_ventes%'  
+ORDER BY total_exec_time DESC  
+LIMIT 10;  
 ```
 
 #### 2. Créer des Index Ciblés
@@ -902,14 +902,14 @@ CREATE INDEX idx_vm_stats_ca ON vm_stats_ventes(ca_total DESC);
 Pour éviter les lookups dans la table.
 
 ```sql
-CREATE INDEX idx_vm_stats_covering
-ON vm_stats_ventes(mois, region)
-INCLUDE (ca_total, nb_ventes);
+CREATE INDEX idx_vm_stats_covering  
+ON vm_stats_ventes(mois, region)  
+INCLUDE (ca_total, nb_ventes);  
 
 -- Requête utilisant uniquement l'index (index-only scan)
-SELECT mois, region, ca_total
-FROM vm_stats_ventes
-WHERE mois = '2024-06-01';
+SELECT mois, region, ca_total  
+FROM vm_stats_ventes  
+WHERE mois = '2024-06-01';  
 ```
 
 ### Maintenance des Index
@@ -926,8 +926,8 @@ REFRESH MATERIALIZED VIEW vm_stats_ventes;
 **Coût :** Le refresh prend plus de temps avec des index.
 
 ```
-Sans index : REFRESH en 30 secondes
-Avec 3 index : REFRESH en 45 secondes
+Sans index : REFRESH en 30 secondes  
+Avec 3 index : REFRESH en 45 secondes  
 ```
 
 **Trade-off :** Refresh plus long vs Requêtes plus rapides.
@@ -951,8 +951,8 @@ REINDEX TABLE vm_stats_ventes;
 
 ```sql
 -- Vue matérialisée des KPIs quotidiens
-CREATE MATERIALIZED VIEW vm_dashboard_kpis AS
-SELECT
+CREATE MATERIALIZED VIEW vm_dashboard_kpis AS  
+SELECT  
     DATE_TRUNC('day', created_at) AS jour,
     COUNT(DISTINCT user_id) AS utilisateurs_actifs,
     COUNT(DISTINCT session_id) AS sessions_totales,
@@ -961,9 +961,9 @@ SELECT
     AVG(session_duration) AS duree_session_moyenne,
     PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY session_duration) AS mediane_session,
     PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY page_load_time) AS p95_load_time
-FROM events
-WHERE created_at >= NOW() - INTERVAL '90 days'
-GROUP BY DATE_TRUNC('day', created_at);
+FROM events  
+WHERE created_at >= NOW() - INTERVAL '90 days'  
+GROUP BY DATE_TRUNC('day', created_at);  
 
 -- Index pour requêtes rapides
 CREATE UNIQUE INDEX idx_vm_dashboard_jour ON vm_dashboard_kpis(jour);
@@ -972,9 +972,9 @@ CREATE UNIQUE INDEX idx_vm_dashboard_jour ON vm_dashboard_kpis(jour);
 -- 0 1 * * * psql ... "REFRESH MATERIALIZED VIEW CONCURRENTLY vm_dashboard_kpis"
 
 -- Requête dashboard ultra-rapide
-SELECT * FROM vm_dashboard_kpis
-WHERE jour >= CURRENT_DATE - 30
-ORDER BY jour DESC;
+SELECT * FROM vm_dashboard_kpis  
+WHERE jour >= CURRENT_DATE - 30  
+ORDER BY jour DESC;  
 ```
 
 ### Cas 2 : Rapports Mensuels
@@ -983,8 +983,8 @@ ORDER BY jour DESC;
 
 ```sql
 -- Vue matérialisée du rapport mensuel
-CREATE MATERIALIZED VIEW vm_rapport_ventes_mensuel AS
-SELECT
+CREATE MATERIALIZED VIEW vm_rapport_ventes_mensuel AS  
+SELECT  
     DATE_TRUNC('month', v.date_vente) AS mois,
     r.nom_region,
     c.nom_categorie,
@@ -994,15 +994,15 @@ SELECT
     SUM(v.montant) / COUNT(DISTINCT v.commande_id) AS panier_moyen,
     COUNT(DISTINCT v.client_id) AS nb_clients_uniques,
     COUNT(DISTINCT v.vendeur_id) AS nb_vendeurs_actifs
-FROM ventes v
-JOIN regions r ON v.region_id = r.region_id
-JOIN categories c ON v.categorie_id = c.categorie_id
-WHERE v.date_vente >= DATE_TRUNC('month', NOW() - INTERVAL '24 months')
-GROUP BY DATE_TRUNC('month', v.date_vente), r.nom_region, c.nom_categorie;
+FROM ventes v  
+JOIN regions r ON v.region_id = r.region_id  
+JOIN categories c ON v.categorie_id = c.categorie_id  
+WHERE v.date_vente >= DATE_TRUNC('month', NOW() - INTERVAL '24 months')  
+GROUP BY DATE_TRUNC('month', v.date_vente), r.nom_region, c.nom_categorie;  
 
 -- Index composite pour analyses
-CREATE UNIQUE INDEX idx_rapport_pk
-ON vm_rapport_ventes_mensuel(mois, nom_region, nom_categorie);
+CREATE UNIQUE INDEX idx_rapport_pk  
+ON vm_rapport_ventes_mensuel(mois, nom_region, nom_categorie);  
 
 CREATE INDEX idx_rapport_mois ON vm_rapport_ventes_mensuel(mois);
 
@@ -1016,8 +1016,8 @@ CREATE INDEX idx_rapport_mois ON vm_rapport_ventes_mensuel(mois);
 
 ```sql
 -- Vue matérialisée avec tsvector pré-calculé
-CREATE MATERIALIZED VIEW vm_produits_recherche AS
-SELECT
+CREATE MATERIALIZED VIEW vm_produits_recherche AS  
+SELECT  
     produit_id,
     nom_produit,
     description,
@@ -1028,9 +1028,9 @@ FROM produits;
 CREATE INDEX idx_produits_search ON vm_produits_recherche USING GIN(search_vector);
 
 -- Recherche ultra-rapide
-SELECT produit_id, nom_produit
-FROM vm_produits_recherche
-WHERE search_vector @@ to_tsquery('french', 'ordinateur & portable');
+SELECT produit_id, nom_produit  
+FROM vm_produits_recherche  
+WHERE search_vector @@ to_tsquery('french', 'ordinateur & portable');  
 ```
 
 ### Cas 4 : Dénormalisation pour APIs
@@ -1039,8 +1039,8 @@ WHERE search_vector @@ to_tsquery('french', 'ordinateur & portable');
 
 ```sql
 -- Vue matérialisée dénormalisée
-CREATE MATERIALIZED VIEW vm_api_produits AS
-SELECT
+CREATE MATERIALIZED VIEW vm_api_produits AS  
+SELECT  
     p.produit_id,
     p.nom_produit,
     p.prix,
@@ -1055,13 +1055,13 @@ SELECT
     json_agg(
         json_build_object('taille', v.taille, 'couleur', v.couleur, 'sku', v.sku)
     ) AS variantes
-FROM produits p
-JOIN categories c ON p.categorie_id = c.categorie_id
-JOIN fournisseurs f ON p.fournisseur_id = f.fournisseur_id
-LEFT JOIN inventaire i ON p.produit_id = i.produit_id
-LEFT JOIN reviews r ON p.produit_id = r.produit_id
-LEFT JOIN variantes_produit v ON p.produit_id = v.produit_id
-GROUP BY p.produit_id, p.nom_produit, p.prix, p.description,
+FROM produits p  
+JOIN categories c ON p.categorie_id = c.categorie_id  
+JOIN fournisseurs f ON p.fournisseur_id = f.fournisseur_id  
+LEFT JOIN inventaire i ON p.produit_id = i.produit_id  
+LEFT JOIN reviews r ON p.produit_id = r.produit_id  
+LEFT JOIN variantes_produit v ON p.produit_id = v.produit_id  
+GROUP BY p.produit_id, p.nom_produit, p.prix, p.description,  
          c.nom_categorie, c.slug_categorie, f.nom_fournisseur,
          i.stock_disponible, i.stock_reserve;
 
@@ -1120,17 +1120,17 @@ Besoin de requêter des données ?
 ### Critères de Choix
 
 **Choisir une VUE CLASSIQUE si :**
-- ✅ Fraîcheur critique (données en temps réel)
-- ✅ Requête rapide (< 100ms)
-- ✅ Données très volatiles
-- ✅ Petite table
+- ✅ Fraîcheur critique (données en temps réel)  
+- ✅ Requête rapide (< 100ms)  
+- ✅ Données très volatiles  
+- ✅ Petite table  
 - ✅ Besoin de sécurité/abstraction uniquement
 
 **Choisir une VUE MATÉRIALISÉE si :**
-- ✅ Performance critique (requête > 1s)
-- ✅ Requête très fréquente (centaines/milliers par seconde)
-- ✅ Agrégations complexes
-- ✅ Données relativement stables (refresh quotidien/hebdomadaire OK)
+- ✅ Performance critique (requête > 1s)  
+- ✅ Requête très fréquente (centaines/milliers par seconde)  
+- ✅ Agrégations complexes  
+- ✅ Données relativement stables (refresh quotidien/hebdomadaire OK)  
 - ✅ Jointures massives
 
 **Utiliser les DEUX si :**
@@ -1158,9 +1158,9 @@ CREATE MATERIALIZED VIEW vm_stats_quotidiennes AS ...
 -- Ajouter des commentaires
 COMMENT ON MATERIALIZED VIEW vm_dashboard IS
 'Vue matérialisée des KPIs pour le dashboard executif.
-Rafraîchie quotidiennement à 2h du matin via cron.
-Dépend de : events, users, sessions.
-Propriétaire : équipe Analytics';
+Rafraîchie quotidiennement à 2h du matin via cron.  
+Dépend de : events, users, sessions.  
+Propriétaire : équipe Analytics';  
 
 COMMENT ON COLUMN vm_dashboard.utilisateurs_actifs IS
 'Nombre d''utilisateurs distincts ayant au moins un événement dans la journée';
@@ -1170,13 +1170,13 @@ COMMENT ON COLUMN vm_dashboard.utilisateurs_actifs IS
 
 ```sql
 -- ✅ Bon
-CREATE MATERIALIZED VIEW vm_stats AS
-SELECT jour, region, SUM(montant) AS total
-FROM ventes
-GROUP BY jour, region;
+CREATE MATERIALIZED VIEW vm_stats AS  
+SELECT jour, region, SUM(montant) AS total  
+FROM ventes  
+GROUP BY jour, region;  
 
-CREATE UNIQUE INDEX idx_vm_stats_pk ON vm_stats(jour, region);
-REFRESH MATERIALIZED VIEW CONCURRENTLY vm_stats;
+CREATE UNIQUE INDEX idx_vm_stats_pk ON vm_stats(jour, region);  
+REFRESH MATERIALIZED VIEW CONCURRENTLY vm_stats;  
 
 -- ❌ Mauvais (pas d'index unique)
 REFRESH MATERIALIZED VIEW CONCURRENTLY vm_stats;  -- Erreur !
@@ -1186,15 +1186,15 @@ REFRESH MATERIALIZED VIEW CONCURRENTLY vm_stats;  -- Erreur !
 
 ```sql
 -- Vue de monitoring
-CREATE VIEW v_monitoring_mvs AS
-SELECT
+CREATE VIEW v_monitoring_mvs AS  
+SELECT  
     schemaname,
     matviewname,
     pg_size_pretty(pg_total_relation_size(schemaname||'.'||matviewname)) AS taille,
     (SELECT MAX(refreshed_at) FROM vm_stats) AS derniere_maj,
     AGE(NOW(), (SELECT MAX(refreshed_at) FROM vm_stats)) AS age_donnees
-FROM pg_matviews
-ORDER BY pg_total_relation_size(schemaname||'.'||matviewname) DESC;
+FROM pg_matviews  
+ORDER BY pg_total_relation_size(schemaname||'.'||matviewname) DESC;  
 ```
 
 ### 5. Tester le Temps de Refresh
@@ -1215,8 +1215,8 @@ Si le refresh prend trop de temps, considérer :
 
 ```sql
 -- ❌ Interdit
-CREATE MATERIALIZED VIEW vm_a AS SELECT * FROM vm_b;
-CREATE MATERIALIZED VIEW vm_b AS SELECT * FROM vm_a;
+CREATE MATERIALIZED VIEW vm_a AS SELECT * FROM vm_b;  
+CREATE MATERIALIZED VIEW vm_b AS SELECT * FROM vm_a;  
 -- Erreur : dépendance circulaire
 ```
 
@@ -1233,8 +1233,8 @@ CREATE MATERIALIZED VIEW vm_b AS SELECT * FROM vm_a;
 
 ```sql
 -- Script de refresh avec gestion d'erreurs
-DO $$
-BEGIN
+DO $$  
+BEGIN  
     REFRESH MATERIALIZED VIEW CONCURRENTLY vm_stats;
     RAISE NOTICE 'Refresh réussi : vm_stats';
 EXCEPTION WHEN OTHERS THEN
@@ -1258,10 +1258,10 @@ PostgreSQL ne supporte pas le refresh incrémental (mise à jour des seules lign
 CREATE EXTENSION pg_ivm;
 
 -- Vue avec maintenance incrémentale
-CREATE INCREMENTAL MATERIALIZED VIEW ivm_stats AS
-SELECT jour, SUM(montant) AS total
-FROM ventes
-GROUP BY jour;
+CREATE INCREMENTAL MATERIALIZED VIEW ivm_stats AS  
+SELECT jour, SUM(montant) AS total  
+FROM ventes  
+GROUP BY jour;  
 
 -- Mise à jour automatique lors d'INSERT/UPDATE/DELETE sur ventes
 ```
@@ -1276,8 +1276,8 @@ Contrairement à certains SGBD, PostgreSQL ne rafraîchit pas automatiquement.
 
 ```sql
 -- ❌ Non supporté
-CREATE MATERIALIZED VIEW vm_hierarchie AS
-WITH RECURSIVE ...  -- Erreur
+CREATE MATERIALIZED VIEW vm_hierarchie AS  
+WITH RECURSIVE ...  -- Erreur  
 ```
 
 ### Alternatives aux Vues Matérialisées
@@ -1288,12 +1288,12 @@ Pour données ultra-volatiles ou refresh très fréquent.
 
 ```python
 # Exemple Python
-import redis
-r = redis.Redis()
+import redis  
+r = redis.Redis()  
 
 # Calculer et cacher
-result = expensive_query()
-r.setex('dashboard:stats', 300, json.dumps(result))  # Cache 5 minutes
+result = expensive_query()  
+r.setex('dashboard:stats', 300, json.dumps(result))  # Cache 5 minutes  
 
 # Lire du cache
 cached = r.get('dashboard:stats')
@@ -1312,9 +1312,9 @@ CREATE TABLE stats_quotidiennes (
 );
 
 -- Mise à jour via procédure stockée
-CREATE OR REPLACE FUNCTION update_stats_quotidiennes()
-RETURNS VOID AS $$
-BEGIN
+CREATE OR REPLACE FUNCTION update_stats_quotidiennes()  
+RETURNS VOID AS $$  
+BEGIN  
     DELETE FROM stats_quotidiennes WHERE jour = CURRENT_DATE;
 
     INSERT INTO stats_quotidiennes (jour, nb_ventes, ca_total)
@@ -1336,13 +1336,13 @@ Pour séries temporelles avec refresh incrémental.
 CREATE EXTENSION timescaledb;
 
 -- Agrégation continue (refresh automatique)
-CREATE MATERIALIZED VIEW stats_horaires
-WITH (timescaledb.continuous) AS
-SELECT
+CREATE MATERIALIZED VIEW stats_horaires  
+WITH (timescaledb.continuous) AS  
+SELECT  
     time_bucket('1 hour', timestamp) AS heure,
     COUNT(*) AS nb_events
-FROM events
-GROUP BY heure;
+FROM events  
+GROUP BY heure;  
 ```
 
 ---
@@ -1376,19 +1376,19 @@ GROUP BY heure;
 ### Checklist de Décision
 
 **Avant de créer une vue matérialisée :**
-- [ ] La requête prend-elle > 1 seconde ?
-- [ ] Est-elle exécutée fréquemment (> 100×/jour) ?
-- [ ] Les données peuvent-elles être obsolètes de quelques heures/jours ?
-- [ ] Ai-je un moyen de rafraîchir régulièrement ?
+- [ ] La requête prend-elle > 1 seconde ?  
+- [ ] Est-elle exécutée fréquemment (> 100×/jour) ?  
+- [ ] Les données peuvent-elles être obsolètes de quelques heures/jours ?  
+- [ ] Ai-je un moyen de rafraîchir régulièrement ?  
 - [ ] Les bénéfices justifient-ils l'espace disque utilisé ?
 
 **Si 4-5 "oui" → Vue matérialisée recommandée**
 
 ### Ressources
 
-- [Documentation PostgreSQL - Views](https://www.postgresql.org/docs/current/sql-createview.html)
-- [Documentation PostgreSQL - Materialized Views](https://www.postgresql.org/docs/current/sql-creatematerializedview.html)
-- [Extension pg_cron](https://github.com/citusdata/pg_cron)
+- [Documentation PostgreSQL - Views](https://www.postgresql.org/docs/current/sql-createview.html)  
+- [Documentation PostgreSQL - Materialized Views](https://www.postgresql.org/docs/current/sql-creatematerializedview.html)  
+- [Extension pg_cron](https://github.com/citusdata/pg_cron)  
 - [Extension pg_ivm](https://github.com/sraoss/pg_ivm)
 
 ---

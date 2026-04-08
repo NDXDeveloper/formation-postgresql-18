@@ -52,8 +52,8 @@ SUM(montant) OVER (PARTITION BY vendeur)
 
 PostgreSQL propose trois façons de définir un frame :
 
-1. **ROWS** : Compte les lignes physiques
-2. **RANGE** : Regroupe les lignes ayant la même valeur (dans ORDER BY)
+1. **ROWS** : Compte les lignes physiques  
+2. **RANGE** : Regroupe les lignes ayant la même valeur (dans ORDER BY)  
 3. **GROUPS** : Travaille par groupes de valeurs égales (PostgreSQL 11+)
 
 ### Vue d'Ensemble
@@ -101,8 +101,8 @@ SELECT
         ORDER BY date_vente
         ROWS BETWEEN 2 PRECEDING AND CURRENT ROW
     ) AS moyenne_mobile_3j
-FROM ventes
-ORDER BY date_vente;
+FROM ventes  
+ORDER BY date_vente;  
 ```
 
 **Données** :
@@ -146,8 +146,8 @@ SELECT
         ORDER BY jour
         ROWS BETWEEN 1 PRECEDING AND 1 FOLLOWING
     ) AS temp_lissee
-FROM meteo
-ORDER BY jour;
+FROM meteo  
+ORDER BY jour;  
 ```
 
 Cette fenêtre inclut :
@@ -187,8 +187,8 @@ SELECT
         ORDER BY date_vente
         ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
     ) AS cumul
-FROM ventes
-ORDER BY date_vente;
+FROM ventes  
+ORDER BY date_vente;  
 ```
 
 C'est le **cumul classique** : chaque ligne additionne toutes les lignes précédentes plus elle-même.
@@ -247,8 +247,8 @@ SELECT
         ORDER BY date_vente
         ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
     ) AS cumul_rows
-FROM ventes
-ORDER BY date_vente, id;
+FROM ventes  
+ORDER BY date_vente, id;  
 ```
 
 **Résultat** :
@@ -273,8 +273,8 @@ SELECT
         ORDER BY date_vente
         RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
     ) AS cumul_range
-FROM ventes
-ORDER BY date_vente, id;
+FROM ventes  
+ORDER BY date_vente, id;  
 ```
 
 **Résultat** :
@@ -300,7 +300,7 @@ Les lignes 1 et 2 ont le **même cumul** (250) car elles ont la même date. `RAN
 
 ### Limites de RANGE
 
-1. **Colonne ORDER BY unique** : `RANGE` ne fonctionne bien qu'avec une seule colonne dans `ORDER BY`
+1. **Colonne ORDER BY unique** : `RANGE` ne fonctionne bien qu'avec une seule colonne dans `ORDER BY`  
 2. **Type de données** : La colonne doit être numérique ou temporelle pour les offsets (ex: `RANGE 7 PRECEDING` pour 7 jours)
 
 ### RANGE avec Offset
@@ -315,8 +315,8 @@ SELECT
         ORDER BY date_vente
         RANGE BETWEEN INTERVAL '7 days' PRECEDING AND CURRENT ROW
     ) AS total_7_derniers_jours
-FROM ventes
-ORDER BY date_vente;
+FROM ventes  
+ORDER BY date_vente;  
 ```
 
 Cela inclut **toutes les lignes dont la date est dans les 7 jours précédents** (peu importe le nombre de lignes).
@@ -361,8 +361,8 @@ SELECT
         ORDER BY date_vente
         GROUPS BETWEEN 1 PRECEDING AND CURRENT ROW
     ) AS total_2_groupes
-FROM ventes
-ORDER BY date_vente;
+FROM ventes  
+ORDER BY date_vente;  
 ```
 
 **Données** :
@@ -415,11 +415,11 @@ fonction OVER (
 ### Bornes Disponibles
 
 ```sql
-UNBOUNDED PRECEDING    -- Début de la partition
-n PRECEDING            -- N unités avant (lignes/valeurs/groupes)
-CURRENT ROW            -- Ligne courante
-n FOLLOWING            -- N unités après
-UNBOUNDED FOLLOWING    -- Fin de la partition
+UNBOUNDED PRECEDING    -- Début de la partition  
+n PRECEDING            -- N unités avant (lignes/valeurs/groupes)  
+CURRENT ROW            -- Ligne courante  
+n FOLLOWING            -- N unités après  
+UNBOUNDED FOLLOWING    -- Fin de la partition  
 ```
 
 ### Exemples de Frames Courants
@@ -529,8 +529,8 @@ SELECT
         ORDER BY date
         ROWS BETWEEN 6 PRECEDING AND CURRENT ROW
     ) AS moyenne_mobile_7j
-FROM analytics
-ORDER BY date;
+FROM analytics  
+ORDER BY date;  
 ```
 
 **Usage** : Détecter les tendances en éliminant le bruit.
@@ -544,8 +544,8 @@ SELECT
     date,
     ca_journalier,
     ca_journalier - LAG(ca_journalier) OVER (ORDER BY date) AS croissance
-FROM ventes
-ORDER BY date;
+FROM ventes  
+ORDER BY date;  
 ```
 
 Note : `LAG()` est une fonction spécifique aux window functions (vue au chapitre 10.5).
@@ -563,8 +563,8 @@ SELECT
         ORDER BY date
         ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
     ) AS cumul_annuel
-FROM ventes
-ORDER BY date;
+FROM ventes  
+ORDER BY date;  
 ```
 
 ### 4. Somme Glissante sur 3 Mois
@@ -579,8 +579,8 @@ SELECT
         ORDER BY date
         RANGE BETWEEN INTERVAL '90 days' PRECEDING AND CURRENT ROW
     ) AS total_3_mois
-FROM ventes
-ORDER BY date;
+FROM ventes  
+ORDER BY date;  
 ```
 
 ### 5. Comparaison avec le Meilleur du Mois
@@ -595,8 +595,8 @@ SELECT
         PARTITION BY DATE_TRUNC('month', date)
         ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING
     ) AS max_mois
-FROM ventes
-ORDER BY date;
+FROM ventes  
+ORDER BY date;  
 ```
 
 ## Tableau Comparatif Complet
@@ -678,8 +678,8 @@ ROWS BETWEEN 3 PRECEDING AND CURRENT ROW
 
 ### 1. Choisir le Bon Type de Frame
 
-- **ROWS** : Plus performant car simple à calculer
-- **RANGE** : Peut être plus coûteux, surtout avec des offsets temporels
+- **ROWS** : Plus performant car simple à calculer  
+- **RANGE** : Peut être plus coûteux, surtout avec des offsets temporels  
 - **GROUPS** : Coût intermédiaire
 
 ### 2. Utiliser des Index
@@ -708,21 +708,21 @@ SELECT
     SUM(montant) OVER w AS total,
     AVG(montant) OVER w AS moyenne,
     COUNT(*) OVER w AS nb
-FROM ventes
-WINDOW w AS (ORDER BY date ROWS BETWEEN 6 PRECEDING AND CURRENT ROW);
+FROM ventes  
+WINDOW w AS (ORDER BY date ROWS BETWEEN 6 PRECEDING AND CURRENT ROW);  
 ```
 
 La clause `WINDOW` définit un frame réutilisable, évitant la duplication de code.
 
 ## Points Clés à Retenir
 
-- ✅ **ROWS** compte les lignes physiquement, une par une
-- ✅ **RANGE** groupe les valeurs égales et permet des offsets temporels
-- ✅ **GROUPS** compte les groupes de valeurs égales
-- ✅ Sans frame explicite + ORDER BY → Par défaut : `RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW`
-- ✅ `N PRECEDING` / `N FOLLOWING` pour définir la taille de la fenêtre
-- ✅ `UNBOUNDED` pour inclure tout depuis le début ou jusqu'à la fin
-- ✅ Les frames nécessitent `ORDER BY` pour définir "avant" et "après"
+- ✅ **ROWS** compte les lignes physiquement, une par une  
+- ✅ **RANGE** groupe les valeurs égales et permet des offsets temporels  
+- ✅ **GROUPS** compte les groupes de valeurs égales  
+- ✅ Sans frame explicite + ORDER BY → Par défaut : `RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW`  
+- ✅ `N PRECEDING` / `N FOLLOWING` pour définir la taille de la fenêtre  
+- ✅ `UNBOUNDED` pour inclure tout depuis le début ou jusqu'à la fin  
+- ✅ Les frames nécessitent `ORDER BY` pour définir "avant" et "après"  
 - ✅ Utilisez la clause `WINDOW` pour définir des frames réutilisables
 
 ## Résumé Visuel
@@ -747,8 +747,8 @@ FROM table;
 
 **Formes raccourcies** :
 ```sql
-ROWS 3 PRECEDING              → ROWS BETWEEN 3 PRECEDING AND CURRENT ROW
-ROWS UNBOUNDED PRECEDING      → ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+ROWS 3 PRECEDING              → ROWS BETWEEN 3 PRECEDING AND CURRENT ROW  
+ROWS UNBOUNDED PRECEDING      → ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW  
 ```
 
 ---

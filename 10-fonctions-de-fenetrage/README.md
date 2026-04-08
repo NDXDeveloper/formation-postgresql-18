@@ -134,12 +134,12 @@ Résoudre des problèmes réels avec des patterns éprouvés en production.
 
 À la fin de ce chapitre, vous serez capable de :
 
-- ✅ **Comprendre** la philosophie et le fonctionnement des window functions
-- ✅ **Écrire** des requêtes avec OVER, PARTITION BY, et ORDER BY
-- ✅ **Contrôler** précisément les frames de fenêtre (ROWS, RANGE, GROUPS)
-- ✅ **Utiliser** toutes les fonctions de fenêtrage (rangs, valeurs, agrégations)
-- ✅ **Résoudre** des problèmes complexes : top N, moyennes mobiles, cumuls
-- ✅ **Optimiser** les performances de vos requêtes avec window functions
+- ✅ **Comprendre** la philosophie et le fonctionnement des window functions  
+- ✅ **Écrire** des requêtes avec OVER, PARTITION BY, et ORDER BY  
+- ✅ **Contrôler** précisément les frames de fenêtre (ROWS, RANGE, GROUPS)  
+- ✅ **Utiliser** toutes les fonctions de fenêtrage (rangs, valeurs, agrégations)  
+- ✅ **Résoudre** des problèmes complexes : top N, moyennes mobiles, cumuls  
+- ✅ **Optimiser** les performances de vos requêtes avec window functions  
 - ✅ **Analyser** des données avec des techniques professionnelles
 
 ## Prérequis
@@ -212,9 +212,9 @@ Il est crucial de comprendre cette différence fondamentale :
 
 ```sql
 -- GROUP BY : 3 lignes (une par vendeur)
-SELECT vendeur, SUM(ventes) AS total
-FROM ventes
-GROUP BY vendeur;
+SELECT vendeur, SUM(ventes) AS total  
+FROM ventes  
+GROUP BY vendeur;  
 
 -- Window Function : toutes les lignes conservées
 SELECT vendeur, produit, ventes,
@@ -259,8 +259,8 @@ Les window functions sont un terrain de jeu fantastique. N'ayez pas peur d'expé
 
 Les window functions sont généralement **très performantes** dans PostgreSQL. Cependant :
 
-- ✅ **Bonne nouvelle** : PostgreSQL optimise intelligemment les calculs de fenêtres multiples
-- ✅ **Index utiles** : Les colonnes dans `PARTITION BY` et `ORDER BY` bénéficient d'index
+- ✅ **Bonne nouvelle** : PostgreSQL optimise intelligemment les calculs de fenêtres multiples  
+- ✅ **Index utiles** : Les colonnes dans `PARTITION BY` et `ORDER BY` bénéficient d'index  
 - ⚠️ **Attention** : Les fenêtres très larges (ex: `UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING`) sur de très grandes tables peuvent être coûteuses
 
 Nous aborderons les aspects de performance en détail dans chaque section.
@@ -269,10 +269,10 @@ Nous aborderons les aspects de performance en détail dans chaque section.
 
 Dans tout ce chapitre, nous suivrons ce format pour les exemples :
 
-1. **Le problème** : Ce que nous voulons accomplir
-2. **La requête SQL** : Avec window functions
-3. **Les données d'entrée** : Sous forme de tableau
-4. **Le résultat** : Avec explications ligne par ligne si nécessaire
+1. **Le problème** : Ce que nous voulons accomplir  
+2. **La requête SQL** : Avec window functions  
+3. **Les données d'entrée** : Sous forme de tableau  
+4. **Le résultat** : Avec explications ligne par ligne si nécessaire  
 5. **L'analyse** : Pourquoi ça fonctionne
 
 Exemple de format :
@@ -305,18 +305,18 @@ FROM table;
 
 Une fois ce chapitre complété, vous pourrez approfondir avec :
 
-- **Documentation officielle PostgreSQL** : Section "Window Functions"
-- **PostgreSQL Up and Running** (livre) : Chapitre sur les window functions
-- **Modern SQL** (site web) : Excellentes explications sur les window functions
+- **Documentation officielle PostgreSQL** : Section "Window Functions"  
+- **PostgreSQL Up and Running** (livre) : Chapitre sur les window functions  
+- **Modern SQL** (site web) : Excellentes explications sur les window functions  
 - **Use The Index, Luke** : Aspects de performance
 
 ## Mindset pour ce Chapitre
 
 Les window functions peuvent sembler déroutantes au début, surtout si vous êtes habitué à penser en termes de `GROUP BY`. Voici le bon état d'esprit :
 
-- 🧠 **Pensez "vue d'ensemble + détail"** : Vous voulez garder les détails ET avoir une vue d'ensemble
-- 🧠 **Pensez "fenêtre glissante"** : Imaginez une fenêtre qui se déplace sur vos données
-- 🧠 **Pensez "contexte"** : Chaque ligne voit son contexte (les lignes autour d'elle)
+- 🧠 **Pensez "vue d'ensemble + détail"** : Vous voulez garder les détails ET avoir une vue d'ensemble  
+- 🧠 **Pensez "fenêtre glissante"** : Imaginez une fenêtre qui se déplace sur vos données  
+- 🧠 **Pensez "contexte"** : Chaque ligne voit son contexte (les lignes autour d'elle)  
 - 🧠 **Pensez "sans fusion"** : Contrairement à GROUP BY, les lignes ne fusionnent jamais
 
 ## Prêt à Commencer ?

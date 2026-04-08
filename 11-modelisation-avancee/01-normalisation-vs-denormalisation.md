@@ -10,10 +10,10 @@ La **normalisation** est un processus méthodique de conception de bases de donn
 
 Imaginez une entreprise qui stocke toutes ses informations dans une seule grande table. Cette approche peut sembler simple au départ, mais elle pose rapidement plusieurs problèmes :
 
-1. **Redondance des données** : Les mêmes informations sont répétées inutilement
-2. **Anomalies d'insertion** : Impossibilité d'ajouter certaines données sans en ajouter d'autres
-3. **Anomalies de mise à jour** : Risque d'incohérences lors de modifications
-4. **Anomalies de suppression** : Perte d'informations lors de suppressions
+1. **Redondance des données** : Les mêmes informations sont répétées inutilement  
+2. **Anomalies d'insertion** : Impossibilité d'ajouter certaines données sans en ajouter d'autres  
+3. **Anomalies de mise à jour** : Risque d'incohérences lors de modifications  
+4. **Anomalies de suppression** : Perte d'informations lors de suppressions  
 5. **Gaspillage d'espace** : Stockage inefficace des données
 
 La normalisation résout ces problèmes en décomposant les tables de manière logique et systématique.
@@ -116,9 +116,9 @@ Table: Clients
 
 ### Avantages de la 1NF
 
-- ✅ Recherches et filtres efficaces sur chaque valeur
-- ✅ Facilité d'ajout, modification et suppression
-- ✅ Possibilité d'indexation sur des valeurs individuelles
+- ✅ Recherches et filtres efficaces sur chaque valeur  
+- ✅ Facilité d'ajout, modification et suppression  
+- ✅ Possibilité d'indexation sur des valeurs individuelles  
 - ✅ Intégrité des données garantie
 
 ---
@@ -184,9 +184,9 @@ Table: Commandes_Details
 
 ### Avantages de la 2NF
 
-- ✅ Élimination de la redondance des données produits
-- ✅ Modification du prix en un seul endroit
-- ✅ Possibilité de gérer les produits indépendamment des commandes
+- ✅ Élimination de la redondance des données produits  
+- ✅ Modification du prix en un seul endroit  
+- ✅ Possibilité de gérer les produits indépendamment des commandes  
 - ✅ Cohérence garantie des informations produits
 
 ---
@@ -229,12 +229,12 @@ Clé primaire: employe_id
 
 **Analyse des dépendances :**
 ```
-employe_id → nom_employe       (OK, dépendance directe)
-employe_id → departement_id    (OK, dépendance directe)
-employe_id → nom_departement   (PROBLÈME : dépendance transitive)
+employe_id → nom_employe       (OK, dépendance directe)  
+employe_id → departement_id    (OK, dépendance directe)  
+employe_id → nom_departement   (PROBLÈME : dépendance transitive)  
 
-Car en réalité :
-departement_id → nom_departement
+Car en réalité :  
+departement_id → nom_departement  
 ```
 
 **Problèmes identifiés :**
@@ -271,9 +271,9 @@ Table: Employes
 
 ### Avantages de la 3NF
 
-- ✅ Chaque information n'existe qu'à un seul endroit
-- ✅ Modifications simples et sans risque d'incohérence
-- ✅ Gestion indépendante des départements
+- ✅ Chaque information n'existe qu'à un seul endroit  
+- ✅ Modifications simples et sans risque d'incohérence  
+- ✅ Gestion indépendante des départements  
 - ✅ Structure logique et maintenable
 
 ---
@@ -410,8 +410,8 @@ Dans la **grande majorité des cas pratiques**, la **3NF est suffisante**. La BC
 
 Après avoir appris à normaliser, il peut sembler contre-intuitif de **volontairement** introduire de la redondance. Pourtant, la dénormalisation est une technique essentielle en production pour :
 
-1. **Améliorer les performances** : Réduire le nombre de jointures coûteuses
-2. **Simplifier les requêtes** : Rendre le code plus lisible et maintenable
+1. **Améliorer les performances** : Réduire le nombre de jointures coûteuses  
+2. **Simplifier les requêtes** : Rendre le code plus lisible et maintenable  
 3. **Optimiser les cas d'usage spécifiques** : Adapter la structure aux besoins réels
 
 ### Principe fondamental
@@ -419,9 +419,9 @@ Après avoir appris à normaliser, il peut sembler contre-intuitif de **volontai
 > La normalisation est la règle, la dénormalisation est l'exception justifiée.
 
 La dénormalisation doit être :
-- **Intentionnelle** : Résultat d'une décision consciente, pas de paresse
-- **Documentée** : Les raisons doivent être expliquées
-- **Mesurée** : Les gains doivent être quantifiés
+- **Intentionnelle** : Résultat d'une décision consciente, pas de paresse  
+- **Documentée** : Les raisons doivent être expliquées  
+- **Mesurée** : Les gains doivent être quantifiés  
 - **Contrôlée** : Les risques d'incohérence doivent être gérés
 
 ### Quand dénormaliser ?
@@ -439,11 +439,11 @@ SELECT
     p.nom_produit,
     cd.quantite,
     p.prix_unitaire
-FROM commandes c
-JOIN clients cl ON c.client_id = cl.client_id
-JOIN commandes_details cd ON c.commande_id = cd.commande_id
-JOIN produits p ON cd.produit_id = p.produit_id
-WHERE c.date_commande > '2025-01-01';
+FROM commandes c  
+JOIN clients cl ON c.client_id = cl.client_id  
+JOIN commandes_details cd ON c.commande_id = cd.commande_id  
+JOIN produits p ON cd.produit_id = p.produit_id  
+WHERE c.date_commande > '2025-01-01';  
 ```
 
 Cette requête nécessite **3 jointures** à chaque exécution.
@@ -463,13 +463,13 @@ SELECT
     cd.nom_produit,
     cd.quantite,
     cd.prix_unitaire
-FROM commandes_details_denorm cd
-JOIN commandes c ON cd.commande_id = c.commande_id
-WHERE c.date_commande > '2025-01-01';
+FROM commandes_details_denorm cd  
+JOIN commandes c ON cd.commande_id = c.commande_id  
+WHERE c.date_commande > '2025-01-01';  
 ```
 
 **Trade-off :**
-- ✅ Gain : 1 jointure en moins, requête plus rapide
+- ✅ Gain : 1 jointure en moins, requête plus rapide  
 - ❌ Coût : Duplication du nom et du prix du produit
 
 #### 2. Agrégations répétitives
@@ -482,9 +482,9 @@ SELECT
     cl.client_id,
     cl.nom_client,
     COUNT(c.commande_id) as nb_commandes
-FROM clients cl
-LEFT JOIN commandes c ON cl.client_id = c.client_id
-GROUP BY cl.client_id, cl.nom_client;
+FROM clients cl  
+LEFT JOIN commandes c ON cl.client_id = c.client_id  
+GROUP BY cl.client_id, cl.nom_client;  
 ```
 
 **Solution dénormalisée :**
@@ -503,13 +503,13 @@ Table: Clients
 +-------------+------------------+---------------+
 
 -- Requête instantanée
-SELECT client_id, nom_client, nb_commandes
-FROM clients
-WHERE nb_commandes > 10;
+SELECT client_id, nom_client, nb_commandes  
+FROM clients  
+WHERE nb_commandes > 10;  
 ```
 
 **Trade-off :**
-- ✅ Gain : Requête ultra-rapide, pas d'agrégation
+- ✅ Gain : Requête ultra-rapide, pas d'agrégation  
 - ❌ Coût : Nécessite de maintenir la cohérence via trigger/code applicatif
 
 #### 3. Données historiques immuables
@@ -526,9 +526,9 @@ Table: Commandes_Details
 +-------------+--------------+-------------+
 
 -- Requête pour obtenir le prix (INCORRECT pour historique)
-SELECT cd.*, p.prix_unitaire
-FROM commandes_details cd
-JOIN produits p ON cd.produit_id = p.produit_id;
+SELECT cd.*, p.prix_unitaire  
+FROM commandes_details cd  
+JOIN produits p ON cd.produit_id = p.produit_id;  
 -- Le prix actuel n'est pas forcément celui de la commande !
 ```
 
@@ -571,16 +571,16 @@ CREATE TABLE produits (
 Pour des agrégations complexes utilisées fréquemment :
 
 ```sql
-CREATE MATERIALIZED VIEW stats_ventes AS
-SELECT
+CREATE MATERIALIZED VIEW stats_ventes AS  
+SELECT  
     DATE_TRUNC('month', c.date_commande) as mois,
     p.categorie,
     SUM(cd.quantite * cd.prix_unitaire) as chiffre_affaires,
     COUNT(DISTINCT c.commande_id) as nb_commandes
-FROM commandes c
-JOIN commandes_details cd ON c.commande_id = cd.commande_id
-JOIN produits p ON cd.produit_id = p.produit_id
-GROUP BY 1, 2;
+FROM commandes c  
+JOIN commandes_details cd ON c.commande_id = cd.commande_id  
+JOIN produits p ON cd.produit_id = p.produit_id  
+GROUP BY 1, 2;  
 
 -- Rafraîchissement périodique
 REFRESH MATERIALIZED VIEW stats_ventes;
@@ -592,17 +592,17 @@ Copie dénormalisée mise à jour périodiquement :
 
 ```sql
 -- Table optimisée pour l'affichage
-CREATE TABLE commandes_display_cache AS
-SELECT
+CREATE TABLE commandes_display_cache AS  
+SELECT  
     c.commande_id,
     c.date_commande,
     cl.nom_client,
     cl.email,
     SUM(cd.quantite * cd.prix_unitaire) as montant_total
-FROM commandes c
-JOIN clients cl ON c.client_id = cl.client_id
-JOIN commandes_details cd ON c.commande_id = cd.commande_id
-GROUP BY c.commande_id, c.date_commande, cl.nom_client, cl.email;
+FROM commandes c  
+JOIN clients cl ON c.client_id = cl.client_id  
+JOIN commandes_details cd ON c.commande_id = cd.commande_id  
+GROUP BY c.commande_id, c.date_commande, cl.nom_client, cl.email;  
 
 -- Rafraîchir chaque nuit via cron
 ```
@@ -615,9 +615,9 @@ La dénormalisation introduit un risque d'**incohérence**. Voici les stratégie
 
 ```sql
 -- Maintenir automatiquement nb_commandes dans clients
-CREATE OR REPLACE FUNCTION update_client_nb_commandes()
-RETURNS TRIGGER AS $$
-BEGIN
+CREATE OR REPLACE FUNCTION update_client_nb_commandes()  
+RETURNS TRIGGER AS $$  
+BEGIN  
     IF TG_OP = 'INSERT' THEN
         UPDATE clients
         SET nb_commandes = nb_commandes + 1
@@ -631,9 +631,9 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE TRIGGER trg_update_nb_commandes
-AFTER INSERT OR DELETE ON commandes
-FOR EACH ROW EXECUTE FUNCTION update_client_nb_commandes();
+CREATE TRIGGER trg_update_nb_commandes  
+AFTER INSERT OR DELETE ON commandes  
+FOR EACH ROW EXECUTE FUNCTION update_client_nb_commandes();  
 ```
 
 #### 2. Logique applicative
@@ -676,10 +676,10 @@ SELECT
     c.nb_commandes as compteur_stocke,
     COUNT(co.commande_id) as compteur_reel,
     c.nb_commandes - COUNT(co.commande_id) as ecart
-FROM clients c
-LEFT JOIN commandes co ON c.client_id = co.client_id
-GROUP BY c.client_id, c.nom_client, c.nb_commandes
-HAVING c.nb_commandes != COUNT(co.commande_id);
+FROM clients c  
+LEFT JOIN commandes co ON c.client_id = co.client_id  
+GROUP BY c.client_id, c.nom_client, c.nb_commandes  
+HAVING c.nb_commandes != COUNT(co.commande_id);  
 ```
 
 ### Règles de décision : Normaliser ou Dénormaliser ?
@@ -743,16 +743,16 @@ Table: Produits_Denorm
 
 ```sql
 -- Au lieu de recalculer à chaque affichage
-CREATE MATERIALIZED VIEW dashboard_ventes_journalieres AS
-SELECT
+CREATE MATERIALIZED VIEW dashboard_ventes_journalieres AS  
+SELECT  
     DATE(c.date_commande) as jour,
     COUNT(DISTINCT c.commande_id) as nb_commandes,
     COUNT(DISTINCT c.client_id) as nb_clients,
     SUM(cd.quantite * cd.prix_unitaire) as ca_jour,
     AVG(cd.quantite * cd.prix_unitaire) as panier_moyen
-FROM commandes c
-JOIN commandes_details cd ON c.commande_id = cd.commande_id
-GROUP BY DATE(c.date_commande);
+FROM commandes c  
+JOIN commandes_details cd ON c.commande_id = cd.commande_id  
+GROUP BY DATE(c.date_commande);  
 
 -- Rafraîchir chaque nuit à 1h du matin
 -- Dashboard = requête SELECT simple et ultra-rapide
@@ -764,32 +764,32 @@ GROUP BY DATE(c.date_commande);
 
 ### Pour la normalisation
 
-1. **Commencez toujours normalisé** : Plus facile de dénormaliser que l'inverse
-2. **Documentez vos choix** : Expliquez pourquoi vous vous arrêtez à 2NF ou 3NF
-3. **Utilisez des outils de modélisation** : ERD (Entity-Relationship Diagram)
-4. **Testez avec des données réalistes** : Simulez le volume de production
+1. **Commencez toujours normalisé** : Plus facile de dénormaliser que l'inverse  
+2. **Documentez vos choix** : Expliquez pourquoi vous vous arrêtez à 2NF ou 3NF  
+3. **Utilisez des outils de modélisation** : ERD (Entity-Relationship Diagram)  
+4. **Testez avec des données réalistes** : Simulez le volume de production  
 5. **Révisez régulièrement** : Le modèle évolue avec l'application
 
 ### Pour la dénormalisation
 
-1. **Mesurez avant d'agir** : `EXPLAIN ANALYZE` est votre ami
-2. **Dénormalisez progressivement** : Une colonne à la fois
-3. **Automatisez la cohérence** : Triggers ou logique applicative robuste
-4. **Monitorer les écarts** : Scripts de validation réguliers
+1. **Mesurez avant d'agir** : `EXPLAIN ANALYZE` est votre ami  
+2. **Dénormalisez progressivement** : Une colonne à la fois  
+3. **Automatisez la cohérence** : Triggers ou logique applicative robuste  
+4. **Monitorer les écarts** : Scripts de validation réguliers  
 5. **Documentez clairement** : Indiquez les données redondantes et leur source
 
 ### Erreurs courantes à éviter
 
-- ❌ **Dénormaliser par paresse** : "C'est plus simple d'avoir tout dans une table"
+- ❌ **Dénormaliser par paresse** : "C'est plus simple d'avoir tout dans une table"  
 - ✅ Normaliser d'abord, dénormaliser si besoin justifié
 
-- ❌ **Optimisation prématurée** : Dénormaliser avant d'avoir mesuré
+- ❌ **Optimisation prématurée** : Dénormaliser avant d'avoir mesuré  
 - ✅ Profiler, identifier les goulots, puis optimiser
 
-- ❌ **Ignorer les coûts de maintenance** : Oublier la synchronisation
+- ❌ **Ignorer les coûts de maintenance** : Oublier la synchronisation  
 - ✅ Évaluer le coût total (développement + maintenance)
 
-- ❌ **Dénormaliser sans stratégie de cohérence** : Données incohérentes
+- ❌ **Dénormaliser sans stratégie de cohérence** : Données incohérentes  
 - ✅ Mettre en place triggers/validation dès le départ
 
 ---
@@ -849,15 +849,15 @@ SELECT
     au.nom as nom_auteur,
     COUNT(DISTINCT c.commentaire_id) as nb_commentaires,
     STRING_AGG(DISTINCT t.nom_tag, ', ') as tags
-FROM articles a
-JOIN auteurs au ON a.auteur_id = au.auteur_id
-LEFT JOIN commentaires c ON a.article_id = c.article_id
-LEFT JOIN articles_tags at ON a.article_id = at.article_id
-LEFT JOIN tags t ON at.tag_id = t.tag_id
-WHERE a.date_publication <= NOW()
-GROUP BY a.article_id, a.titre, au.nom
-ORDER BY a.date_publication DESC
-LIMIT 20;
+FROM articles a  
+JOIN auteurs au ON a.auteur_id = au.auteur_id  
+LEFT JOIN commentaires c ON a.article_id = c.article_id  
+LEFT JOIN articles_tags at ON a.article_id = at.article_id  
+LEFT JOIN tags t ON at.tag_id = t.tag_id  
+WHERE a.date_publication <= NOW()  
+GROUP BY a.article_id, a.titre, au.nom  
+ORDER BY a.date_publication DESC  
+LIMIT 20;  
 ```
 
 **Analyse :** 4 jointures, 2 agrégations, exécuté des milliers de fois.
@@ -866,27 +866,27 @@ LIMIT 20;
 
 ```sql
 -- Ajouter des colonnes dénormalisées
-ALTER TABLE articles ADD COLUMN nom_auteur VARCHAR(100);
-ALTER TABLE articles ADD COLUMN nb_commentaires INTEGER DEFAULT 0;
-ALTER TABLE articles ADD COLUMN tags_list TEXT;
+ALTER TABLE articles ADD COLUMN nom_auteur VARCHAR(100);  
+ALTER TABLE articles ADD COLUMN nb_commentaires INTEGER DEFAULT 0;  
+ALTER TABLE articles ADD COLUMN tags_list TEXT;  
 
 -- Trigger pour maintenir nom_auteur
-CREATE OR REPLACE FUNCTION sync_nom_auteur()
-RETURNS TRIGGER AS $$
-BEGIN
+CREATE OR REPLACE FUNCTION sync_nom_auteur()  
+RETURNS TRIGGER AS $$  
+BEGIN  
     NEW.nom_auteur := (SELECT nom FROM auteurs WHERE auteur_id = NEW.auteur_id);
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE TRIGGER trg_sync_auteur
-BEFORE INSERT OR UPDATE OF auteur_id ON articles
-FOR EACH ROW EXECUTE FUNCTION sync_nom_auteur();
+CREATE TRIGGER trg_sync_auteur  
+BEFORE INSERT OR UPDATE OF auteur_id ON articles  
+FOR EACH ROW EXECUTE FUNCTION sync_nom_auteur();  
 
 -- Trigger pour nb_commentaires
-CREATE OR REPLACE FUNCTION update_nb_commentaires()
-RETURNS TRIGGER AS $$
-BEGIN
+CREATE OR REPLACE FUNCTION update_nb_commentaires()  
+RETURNS TRIGGER AS $$  
+BEGIN  
     IF TG_OP = 'INSERT' THEN
         UPDATE articles SET nb_commentaires = nb_commentaires + 1
         WHERE article_id = NEW.article_id;
@@ -898,9 +898,9 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE TRIGGER trg_update_nb_commentaires
-AFTER INSERT OR DELETE ON commentaires
-FOR EACH ROW EXECUTE FUNCTION update_nb_commentaires();
+CREATE TRIGGER trg_update_nb_commentaires  
+AFTER INSERT OR DELETE ON commentaires  
+FOR EACH ROW EXECUTE FUNCTION update_nb_commentaires();  
 
 -- Nouvelle requête ultra-rapide
 SELECT
@@ -909,16 +909,16 @@ SELECT
     nom_auteur,
     nb_commentaires,
     tags_list
-FROM articles
-WHERE date_publication <= NOW()
-ORDER BY date_publication DESC
-LIMIT 20;
+FROM articles  
+WHERE date_publication <= NOW()  
+ORDER BY date_publication DESC  
+LIMIT 20;  
 ```
 
 **Résultat :**
-- ✅ Requête 10× plus rapide (0 jointure, 0 agrégation)
-- ✅ Code applicatif simplifié
-- ⚠️ Complexité déplacée vers les triggers de synchronisation
+- ✅ Requête 10× plus rapide (0 jointure, 0 agrégation)  
+- ✅ Code applicatif simplifié  
+- ⚠️ Complexité déplacée vers les triggers de synchronisation  
 - ⚠️ Nécessite tests rigoureux de la cohérence
 
 ---
@@ -929,10 +929,10 @@ La normalisation et la dénormalisation sont deux faces d'une même médaille : 
 
 ### Principes à retenir
 
-1. **Normaliser est la base** : Commencez toujours par une structure normalisée (3NF)
-2. **Dénormaliser avec intention** : Seulement pour résoudre des problèmes mesurés
-3. **Équilibrer** : Performance vs Cohérence vs Maintenabilité
-4. **Mesurer** : Utilisez `EXPLAIN ANALYZE`, `pg_stat_statements`
+1. **Normaliser est la base** : Commencez toujours par une structure normalisée (3NF)  
+2. **Dénormaliser avec intention** : Seulement pour résoudre des problèmes mesurés  
+3. **Équilibrer** : Performance vs Cohérence vs Maintenabilité  
+4. **Mesurer** : Utilisez `EXPLAIN ANALYZE`, `pg_stat_statements`  
 5. **Documenter** : Expliquez vos choix de conception
 
 ### Philosophie de conception
@@ -949,12 +949,12 @@ La normalisation et la dénormalisation sont deux faces d'une même médaille : 
 
 Avant de dénormaliser, posez-vous ces questions :
 
-- [ ] Ai-je mesuré le problème de performance avec `EXPLAIN ANALYZE` ?
-- [ ] Est-ce réellement la jointure qui est le goulot ?
-- [ ] Ai-je exploré toutes les alternatives (index, cache, query optimization) ?
-- [ ] Puis-je maintenir la cohérence facilement et automatiquement ?
-- [ ] Le gain de performance justifie-t-il la complexité ajoutée ?
-- [ ] Ai-je documenté ma décision et les raisons ?
+- [ ] Ai-je mesuré le problème de performance avec `EXPLAIN ANALYZE` ?  
+- [ ] Est-ce réellement la jointure qui est le goulot ?  
+- [ ] Ai-je exploré toutes les alternatives (index, cache, query optimization) ?  
+- [ ] Puis-je maintenir la cohérence facilement et automatiquement ?  
+- [ ] Le gain de performance justifie-t-il la complexité ajoutée ?  
+- [ ] Ai-je documenté ma décision et les raisons ?  
 - [ ] Ai-je mis en place un mécanisme de validation de la cohérence ?
 
 Si vous répondez "oui" à toutes ces questions, la dénormalisation est probablement justifiée.
@@ -965,15 +965,15 @@ Si vous répondez "oui" à toutes ces questions, la dénormalisation est probabl
 
 ### Ressources recommandées
 
-- **Documentation PostgreSQL** : [Normalisation et conception de schémas](https://www.postgresql.org/docs/)
-- **Livre** : "Database Design and Relational Theory" par C.J. Date
+- **Documentation PostgreSQL** : [Normalisation et conception de schémas](https://www.postgresql.org/docs/)  
+- **Livre** : "Database Design and Relational Theory" par C.J. Date  
 - **Article** : "Normalization and Denormalization" sur PostgreSQL Wiki
 
 ### Concepts connexes à explorer
 
-- **Partitionnement de tables** : Diviser une grande table en sous-tables
-- **Vues matérialisées** : Cache de requêtes complexes
-- **Index covering** : Inclure des colonnes dans l'index pour éviter les lookups
+- **Partitionnement de tables** : Diviser une grande table en sous-tables  
+- **Vues matérialisées** : Cache de requêtes complexes  
+- **Index covering** : Inclure des colonnes dans l'index pour éviter les lookups  
 - **JSONB** : Alternative NoSQL dans PostgreSQL pour certains cas d'usage
 
 ---

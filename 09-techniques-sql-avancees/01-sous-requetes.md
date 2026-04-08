@@ -18,9 +18,9 @@ Une sous-requête est simplement une requête `SELECT` placée entre parenthèse
 
 ```sql
 -- Trouver les employés qui gagnent plus que le salaire moyen
-SELECT nom, salaire
-FROM employes
-WHERE salaire > (SELECT AVG(salaire) FROM employes);
+SELECT nom, salaire  
+FROM employes  
+WHERE salaire > (SELECT AVG(salaire) FROM employes);  
 ```
 
 Dans cet exemple, `(SELECT AVG(salaire) FROM employes)` est une sous-requête qui calcule le salaire moyen, et cette valeur est ensuite utilisée dans la condition `WHERE`.
@@ -45,9 +45,9 @@ Une sous-requête scalaire retourne **une seule valeur** (une ligne, une colonne
 
 ```sql
 -- Trouver les produits plus chers que le produit le moins cher de la catégorie 'Électronique'
-SELECT nom, prix
-FROM produits
-WHERE prix > (
+SELECT nom, prix  
+FROM produits  
+WHERE prix > (  
     SELECT MIN(prix)
     FROM produits
     WHERE categorie = 'Électronique'
@@ -72,9 +72,9 @@ FROM employes;
 SELECT
     departement,
     SUM(salaire) AS masse_salariale
-FROM employes
-GROUP BY departement
-HAVING SUM(salaire) > (
+FROM employes  
+GROUP BY departement  
+HAVING SUM(salaire) > (  
     SELECT AVG(total)
     FROM (
         SELECT SUM(salaire) AS total
@@ -90,9 +90,9 @@ Si votre sous-requête retourne plus d'une ligne, PostgreSQL génèrera une erre
 
 ```sql
 -- ❌ ERREUR : Cette sous-requête retourne plusieurs lignes
-SELECT nom
-FROM employes
-WHERE salaire = (SELECT salaire FROM employes WHERE departement = 'IT');
+SELECT nom  
+FROM employes  
+WHERE salaire = (SELECT salaire FROM employes WHERE departement = 'IT');  
 ```
 
 **Solution :** Utilisez des opérateurs adaptés comme `IN`, `ANY`, `ALL` pour les résultats multi-lignes.
@@ -115,9 +115,9 @@ Une sous-requête vectorielle retourne **plusieurs lignes** mais **une seule col
 
 ```sql
 -- Trouver les employés travaillant dans des départements situés à Paris
-SELECT nom, departement
-FROM employes
-WHERE departement IN (
+SELECT nom, departement  
+FROM employes  
+WHERE departement IN (  
     SELECT nom_departement
     FROM departements
     WHERE ville = 'Paris'
@@ -128,9 +128,9 @@ WHERE departement IN (
 
 ```sql
 -- Trouver les produits qui n'ont jamais été commandés
-SELECT nom
-FROM produits
-WHERE id NOT IN (
+SELECT nom  
+FROM produits  
+WHERE id NOT IN (  
     SELECT produit_id
     FROM commandes
 );
@@ -142,9 +142,9 @@ WHERE id NOT IN (
 
 ```sql
 -- Trouver les employés qui gagnent plus que n'importe quel employé du département 'Support'
-SELECT nom, salaire
-FROM employes
-WHERE salaire > ANY (
+SELECT nom, salaire  
+FROM employes  
+WHERE salaire > ANY (  
     SELECT salaire
     FROM employes
     WHERE departement = 'Support'
@@ -157,9 +157,9 @@ WHERE salaire > ANY (
 
 ```sql
 -- Trouver les employés qui gagnent plus que tous les employés du département 'Support'
-SELECT nom, salaire
-FROM employes
-WHERE salaire > ALL (
+SELECT nom, salaire  
+FROM employes  
+WHERE salaire > ALL (  
     SELECT salaire
     FROM employes
     WHERE departement = 'Support'
@@ -172,9 +172,9 @@ WHERE salaire > ALL (
 
 ```sql
 -- Trouver les clients qui ont passé au moins une commande
-SELECT nom
-FROM clients c
-WHERE EXISTS (
+SELECT nom  
+FROM clients c  
+WHERE EXISTS (  
     SELECT 1
     FROM commandes
     WHERE client_id = c.id
@@ -187,19 +187,19 @@ WHERE EXISTS (
 
 ```sql
 -- Avec IN (charge tous les IDs en mémoire)
-SELECT nom
-FROM clients
-WHERE id IN (SELECT client_id FROM commandes);
+SELECT nom  
+FROM clients  
+WHERE id IN (SELECT client_id FROM commandes);  
 
 -- Avec EXISTS (teste l'existence ligne par ligne, souvent plus performant)
-SELECT nom
-FROM clients c
-WHERE EXISTS (SELECT 1 FROM commandes WHERE client_id = c.id);
+SELECT nom  
+FROM clients c  
+WHERE EXISTS (SELECT 1 FROM commandes WHERE client_id = c.id);  
 ```
 
 **Règle générale :**
-- `EXISTS` est souvent plus performant pour les grandes tables
-- `IN` est plus lisible pour les petits ensembles
+- `EXISTS` est souvent plus performant pour les grandes tables  
+- `IN` est plus lisible pour les petits ensembles  
 - `EXISTS` gère mieux les `NULL`
 
 ---
@@ -217,8 +217,8 @@ Une sous-requête de table retourne **plusieurs lignes et plusieurs colonnes**, 
 #### Syntaxe de base
 
 ```sql
-SELECT colonnes
-FROM (
+SELECT colonnes  
+FROM (  
     SELECT ... FROM ... WHERE ...
 ) AS alias_obligatoire
 WHERE conditions;
@@ -230,8 +230,8 @@ WHERE conditions;
 
 ```sql
 -- Calculer la moyenne des masses salariales par département
-SELECT AVG(masse_salariale) AS moyenne_masse_salariale
-FROM (
+SELECT AVG(masse_salariale) AS moyenne_masse_salariale  
+FROM (  
     SELECT departement, SUM(salaire) AS masse_salariale
     FROM employes
     GROUP BY departement
@@ -242,8 +242,8 @@ FROM (
 
 ```sql
 -- Trouver les catégories de produits avec un prix moyen > 100
-SELECT categorie, prix_moyen
-FROM (
+SELECT categorie, prix_moyen  
+FROM (  
     SELECT
         categorie,
         AVG(prix) AS prix_moyen
@@ -262,8 +262,8 @@ SELECT
     e.salaire,
     d.salaire_moyen_dept,
     e.salaire - d.salaire_moyen_dept AS ecart
-FROM employes e
-INNER JOIN (
+FROM employes e  
+INNER JOIN (  
     SELECT
         departement,
         AVG(salaire) AS salaire_moyen_dept
@@ -276,8 +276,8 @@ INNER JOIN (
 
 ```sql
 -- Obtenir les 3 employés les mieux payés de chaque département
-SELECT *
-FROM (
+SELECT *  
+FROM (  
     SELECT
         nom,
         departement,
@@ -298,9 +298,9 @@ Une sous-requête non-corrélée est **indépendante** de la requête externe. E
 
 ```sql
 -- La sous-requête est exécutée 1 fois
-SELECT nom, salaire
-FROM employes
-WHERE salaire > (SELECT AVG(salaire) FROM employes);
+SELECT nom, salaire  
+FROM employes  
+WHERE salaire > (SELECT AVG(salaire) FROM employes);  
 ```
 
 **Avantages :**
@@ -316,9 +316,9 @@ Une sous-requête corrélée **dépend** de la requête externe. Elle référenc
 
 ```sql
 -- La sous-requête est exécutée pour chaque employé
-SELECT e1.nom, e1.salaire
-FROM employes e1
-WHERE e1.salaire > (
+SELECT e1.nom, e1.salaire  
+FROM employes e1  
+WHERE e1.salaire > (  
     SELECT AVG(e2.salaire)
     FROM employes e2
     WHERE e2.departement = e1.departement  -- ← Corrélation
@@ -334,9 +334,9 @@ WHERE e1.salaire > (
 
 ```sql
 -- Trouver les clients qui ont commandé au moins un produit de catégorie 'Électronique'
-SELECT c.nom
-FROM clients c
-WHERE EXISTS (
+SELECT c.nom  
+FROM clients c  
+WHERE EXISTS (  
     SELECT 1
     FROM commandes co
     INNER JOIN produits p ON co.produit_id = p.id
@@ -382,8 +382,8 @@ FROM produits p;
 SELECT
     p.nom,
     COALESCE(c.nb_commandes, 0) AS nb_commandes
-FROM produits p
-LEFT JOIN (
+FROM produits p  
+LEFT JOIN (  
     SELECT produit_id, COUNT(*) AS nb_commandes
     FROM commandes
     GROUP BY produit_id
@@ -396,9 +396,9 @@ Les sous-requêtes bénéficient grandement des index sur les colonnes utilisée
 
 ```sql
 -- Cette requête sera rapide si un index existe sur commandes.client_id
-SELECT nom
-FROM clients c
-WHERE EXISTS (
+SELECT nom  
+FROM clients c  
+WHERE EXISTS (  
     SELECT 1 FROM commandes WHERE client_id = c.id
 );
 ```
@@ -413,29 +413,29 @@ Souvent, une sous-requête peut être réécrite avec une jointure. Voici les co
 
 #### Quand préférer une sous-requête
 
-1. **Clarté du code :** Logique plus évidente
-2. **Test d'existence :** `EXISTS` est explicite et optimisé
+1. **Clarté du code :** Logique plus évidente  
+2. **Test d'existence :** `EXISTS` est explicite et optimisé  
 3. **Agrégation dans SELECT :** Calcul par ligne
 
 ```sql
 -- Plus lisible avec EXISTS
-SELECT nom
-FROM clients c
-WHERE EXISTS (SELECT 1 FROM commandes WHERE client_id = c.id);
+SELECT nom  
+FROM clients c  
+WHERE EXISTS (SELECT 1 FROM commandes WHERE client_id = c.id);  
 ```
 
 #### Quand préférer une jointure
 
-1. **Performance :** Souvent plus rapide (une seule passe)
-2. **Récupération de colonnes multiples :** Plus naturel
+1. **Performance :** Souvent plus rapide (une seule passe)  
+2. **Récupération de colonnes multiples :** Plus naturel  
 3. **Agrégations globales :** Moins de sous-requêtes imbriquées
 
 ```sql
 -- Plus performant avec JOIN
-SELECT c.nom, COUNT(co.id) AS nb_commandes
-FROM clients c
-LEFT JOIN commandes co ON c.id = co.client_id
-GROUP BY c.id, c.nom;
+SELECT c.nom, COUNT(co.id) AS nb_commandes  
+FROM clients c  
+LEFT JOIN commandes co ON c.id = co.client_id  
+GROUP BY c.id, c.nom;  
 ```
 
 ---
@@ -450,8 +450,8 @@ PostgreSQL peut convertir `IN` et `EXISTS` en semi-jointures efficaces :
 
 ```sql
 -- Ces deux requêtes peuvent produire le même plan d'exécution
-SELECT * FROM clients WHERE id IN (SELECT client_id FROM commandes);
-SELECT * FROM clients c WHERE EXISTS (SELECT 1 FROM commandes WHERE client_id = c.id);
+SELECT * FROM clients WHERE id IN (SELECT client_id FROM commandes);  
+SELECT * FROM clients c WHERE EXISTS (SELECT 1 FROM commandes WHERE client_id = c.id);  
 ```
 
 #### 2. Subquery Pull-Up
@@ -460,8 +460,8 @@ Certaines sous-requêtes dans `FROM` sont "remontées" et fusionnées avec la re
 
 ```sql
 -- Peut être optimisée en une seule requête par PostgreSQL
-SELECT nom
-FROM (
+SELECT nom  
+FROM (  
     SELECT nom, salaire FROM employes WHERE actif = TRUE
 ) AS e
 WHERE salaire > 50000;
@@ -478,18 +478,18 @@ Pour les sous-requêtes coûteuses utilisées plusieurs fois, PostgreSQL peut le
 Utilisez `EXPLAIN ANALYZE` pour comprendre comment PostgreSQL exécute vos sous-requêtes :
 
 ```sql
-EXPLAIN ANALYZE
-SELECT nom
-FROM clients c
-WHERE EXISTS (
+EXPLAIN ANALYZE  
+SELECT nom  
+FROM clients c  
+WHERE EXISTS (  
     SELECT 1 FROM commandes WHERE client_id = c.id
 );
 ```
 
 **Éléments à surveiller :**
-- **Nested Loop** : Peut indiquer une corrélation ligne par ligne
-- **Hash Semi Join** / **Merge Semi Join** : Optimisations efficaces
-- **SubPlan** : Sous-requête corrélée (attention si coût élevé)
+- **Nested Loop** : Peut indiquer une corrélation ligne par ligne  
+- **Hash Semi Join** / **Merge Semi Join** : Optimisations efficaces  
+- **SubPlan** : Sous-requête corrélée (attention si coût élevé)  
 - **InitPlan** : Sous-requête exécutée une fois avant la requête principale (bon signe)
 
 ---
@@ -568,8 +568,8 @@ WHERE EXISTS (
 
 ```sql
 -- Les 2 produits les plus vendus par catégorie
-SELECT categorie, nom, ventes
-FROM (
+SELECT categorie, nom, ventes  
+FROM (  
     SELECT
         categorie,
         nom,
@@ -584,9 +584,9 @@ WHERE rang <= 2;
 
 ```sql
 -- Employés gagnant plus que la moyenne de leur département
-SELECT e.nom, e.salaire, e.departement
-FROM employes e
-WHERE e.salaire > (
+SELECT e.nom, e.salaire, e.departement  
+FROM employes e  
+WHERE e.salaire > (  
     SELECT AVG(salaire)
     FROM employes
     WHERE departement = e.departement
@@ -597,9 +597,9 @@ WHERE e.salaire > (
 
 ```sql
 -- Garder uniquement le dernier enregistrement pour chaque client
-SELECT *
-FROM commandes c1
-WHERE c1.date_commande = (
+SELECT *  
+FROM commandes c1  
+WHERE c1.date_commande = (  
     SELECT MAX(date_commande)
     FROM commandes c2
     WHERE c2.client_id = c1.client_id
@@ -610,9 +610,9 @@ WHERE c1.date_commande = (
 
 ```sql
 -- Départements avec plus de 10 employés
-SELECT nom
-FROM departements
-WHERE id IN (
+SELECT nom  
+FROM departements  
+WHERE id IN (  
     SELECT departement_id
     FROM employes
     GROUP BY departement_id
@@ -632,21 +632,21 @@ WHERE id IN (
 
 **Points clés à retenir :**
 
-1. Les sous-requêtes permettent de décomposer des problèmes complexes
-2. `EXISTS` est généralement plus performant que `IN` pour les grandes tables
-3. Évitez les sous-requêtes corrélées dans `SELECT` si possible
-4. Les index sur les colonnes de corrélation sont cruciaux
-5. Utilisez `EXPLAIN ANALYZE` pour valider vos optimisations
-6. Parfois, une jointure est plus performante qu'une sous-requête
+1. Les sous-requêtes permettent de décomposer des problèmes complexes  
+2. `EXISTS` est généralement plus performant que `IN` pour les grandes tables  
+3. Évitez les sous-requêtes corrélées dans `SELECT` si possible  
+4. Les index sur les colonnes de corrélation sont cruciaux  
+5. Utilisez `EXPLAIN ANALYZE` pour valider vos optimisations  
+6. Parfois, une jointure est plus performante qu'une sous-requête  
 7. PostgreSQL optimise intelligemment de nombreuses sous-requêtes automatiquement
 
 ---
 
 ## Pour aller plus loin
 
-- **CTEs (Common Table Expressions)** : Alternative souvent plus lisible aux sous-requêtes complexes
-- **Window Functions** : Pour éviter certaines sous-requêtes corrélées
-- **Lateral Joins** : Pour corréler efficacement des sous-requêtes de table
+- **CTEs (Common Table Expressions)** : Alternative souvent plus lisible aux sous-requêtes complexes  
+- **Window Functions** : Pour éviter certaines sous-requêtes corrélées  
+- **Lateral Joins** : Pour corréler efficacement des sous-requêtes de table  
 - **Subquery Pull-Up** : Détails internes de l'optimiseur PostgreSQL
 
 ---

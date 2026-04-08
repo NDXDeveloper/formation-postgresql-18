@@ -15,13 +15,13 @@ Ce chapitre marque une transition importante dans votre parcours d'apprentissage
 ### 1. Résoudre des problèmes complexes
 
 Les techniques de base de SQL permettent de répondre à des questions simples :
-- "Quels sont tous les clients de Paris ?"
-- "Quel est le total des ventes par produit ?"
+- "Quels sont tous les clients de Paris ?"  
+- "Quel est le total des ventes par produit ?"  
 - "Combien d'employés travaillent dans le département IT ?"
 
 Mais que faire lorsque les questions deviennent plus complexes ?
-- "Quels sont les clients dont les achats totaux dépassent la moyenne de leur région ?"
-- "Comment afficher tous les employés avec leur manager, le manager de leur manager, et ainsi de suite ?"
+- "Quels sont les clients dont les achats totaux dépassent la moyenne de leur région ?"  
+- "Comment afficher tous les employés avec leur manager, le manager de leur manager, et ainsi de suite ?"  
 - "Comment identifier les produits qui se vendent mieux que tous les autres produits de leur catégorie ?"
 
 **Les techniques SQL avancées vous permettent de répondre à ces questions** sans avoir à écrire des centaines de lignes de code applicatif.
@@ -38,9 +38,9 @@ for client in clients:
 SELECT
     c.*,
     o.*
-FROM clients c
-LEFT JOIN orders o ON c.id = o.client_id
-WHERE c.statut = 'actif';
+FROM clients c  
+LEFT JOIN orders o ON c.id = o.client_id  
+WHERE c.statut = 'actif';  
 ```
 
 Une requête SQL avancée bien conçue peut remplacer des dizaines ou des centaines de requêtes simples, réduisant drastiquement le temps d'exécution de votre application.
@@ -58,9 +58,9 @@ commandes_recentes AS (
 SELECT
     ca.nom,
     COUNT(cr.id) AS nb_commandes
-FROM clients_actifs ca
-LEFT JOIN commandes_recentes cr ON ca.id = cr.client_id
-GROUP BY ca.id, ca.nom;
+FROM clients_actifs ca  
+LEFT JOIN commandes_recentes cr ON ca.id = cr.client_id  
+GROUP BY ca.id, ca.nom;  
 ```
 
 Les techniques avancées permettent d'exprimer la logique métier **directement dans SQL**, de manière claire et déclarative.
@@ -128,8 +128,8 @@ Les six techniques sont présentées par difficulté croissante :
 
 ### Temps d'apprentissage estimé
 
-- **Lecture complète du chapitre** : 8-10 heures
-- **Compréhension avec expérimentation** : 15-20 heures
+- **Lecture complète du chapitre** : 8-10 heures  
+- **Compréhension avec expérimentation** : 15-20 heures  
 - **Maîtrise pratique** : 40-60 heures (avec pratique régulière)
 
 ---
@@ -143,9 +143,9 @@ Les six techniques sont présentées par difficulté croissante :
 **Exemple simple :**
 ```sql
 -- Trouver les employés qui gagnent plus que la moyenne
-SELECT nom, salaire
-FROM employes
-WHERE salaire > (SELECT AVG(salaire) FROM employes);
+SELECT nom, salaire  
+FROM employes  
+WHERE salaire > (SELECT AVG(salaire) FROM employes);  
                  └─────── sous-requête ──────┘
 ```
 
@@ -168,9 +168,9 @@ WITH salaires_moyens AS (
     FROM employes
     GROUP BY departement
 )
-SELECT e.nom, e.salaire, sm.moyenne
-FROM employes e
-JOIN salaires_moyens sm ON e.departement = sm.departement;
+SELECT e.nom, e.salaire, sm.moyenne  
+FROM employes e  
+JOIN salaires_moyens sm ON e.departement = sm.departement;  
 ```
 
 **Quand l'utiliser :**
@@ -217,19 +217,19 @@ SELECT * FROM hierarchie ORDER BY niveau;
 **Exemple simple :**
 ```sql
 -- Combiner deux listes
-SELECT nom FROM clients
-UNION
-SELECT nom FROM fournisseurs;
+SELECT nom FROM clients  
+UNION  
+SELECT nom FROM fournisseurs;  
 
 -- Trouver les éléments communs
-SELECT email FROM clients
-INTERSECT
-SELECT email FROM newsletter_subscribers;
+SELECT email FROM clients  
+INTERSECT  
+SELECT email FROM newsletter_subscribers;  
 
 -- Calculer la différence
-SELECT email FROM clients
-EXCEPT
-SELECT email FROM liste_bannis;
+SELECT email FROM clients  
+EXCEPT  
+SELECT email FROM liste_bannis;  
 ```
 
 **Quand l'utiliser :**
@@ -272,12 +272,12 @@ FROM employes;
 **Exemple :**
 ```sql
 -- Votre code (inchangé)
-SELECT * FROM produits
-WHERE categorie = 'A' OR categorie = 'B' OR categorie = 'C';
+SELECT * FROM produits  
+WHERE categorie = 'A' OR categorie = 'B' OR categorie = 'C';  
 
 -- PostgreSQL 18 optimise automatiquement en :
-SELECT * FROM produits
-WHERE categorie = ANY(ARRAY['A', 'B', 'C']);
+SELECT * FROM produits  
+WHERE categorie = ANY(ARRAY['A', 'B', 'C']);  
 ```
 
 **Bénéfice :**
@@ -292,19 +292,19 @@ WHERE categorie = ANY(ARRAY['A', 'B', 'C']);
 ### Pour les débutants
 
 Si vous découvrez SQL :
-1. ✅ Commencez par **CASE** (9.5) - le plus accessible
-2. ✅ Puis **Opérations d'ensemble** (9.4) - concepts mathématiques simples
-3. ✅ Ensuite **Sous-requêtes** (9.1) - fondation essentielle
-4. ✅ Suivez avec **CTE** (9.2) - améliore la lisibilité
-5. ⚠️ Abordez **CTE Récursives** (9.3) après avoir bien compris les CTE
+1. ✅ Commencez par **CASE** (9.5) - le plus accessible  
+2. ✅ Puis **Opérations d'ensemble** (9.4) - concepts mathématiques simples  
+3. ✅ Ensuite **Sous-requêtes** (9.1) - fondation essentielle  
+4. ✅ Suivez avec **CTE** (9.2) - améliore la lisibilité  
+5. ⚠️ Abordez **CTE Récursives** (9.3) après avoir bien compris les CTE  
 6. ℹ️ Lisez **OR→ANY** (9.6) pour comprendre les optimisations PG 18
 
 ### Pour les développeurs expérimentés
 
 Si vous connaissez déjà SQL :
-1. Parcourez rapidement les sections que vous maîtrisez
-2. Concentrez-vous sur les **nouveautés PostgreSQL 18**
-3. Approfondissez les **aspects performance**
+1. Parcourez rapidement les sections que vous maîtrisez  
+2. Concentrez-vous sur les **nouveautés PostgreSQL 18**  
+3. Approfondissez les **aspects performance**  
 4. Explorez les **cas d'usage avancés**
 
 ### Conseils d'apprentissage
@@ -335,8 +335,8 @@ INSERT INTO employes_test (nom, departement, salaire, manager_id) VALUES
 
 ```sql
 -- Voir comment PostgreSQL exécute votre requête
-EXPLAIN ANALYZE
-SELECT ...;
+EXPLAIN ANALYZE  
+SELECT ...;  
 ```
 
 #### 3. Commencez simple, puis complexifiez
@@ -346,15 +346,15 @@ SELECT ...;
 SELECT nom FROM employes;
 
 -- Étape 2 : Ajouter une sous-requête
-SELECT nom FROM employes
-WHERE salaire > (SELECT AVG(salaire) FROM employes);
+SELECT nom FROM employes  
+WHERE salaire > (SELECT AVG(salaire) FROM employes);  
 
 -- Étape 3 : Convertir en CTE pour la lisibilité
 WITH salaire_moyen AS (
     SELECT AVG(salaire) AS moyenne FROM employes
 )
-SELECT nom FROM employes, salaire_moyen
-WHERE salaire > moyenne;
+SELECT nom FROM employes, salaire_moyen  
+WHERE salaire > moyenne;  
 ```
 
 #### 4. Comparez les approches
@@ -363,18 +363,18 @@ Souvent, plusieurs techniques peuvent résoudre le même problème. Comparez-les
 
 ```sql
 -- Approche 1 : Sous-requête
-SELECT * FROM employes
-WHERE departement IN (SELECT DISTINCT departement FROM managers);
+SELECT * FROM employes  
+WHERE departement IN (SELECT DISTINCT departement FROM managers);  
 
 -- Approche 2 : JOIN
-SELECT DISTINCT e.*
-FROM employes e
-JOIN managers m ON e.departement = m.departement;
+SELECT DISTINCT e.*  
+FROM employes e  
+JOIN managers m ON e.departement = m.departement;  
 
 -- Approche 3 : INTERSECT
-SELECT departement FROM employes
-INTERSECT
-SELECT departement FROM managers;
+SELECT departement FROM employes  
+INTERSECT  
+SELECT departement FROM managers;  
 ```
 
 ---
@@ -383,16 +383,16 @@ SELECT departement FROM managers;
 
 ### Prérequis (déjà vus)
 
-- **Chapitre 5** : Requêtes de sélection (DQL)
-- **Chapitre 6** : Manipulation de données (DML)
-- **Chapitre 7** : Relations et jointures
+- **Chapitre 5** : Requêtes de sélection (DQL)  
+- **Chapitre 6** : Manipulation de données (DML)  
+- **Chapitre 7** : Relations et jointures  
 - **Chapitre 8** : Agrégation et groupement
 
 ### Préparation aux chapitres suivants
 
 Les techniques de ce chapitre sont essentielles pour :
-- **Chapitre 10** : Fonctions de fenêtrage (Window Functions)
-- **Chapitre 11** : Modélisation avancée
+- **Chapitre 10** : Fonctions de fenêtrage (Window Functions)  
+- **Chapitre 11** : Modélisation avancée  
 - **Chapitre 13** : Optimisation et indexation
 
 ---
@@ -423,8 +423,8 @@ PostgreSQL adopte une approche **déclarative** du traitement des données :
 **Approche impérative** (code applicatif) :
 ```python
 # Dire COMMENT faire
-results = []
-for employee in employees:
+results = []  
+for employee in employees:  
     if employee.salary > average_salary:
         results.append(employee)
 ```
@@ -432,14 +432,14 @@ for employee in employees:
 **Approche déclarative** (SQL) :
 ```sql
 -- Dire CE QUE l'on veut
-SELECT * FROM employes
-WHERE salaire > (SELECT AVG(salaire) FROM employes);
+SELECT * FROM employes  
+WHERE salaire > (SELECT AVG(salaire) FROM employes);  
 ```
 
 **Avantages du déclaratif :**
-- ✅ Plus concis
-- ✅ Optimisé automatiquement par PostgreSQL
-- ✅ Fonctionne sur des millions de lignes
+- ✅ Plus concis  
+- ✅ Optimisé automatiquement par PostgreSQL  
+- ✅ Fonctionne sur des millions de lignes  
 - ✅ Indépendant du langage de programmation
 
 ---
@@ -450,25 +450,25 @@ WHERE salaire > (SELECT AVG(salaire) FROM employes);
 
 ### Compétences techniques
 
-- ✅ Écrire et comprendre des sous-requêtes de tous types
-- ✅ Utiliser les CTE pour structurer vos requêtes
-- ✅ Parcourir des hiérarchies avec des CTE récursives
-- ✅ Combiner des résultats avec UNION, INTERSECT, EXCEPT
-- ✅ Implémenter une logique conditionnelle avec CASE
+- ✅ Écrire et comprendre des sous-requêtes de tous types  
+- ✅ Utiliser les CTE pour structurer vos requêtes  
+- ✅ Parcourir des hiérarchies avec des CTE récursives  
+- ✅ Combiner des résultats avec UNION, INTERSECT, EXCEPT  
+- ✅ Implémenter une logique conditionnelle avec CASE  
 - ✅ Comprendre les optimisations automatiques de PostgreSQL 18
 
 ### Compétences conceptuelles
 
-- ✅ Identifier quelle technique utiliser selon le problème
-- ✅ Évaluer la performance de différentes approches
-- ✅ Lire et comprendre du SQL avancé écrit par d'autres
+- ✅ Identifier quelle technique utiliser selon le problème  
+- ✅ Évaluer la performance de différentes approches  
+- ✅ Lire et comprendre du SQL avancé écrit par d'autres  
 - ✅ Décomposer un problème complexe en requêtes SQL
 
 ### Compétences pratiques
 
-- ✅ Optimiser des requêtes lentes
-- ✅ Rendre le code SQL plus maintenable
-- ✅ Résoudre des problèmes métier complexes en SQL
+- ✅ Optimiser des requêtes lentes  
+- ✅ Rendre le code SQL plus maintenable  
+- ✅ Résoudre des problèmes métier complexes en SQL  
 - ✅ Utiliser EXPLAIN pour analyser les performances
 
 ---
@@ -477,13 +477,13 @@ WHERE salaire > (SELECT AVG(salaire) FROM employes);
 
 Chaque technique est présentée selon le même format :
 
-1. **Introduction** : Qu'est-ce que c'est et pourquoi c'est utile
-2. **Syntaxe** : Comment l'écrire
-3. **Exemples progressifs** : Du simple au complexe
-4. **Cas d'usage pratiques** : Situations réelles
-5. **Performance** : Comprendre l'impact
-6. **Pièges courants** : Erreurs à éviter
-7. **Bonnes pratiques** : Recommandations
+1. **Introduction** : Qu'est-ce que c'est et pourquoi c'est utile  
+2. **Syntaxe** : Comment l'écrire  
+3. **Exemples progressifs** : Du simple au complexe  
+4. **Cas d'usage pratiques** : Situations réelles  
+5. **Performance** : Comprendre l'impact  
+6. **Pièges courants** : Erreurs à éviter  
+7. **Bonnes pratiques** : Recommandations  
 8. **Résumé** : Points clés à retenir
 
 ---
@@ -512,15 +512,15 @@ Vous avez maintenant une vue d'ensemble complète de ce qui vous attend dans ce 
 
 ### Documentation PostgreSQL officielle
 
-- [Queries](https://www.postgresql.org/docs/current/queries.html)
-- [SELECT](https://www.postgresql.org/docs/current/sql-select.html)
+- [Queries](https://www.postgresql.org/docs/current/queries.html)  
+- [SELECT](https://www.postgresql.org/docs/current/sql-select.html)  
 - [WITH Queries (CTE)](https://www.postgresql.org/docs/current/queries-with.html)
 
 ### Outils utiles pour l'apprentissage
 
-- **psql** : Client en ligne de commande PostgreSQL
-- **pgAdmin** : Interface graphique pour PostgreSQL
-- **DBeaver** : Client universel multi-bases
+- **psql** : Client en ligne de commande PostgreSQL  
+- **pgAdmin** : Interface graphique pour PostgreSQL  
+- **DBeaver** : Client universel multi-bases  
 - **EXPLAIN Visualizer** : Comprendre les plans d'exécution
 
 ### Environnement de test recommandé

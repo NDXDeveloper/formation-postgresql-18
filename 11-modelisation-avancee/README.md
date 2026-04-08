@@ -10,10 +10,10 @@ Bienvenue dans le chapitre sur la **modélisation avancée** des bases de donné
 
 La **modélisation avancée** va au-delà de la simple création de tables et de relations. Elle englobe un ensemble de principes, techniques et stratégies qui vous permettent de :
 
-- **Concevoir des schémas optimaux** qui équilibrent performances, intégrité et maintenabilité
-- **Gérer des relations complexes** entre vos données de manière élégante
-- **Optimiser les performances** grâce à des choix architecturaux judicieux
-- **Garantir la qualité des données** avec des contraintes et validations appropriées
+- **Concevoir des schémas optimaux** qui équilibrent performances, intégrité et maintenabilité  
+- **Gérer des relations complexes** entre vos données de manière élégante  
+- **Optimiser les performances** grâce à des choix architecturaux judicieux  
+- **Garantir la qualité des données** avec des contraintes et validations appropriées  
 - **Anticiper l'évolution** de votre base de données dans le temps
 
 ### Pourquoi la Modélisation Avancée est-elle Essentielle ?
@@ -127,11 +127,11 @@ La normalisation est le processus d'organisation des données pour éliminer la 
 **Exemple concret :**
 ```sql
 -- Base normalisée : 3 jointures pour afficher une commande
-SELECT c.*, cl.nom, p.nom_produit, p.prix
-FROM commandes c
-JOIN clients cl ON c.client_id = cl.client_id
-JOIN commandes_details cd ON c.commande_id = cd.commande_id
-JOIN produits p ON cd.produit_id = p.produit_id;
+SELECT c.*, cl.nom, p.nom_produit, p.prix  
+FROM commandes c  
+JOIN clients cl ON c.client_id = cl.client_id  
+JOIN commandes_details cd ON c.commande_id = cd.commande_id  
+JOIN produits p ON cd.produit_id = p.produit_id;  
 
 -- Base dénormalisée : 0 jointure, accès direct
 SELECT * FROM commandes_denormalisees WHERE commande_id = 123;
@@ -159,8 +159,8 @@ CREATE TABLE vehicules (
 );
 
 -- Tables enfants héritant de vehicules
-CREATE TABLE voitures (...) INHERITS (vehicules);
-CREATE TABLE motos (...) INHERITS (vehicules);
+CREATE TABLE voitures (...) INHERITS (vehicules);  
+CREATE TABLE motos (...) INHERITS (vehicules);  
 ```
 
 ### 11.3. Partitionnement Avancé
@@ -181,13 +181,13 @@ Table LOGS (10 milliards de lignes)
     ↓
 Partitionnée par mois
     ↓
-logs_2024_01 (100M lignes)
-logs_2024_02 (150M lignes)
-logs_2024_03 (200M lignes)
+logs_2024_01 (100M lignes)  
+logs_2024_02 (150M lignes)  
+logs_2024_03 (200M lignes)  
 ...
 
-Requête sur janvier → Scan uniquement logs_2024_01
-Performance : 100× plus rapide ! 🚀
+Requête sur janvier → Scan uniquement logs_2024_01  
+Performance : 100× plus rapide ! 🚀  
 ```
 
 ### 11.4. Types de Données Personnalisés et Domaines
@@ -205,8 +205,8 @@ PostgreSQL permet de définir des types personnalisés et des domaines pour enca
 **Exemple concret :**
 ```sql
 -- Domaine pour email valide
-CREATE DOMAIN email AS VARCHAR(255)
-CHECK (VALUE ~ '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$');
+CREATE DOMAIN email AS VARCHAR(255)  
+CHECK (VALUE ~ '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$');  
 
 -- Utilisation
 CREATE TABLE utilisateurs (
@@ -347,8 +347,8 @@ Exemples pratiques
 ### 2. Exemples Concrets et Progressifs
 
 Chaque concept est illustré avec :
-- **Exemples simples** pour comprendre le principe
-- **Exemples réalistes** reflétant des situations réelles
+- **Exemples simples** pour comprendre le principe  
+- **Exemples réalistes** reflétant des situations réelles  
 - **Cas d'usage avancés** pour aller plus loin
 
 ### 3. Comparaisons et Décisions
@@ -363,17 +363,17 @@ La modélisation implique souvent de faire des **choix**. Chaque section vous ai
 ```
 Besoin d'une colonne calculée ?
     ↓
-Calcul simple ? → VIRTUAL (11.6)
-Calcul complexe ? → STORED (11.6)
-Très fréquent ? → Vue matérialisée (11.5)
+Calcul simple ? → VIRTUAL (11.6)  
+Calcul complexe ? → STORED (11.6)  
+Très fréquent ? → Vue matérialisée (11.5)  
 ```
 
 ### 4. Bonnes Pratiques et Pièges
 
 Chaque section inclut :
-- ✅ Bonnes pratiques recommandées
-- ❌ Erreurs courantes à éviter
-- ⚠️ Points d'attention particuliers
+- ✅ Bonnes pratiques recommandées  
+- ❌ Erreurs courantes à éviter  
+- ⚠️ Points d'attention particuliers  
 - 💡 Astuces de professionnels
 
 ---
@@ -383,8 +383,8 @@ Chaque section inclut :
 ### Versions de PostgreSQL
 
 Ce chapitre couvre des fonctionnalités de différentes versions :
-- **PostgreSQL 12+** : Colonnes générées STORED, partitionnement natif amélioré
-- **PostgreSQL 14+** : Améliorations du partitionnement
+- **PostgreSQL 12+** : Colonnes générées STORED, partitionnement natif amélioré  
+- **PostgreSQL 14+** : Améliorations du partitionnement  
 - **PostgreSQL 18** : Colonnes générées VIRTUAL (section 11.6)
 
 **Note :** La majorité des concepts s'appliquent à PostgreSQL 12 et supérieur.
@@ -410,8 +410,8 @@ psql -U postgres -d mydb
 ### Base de Données d'Exemple
 
 Plusieurs sections utilisent des bases de données d'exemple :
-- **E-commerce** : produits, commandes, clients
-- **RH** : employés, départements, hiérarchie
+- **E-commerce** : produits, commandes, clients  
+- **RH** : employés, départements, hiérarchie  
 - **Analytics** : logs, événements, métriques
 
 Des scripts d'initialisation sont fournis dans chaque section.
@@ -543,8 +543,8 @@ Optimiser :
 ### 3. Documentation et Communication
 
 Un schéma de base de données est un **contrat** entre l'application et les données. Il doit être :
-- **Documenté** : Commentaires sur tables, colonnes, contraintes
-- **Communiqué** : Diagrammes ERD, wiki d'équipe
+- **Documenté** : Commentaires sur tables, colonnes, contraintes  
+- **Communiqué** : Diagrammes ERD, wiki d'équipe  
 - **Versionné** : Migrations avec historique clair
 
 ### 4. Itération et Apprentissage
@@ -570,17 +570,17 @@ Aucun schéma n'est parfait dès le départ. L'essentiel est d'itérer intellige
 ## Ressources Complémentaires
 
 ### Livres Recommandés
-- **"Database Design for Mere Mortals"** - Michael J. Hernandez
-- **"SQL and Relational Theory"** - C.J. Date
+- **"Database Design for Mere Mortals"** - Michael J. Hernandez  
+- **"SQL and Relational Theory"** - C.J. Date  
 - **"The Art of SQL"** - Stéphane Faroult
 
 ### Documentation PostgreSQL
-- [PostgreSQL Official Documentation](https://www.postgresql.org/docs/)
+- [PostgreSQL Official Documentation](https://www.postgresql.org/docs/)  
 - [PostgreSQL Wiki](https://wiki.postgresql.org/)
 
 ### Outils de Modélisation
-- **pgModeler** : Modélisation visuelle pour PostgreSQL
-- **DBDiagram.io** : Création de diagrammes ERD en ligne
+- **pgModeler** : Modélisation visuelle pour PostgreSQL  
+- **DBDiagram.io** : Création de diagrammes ERD en ligne  
 - **pgAdmin** : Interface graphique complète
 
 ---
@@ -634,8 +634,8 @@ Ne vous contentez pas de lire. **Expérimentez** :
 ### 2. Pensez à Vos Propres Projets
 
 Pour chaque concept, demandez-vous :
-- "Est-ce applicable à mon projet actuel ?"
-- "Aurais-je pu utiliser ça pour résoudre tel problème ?"
+- "Est-ce applicable à mon projet actuel ?"  
+- "Aurais-je pu utiliser ça pour résoudre tel problème ?"  
 - "Comment adapter cet exemple à mon contexte ?"
 
 ### 3. Construisez Votre Intuition
@@ -650,8 +650,8 @@ Cette intuition vient de l'expérience et de l'expérimentation.
 ### 4. Gardez un Esprit Critique
 
 Questionnez tout, y compris ce tutoriel :
-- "Cette recommandation s'applique-t-elle à mon cas ?"
-- "Y a-t-il une meilleure solution ?"
+- "Cette recommandation s'applique-t-elle à mon cas ?"  
+- "Y a-t-il une meilleure solution ?"  
 - "Quels sont les trade-offs ?"
 
 Il n'y a pas de vérité absolue en modélisation.
@@ -700,9 +700,9 @@ Basez vos décisions sur des données, pas des suppositions.
 ## Conclusion de l'Introduction
 
 Vous êtes maintenant prêt à plonger dans la modélisation avancée de bases de données. Ce chapitre vous donnera les outils et la compréhension nécessaires pour concevoir des bases de données :
-- **Performantes** : Optimisées pour vos cas d'usage réels
-- **Maintenables** : Faciles à comprendre et à faire évoluer
-- **Robustes** : Protégées contre les erreurs et incohérences
+- **Performantes** : Optimisées pour vos cas d'usage réels  
+- **Maintenables** : Faciles à comprendre et à faire évoluer  
+- **Robustes** : Protégées contre les erreurs et incohérences  
 - **Évolutives** : Capables de grandir avec votre application
 
 La modélisation avancée n'est pas seulement une compétence technique, c'est une **façon de penser** qui influence profondément la qualité de vos applications.
