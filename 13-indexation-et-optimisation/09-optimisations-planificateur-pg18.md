@@ -53,10 +53,10 @@ Un **plan d'exécution** est une séquence d'opérations que PostgreSQL va effec
 Prenons cette requête :
 
 ```sql
-SELECT nom, email
-FROM clients
-WHERE ville = 'Paris'
-ORDER BY nom;
+SELECT nom, email  
+FROM clients  
+WHERE ville = 'Paris'  
+ORDER BY nom;  
 ```
 
 Le planificateur doit décider :
@@ -84,11 +84,11 @@ Le planificateur évalue **plusieurs plans possibles** et choisit celui avec le 
 PostgreSQL permet de visualiser le plan d'exécution avec la commande `EXPLAIN` :
 
 ```sql
-EXPLAIN
-SELECT nom, email
-FROM clients
-WHERE ville = 'Paris'
-ORDER BY nom;
+EXPLAIN  
+SELECT nom, email  
+FROM clients  
+WHERE ville = 'Paris'  
+ORDER BY nom;  
 ```
 
 **Résultat possible :**
@@ -101,8 +101,8 @@ Sort  (cost=125.45..128.23 rows=1112 width=64)
 ```
 
 Ce plan nous dit :
-1. PostgreSQL va utiliser un **Index Scan** sur l'index `idx_clients_ville`
-2. Les lignes trouvées seront ensuite **triées** par nom
+1. PostgreSQL va utiliser un **Index Scan** sur l'index `idx_clients_ville`  
+2. Les lignes trouvées seront ensuite **triées** par nom  
 3. Le coût estimé total est de 128.23 unités
 
 ---
@@ -116,9 +116,9 @@ Le planificateur essaie toujours de trouver le **meilleur plan**, mais parfois, 
 **Avant PostgreSQL 18 :**
 ```sql
 -- Requête avec self-join inutile
-SELECT e1.nom, e1.email
-FROM employes e1
-INNER JOIN employes e2 ON e1.id = e2.id;
+SELECT e1.nom, e1.email  
+FROM employes e1  
+INNER JOIN employes e2 ON e1.id = e2.id;  
 ```
 
 Le planificateur **exécutait** le self-join même s'il était redondant.
@@ -130,9 +130,9 @@ Le planificateur **détecte et élimine** automatiquement ce self-join inutile.
 
 De nombreux outils et frameworks génèrent automatiquement du SQL qui n'est pas toujours optimal :
 
-- **ORM (Object-Relational Mapping)** : Hibernate, Entity Framework, Django ORM, SQLAlchemy
-- **Générateurs de requêtes** : QueryBuilder, JOOQ, Knex
-- **Outils de BI** : Tableau, PowerBI, Looker
+- **ORM (Object-Relational Mapping)** : Hibernate, Entity Framework, Django ORM, SQLAlchemy  
+- **Générateurs de requêtes** : QueryBuilder, JOOQ, Knex  
+- **Outils de BI** : Tableau, PowerBI, Looker  
 - **GraphQL servers** : Hasura, PostGraphile
 
 Ces outils peuvent produire des requêtes complexes ou redondantes. PostgreSQL 18 compense intelligemment ces imperfections.
@@ -163,10 +163,10 @@ PostgreSQL 18 introduit trois optimisations du planificateur particulièrement i
 **Exemple de requête optimisée :**
 ```sql
 -- Requête avec self-join inutile
-SELECT e1.nom, e1.salaire
-FROM employes e1
-INNER JOIN employes e2 ON e1.id = e2.id
-WHERE e1.departement = 'IT';
+SELECT e1.nom, e1.salaire  
+FROM employes e1  
+INNER JOIN employes e2 ON e1.id = e2.id  
+WHERE e1.departement = 'IT';  
 ```
 
 **Ce que fait PostgreSQL 18 :**
@@ -174,9 +174,9 @@ Détecte que le self-join est inutile (jointure 1:1 sur clé primaire, aucune co
 
 ```sql
 -- Version optimisée exécutée en interne
-SELECT nom, salaire
-FROM employes
-WHERE departement = 'IT';
+SELECT nom, salaire  
+FROM employes  
+WHERE departement = 'IT';  
 ```
 
 **Impact :** Jusqu'à **50-70% de réduction** du temps d'exécution sur grandes tables.
@@ -190,13 +190,13 @@ WHERE departement = 'IT';
 **Exemple de requête optimisée :**
 ```sql
 -- Requête écrite naturellement
-SELECT DISTINCT client_id, produit_id
-FROM commandes;
+SELECT DISTINCT client_id, produit_id  
+FROM commandes;  
 ```
 
 **Ce que fait PostgreSQL 18 :**
 Analyse les statistiques et découvre que :
-- `client_id` a 1 000 valeurs distinctes (faible cardinalité)
+- `client_id` a 1 000 valeurs distinctes (faible cardinalité)  
 - `produit_id` a 10 000 valeurs distinctes (haute cardinalité)
 
 Le planificateur trie donc **en interne** par `(produit_id, client_id)` au lieu de `(client_id, produit_id)` pour optimiser l'élimination des doublons, tout en retournant le résultat dans l'ordre demandé.
@@ -212,8 +212,8 @@ Le planificateur trie donc **en interne** par `(produit_id, client_id)` au lieu 
 **Exemple de requête optimisée :**
 ```sql
 -- Requête souvent générée par les ORM
-SELECT * FROM commandes
-WHERE client_id IN (VALUES (101), (205), (389), (512), (678));
+SELECT * FROM commandes  
+WHERE client_id IN (VALUES (101), (205), (389), (512), (678));  
 ```
 
 **Ce que fait PostgreSQL 18 :**
@@ -221,8 +221,8 @@ Transforme automatiquement en :
 
 ```sql
 -- Version optimisée exécutée en interne
-SELECT * FROM commandes
-WHERE client_id = ANY(ARRAY[101, 205, 389, 512, 678]);
+SELECT * FROM commandes  
+WHERE client_id = ANY(ARRAY[101, 205, 389, 512, 678]);  
 ```
 
 **Impact :** Jusqu'à **360× plus rapide** (de 180ms à 0.5ms sur 1 million de lignes) grâce à l'utilisation directe d'index et à l'élimination de jointures intermédiaires.
@@ -237,10 +237,10 @@ Ces trois optimisations ne sont pas isolées. Le planificateur de PostgreSQL 18 
 
 ```sql
 -- Requête complexe combinant plusieurs patterns
-SELECT DISTINCT e1.departement, e1.categorie
-FROM employes e1
-INNER JOIN employes e2 ON e1.id = e2.id
-WHERE e1.statut IN (VALUES ('actif'), ('en_formation'), ('disponible'));
+SELECT DISTINCT e1.departement, e1.categorie  
+FROM employes e1  
+INNER JOIN employes e2 ON e1.id = e2.id  
+WHERE e1.statut IN (VALUES ('actif'), ('en_formation'), ('disponible'));  
 ```
 
 **Ce que PostgreSQL 18 fait :**
@@ -257,9 +257,9 @@ WHERE e1.statut IN (VALUES ('actif'), ('en_formation'), ('disponible'));
 
 Ces optimisations sont **transparentes** :
 
-- ✅ Aucune modification de syntaxe SQL requise
-- ✅ Résultats strictement identiques
-- ✅ Rétrocompatibilité totale
+- ✅ Aucune modification de syntaxe SQL requise  
+- ✅ Résultats strictement identiques  
+- ✅ Rétrocompatibilité totale  
 - ✅ Activées par défaut
 
 Vous écrivez du SQL standard, PostgreSQL 18 l'optimise automatiquement.
@@ -305,9 +305,9 @@ Pour maximiser les bénéfices de l'optimisation `IN → ANY`, créez des index 
 CREATE INDEX idx_commandes_client_id ON commandes(client_id);
 
 -- Index avec INCLUDE pour Index-Only Scans
-CREATE INDEX idx_commandes_client_full
-ON commandes(client_id)
-INCLUDE (montant, date_commande);
+CREATE INDEX idx_commandes_client_full  
+ON commandes(client_id)  
+INCLUDE (montant, date_commande);  
 ```
 
 ---
@@ -320,18 +320,18 @@ La commande `EXPLAIN ANALYZE` permet de comparer les performances avant/après u
 
 ```sql
 -- Voir le plan d'exécution ET les statistiques réelles
-EXPLAIN (ANALYZE, BUFFERS, VERBOSE)
-SELECT DISTINCT col1, col2
-FROM ma_table
-WHERE col3 IN (VALUES (1), (2), (3));
+EXPLAIN (ANALYZE, BUFFERS, VERBOSE)  
+SELECT DISTINCT col1, col2  
+FROM ma_table  
+WHERE col3 IN (VALUES (1), (2), (3));  
 ```
 
 **Métriques clés à observer :**
 
 ```
-Planning Time: 0.234 ms    ← Temps de planification
-Execution Time: 15.678 ms  ← Temps d'exécution réel (le plus important)
-Buffers: shared hit=1234   ← Blocs lus depuis le cache
+Planning Time: 0.234 ms    ← Temps de planification  
+Execution Time: 15.678 ms  ← Temps d'exécution réel (le plus important)  
+Buffers: shared hit=1234   ← Blocs lus depuis le cache  
          read=56           ← Blocs lus depuis le disque
 ```
 
@@ -341,17 +341,17 @@ Si vous migrez depuis PostgreSQL 17, vous pouvez comparer :
 
 **Sur PostgreSQL 17 (avant upgrade) :**
 ```sql
-EXPLAIN (ANALYZE, BUFFERS)
-SELECT e1.nom FROM employes e1
-INNER JOIN employes e2 ON e1.id = e2.id;
+EXPLAIN (ANALYZE, BUFFERS)  
+SELECT e1.nom FROM employes e1  
+INNER JOIN employes e2 ON e1.id = e2.id;  
 ```
 
 **Sur PostgreSQL 18 (après upgrade) :**
 ```sql
 -- Même requête
-EXPLAIN (ANALYZE, BUFFERS)
-SELECT e1.nom FROM employes e1
-INNER JOIN employes e2 ON e1.id = e2.id;
+EXPLAIN (ANALYZE, BUFFERS)  
+SELECT e1.nom FROM employes e1  
+INNER JOIN employes e2 ON e1.id = e2.id;  
 ```
 
 Comparez les `Execution Time` et la structure des plans.
@@ -441,9 +441,9 @@ Par défaut dans PostgreSQL 18, toutes ces optimisations sont **activées** :
 
 ```sql
 -- Vérifier les paramètres (exemples, noms réels peuvent varier)
-SHOW enable_self_join_removal;     -- on
-SHOW enable_distinct_reorder;      -- on
-SHOW enable_values_to_any;         -- on
+SHOW enable_self_join_removal;     -- on  
+SHOW enable_distinct_reorder;      -- on  
+SHOW enable_values_to_any;         -- on  
 ```
 
 ### Désactivation Sélective (Débogage)
@@ -483,9 +483,9 @@ SELECT pg_reload_conf();
 
 Ces optimisations sont **100% rétrocompatibles** :
 
-- ✅ Aucun changement de comportement observable
-- ✅ Résultats identiques aux versions précédentes
-- ✅ Pas de risque de régression fonctionnelle
+- ✅ Aucun changement de comportement observable  
+- ✅ Résultats identiques aux versions précédentes  
+- ✅ Pas de risque de régression fonctionnelle  
 - ✅ Syntaxe SQL standard respectée
 
 ### Migration depuis PostgreSQL 17
@@ -528,8 +528,8 @@ ANALYZE;
 
 ```sql
 -- PRIMARY KEY, UNIQUE, FOREIGN KEY, CHECK, NOT NULL
-ALTER TABLE ma_table ADD PRIMARY KEY (id);
-ALTER TABLE ma_table ADD CONSTRAINT uk_code UNIQUE (code);
+ALTER TABLE ma_table ADD PRIMARY KEY (id);  
+ALTER TABLE ma_table ADD CONSTRAINT uk_code UNIQUE (code);  
 ```
 
 ### 3. Créez des Index Appropriés
@@ -588,8 +588,8 @@ SELECT
     tablename,
     last_analyze,
     last_autoanalyze
-FROM pg_stat_user_tables
-WHERE tablename = 'ma_table';
+FROM pg_stat_user_tables  
+WHERE tablename = 'ma_table';  
 ```
 
 ### 2. Overhead de Planification Minime
@@ -623,9 +623,9 @@ SELECT
     total_exec_time,
     mean_exec_time,
     max_exec_time
-FROM pg_stat_statements
-ORDER BY mean_exec_time DESC
-LIMIT 10;
+FROM pg_stat_statements  
+ORDER BY mean_exec_time DESC  
+LIMIT 10;  
 ```
 
 ### Logs PostgreSQL
@@ -634,8 +634,8 @@ Activer le logging des requêtes lentes :
 
 ```sql
 -- Dans postgresql.conf
-log_min_duration_statement = 1000  -- Log requêtes > 1 seconde
-auto_explain.log_min_duration = 1000  -- Log plans des requêtes lentes
+log_min_duration_statement = 1000  -- Log requêtes > 1 seconde  
+auto_explain.log_min_duration = 1000  -- Log plans des requêtes lentes  
 ```
 
 ---
@@ -644,9 +644,9 @@ auto_explain.log_min_duration = 1000  -- Log plans des requêtes lentes
 
 Les **optimisations du planificateur** de PostgreSQL 18 représentent une avancée majeure dans l'intelligence du moteur de base de données. Ces trois optimisations (auto-élimination des self-joins, réorganisation des colonnes DISTINCT, et transformation IN → ANY) permettent à PostgreSQL de :
 
-- ✅ **Compenser automatiquement** le code sous-optimal généré par les frameworks
-- ✅ **Améliorer les performances** sans intervention humaine
-- ✅ **Réduire la dette technique** des applications
+- ✅ **Compenser automatiquement** le code sous-optimal généré par les frameworks  
+- ✅ **Améliorer les performances** sans intervention humaine  
+- ✅ **Réduire la dette technique** des applications  
 - ✅ **Adapter les requêtes** aux données réelles via les statistiques
 
 PostgreSQL 18 marque un tournant vers un **planificateur véritablement intelligent** qui comprend l'intention de vos requêtes et les optimise de manière autonome.

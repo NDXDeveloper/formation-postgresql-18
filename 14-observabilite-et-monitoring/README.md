@@ -22,11 +22,11 @@ Dans ce chapitre, nous allons explorer comment transformer votre base de donnée
 
 L'**observabilité** est la capacité à comprendre l'état interne d'un système en examinant ses sorties (métriques, logs, traces). Dans le contexte de PostgreSQL, cela signifie pouvoir répondre à des questions comme :
 
-- ✅ Quelle requête consomme le plus de ressources en ce moment ?
-- ✅ Pourquoi cette table n'est-elle jamais vacuum ?
-- ✅ Combien de connexions sont actives ?
-- ✅ Quel est le taux de cache hit (données en mémoire vs disque) ?
-- ✅ Y a-t-il des deadlocks ou des contentions de locks ?
+- ✅ Quelle requête consomme le plus de ressources en ce moment ?  
+- ✅ Pourquoi cette table n'est-elle jamais vacuum ?  
+- ✅ Combien de connexions sont actives ?  
+- ✅ Quel est le taux de cache hit (données en mémoire vs disque) ?  
+- ✅ Y a-t-il des deadlocks ou des contentions de locks ?  
 - ✅ Les index sont-ils utilisés efficacement ?
 
 ### Observabilité vs Monitoring
@@ -77,31 +77,31 @@ Sans observabilité, impossible de :
 **Avec observabilité** : Vous auriez identifié cette requête en quelques minutes et l'auriez optimisée.
 
 **Coûts de l'ignorance** :
-- 💰 Ressources matérielles gaspillées
-- 😤 Utilisateurs insatisfaits (churn)
-- ⏱️ Heures d'investigation perdues
+- 💰 Ressources matérielles gaspillées  
+- 😤 Utilisateurs insatisfaits (churn)  
+- ⏱️ Heures d'investigation perdues  
 - 📉 Perte de revenus
 
 ### 3. Optimisation proactive vs réactive
 
 **Sans observabilité (mode réactif)** :
-1. Un problème survient (application en panne)
-2. Panique : "Qu'est-ce qui se passe ?!"
-3. Investigation à l'aveugle pendant des heures
-4. Correction d'urgence avec stress maximal
+1. Un problème survient (application en panne)  
+2. Panique : "Qu'est-ce qui se passe ?!"  
+3. Investigation à l'aveugle pendant des heures  
+4. Correction d'urgence avec stress maximal  
 5. Post-mortem : "On aurait dû voir ça venir..."
 
 **Avec observabilité (mode proactif)** :
-1. Détection précoce : "Le nombre de fichiers temporaires augmente"
-2. Investigation calme : "Requête X crée des fichiers temporaires"
-3. Optimisation planifiée : "Ajoutons un index"
-4. Problème évité avant impact utilisateur
+1. Détection précoce : "Le nombre de fichiers temporaires augmente"  
+2. Investigation calme : "Requête X crée des fichiers temporaires"  
+3. Optimisation planifiée : "Ajoutons un index"  
+4. Problème évité avant impact utilisateur  
 5. Équipe sereine et productive
 
 ### 4. Respect des SLA (Service Level Agreements)
 
 Si vous avez des engagements de disponibilité (99.9%, 99.99%), l'observabilité n'est pas optionnelle :
-- **99.9%** = 43 minutes de downtime par mois maximum
+- **99.9%** = 43 minutes de downtime par mois maximum  
 - **99.99%** = 4 minutes de downtime par mois maximum
 
 Chaque minute compte. Vous devez détecter et résoudre les problèmes en quelques minutes, pas en heures.
@@ -124,9 +124,9 @@ L'observabilité moderne repose sur trois piliers fondamentaux :
 - Nombre de lignes lues/écrites
 
 **Caractéristiques** :
-- ✅ Légères (faible overhead)
-- ✅ Faciles à agréger et visualiser (graphiques)
-- ✅ Idéales pour les alertes
+- ✅ Légères (faible overhead)  
+- ✅ Faciles à agréger et visualiser (graphiques)  
+- ✅ Idéales pour les alertes  
 - ❌ Manquent de contexte détaillé
 
 **Outils** : Prometheus, Grafana, CloudWatch, Datadog
@@ -143,9 +143,9 @@ L'observabilité moderne repose sur trois piliers fondamentaux :
 - Checkpoints
 
 **Caractéristiques** :
-- ✅ Contexte riche (qui, quoi, quand, où)
-- ✅ Essentiels pour le débogage
-- ✅ Audit et conformité
+- ✅ Contexte riche (qui, quoi, quand, où)  
+- ✅ Essentiels pour le débogage  
+- ✅ Audit et conformité  
 - ❌ Volume important (nécessite rotation et archivage)
 
 **Outils** : pgBadger, ELK Stack (Elasticsearch/Logstash/Kibana), Splunk
@@ -160,8 +160,8 @@ L'observabilité moderne repose sur trois piliers fondamentaux :
 - Corrélation entre différentes requêtes d'une transaction
 
 **Caractéristiques** :
-- ✅ Vue end-to-end d'une opération
-- ✅ Identification précise des goulots d'étranglement
+- ✅ Vue end-to-end d'une opération  
+- ✅ Identification précise des goulots d'étranglement  
 - ❌ Plus complexe à mettre en place
 
 **Outils** : OpenTelemetry, Jaeger, Zipkin
@@ -172,9 +172,9 @@ L'observabilité moderne repose sur trois piliers fondamentaux :
 
 **Scénario** : L'application est lente
 
-1. **Métriques** : "Le temps de réponse médian est passé de 50ms à 2000ms"
-2. **Logs** : "Plusieurs requêtes SELECT sur la table 'orders' prennent > 5 secondes"
-3. **Traces** : "80% du temps est passé dans un Sequential Scan sur 'orders'"
+1. **Métriques** : "Le temps de réponse médian est passé de 50ms à 2000ms"  
+2. **Logs** : "Plusieurs requêtes SELECT sur la table 'orders' prennent > 5 secondes"  
+3. **Traces** : "80% du temps est passé dans un Sequential Scan sur 'orders'"  
 4. **Action** : Ajouter un index sur la colonne filtrée
 
 Sans ces trois sources d'information, vous auriez eu beaucoup de mal à identifier le problème.
@@ -224,9 +224,9 @@ PostgreSQL dispose d'un système de logging extrêmement configurable :
 #### 4. Catalogues Système (pg_catalog)
 
 Les métadonnées complètes de votre base :
-- `pg_class` : Tables, index, séquences
-- `pg_attribute` : Colonnes
-- `pg_index` : Définitions d'index
+- `pg_class` : Tables, index, séquences  
+- `pg_attribute` : Colonnes  
+- `pg_index` : Définitions d'index  
 - `pg_constraint` : Contraintes
 - Et bien plus...
 
@@ -282,9 +282,9 @@ L'observabilité peut sembler intimidante. Voici une approche progressive :
 **Objectif** : Avoir une visibilité de base
 
 **Actions** :
-1. ✅ Activer et configurer les logs PostgreSQL
-2. ✅ Installer et configurer `pg_stat_statements`
-3. ✅ Créer quelques requêtes de base sur `pg_stat_activity`
+1. ✅ Activer et configurer les logs PostgreSQL  
+2. ✅ Installer et configurer `pg_stat_statements`  
+3. ✅ Créer quelques requêtes de base sur `pg_stat_activity`  
 4. ✅ Comprendre les métriques clés (connexions, TPS, cache hit ratio)
 
 **Durée** : 1-2 jours
@@ -296,10 +296,10 @@ L'observabilité peut sembler intimidante. Voici une approche progressive :
 **Objectif** : Surveiller en continu et être alerté
 
 **Actions** :
-1. ✅ Installer Prometheus + Grafana (ou équivalent)
-2. ✅ Configurer des dashboards pour les métriques clés
-3. ✅ Mettre en place des alertes (connexions, slow queries, cache hit ratio)
-4. ✅ Configurer `auto_explain` pour les requêtes lentes
+1. ✅ Installer Prometheus + Grafana (ou équivalent)  
+2. ✅ Configurer des dashboards pour les métriques clés  
+3. ✅ Mettre en place des alertes (connexions, slow queries, cache hit ratio)  
+4. ✅ Configurer `auto_explain` pour les requêtes lentes  
 5. ✅ Analyser régulièrement avec pgBadger
 
 **Durée** : 1 semaine
@@ -311,10 +311,10 @@ L'observabilité peut sembler intimidante. Voici une approche progressive :
 **Objectif** : Diagnostic profond et optimisation proactive
 
 **Actions** :
-1. ✅ Intégrer tous les aspects (métriques, logs, traces si applicable)
-2. ✅ Créer des dashboards personnalisés par équipe/application
-3. ✅ Corréler PostgreSQL avec les métriques applicatives
-4. ✅ Automatiser l'analyse et les rapports
+1. ✅ Intégrer tous les aspects (métriques, logs, traces si applicable)  
+2. ✅ Créer des dashboards personnalisés par équipe/application  
+3. ✅ Corréler PostgreSQL avec les métriques applicatives  
+4. ✅ Automatiser l'analyse et les rapports  
 5. ✅ Mettre en place des runbooks pour les incidents courants
 
 **Durée** : 1 mois
@@ -335,9 +335,9 @@ Cache Hit Ratio = (blks_hit / (blks_hit + blks_read)) × 100
 ```
 
 **Interprétation** :
-- **> 99%** : Excellent (presque tout en mémoire)
-- **95-99%** : Bon
-- **90-95%** : Correct, mais peut être amélioré
+- **> 99%** : Excellent (presque tout en mémoire)  
+- **95-99%** : Bon  
+- **90-95%** : Correct, mais peut être amélioré  
 - **< 90%** : Problème ! Beaucoup de lectures disque
 
 **Pourquoi c'est crucial** : Le disque est 100× plus lent que la RAM. Un cache hit ratio bas signifie des performances dégradées.
@@ -357,7 +357,7 @@ FROM pg_stat_database;
 - Connection storm = saturation serveur
 
 **Seuils d'alerte** :
-- **Warning** : > 80% de `max_connections`
+- **Warning** : > 80% de `max_connections`  
 - **Critical** : > 95% de `max_connections`
 
 **Comment le mesurer** :
@@ -366,8 +366,8 @@ SELECT
     count(*) FILTER (WHERE state = 'active') AS active_connections,
     count(*) FILTER (WHERE state = 'idle') AS idle_connections,
     count(*) AS total_connections
-FROM pg_stat_activity
-WHERE backend_type = 'client backend';
+FROM pg_stat_activity  
+WHERE backend_type = 'client backend';  
 ```
 
 ### 3. Transactions par Seconde (TPS)
@@ -383,8 +383,8 @@ WHERE backend_type = 'client backend';
 ```sql
 SELECT
     xact_commit + xact_rollback AS total_transactions
-FROM pg_stat_database
-WHERE datname = current_database();
+FROM pg_stat_database  
+WHERE datname = current_database();  
 ```
 
 (Mesurer la différence sur un intervalle pour obtenir le TPS)
@@ -411,7 +411,7 @@ WHERE datname = current_database();
 - Signe que VACUUM ne fonctionne pas bien
 
 **Seuils d'alerte** :
-- **Warning** : > 20% de bloat
+- **Warning** : > 20% de bloat  
 - **Critical** : > 40% de bloat
 
 ### 6. Locks et Deadlocks
@@ -450,7 +450,7 @@ SELECT * FROM pg_locks WHERE NOT granted;  -- Locks en attente
 - Risque de perte de données en cas de failover
 
 **Seuil d'alerte** :
-- **Warning** : > 10 secondes
+- **Warning** : > 10 secondes  
 - **Critical** : > 60 secondes
 
 ### 10. Utilisation Disque
@@ -460,7 +460,7 @@ SELECT * FROM pg_locks WHERE NOT granted;  -- Locks en attente
 - Croissance rapide = problème de bloat ou de logs
 
 **Seuil d'alerte** :
-- **Warning** : > 80% utilisé
+- **Warning** : > 80% utilisé  
 - **Critical** : > 90% utilisé
 
 ---
@@ -551,27 +551,27 @@ Pour commencer, créez un dashboard avec ces 6 graphiques :
 Voici une checklist pour démarrer l'observabilité de votre PostgreSQL :
 
 ### Phase 1 : Fondations (Jour 1)
-- [ ] Configurer les logs PostgreSQL (niveau, format, rotation)
-- [ ] Installer et configurer `pg_stat_statements`
-- [ ] Documenter où se trouvent les logs
+- [ ] Configurer les logs PostgreSQL (niveau, format, rotation)  
+- [ ] Installer et configurer `pg_stat_statements`  
+- [ ] Documenter où se trouvent les logs  
 - [ ] Tester l'accès aux vues `pg_stat_*`
 
 ### Phase 2 : Monitoring de Base (Semaine 1)
-- [ ] Installer un outil de monitoring (Grafana ou équivalent)
-- [ ] Créer un dashboard avec les 10 métriques clés
-- [ ] Configurer des alertes sur les métriques critiques
+- [ ] Installer un outil de monitoring (Grafana ou équivalent)  
+- [ ] Créer un dashboard avec les 10 métriques clés  
+- [ ] Configurer des alertes sur les métriques critiques  
 - [ ] Tester les alertes
 
 ### Phase 3 : Observabilité Avancée (Mois 1)
-- [ ] Configurer `auto_explain` pour les requêtes lentes
-- [ ] Installer pgBadger pour l'analyse de logs
-- [ ] Créer des dashboards personnalisés par équipe
+- [ ] Configurer `auto_explain` pour les requêtes lentes  
+- [ ] Installer pgBadger pour l'analyse de logs  
+- [ ] Créer des dashboards personnalisés par équipe  
 - [ ] Mettre en place un processus de revue hebdomadaire des métriques
 
 ### Phase 4 : Optimisation Continue (Ongoing)
-- [ ] Analyser régulièrement les requêtes lentes
-- [ ] Optimiser les index basés sur les statistiques
-- [ ] Ajuster les seuils d'alerte selon l'évolution
+- [ ] Analyser régulièrement les requêtes lentes  
+- [ ] Optimiser les index basés sur les statistiques  
+- [ ] Ajuster les seuils d'alerte selon l'évolution  
 - [ ] Documenter les incidents et leurs résolutions
 
 ---
@@ -648,7 +648,7 @@ L'observabilité n'est jamais "terminée". C'est un processus continu :
 ### 3. Le Contexte Avant Tout
 
 Une métrique sans contexte ne sert à rien :
-- "Le CPU est à 90%" → Inutile seul
+- "Le CPU est à 90%" → Inutile seul  
 - "Le CPU est à 90% alors qu'habituellement il est à 30%, causé par une requête de rapport qui scan toute la table orders" → Actionnable !
 
 ### 4. La Simplicité d'Abord
@@ -710,32 +710,32 @@ Dans les sections suivantes, nous allons explorer chaque aspect en profondeur av
 Avant de plonger dans les sections détaillées, voici quelques ressources utiles :
 
 ### Documentation Officielle
-- [PostgreSQL Monitoring Documentation](https://www.postgresql.org/docs/18/monitoring.html)
-- [PostgreSQL Statistics Views](https://www.postgresql.org/docs/18/monitoring-stats.html)
+- [PostgreSQL Monitoring Documentation](https://www.postgresql.org/docs/18/monitoring.html)  
+- [PostgreSQL Statistics Views](https://www.postgresql.org/docs/18/monitoring-stats.html)  
 - [PostgreSQL Error Reporting and Logging](https://www.postgresql.org/docs/18/runtime-config-logging.html)
 
 ### Livres Recommandés
-- "PostgreSQL High Performance" par Gregory Smith
-- "Mastering PostgreSQL in Application Development" par Dimitri Fontaine
+- "PostgreSQL High Performance" par Gregory Smith  
+- "Mastering PostgreSQL in Application Development" par Dimitri Fontaine  
 - "The Art of PostgreSQL" par Dimitri Fontaine
 
 ### Outils Mentionnés
-- [pgBadger](https://pgbadger.darold.net/) - Analyseur de logs
-- [Grafana](https://grafana.com/) - Visualisation de métriques
-- [Prometheus](https://prometheus.io/) - Collecte de métriques
+- [pgBadger](https://pgbadger.darold.net/) - Analyseur de logs  
+- [Grafana](https://grafana.com/) - Visualisation de métriques  
+- [Prometheus](https://prometheus.io/) - Collecte de métriques  
 - [postgres_exporter](https://github.com/prometheus-community/postgres_exporter) - Exporteur Prometheus
 
 ### Communautés
-- [PostgreSQL Mailing Lists](https://www.postgresql.org/list/)
-- [r/PostgreSQL](https://reddit.com/r/PostgreSQL)
-- [PostgreSQL Discord](https://discord.gg/postgresql)
+- [PostgreSQL Mailing Lists](https://www.postgresql.org/list/)  
+- [r/PostgreSQL](https://reddit.com/r/PostgreSQL)  
+- [PostgreSQL Discord](https://discord.gg/postgresql)  
 - [PostgreSQL Slack Workspace](https://postgres-slack.herokuapp.com/)
 
 ---
 
 **💡 Citation ** :
 
-> "You can't improve what you don't measure."
+> "You can't improve what you don't measure."  
 > — Peter Drucker
 
 **🎯 Objectif de ce chapitre** : Vous donner les outils et les connaissances pour mesurer, comprendre, et améliorer continuellement votre PostgreSQL.

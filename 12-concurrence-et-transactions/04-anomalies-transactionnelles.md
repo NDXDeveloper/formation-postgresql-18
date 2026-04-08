@@ -18,16 +18,16 @@ Dans ce chapitre, nous allons explorer en profondeur chaque type d'anomalie, com
 
 Le standard SQL ANSI définit trois anomalies principales :
 
-1. **Dirty Read** (Lecture sale) : Lire des données non validées
-2. **Non-Repeatable Read** (Lecture non répétable) : Relire la même ligne et obtenir un résultat différent
+1. **Dirty Read** (Lecture sale) : Lire des données non validées  
+2. **Non-Repeatable Read** (Lecture non répétable) : Relire la même ligne et obtenir un résultat différent  
 3. **Phantom Read** (Lecture fantôme) : Relire avec la même requête et obtenir des lignes supplémentaires/manquantes
 
 ### Au-delà du standard ANSI
 
 PostgreSQL et les bases de données modernes reconnaissent aussi d'autres anomalies :
 
-4. **Lost Update** (Mise à jour perdue) : Une modification écrase silencieusement une autre
-5. **Write Skew** (Biais d'écriture) : Deux transactions violent une contrainte en écrivant simultanément
+4. **Lost Update** (Mise à jour perdue) : Une modification écrase silencieusement une autre  
+5. **Write Skew** (Biais d'écriture) : Deux transactions violent une contrainte en écrivant simultanément  
 6. **Read Skew** (Biais de lecture) : Lire des données incohérentes entre elles
 
 ### Tableau de prévention selon les niveaux d'isolation
@@ -58,7 +58,7 @@ Une **Dirty Read** se produit lorsqu'une transaction lit des données qui ont é
 #### Contexte
 
 Deux utilisateurs travaillent sur un système bancaire :
-- **Alice** (Transaction A) : Consulte son solde
+- **Alice** (Transaction A) : Consulte son solde  
 - **Bob** (Transaction B) : Effectue un retrait mais annule ensuite
 
 #### Scénario avec Dirty Read (niveau Read Uncommitted)
@@ -77,8 +77,8 @@ id | proprietaire | solde
 T1 (10:00:00) - Transaction B (Bob) démarre
 ```
 ```sql
-BEGIN;  -- Transaction B
-UPDATE comptes SET solde = solde - 500 WHERE id = 1;
+BEGIN;  -- Transaction B  
+UPDATE comptes SET solde = solde - 500 WHERE id = 1;  
 -- Le solde est maintenant 500€ DANS LA TRANSACTION B (pas encore commité)
 ```
 
@@ -121,9 +121,9 @@ SELECT solde FROM comptes WHERE id = 1;
 Alice a pris une décision (penser que son compte est bientôt à découvert) basée sur des données qui **n'ont jamais existé** réellement. C'est une **Dirty Read**.
 
 **Problèmes causés** :
-- 🚨 Décisions métier incorrectes
-- 🚨 Calculs faux (statistiques, rapports)
-- 🚨 Violation de l'intégrité logique de l'application
+- 🚨 Décisions métier incorrectes  
+- 🚨 Calculs faux (statistiques, rapports)  
+- 🚨 Violation de l'intégrité logique de l'application  
 - 🚨 Données incohérentes affichées aux utilisateurs
 
 ### Comment PostgreSQL prévient les Dirty Reads
@@ -251,9 +251,9 @@ Système facture : 450€ (!!)
 ```
 
 **Autres problèmes causés** :
-- 💸 Incohérences de facturation
-- 📊 Rapports avec des totaux incorrects
-- 🎯 Violations de règles métier basées sur des valeurs stables
+- 💸 Incohérences de facturation  
+- 📊 Rapports avec des totaux incorrects  
+- 🎯 Violations de règles métier basées sur des valeurs stables  
 - 🔄 Calculs complexes produisant des résultats erronés
 
 ### Diagramme temporel de Non-Repeatable Read
@@ -315,8 +315,8 @@ SELECT prix_nuit FROM chambres WHERE id = 1;
 COMMIT;  -- Libère le verrou
 ```
 
-**Avantage** : Empêche les autres transactions de modifier la ligne.
-**Inconvénient** : Crée des contentions (autres transactions bloquées).
+**Avantage** : Empêche les autres transactions de modifier la ligne.  
+**Inconvénient** : Crée des contentions (autres transactions bloquées).  
 
 ---
 
@@ -355,13 +355,13 @@ T1 (11:00:00) - Transaction A démarre
 BEGIN;  -- Read Committed par défaut
 
 -- Compter les commandes en attente pour le client 42
-SELECT COUNT(*) FROM commandes
-WHERE client_id = 42 AND statut = 'En attente';
+SELECT COUNT(*) FROM commandes  
+WHERE client_id = 42 AND statut = 'En attente';  
 -- Résultat : 2 commandes
 
 -- Calculer le montant total
-SELECT SUM(montant) FROM commandes
-WHERE client_id = 42 AND statut = 'En attente';
+SELECT SUM(montant) FROM commandes  
+WHERE client_id = 42 AND statut = 'En attente';  
 -- Résultat : 250€ (100 + 150)
 
 -- [Génération du reste du rapport...]
@@ -376,8 +376,8 @@ T2 (11:00:15) - Transaction B démarre et se termine
 BEGIN;
 
 -- Un nouveau client crée une commande
-INSERT INTO commandes (client_id, montant, statut)
-VALUES (42, 75.00, 'En attente');
+INSERT INTO commandes (client_id, montant, statut)  
+VALUES (42, 75.00, 'En attente');  
 
 COMMIT;  -- ✅ Validé !
 ```
@@ -389,13 +389,13 @@ T3 (11:00:30) - Transaction A continue son rapport
 ```
 ```sql
 -- Recompter pour vérification finale
-SELECT COUNT(*) FROM commandes
-WHERE client_id = 42 AND statut = 'En attente';
+SELECT COUNT(*) FROM commandes  
+WHERE client_id = 42 AND statut = 'En attente';  
 -- Résultat : 3 commandes (!!)  <-- Une ligne "fantôme" est apparue !
 
 -- Recalculer le montant
-SELECT SUM(montant) FROM commandes
-WHERE client_id = 42 AND statut = 'En attente';
+SELECT SUM(montant) FROM commandes  
+WHERE client_id = 42 AND statut = 'En attente';  
 -- Résultat : 325€ (au lieu de 250€)
 
 COMMIT;
@@ -414,16 +414,16 @@ Une ligne "fantôme" est apparue. C'est une **Phantom Read**.
 Le rapport généré contient des **incohérences** :
 
 ```
-Début du rapport : "Client 42 a 2 commandes en attente pour 250€"
-Fin du rapport : "Total général : 3 commandes pour 325€"
+Début du rapport : "Client 42 a 2 commandes en attente pour 250€"  
+Fin du rapport : "Total général : 3 commandes pour 325€"  
 
 🚨 Les chiffres ne correspondent pas !
 ```
 
 **Autres problèmes causés** :
-- 📊 Rapports analytiques incohérents
-- 🧮 Totaux qui ne correspondent pas aux détails
-- 📈 Graphiques basés sur des comptages instables
+- 📊 Rapports analytiques incohérents  
+- 🧮 Totaux qui ne correspondent pas aux détails  
+- 📈 Graphiques basés sur des comptages instables  
 - ✅ Violations de contraintes d'agrégation
 
 ### Diagramme temporel de Phantom Read
@@ -459,15 +459,15 @@ Transaction A                             Transaction B
 **Exemple visuel** :
 
 ```
-Non-Repeatable Read:
-T1: SELECT prix WHERE id=1 → 100€
-T2: (autre transaction UPDATE)
-T3: SELECT prix WHERE id=1 → 150€  (même ligne, valeur différente)
+Non-Repeatable Read:  
+T1: SELECT prix WHERE id=1 → 100€  
+T2: (autre transaction UPDATE)  
+T3: SELECT prix WHERE id=1 → 150€  (même ligne, valeur différente)  
 
-Phantom Read:
-T1: SELECT COUNT(*) WHERE statut='En attente' → 5 lignes
-T2: (autre transaction INSERT)
-T3: SELECT COUNT(*) WHERE statut='En attente' → 6 lignes  (nouvelle ligne)
+Phantom Read:  
+T1: SELECT COUNT(*) WHERE statut='En attente' → 5 lignes  
+T2: (autre transaction INSERT)  
+T3: SELECT COUNT(*) WHERE statut='En attente' → 6 lignes  (nouvelle ligne)  
 ```
 
 ### Comment prévenir les Phantom Reads
@@ -514,9 +514,9 @@ Avec une clé primaire précise :
 BEGIN;
 
 -- Verrouiller toutes les lignes correspondantes
-SELECT * FROM commandes
-WHERE client_id = 42 AND statut = 'En attente'
-FOR UPDATE;
+SELECT * FROM commandes  
+WHERE client_id = 42 AND statut = 'En attente'  
+FOR UPDATE;  
 
 -- Empêche les modifications, mais PAS les insertions de nouvelles lignes
 -- Donc ne prévient pas complètement les Phantom Reads
@@ -665,8 +665,8 @@ UPDATE posts SET nb_likes = 101 WHERE id = 1;
 COMMIT;
 ```
 
-**Avantage** : Détection automatique des conflits.
-**Inconvénient** : Nécessite une logique de retry.
+**Avantage** : Détection automatique des conflits.  
+**Inconvénient** : Nécessite une logique de retry.  
 
 #### Solution 3 : Verrouillage optimiste (version column)
 
@@ -675,33 +675,33 @@ COMMIT;
 ALTER TABLE posts ADD COLUMN version INTEGER DEFAULT 0;
 
 -- Transaction A
-BEGIN;
-SELECT nb_likes, version FROM posts WHERE id = 1;
+BEGIN;  
+SELECT nb_likes, version FROM posts WHERE id = 1;  
 -- Résultat : nb_likes=100, version=5
 
-UPDATE posts
-SET nb_likes = 101, version = version + 1
-WHERE id = 1 AND version = 5;
+UPDATE posts  
+SET nb_likes = 101, version = version + 1  
+WHERE id = 1 AND version = 5;  
 -- UPDATE 1 (succès si version toujours = 5)
 
 COMMIT;
 
 -- Transaction B (en parallèle)
-BEGIN;
-SELECT nb_likes, version FROM posts WHERE id = 1;
+BEGIN;  
+SELECT nb_likes, version FROM posts WHERE id = 1;  
 -- Résultat : nb_likes=100, version=5
 
-UPDATE posts
-SET nb_likes = 101, version = version + 1
-WHERE id = 1 AND version = 5;
+UPDATE posts  
+SET nb_likes = 101, version = version + 1  
+WHERE id = 1 AND version = 5;  
 -- UPDATE 0 (échec ! Version a changé)
 -- L'application détecte et réessaie
 
 ROLLBACK;
 ```
 
-**Avantage** : Contrôle fin, fonctionne en Read Committed.
-**Inconvénient** : Plus de code applicatif.
+**Avantage** : Contrôle fin, fonctionne en Read Committed.  
+**Inconvénient** : Plus de code applicatif.  
 
 #### Solution 4 : Verrouillage pessimiste (FOR UPDATE)
 
@@ -719,8 +719,8 @@ UPDATE posts SET nb_likes = 101 WHERE id = 1;
 COMMIT;
 ```
 
-**Avantage** : Prévention garantie.
-**Inconvénient** : Contention, autres transactions bloquées.
+**Avantage** : Prévention garantie.  
+**Inconvénient** : Contention, autres transactions bloquées.  
 
 ---
 
@@ -819,16 +819,16 @@ C'est un **Write Skew** : les écritures combinées créent une incohérence.
 Repeatable Read détecte les conflits **sur la même ligne** :
 
 ```
-Transaction A : UPDATE ligne 1
-Transaction B : UPDATE ligne 1
+Transaction A : UPDATE ligne 1  
+Transaction B : UPDATE ligne 1  
 → Conflit détecté ! ✅
 ```
 
 Mais **pas** les conflits **entre lignes différentes** :
 
 ```
-Transaction A : UPDATE ligne 1
-Transaction B : UPDATE ligne 2
+Transaction A : UPDATE ligne 1  
+Transaction B : UPDATE ligne 2  
 → Pas de conflit détecté ❌ (même si la combinaison viole une règle)
 ```
 
@@ -869,16 +869,16 @@ PostgreSQL détecte que la combinaison des deux transactions créerait une incoh
 disponible = true
 
 -- Transaction A
-BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ;
-SELECT disponible FROM places WHERE id = 42;  -- true
-UPDATE places SET disponible = false, client_id = 'Alice' WHERE id = 42;
-COMMIT;  -- ✅
+BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ;  
+SELECT disponible FROM places WHERE id = 42;  -- true  
+UPDATE places SET disponible = false, client_id = 'Alice' WHERE id = 42;  
+COMMIT;  -- ✅  
 
 -- Transaction B (parallèle)
-BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ;
-SELECT disponible FROM places WHERE id = 42;  -- true (snapshot ancien)
-UPDATE places SET disponible = false, client_id = 'Bob' WHERE id = 42;
-COMMIT;  -- ❌ Erreur (modification concurrente détectée)
+BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ;  
+SELECT disponible FROM places WHERE id = 42;  -- true (snapshot ancien)  
+UPDATE places SET disponible = false, client_id = 'Bob' WHERE id = 42;  
+COMMIT;  -- ❌ Erreur (modification concurrente détectée)  
 ```
 
 Ce cas **est détecté** par Repeatable Read car les deux transactions modifient **la même ligne**.
@@ -906,8 +906,8 @@ Un virement entre deux comptes.
 -- Table comptes
 id | proprietaire | solde
 ---|--------------|-------
-A  | Alice        | 1000.00
-B  | Bob          | 500.00
+A  | Alice        | 1000.00  
+B  | Bob          | 500.00  
 -- Total : 1500€
 ```
 
@@ -998,8 +998,8 @@ BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ;
 -- Toutes les lectures utilisent le MÊME snapshot
 SELECT solde FROM comptes WHERE id = 'A';  -- 1000€
 -- [Transfert se produit dans une autre transaction]
-SELECT solde FROM comptes WHERE id = 'B';  -- 500€
-SELECT SUM(solde) FROM comptes WHERE id IN ('A', 'B');  -- 1500€
+SELECT solde FROM comptes WHERE id = 'B';  -- 500€  
+SELECT SUM(solde) FROM comptes WHERE id IN ('A', 'B');  -- 1500€  
 
 -- Vue cohérente garantie ! ✅
 
@@ -1039,37 +1039,37 @@ COMMIT;
 ### Application CRUD simple (Blog, CMS)
 
 ```
-Anomalies acceptables : Non-Repeatable Read, Phantom Read, Read Skew
-Niveau : Read Committed (défaut)
-Justification : Performance et simplicité
+Anomalies acceptables : Non-Repeatable Read, Phantom Read, Read Skew  
+Niveau : Read Committed (défaut)  
+Justification : Performance et simplicité  
 ```
 
 ### E-commerce (Panier, Stock)
 
 ```
-Anomalies critiques : Lost Update (stock)
-Niveau : Read Committed + UPDATE atomique
+Anomalies critiques : Lost Update (stock)  
+Niveau : Read Committed + UPDATE atomique  
 ```
 
 ```sql
 -- Bon pattern pour gérer le stock
-BEGIN;
-UPDATE produits
-SET stock = stock - quantite_achetee
-WHERE id = produit_id AND stock >= quantite_achetee;
+BEGIN;  
+UPDATE produits  
+SET stock = stock - quantite_achetee  
+WHERE id = produit_id AND stock >= quantite_achetee;  
 
 IF NOT FOUND THEN
     RAISE EXCEPTION 'Stock insuffisant';
-END IF;
-COMMIT;
+END IF;  
+COMMIT;  
 ```
 
 ### Système bancaire
 
 ```
-Anomalies critiques : TOUTES
-Niveau : Serializable
-Justification : Argent en jeu, cohérence absolue requise
+Anomalies critiques : TOUTES  
+Niveau : Serializable  
+Justification : Argent en jeu, cohérence absolue requise  
 ```
 
 ```sql
@@ -1079,8 +1079,8 @@ BEGIN TRANSACTION ISOLATION LEVEL SERIALIZABLE;
 SELECT solde FROM comptes WHERE id = source_id;
 
 -- Effectuer transfert
-UPDATE comptes SET solde = solde - montant WHERE id = source_id;
-UPDATE comptes SET solde = solde + montant WHERE id = dest_id;
+UPDATE comptes SET solde = solde - montant WHERE id = source_id;  
+UPDATE comptes SET solde = solde + montant WHERE id = dest_id;  
 
 COMMIT;
 -- Retry automatique si erreur de sérialisation
@@ -1089,18 +1089,18 @@ COMMIT;
 ### Rapports et Analytics
 
 ```
-Anomalies critiques : Phantom Read, Read Skew
-Niveau : Repeatable Read
-Justification : Vue cohérente nécessaire
+Anomalies critiques : Phantom Read, Read Skew  
+Niveau : Repeatable Read  
+Justification : Vue cohérente nécessaire  
 ```
 
 ```sql
 BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ;
 
 -- Toutes les requêtes voient le même snapshot
-SELECT SUM(ventes) FROM commandes WHERE mois = 'Janvier';
-SELECT AVG(panier) FROM commandes WHERE mois = 'Janvier';
-SELECT COUNT(*) FROM commandes WHERE mois = 'Janvier';
+SELECT SUM(ventes) FROM commandes WHERE mois = 'Janvier';  
+SELECT AVG(panier) FROM commandes WHERE mois = 'Janvier';  
+SELECT COUNT(*) FROM commandes WHERE mois = 'Janvier';  
 
 COMMIT;
 ```
@@ -1108,8 +1108,8 @@ COMMIT;
 ### Système de réservation
 
 ```
-Anomalies critiques : Write Skew, Lost Update
-Niveau : Serializable
+Anomalies critiques : Write Skew, Lost Update  
+Niveau : Serializable  
 ```
 
 ```sql
@@ -1119,8 +1119,8 @@ BEGIN TRANSACTION ISOLATION LEVEL SERIALIZABLE;
 SELECT COUNT(*) FROM reservations WHERE place_id = 42 AND date = '2024-01-15';
 
 -- Réserver
-INSERT INTO reservations (place_id, client_id, date)
-VALUES (42, 123, '2024-01-15');
+INSERT INTO reservations (place_id, client_id, date)  
+VALUES (42, 123, '2024-01-15');  
 
 COMMIT;
 ```
@@ -1135,28 +1135,28 @@ COMMIT;
 - ❌ N/A dans PostgreSQL (automatiquement empêché)
 
 **Non-Repeatable Read** :
-- ✋ Les utilisateurs rapportent des prix qui changent pendant la navigation
-- ✋ Les totaux calculés ne correspondent pas aux détails affichés
+- ✋ Les utilisateurs rapportent des prix qui changent pendant la navigation  
+- ✋ Les totaux calculés ne correspondent pas aux détails affichés  
 - ✋ Les validations échouent avec des messages "données modifiées"
 
 **Phantom Read** :
-- ✋ Les rapports montrent des comptages incohérents
-- ✋ Les listes d'éléments changent de longueur sans action utilisateur
+- ✋ Les rapports montrent des comptages incohérents  
+- ✋ Les listes d'éléments changent de longueur sans action utilisateur  
 - ✋ Les agrégations (SUM, COUNT) varient entre les requêtes
 
 **Lost Update** :
-- ✋ Les compteurs (likes, vues, stocks) sont incorrects
-- ✋ Les modifications utilisateur "disparaissent"
+- ✋ Les compteurs (likes, vues, stocks) sont incorrects  
+- ✋ Les modifications utilisateur "disparaissent"  
 - ✋ Les inventaires ne correspondent pas aux ventes
 
 **Write Skew** :
-- ✋ Les contraintes métier sont violées (ex: pas de gardien)
-- ✋ Les limites (quotas, capacités) sont dépassées
+- ✋ Les contraintes métier sont violées (ex: pas de gardien)  
+- ✋ Les limites (quotas, capacités) sont dépassées  
 - ✋ Les allocations de ressources créent des conflits
 
 **Read Skew** :
-- ✋ Les totaux ne correspondent pas à la somme des parties
-- ✋ Les données liées semblent désynchronisées
+- ✋ Les totaux ne correspondent pas à la somme des parties  
+- ✋ Les données liées semblent désynchronisées  
 - ✋ Les exports contiennent des incohérences
 
 ---
@@ -1167,9 +1167,9 @@ COMMIT;
 
 Avant de choisir un niveau d'isolation, posez-vous ces questions :
 
-- ✅ Quelle est la gravité d'une lecture incohérente ?
-- ✅ Les utilisateurs peuvent-ils tolérer des données légèrement obsolètes ?
-- ✅ Y a-t-il des contraintes métier qui doivent être absolument respectées ?
+- ✅ Quelle est la gravité d'une lecture incohérente ?  
+- ✅ Les utilisateurs peuvent-ils tolérer des données légèrement obsolètes ?  
+- ✅ Y a-t-il des contraintes métier qui doivent être absolument respectées ?  
 - ✅ Quelle est la fréquence de modification des données ?
 
 ### 2. Privilégier les opérations atomiques
@@ -1191,8 +1191,8 @@ UPDATE table SET valeur = valeur + increment WHERE id = 1;
 ALTER TABLE comptes ADD CONSTRAINT solde_positif CHECK (solde >= 0);
 
 -- Contrainte UNIQUE pour empêcher les doublons
-ALTER TABLE reservations ADD CONSTRAINT place_date_unique
-UNIQUE (place_id, date);
+ALTER TABLE reservations ADD CONSTRAINT place_date_unique  
+UNIQUE (place_id, date);  
 ```
 
 ### 4. Implémenter une logique de retry
@@ -1219,8 +1219,8 @@ SELECT
     xact_commit,
     xact_rollback,
     ROUND(100.0 * xact_rollback / NULLIF(xact_commit + xact_rollback, 0), 2) AS rollback_pct
-FROM pg_stat_database
-WHERE datname = current_database();
+FROM pg_stat_database  
+WHERE datname = current_database();  
 ```
 
 Un taux élevé peut indiquer :
@@ -1234,18 +1234,18 @@ Un taux élevé peut indiquer :
 
 Les anomalies transactionnelles sont des comportements indésirables qui peuvent survenir lorsque plusieurs transactions accèdent aux mêmes données simultanément. Comprendre ces anomalies est essentiel pour :
 
-- ✅ Choisir le bon niveau d'isolation
-- ✅ Concevoir des schémas de données robustes
-- ✅ Éviter les bugs subtils et difficiles à reproduire
+- ✅ Choisir le bon niveau d'isolation  
+- ✅ Concevoir des schémas de données robustes  
+- ✅ Éviter les bugs subtils et difficiles à reproduire  
 - ✅ Garantir l'intégrité des données de votre application
 
 **Points clés** :
 
-1. **Dirty Read** : Jamais dans PostgreSQL (MVCC l'empêche)
-2. **Non-Repeatable Read** : Fréquent en Read Committed, empêché par Repeatable Read
-3. **Phantom Read** : Également empêché par Repeatable Read dans PostgreSQL
-4. **Lost Update** : Dangereux, utilisez des opérations atomiques
-5. **Write Skew** : Subtil, nécessite Serializable
+1. **Dirty Read** : Jamais dans PostgreSQL (MVCC l'empêche)  
+2. **Non-Repeatable Read** : Fréquent en Read Committed, empêché par Repeatable Read  
+3. **Phantom Read** : Également empêché par Repeatable Read dans PostgreSQL  
+4. **Lost Update** : Dangereux, utilisez des opérations atomiques  
+5. **Write Skew** : Subtil, nécessite Serializable  
 6. **Read Skew** : Vue incohérente, utilisez Repeatable Read
 
 **Règle d'or** : Commencez par Read Committed, puis montez en isolation seulement si votre logique métier le justifie, en acceptant le coût (complexité, retries, performance).
@@ -1256,12 +1256,12 @@ Dans la prochaine section (12.5), nous explorerons la **gestion des verrous (Loc
 
 **Points clés à retenir :**
 
-- 🔑 6 anomalies principales : Dirty Read, Non-Repeatable Read, Phantom Read, Lost Update, Write Skew, Read Skew
-- 🔑 PostgreSQL empêche automatiquement les Dirty Reads
-- 🔑 Lost Update est l'anomalie la plus courante → utilisez UPDATE atomique
-- 🔑 Write Skew nécessite Serializable pour être détecté
-- 🔑 Chaque anomalie a un impact métier spécifique
-- 🔑 Le choix du niveau d'isolation dépend des anomalies que vous devez absolument prévenir
+- 🔑 6 anomalies principales : Dirty Read, Non-Repeatable Read, Phantom Read, Lost Update, Write Skew, Read Skew  
+- 🔑 PostgreSQL empêche automatiquement les Dirty Reads  
+- 🔑 Lost Update est l'anomalie la plus courante → utilisez UPDATE atomique  
+- 🔑 Write Skew nécessite Serializable pour être détecté  
+- 🔑 Chaque anomalie a un impact métier spécifique  
+- 🔑 Le choix du niveau d'isolation dépend des anomalies que vous devez absolument prévenir  
 - 🔑 Les opérations atomiques SQL sont toujours préférables au Read-Modify-Write
 
 ⏭️ [Gestion des verrous (Locks) : Types et Deadlocks](/12-concurrence-et-transactions/05-gestion-des-verrous.md)

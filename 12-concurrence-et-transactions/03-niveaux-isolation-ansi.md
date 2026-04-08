@@ -8,8 +8,8 @@ Imaginez que vous êtes dans une bibliothèque où plusieurs personnes consulten
 
 Les **niveaux d'isolation** définissent les règles qui déterminent **ce qu'une transaction peut voir** des modifications effectuées par d'autres transactions concurrentes. C'est un équilibre constant entre :
 
-- 🔒 **Cohérence** : Garantir que les données lues sont valides et cohérentes
-- ⚡ **Performance** : Permettre un maximum de transactions concurrentes
+- 🔒 **Cohérence** : Garantir que les données lues sont valides et cohérentes  
+- ⚡ **Performance** : Permettre un maximum de transactions concurrentes  
 - 🎯 **Simplicité** : Éviter les comportements surprenants pour les développeurs
 
 Plus le niveau d'isolation est strict, plus la cohérence est forte, mais plus la performance peut être impactée.
@@ -20,9 +20,9 @@ Plus le niveau d'isolation est strict, plus la cohérence est forte, mais plus l
 
 Le standard SQL ANSI définit quatre niveaux d'isolation, du moins strict au plus strict :
 
-1. **Read Uncommitted** (Lecture non validée)
-2. **Read Committed** (Lecture validée) ⭐ *Niveau par défaut dans PostgreSQL*
-3. **Repeatable Read** (Lecture répétable)
+1. **Read Uncommitted** (Lecture non validée)  
+2. **Read Committed** (Lecture validée) ⭐ *Niveau par défaut dans PostgreSQL*  
+3. **Repeatable Read** (Lecture répétable)  
 4. **Serializable** (Sérialisable)
 
 **Note importante** : PostgreSQL ne supporte pas réellement Read Uncommitted. Si vous le demandez, PostgreSQL utilise automatiquement Read Committed à la place.
@@ -41,12 +41,12 @@ Une transaction lit des données **non validées** (non commitées) d'une autre 
 
 ```sql
 -- Transaction A
-BEGIN;
-UPDATE comptes SET solde = 0 WHERE id = 1;  -- Pas encore commité !
+BEGIN;  
+UPDATE comptes SET solde = 0 WHERE id = 1;  -- Pas encore commité !  
 
 -- Transaction B (en parallèle)
-BEGIN;
-SELECT solde FROM comptes WHERE id = 1;
+BEGIN;  
+SELECT solde FROM comptes WHERE id = 1;  
 -- Voit : 0 (alors que Transaction A pourrait faire ROLLBACK !)
 ```
 
@@ -60,17 +60,17 @@ Une transaction lit la même ligne **deux fois** et obtient des **résultats dif
 
 ```sql
 -- Transaction A
-BEGIN;
-SELECT solde FROM comptes WHERE id = 1;  -- Voit : 1000€
+BEGIN;  
+SELECT solde FROM comptes WHERE id = 1;  -- Voit : 1000€  
 
 -- Transaction B (en parallèle)
-BEGIN;
-UPDATE comptes SET solde = 500 WHERE id = 1;
-COMMIT;
+BEGIN;  
+UPDATE comptes SET solde = 500 WHERE id = 1;  
+COMMIT;  
 
 -- Transaction A (suite)
-SELECT solde FROM comptes WHERE id = 1;  -- Voit maintenant : 500€ (!!)
-COMMIT;
+SELECT solde FROM comptes WHERE id = 1;  -- Voit maintenant : 500€ (!!)  
+COMMIT;  
 ```
 
 **Problème** : La même requête dans la même transaction retourne des résultats différents.
@@ -83,17 +83,17 @@ Une transaction exécute la même requête **deux fois** et obtient un **nombre 
 
 ```sql
 -- Transaction A
-BEGIN;
-SELECT COUNT(*) FROM commandes WHERE client_id = 42;  -- Voit : 5 commandes
+BEGIN;  
+SELECT COUNT(*) FROM commandes WHERE client_id = 42;  -- Voit : 5 commandes  
 
 -- Transaction B (en parallèle)
-BEGIN;
-INSERT INTO commandes (client_id, montant) VALUES (42, 100);
-COMMIT;
+BEGIN;  
+INSERT INTO commandes (client_id, montant) VALUES (42, 100);  
+COMMIT;  
 
 -- Transaction A (suite)
-SELECT COUNT(*) FROM commandes WHERE client_id = 42;  -- Voit maintenant : 6 commandes (!!)
-COMMIT;
+SELECT COUNT(*) FROM commandes WHERE client_id = 42;  -- Voit maintenant : 6 commandes (!!)  
+COMMIT;  
 ```
 
 **Problème** : De nouvelles lignes "fantômes" apparaissent (ou disparaissent) au milieu de la transaction.
@@ -146,9 +146,9 @@ C'est le **niveau par défaut** dans PostgreSQL. Une transaction ne voit que les
 
 ### Caractéristiques principales
 
-1. ✅ **Pas de Dirty Reads** : On ne lit jamais de données non validées
-2. ❌ **Non-Repeatable Reads possibles** : La même requête peut retourner des résultats différents
-3. ❌ **Phantom Reads possibles** : De nouvelles lignes peuvent apparaître entre deux requêtes
+1. ✅ **Pas de Dirty Reads** : On ne lit jamais de données non validées  
+2. ❌ **Non-Repeatable Reads possibles** : La même requête peut retourner des résultats différents  
+3. ❌ **Phantom Reads possibles** : De nouvelles lignes peuvent apparaître entre deux requêtes  
 4. 📸 **Snapshot par requête** : Chaque requête voit un snapshot de la base pris au moment où elle commence
 
 ### Comment ça fonctionne
@@ -189,8 +189,8 @@ SELECT solde FROM comptes WHERE id = 1;
 ```sql
 BEGIN;
 
-UPDATE comptes SET solde = solde - 200 WHERE id = 1;
-COMMIT;  -- Validé !
+UPDATE comptes SET solde = solde - 200 WHERE id = 1;  
+COMMIT;  -- Validé !  
 ```
 
 **Transaction A (suite)** :
@@ -220,8 +220,8 @@ SELECT COUNT(*) FROM commandes WHERE statut = 'En attente';
 ```sql
 BEGIN;
 
-INSERT INTO commandes (client_id, statut) VALUES (42, 'En attente');
-COMMIT;
+INSERT INTO commandes (client_id, statut) VALUES (42, 'En attente');  
+COMMIT;  
 ```
 
 **Transaction A (suite)** :
@@ -236,14 +236,14 @@ COMMIT;
 
 ### Quand utiliser Read Committed ?
 
-- ✅ **Par défaut pour la plupart des applications**
-- ✅ Applications web classiques (CRUD)
-- ✅ APIs REST standard
-- ✅ Workloads OLTP (transactions courtes)
+- ✅ **Par défaut pour la plupart des applications**  
+- ✅ Applications web classiques (CRUD)  
+- ✅ APIs REST standard  
+- ✅ Workloads OLTP (transactions courtes)  
 - ✅ Quand la performance est prioritaire
 
-- ❌ Rapports nécessitant une cohérence stricte
-- ❌ Calculs financiers complexes avec plusieurs lectures
+- ❌ Rapports nécessitant une cohérence stricte  
+- ❌ Calculs financiers complexes avec plusieurs lectures  
 - ❌ Logique métier sensible aux changements entre requêtes
 
 ### Configuration
@@ -266,9 +266,9 @@ Une transaction voit un **snapshot cohérent** de la base de données pris **au 
 
 ### Caractéristiques principales
 
-1. ✅ **Pas de Dirty Reads**
-2. ✅ **Pas de Non-Repeatable Reads** : Une requête répétée retourne toujours les mêmes résultats
-3. ✅ **Pas de Phantom Reads** (dans PostgreSQL) : Le nombre de lignes reste stable
+1. ✅ **Pas de Dirty Reads**  
+2. ✅ **Pas de Non-Repeatable Reads** : Une requête répétée retourne toujours les mêmes résultats  
+3. ✅ **Pas de Phantom Reads** (dans PostgreSQL) : Le nombre de lignes reste stable  
 4. 📸 **Snapshot unique** : Un seul snapshot pour toute la transaction
 
 ### Comment ça fonctionne
@@ -306,8 +306,8 @@ SELECT solde FROM comptes WHERE id = 1;
 ```sql
 BEGIN;
 
-UPDATE comptes SET solde = solde - 200 WHERE id = 1;
-COMMIT;  -- Validé !
+UPDATE comptes SET solde = solde - 200 WHERE id = 1;  
+COMMIT;  -- Validé !  
 ```
 
 **Transaction A (suite)** :
@@ -335,8 +335,8 @@ SELECT COUNT(*) FROM commandes WHERE statut = 'En attente';
 ```sql
 BEGIN;
 
-INSERT INTO commandes (client_id, statut) VALUES (42, 'En attente');
-COMMIT;
+INSERT INTO commandes (client_id, statut) VALUES (42, 'En attente');  
+COMMIT;  
 ```
 
 **Transaction A (suite)** :
@@ -360,9 +360,9 @@ BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ;
 SELECT solde FROM comptes WHERE id = 1;  -- Voit : 1000€
 
 -- Transaction B (en parallèle)
-BEGIN;
-UPDATE comptes SET solde = solde - 200 WHERE id = 1;
-COMMIT;  -- Change le solde à 800€
+BEGIN;  
+UPDATE comptes SET solde = solde - 200 WHERE id = 1;  
+COMMIT;  -- Change le solde à 800€  
 
 -- Transaction A (suite)
 UPDATE comptes SET solde = solde + 500 WHERE id = 1;
@@ -377,8 +377,8 @@ ROLLBACK;  -- Obligé d'annuler la transaction
 
 ```python
 # Pseudo-code
-max_retries = 3
-for attempt in range(max_retries):
+max_retries = 3  
+for attempt in range(max_retries):  
     try:
         # Tenter la transaction
         conn.execute("BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ")
@@ -394,13 +394,13 @@ for attempt in range(max_retries):
 
 ### Quand utiliser Repeatable Read ?
 
-- ✅ **Rapports financiers** nécessitant une cohérence stricte
-- ✅ **Analyses et statistiques** où les données ne doivent pas changer
-- ✅ **Calculs complexes** avec plusieurs lectures sur les mêmes données
-- ✅ **Exports de données** nécessitant une vue cohérente
+- ✅ **Rapports financiers** nécessitant une cohérence stricte  
+- ✅ **Analyses et statistiques** où les données ne doivent pas changer  
+- ✅ **Calculs complexes** avec plusieurs lectures sur les mêmes données  
+- ✅ **Exports de données** nécessitant une vue cohérente  
 - ✅ **Audits** où l'on doit garantir qu'on voit un état figé
 
-- ❌ Applications avec beaucoup de contentions (risque d'erreurs de sérialisation)
+- ❌ Applications avec beaucoup de contentions (risque d'erreurs de sérialisation)  
 - ❌ Opérations simples CRUD qui peuvent tolérer des changements
 
 ### Configuration
@@ -422,20 +422,20 @@ Le niveau le plus strict. PostgreSQL **garantit** que l'exécution simultanée d
 
 ### Caractéristiques principales
 
-1. ✅ **Pas de Dirty Reads**
-2. ✅ **Pas de Non-Repeatable Reads**
-3. ✅ **Pas de Phantom Reads**
-4. ✅ **Pas d'anomalies d'écriture** (Write Skew)
-5. ⚠️ **Erreurs de sérialisation fréquentes** : Les transactions peuvent être rejetées
+1. ✅ **Pas de Dirty Reads**  
+2. ✅ **Pas de Non-Repeatable Reads**  
+3. ✅ **Pas de Phantom Reads**  
+4. ✅ **Pas d'anomalies d'écriture** (Write Skew)  
+5. ⚠️ **Erreurs de sérialisation fréquentes** : Les transactions peuvent être rejetées  
 6. 🔍 **Détection de conflits** : PostgreSQL analyse les dépendances entre transactions
 
 ### Comment ça fonctionne
 
 Serializable utilise une technique appelée **Serializable Snapshot Isolation (SSI)**. PostgreSQL :
 
-1. Prend un snapshot comme en Repeatable Read
-2. **Surveille** les accès en lecture et écriture
-3. **Détecte** les conflits qui pourraient violer la sérialisation
+1. Prend un snapshot comme en Repeatable Read  
+2. **Surveille** les accès en lecture et écriture  
+3. **Détecte** les conflits qui pourraient violer la sérialisation  
 4. **Rejette** une transaction en cas de conflit avec une erreur
 
 ### Exemple : Write Skew (anomalie d'écriture)
@@ -491,16 +491,16 @@ Les deux transactions ont réussi, mais le résultat viole la contrainte métier
 -- Transaction A
 BEGIN TRANSACTION ISOLATION LEVEL SERIALIZABLE;
 
-SELECT COUNT(*) FROM gardes WHERE en_service = true;  -- 2
-UPDATE gardes SET en_service = false WHERE medecin = 'Alice';
+SELECT COUNT(*) FROM gardes WHERE en_service = true;  -- 2  
+UPDATE gardes SET en_service = false WHERE medecin = 'Alice';  
 
 COMMIT;  -- Succès
 
 -- Transaction B (en parallèle)
 BEGIN TRANSACTION ISOLATION LEVEL SERIALIZABLE;
 
-SELECT COUNT(*) FROM gardes WHERE en_service = true;  -- 2
-UPDATE gardes SET en_service = false WHERE medecin = 'Bob';
+SELECT COUNT(*) FROM gardes WHERE en_service = true;  -- 2  
+UPDATE gardes SET en_service = false WHERE medecin = 'Bob';  
 
 COMMIT;
 -- ERREUR: could not serialize access due to read/write dependencies
@@ -515,9 +515,9 @@ PostgreSQL **détecte** que les deux transactions ont lu les mêmes données et 
 
 **État initial** :
 ```sql
-compte_A : 100€
-compte_B : 100€
-Total : 200€
+compte_A : 100€  
+compte_B : 100€  
+Total : 200€  
 ```
 
 **Transaction 1 (Transfert A→B)** :
@@ -528,8 +528,8 @@ BEGIN TRANSACTION ISOLATION LEVEL SERIALIZABLE;
 SELECT solde FROM comptes WHERE id = 'A';  -- 100€
 
 -- Transférer 150€ de A vers B
-UPDATE comptes SET solde = solde - 150 WHERE id = 'A';  -- A = -50€
-UPDATE comptes SET solde = solde + 150 WHERE id = 'B';  -- B = 250€
+UPDATE comptes SET solde = solde - 150 WHERE id = 'A';  -- A = -50€  
+UPDATE comptes SET solde = solde + 150 WHERE id = 'B';  -- B = 250€  
 
 COMMIT;
 ```
@@ -542,8 +542,8 @@ BEGIN TRANSACTION ISOLATION LEVEL SERIALIZABLE;
 SELECT solde FROM comptes WHERE id = 'B';  -- 100€
 
 -- Transférer 150€ de B vers A
-UPDATE comptes SET solde = solde - 150 WHERE id = 'B';  -- B = -50€
-UPDATE comptes SET solde = solde + 150 WHERE id = 'A';  -- A = 250€
+UPDATE comptes SET solde = solde - 150 WHERE id = 'B';  -- B = -50€  
+UPDATE comptes SET solde = solde + 150 WHERE id = 'A';  -- A = 250€  
 
 COMMIT;
 -- ERREUR: could not serialize access
@@ -555,26 +555,26 @@ PostgreSQL détecte que les deux transactions créeraient une incohérence et re
 
 Le niveau Serializable a un coût :
 
-1. **Overhead de surveillance** : PostgreSQL doit traquer toutes les lectures et écritures
-2. **Erreurs de sérialisation** : Nécessite une logique de retry dans l'application
+1. **Overhead de surveillance** : PostgreSQL doit traquer toutes les lectures et écritures  
+2. **Erreurs de sérialisation** : Nécessite une logique de retry dans l'application  
 3. **Faux positifs** : Parfois, PostgreSQL rejette des transactions qui auraient été sûres
 
 **Impact sur les performances** :
 
-- ⚡ Lecture seule : Impact minimal
-- ⚡ Faible contention : Impact modéré
+- ⚡ Lecture seule : Impact minimal  
+- ⚡ Faible contention : Impact modéré  
 - ⚠️ Haute contention : Impact significatif (beaucoup de retries)
 
 ### Quand utiliser Serializable ?
 
-- ✅ **Logique métier complexe** avec des règles d'intégrité sophistiquées
-- ✅ **Transactions financières critiques**
-- ✅ **Systèmes où la cohérence absolue est requise**
-- ✅ **Protection contre le Write Skew**
+- ✅ **Logique métier complexe** avec des règles d'intégrité sophistiquées  
+- ✅ **Transactions financières critiques**  
+- ✅ **Systèmes où la cohérence absolue est requise**  
+- ✅ **Protection contre le Write Skew**  
 - ✅ **Applications où les erreurs de logique sont plus coûteuses que les retries**
 
-- ❌ Applications haute performance avec beaucoup de contentions
-- ❌ Workloads OLTP simples
+- ❌ Applications haute performance avec beaucoup de contentions  
+- ❌ Workloads OLTP simples  
 - ❌ Applications qui ne peuvent pas gérer les retries
 
 ### Configuration
@@ -597,8 +597,8 @@ default_transaction_isolation = 'serializable'
 
 ```sql
 -- Table initiale
-CREATE TABLE comptes (id INT PRIMARY KEY, solde NUMERIC(10,2));
-INSERT INTO comptes VALUES (1, 1000.00);
+CREATE TABLE comptes (id INT PRIMARY KEY, solde NUMERIC(10,2));  
+INSERT INTO comptes VALUES (1, 1000.00);  
 ```
 
 | Action | Read Committed | Repeatable Read | Serializable |
@@ -701,16 +701,16 @@ ALTER DATABASE ma_base SET default_transaction_isolation = 'serializable';
 En Repeatable Read et Serializable, vous pouvez rencontrer ces erreurs :
 
 ```
-ERROR: could not serialize access due to concurrent update
-ERROR: could not serialize access due to read/write dependencies among transactions
+ERROR: could not serialize access due to concurrent update  
+ERROR: could not serialize access due to read/write dependencies among transactions  
 ```
 
 ### Pattern de retry recommandé
 
 ```python
-import time
-import psycopg2
-from psycopg2.extensions import ISOLATION_LEVEL_REPEATABLE_READ
+import time  
+import psycopg2  
+from psycopg2.extensions import ISOLATION_LEVEL_REPEATABLE_READ  
 
 def execute_with_retry(conn, operation, max_retries=5):
     """
@@ -753,10 +753,10 @@ execute_with_retry(conn, mon_transfert)
 
 ### Bonnes pratiques de retry
 
-1. ✅ **Limiter le nombre de tentatives** (3-5 typiquement)
-2. ✅ **Utiliser un backoff exponentiel** pour éviter la congestion
-3. ✅ **Logger les retries** pour surveiller la contention
-4. ✅ **Considérer un circuit breaker** si trop d'échecs
+1. ✅ **Limiter le nombre de tentatives** (3-5 typiquement)  
+2. ✅ **Utiliser un backoff exponentiel** pour éviter la congestion  
+3. ✅ **Logger les retries** pour surveiller la contention  
+4. ✅ **Considérer un circuit breaker** si trop d'échecs  
 5. ⚠️ **Attention aux effets de bord** : L'opération ne doit pas avoir d'effets non-transactionnels
 
 ---
@@ -777,8 +777,8 @@ SELECT
     SUM(montant) as total_ventes,
     COUNT(*) as nb_commandes,
     AVG(montant) as panier_moyen
-FROM commandes
-WHERE date >= '2024-01-01' AND date < '2024-02-01';
+FROM commandes  
+WHERE date >= '2024-01-01' AND date < '2024-02-01';  
 
 -- Autres requêtes du rapport...
 
@@ -795,8 +795,8 @@ BEGIN TRANSACTION ISOLATION LEVEL SERIALIZABLE;
 SELECT solde FROM comptes WHERE id = source_id;
 
 -- Effectuer le transfert
-UPDATE comptes SET solde = solde - montant WHERE id = source_id;
-UPDATE comptes SET solde = solde + montant WHERE id = dest_id;
+UPDATE comptes SET solde = solde - montant WHERE id = source_id;  
+UPDATE comptes SET solde = solde + montant WHERE id = dest_id;  
 
 COMMIT;
 -- Si erreur de sérialisation → retry automatique par l'application
@@ -808,11 +808,11 @@ Plus une transaction est longue, plus le risque d'erreur de sérialisation augme
 
 ```sql
 -- ❌ MAUVAIS : Transaction longue
-BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ;
-SELECT * FROM huge_table;  -- Lecture de millions de lignes
+BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ;  
+SELECT * FROM huge_table;  -- Lecture de millions de lignes  
 -- [Traitement long dans l'application]
-UPDATE some_table SET ...;
-COMMIT;  -- Risque élevé d'erreur
+UPDATE some_table SET ...;  
+COMMIT;  -- Risque élevé d'erreur  
 
 -- ✅ BON : Transactions courtes
 -- Lecture en dehors de la transaction
@@ -820,9 +820,9 @@ SELECT * FROM huge_table;
 -- [Traitement]
 
 -- Transaction courte pour l'écriture
-BEGIN;
-UPDATE some_table SET ...;
-COMMIT;
+BEGIN;  
+UPDATE some_table SET ...;  
+COMMIT;  
 ```
 
 ### 5. Testez les erreurs de sérialisation
@@ -838,8 +838,8 @@ SELECT
     xact_rollback as rollbacks,
     xact_commit as commits,
     ROUND(100.0 * xact_rollback / NULLIF(xact_commit + xact_rollback, 0), 2) as rollback_ratio
-FROM pg_stat_database
-WHERE datname NOT IN ('template0', 'template1', 'postgres');
+FROM pg_stat_database  
+WHERE datname NOT IN ('template0', 'template1', 'postgres');  
 ```
 
 Si le ratio de rollback est élevé, considérez :
@@ -880,9 +880,9 @@ COMMIT;
 BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ;
 
 -- Toutes ces requêtes voient les mêmes données
-SELECT COUNT(*) FROM ventes WHERE date = CURRENT_DATE;
-SELECT SUM(montant) FROM ventes WHERE date = CURRENT_DATE;
-SELECT AVG(montant) FROM ventes WHERE date = CURRENT_DATE;
+SELECT COUNT(*) FROM ventes WHERE date = CURRENT_DATE;  
+SELECT SUM(montant) FROM ventes WHERE date = CURRENT_DATE;  
+SELECT AVG(montant) FROM ventes WHERE date = CURRENT_DATE;  
 
 COMMIT;
 ```
@@ -897,8 +897,8 @@ COMMIT;
 -- Pas besoin de spécifier explicitement
 BEGIN;
 
-UPDATE produits SET stock = stock - 1 WHERE id = 456;
-INSERT INTO commandes (produit_id, quantite) VALUES (456, 1);
+UPDATE produits SET stock = stock - 1 WHERE id = 456;  
+INSERT INTO commandes (produit_id, quantite) VALUES (456, 1);  
 
 COMMIT;
 ```
@@ -919,10 +919,10 @@ Les niveaux d'isolation sont un outil puissant pour contrôler le comportement d
 
 ### Règles d'or
 
-1. 🎯 **Commencez simple** : Read Committed couvre 80% des besoins
-2. 📊 **Rapports = Repeatable Read** : Pour une vue cohérente
-3. 💰 **Critique = Serializable** : Quand la cohérence est non négociable
-4. 🔄 **Implémentez les retries** : Indispensables pour Repeatable Read et Serializable
+1. 🎯 **Commencez simple** : Read Committed couvre 80% des besoins  
+2. 📊 **Rapports = Repeatable Read** : Pour une vue cohérente  
+3. 💰 **Critique = Serializable** : Quand la cohérence est non négociable  
+4. 🔄 **Implémentez les retries** : Indispensables pour Repeatable Read et Serializable  
 5. ⏱️ **Transactions courtes** : Minimisez la durée pour réduire les conflits
 
 ### Pour aller plus loin
@@ -933,12 +933,12 @@ Dans la prochaine section (12.4), nous approfondirons les **anomalies transactio
 
 **Points clés à retenir :**
 
-- 🔑 4 niveaux d'isolation : Read Uncommitted, Read Committed, Repeatable Read, Serializable
-- 🔑 PostgreSQL par défaut = Read Committed (bon équilibre)
-- 🔑 Repeatable Read = snapshot figé pour toute la transaction
-- 🔑 Serializable = cohérence maximale mais erreurs de sérialisation possibles
-- 🔑 Plus strict = plus cohérent mais plus d'erreurs à gérer
-- 🔑 Toujours implémenter une logique de retry pour RR et Serializable
+- 🔑 4 niveaux d'isolation : Read Uncommitted, Read Committed, Repeatable Read, Serializable  
+- 🔑 PostgreSQL par défaut = Read Committed (bon équilibre)  
+- 🔑 Repeatable Read = snapshot figé pour toute la transaction  
+- 🔑 Serializable = cohérence maximale mais erreurs de sérialisation possibles  
+- 🔑 Plus strict = plus cohérent mais plus d'erreurs à gérer  
+- 🔑 Toujours implémenter une logique de retry pour RR et Serializable  
 - 🔑 Le choix dépend de votre logique métier, pas de la performance seule
 
 ⏭️ [Anomalies transactionnelles : Dirty Read, Non-Repeatable Read, Phantom Read](/12-concurrence-et-transactions/04-anomalies-transactionnelles.md)

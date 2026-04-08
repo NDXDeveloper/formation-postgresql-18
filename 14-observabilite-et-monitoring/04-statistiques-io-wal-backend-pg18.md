@@ -26,11 +26,11 @@ En termes simples, un **backend** (ou processus backend) est un processus du sys
 
 **Visualisation** :
 ```
-Client 1 ─────► Backend (PID: 12345) ─┐
-Client 2 ─────► Backend (PID: 12346) ─┤
-Client 3 ─────► Backend (PID: 12347) ─┼──► PostgreSQL
-Client 4 ─────► Backend (PID: 12348) ─┤      (Data + WAL)
-Client 5 ─────► Backend (PID: 12349) ─┘
+Client 1 ─────► Backend (PID: 12345) ─┐  
+Client 2 ─────► Backend (PID: 12346) ─┤  
+Client 3 ─────► Backend (PID: 12347) ─┼──► PostgreSQL  
+Client 4 ─────► Backend (PID: 12348) ─┤      (Data + WAL)  
+Client 5 ─────► Backend (PID: 12349) ─┘  
 ```
 
 ### Qu'est-ce que l'I/O (Input/Output) ?
@@ -40,9 +40,9 @@ Client 5 ─────► Backend (PID: 12349) ─┘
 **Pourquoi c'est important** : Le disque est **beaucoup plus lent** que la RAM (mémoire). Une requête qui lit beaucoup de données sur le disque sera lente.
 
 **Types d'I/O dans PostgreSQL** :
-1. **Lectures (Read I/O)** : Charger des données depuis le disque vers la mémoire
-2. **Écritures (Write I/O)** : Sauvegarder des données de la mémoire vers le disque
-3. **Cache hits** : Données trouvées en mémoire (pas d'I/O disque = rapide !)
+1. **Lectures (Read I/O)** : Charger des données depuis le disque vers la mémoire  
+2. **Écritures (Write I/O)** : Sauvegarder des données de la mémoire vers le disque  
+3. **Cache hits** : Données trouvées en mémoire (pas d'I/O disque = rapide !)  
 4. **Cache misses** : Données non trouvées en mémoire (I/O disque requis = lent)
 
 **Analogie** :
@@ -59,8 +59,8 @@ Le **WAL** (aussi appelé journal de transactions) est un mécanisme de sécurit
 **Analogie** : Le WAL est comme le journal de bord d'un navire. Avant de faire une action importante, le capitaine l'écrit dans son journal. Si quelque chose tourne mal, il peut consulter le journal pour savoir ce qui s'est passé et reprendre là où il s'était arrêté.
 
 **Ce qui génère du WAL** :
-- `INSERT`, `UPDATE`, `DELETE` : Modifications de données
-- `CREATE INDEX`, `ALTER TABLE` : Modifications de structure
+- `INSERT`, `UPDATE`, `DELETE` : Modifications de données  
+- `CREATE INDEX`, `ALTER TABLE` : Modifications de structure  
 - `COMMIT` : Validation de transactions
 - Checkpoints : Synchronisation périodique
 
@@ -79,10 +79,10 @@ Avant PostgreSQL 18, vous pouviez voir des **statistiques globales** d'I/O et de
 
 **Scénario typique** :
 ```
-Vous : "Le serveur est lent !"
-Monitoring : "Il y a 200 GO d'I/O en cours"
-Vous : "OK... mais QUELLE requête/connexion cause ça ?"
-Monitoring : "🤷 Aucune idée"
+Vous : "Le serveur est lent !"  
+Monitoring : "Il y a 200 GO d'I/O en cours"  
+Vous : "OK... mais QUELLE requête/connexion cause ça ?"  
+Monitoring : "🤷 Aucune idée"  
 ```
 
 ### Ce que vous pouviez voir
@@ -92,8 +92,8 @@ Monitoring : "🤷 Aucune idée"
 SELECT
     blks_read,      -- Total de blocs lus depuis le disque (TOUTES connexions)
     blks_hit        -- Total de blocs trouvés en cache (TOUTES connexions)
-FROM pg_stat_database
-WHERE datname = 'ma_base';
+FROM pg_stat_database  
+WHERE datname = 'ma_base';  
 
   blks_read  |   blks_hit
 -------------+--------------
@@ -104,9 +104,9 @@ WHERE datname = 'ma_base';
 
 ### Ce que vous NE pouviez PAS voir
 
-- ❌ Quelle connexion (backend) génère le plus d'I/O ?
-- ❌ Quel utilisateur ou application est responsable ?
-- ❌ Quelle requête spécifique cause une génération excessive de WAL ?
+- ❌ Quelle connexion (backend) génère le plus d'I/O ?  
+- ❌ Quel utilisateur ou application est responsable ?  
+- ❌ Quelle requête spécifique cause une génération excessive de WAL ?  
 - ❌ Est-ce un backend unique qui pose problème ou plusieurs ?
 
 **Résultat** : Des heures de recherche pour trouver la source d'un problème de performance.
@@ -148,9 +148,9 @@ PostgreSQL 18 introduit de **nouvelles colonnes dans pg_stat_activity** qui expo
 
 **Note** : Ces statistiques sont **cumulatives** depuis le début de la connexion du backend.
 
-#### Nouvelle vue : pg_stat_io_backend
+#### Filtrage par type de backend dans pg_stat_io
 
-PostgreSQL 18 peut aussi introduire une vue dédiée `pg_stat_io_backend` (selon la version finale) qui offre une vision encore plus détaillée.
+Les statistiques I/O par backend sont disponibles directement dans la vue `pg_stat_io` existante, en filtrant sur la colonne `backend_type`. Il n'y a pas de vue séparée — toutes les informations sont consolidées dans `pg_stat_io`.
 
 ---
 
@@ -169,16 +169,16 @@ SELECT
     io_blks_hit,
     ROUND(100.0 * io_blks_hit / NULLIF(io_blks_hit + io_blks_read, 0), 2) AS cache_hit_ratio,
     query
-FROM pg_stat_activity
-WHERE state = 'active'
+FROM pg_stat_activity  
+WHERE state = 'active'  
   AND io_blks_read + io_blks_written > 0
-ORDER BY (io_blks_read + io_blks_written) DESC
-LIMIT 10;
+ORDER BY (io_blks_read + io_blks_written) DESC  
+LIMIT 10;  
 ```
 
 **Interprétation** :
-- `io_blks_read` élevé : Ce backend lit beaucoup depuis le disque (potentiellement lent)
-- `io_blks_written` élevé : Ce backend écrit beaucoup (INSERT/UPDATE/DELETE massif)
+- `io_blks_read` élevé : Ce backend lit beaucoup depuis le disque (potentiellement lent)  
+- `io_blks_written` élevé : Ce backend écrit beaucoup (INSERT/UPDATE/DELETE massif)  
 - `cache_hit_ratio` faible : Les données ne sont pas en cache, beaucoup d'I/O disque
 - Vous voyez aussi la `query` exacte qui cause ce comportement !
 
@@ -204,15 +204,15 @@ SELECT
     query_start,
     NOW() - query_start AS query_duration,
     LEFT(query, 100) AS query_preview
-FROM pg_stat_activity
-WHERE wal_bytes > 0
-ORDER BY wal_bytes DESC
-LIMIT 10;
+FROM pg_stat_activity  
+WHERE wal_bytes > 0  
+ORDER BY wal_bytes DESC  
+LIMIT 10;  
 ```
 
 **Interprétation** :
-- `wal_bytes` élevé : Ce backend modifie beaucoup de données
-- `wal_fpi` élevé : Beaucoup de Full Page Images (après un checkpoint)
+- `wal_bytes` élevé : Ce backend modifie beaucoup de données  
+- `wal_fpi` élevé : Beaucoup de Full Page Images (après un checkpoint)  
 - `query_duration` long : La requête tourne depuis longtemps
 - Corrélation entre `wal_bytes` et durée : Requête lente ET gourmande
 
@@ -233,10 +233,10 @@ SELECT
     SUM(io_blks_hit) AS total_cache_hits,
     ROUND(AVG(100.0 * io_blks_hit / NULLIF(io_blks_hit + io_blks_read, 0)), 2) AS avg_cache_hit_ratio,
     pg_size_pretty(SUM(wal_bytes)) AS total_wal
-FROM pg_stat_activity
-WHERE state != 'idle'
-GROUP BY usename, application_name
-ORDER BY total_reads + total_writes DESC;
+FROM pg_stat_activity  
+WHERE state != 'idle'  
+GROUP BY usename, application_name  
+ORDER BY total_reads + total_writes DESC;  
 ```
 
 **Interprétation** :
@@ -260,29 +260,29 @@ ORDER BY total_reads + total_writes DESC;
 
 ```sql
 -- Snapshot 1 : Capturer l'état initial
-CREATE TEMP TABLE io_snapshot_1 AS
-SELECT
+CREATE TEMP TABLE io_snapshot_1 AS  
+SELECT  
     pid,
     io_blks_read,
     io_blks_written,
     wal_bytes,
     query
-FROM pg_stat_activity
-WHERE state = 'active';
+FROM pg_stat_activity  
+WHERE state = 'active';  
 
 -- Attendre quelques secondes
 SELECT pg_sleep(5);
 
 -- Snapshot 2 : Capturer l'état après 5 secondes
-CREATE TEMP TABLE io_snapshot_2 AS
-SELECT
+CREATE TEMP TABLE io_snapshot_2 AS  
+SELECT  
     pid,
     io_blks_read,
     io_blks_written,
     wal_bytes,
     query
-FROM pg_stat_activity
-WHERE state = 'active';
+FROM pg_stat_activity  
+WHERE state = 'active';  
 
 -- Calculer le delta (l'activité pendant ces 5 secondes)
 SELECT
@@ -291,9 +291,9 @@ SELECT
     (s2.io_blks_read - COALESCE(s1.io_blks_read, 0)) AS reads_per_5sec,
     (s2.io_blks_written - COALESCE(s1.io_blks_written, 0)) AS writes_per_5sec,
     pg_size_pretty((s2.wal_bytes - COALESCE(s1.wal_bytes, 0))) AS wal_per_5sec
-FROM io_snapshot_2 s2
-LEFT JOIN io_snapshot_1 s1 USING (pid)
-WHERE (s2.io_blks_read - COALESCE(s1.io_blks_read, 0)) > 100
+FROM io_snapshot_2 s2  
+LEFT JOIN io_snapshot_1 s1 USING (pid)  
+WHERE (s2.io_blks_read - COALESCE(s1.io_blks_read, 0)) > 100  
    OR (s2.io_blks_written - COALESCE(s1.io_blks_written, 0)) > 100
 ORDER BY reads_per_5sec + writes_per_5sec DESC;
 ```
@@ -318,15 +318,15 @@ SELECT
     wait_event_type,
     wait_event,
     LEFT(query, 80) AS query_preview
-FROM pg_stat_activity
-WHERE state = 'active'
+FROM pg_stat_activity  
+WHERE state = 'active'  
   AND (io_blks_read + io_blks_written > 1000 OR wal_bytes > 1048576)  -- > 1 MB WAL
 ORDER BY total_io_blocks DESC;
 ```
 
 **Interprétation** :
-- `wait_event_type = 'IO'` : Le backend attend des I/O (lent !)
-- `wait_event = 'DataFileRead'` : Lecture de fichiers de données
+- `wait_event_type = 'IO'` : Le backend attend des I/O (lent !)  
+- `wait_event = 'DataFileRead'` : Lecture de fichiers de données  
 - `duration` long + `total_io_blocks` élevé : Requête lente à cause des I/O
 - Corrélation entre WAL et attentes de locks
 
@@ -353,10 +353,10 @@ SELECT
     state,
     wait_event_type,
     LEFT(query, 60) AS query
-FROM pg_stat_activity
-WHERE state != 'idle'
-ORDER BY io_blks_read + io_blks_written DESC
-LIMIT 20;
+FROM pg_stat_activity  
+WHERE state != 'idle'  
+ORDER BY io_blks_read + io_blks_written DESC  
+LIMIT 20;  
 ```
 
 **Analyse** : Supposons que vous trouvez :
@@ -373,8 +373,8 @@ LIMIT 20;
 - Tourne depuis 45 minutes
 
 **Actions** :
-1. Évaluer si cette requête est légitime ou peut être interrompue
-2. Si légitime : optimiser (ajouter un index, découper en batches)
+1. Évaluer si cette requête est légitime ou peut être interrompue  
+2. Si légitime : optimiser (ajouter un index, découper en batches)  
 3. Si bloquante : tuer le backend : `SELECT pg_terminate_backend(14532);`
 
 ### Scénario 2 : Saturation du WAL et réplication qui prend du retard
@@ -395,10 +395,10 @@ SELECT
     NOW() - query_start AS query_age,
     state,
     LEFT(query, 100) AS query
-FROM pg_stat_activity
-WHERE wal_bytes > 0
-ORDER BY wal_bytes DESC
-LIMIT 10;
+FROM pg_stat_activity  
+WHERE wal_bytes > 0  
+ORDER BY wal_bytes DESC  
+LIMIT 10;  
 ```
 
 **Analyse** : Supposons que vous trouvez :
@@ -411,9 +411,9 @@ LIMIT 10;
 **Conclusion** : Une migration de données génère 1,2 TB de WAL en continu !
 
 **Actions** :
-1. **Optimiser** : Utiliser `COPY` au lieu d'`INSERT` (10× plus rapide, moins de WAL)
-2. **Throttler** : Ajouter des pauses entre les batches
-3. **Paralléliser** : Répartir sur plusieurs transactions pour permettre au WAL d'être répliqué
+1. **Optimiser** : Utiliser `COPY` au lieu d'`INSERT` (10× plus rapide, moins de WAL)  
+2. **Throttler** : Ajouter des pauses entre les batches  
+3. **Paralléliser** : Répartir sur plusieurs transactions pour permettre au WAL d'être répliqué  
 4. **Temporaire** : Augmenter `max_wal_size` pendant la migration
 
 ### Scénario 3 : Ratio de cache anormalement bas
@@ -431,12 +431,12 @@ SELECT
     SUM(io_blks_hit) AS total_cache_hits,
     ROUND(100.0 * SUM(io_blks_hit) / NULLIF(SUM(io_blks_hit) + SUM(io_blks_read), 0), 2) AS cache_hit_ratio,
     ROUND(AVG(io_blks_read)::numeric, 0) AS avg_disk_reads_per_conn
-FROM pg_stat_activity
-WHERE state != 'idle'
+FROM pg_stat_activity  
+WHERE state != 'idle'  
   AND backend_type = 'client backend'
-GROUP BY usename, application_name
-HAVING SUM(io_blks_read) > 0
-ORDER BY cache_hit_ratio ASC;
+GROUP BY usename, application_name  
+HAVING SUM(io_blks_read) > 0  
+ORDER BY cache_hit_ratio ASC;  
 ```
 
 **Analyse** : Supposons que vous trouvez :
@@ -455,9 +455,9 @@ ORDER BY cache_hit_ratio ASC;
 - Pas d'index appropriés
 
 **Actions** :
-1. Analyser les requêtes de `BusinessIntel` (via `pg_stat_statements`)
-2. Vérifier les plans d'exécution (`EXPLAIN ANALYZE`)
-3. Ajouter des index si nécessaire
+1. Analyser les requêtes de `BusinessIntel` (via `pg_stat_statements`)  
+2. Vérifier les plans d'exécution (`EXPLAIN ANALYZE`)  
+3. Ajouter des index si nécessaire  
 4. Envisager d'augmenter `shared_buffers` si le serveur a de la RAM disponible
 
 ### Scénario 4 : Temps d'I/O excessif
@@ -478,24 +478,24 @@ SELECT
     io_blks_written,
     ROUND((io_read_time / NULLIF(io_blks_read, 0))::numeric, 2) AS avg_read_latency_ms,
     LEFT(query, 80) AS query
-FROM pg_stat_activity
-WHERE state = 'active'
+FROM pg_stat_activity  
+WHERE state = 'active'  
   AND (io_read_time > 0 OR io_write_time > 0)
-ORDER BY total_io_time_ms DESC
-LIMIT 10;
+ORDER BY total_io_time_ms DESC  
+LIMIT 10;  
 ```
 
 **Interprétation** :
-- `total_io_time_ms` élevé : Beaucoup de temps passé à attendre les I/O
+- `total_io_time_ms` élevé : Beaucoup de temps passé à attendre les I/O  
 - `avg_read_latency_ms` élevé : Disque lent ou saturé
 - Comparaison entre différents backends : Certains sont-ils plus affectés ?
 
 **Analyse** : Si `avg_read_latency_ms > 10 ms`, vous avez un problème de disque !
 
 **Actions** :
-1. Vérifier la santé du disque (SMART, I/O wait système)
-2. Vérifier si d'autres processus saturent le disque
-3. Envisager un upgrade disque (SSD, NVMe)
+1. Vérifier la santé du disque (SMART, I/O wait système)  
+2. Vérifier si d'autres processus saturent le disque  
+3. Envisager un upgrade disque (SSD, NVMe)  
 4. Optimiser les requêtes pour réduire les I/O
 
 ---
@@ -515,28 +515,28 @@ SELECT
     SUM(io_blks_read) AS total_blks_read,
     SUM(io_blks_written) AS total_blks_written,
     SUM(io_blks_hit) AS total_blks_hit
-FROM pg_stat_activity
-WHERE backend_type = 'client backend'
-GROUP BY application_name;
+FROM pg_stat_activity  
+WHERE backend_type = 'client backend'  
+GROUP BY application_name;  
 
 -- 2. WAL par application
 SELECT
     application_name,
     SUM(wal_bytes) AS total_wal_bytes,
     SUM(wal_records) AS total_wal_records
-FROM pg_stat_activity
-WHERE backend_type = 'client backend'
-GROUP BY application_name;
+FROM pg_stat_activity  
+WHERE backend_type = 'client backend'  
+GROUP BY application_name;  
 
 -- 3. Top 10 des backends par I/O
 SELECT
     pid,
     usename,
     (io_blks_read + io_blks_written) AS total_io
-FROM pg_stat_activity
-WHERE state = 'active'
-ORDER BY total_io DESC
-LIMIT 10;
+FROM pg_stat_activity  
+WHERE state = 'active'  
+ORDER BY total_io DESC  
+LIMIT 10;  
 ```
 
 **Dashboards Grafana recommandés** :
@@ -552,8 +552,8 @@ Voici un script shell pour surveiller l'I/O en continu :
 #!/bin/bash
 # monitor_backend_io.sh
 
-THRESHOLD_IO_BLOCKS=100000
-THRESHOLD_WAL_GB=5
+THRESHOLD_IO_BLOCKS=100000  
+THRESHOLD_WAL_GB=5  
 
 while true; do
     psql -U postgres -d ma_base -t -A -c "
@@ -592,10 +592,10 @@ SELECT
     (SELECT SUM(wal_bytes)
      FROM pg_stat_activity
      WHERE query LIKE '%' || SUBSTRING(pss.query, 1, 30) || '%') AS estimated_wal
-FROM pg_stat_statements pss
-WHERE pss.calls > 100
-ORDER BY estimated_wal DESC NULLS LAST
-LIMIT 10;
+FROM pg_stat_statements pss  
+WHERE pss.calls > 100  
+ORDER BY estimated_wal DESC NULLS LAST  
+LIMIT 10;  
 ```
 
 ---
@@ -606,8 +606,8 @@ LIMIT 10;
 
 ```sql
 -- Rapport hebdomadaire : Quelle application consomme le plus de ressources ?
-CREATE MATERIALIZED VIEW weekly_app_resource_usage AS
-SELECT
+CREATE MATERIALIZED VIEW weekly_app_resource_usage AS  
+SELECT  
     application_name,
     usename,
     COUNT(DISTINCT pid) AS avg_concurrent_connections,
@@ -615,11 +615,11 @@ SELECT
     pg_size_pretty(SUM(io_blks_written) * 8192) AS total_disk_writes,
     pg_size_pretty(SUM(wal_bytes)) AS total_wal_generated,
     ROUND(AVG(100.0 * io_blks_hit / NULLIF(io_blks_hit + io_blks_read, 0)), 2) AS avg_cache_hit_ratio
-FROM pg_stat_activity
-WHERE backend_type = 'client backend'
+FROM pg_stat_activity  
+WHERE backend_type = 'client backend'  
   AND backend_start > NOW() - INTERVAL '7 days'
-GROUP BY application_name, usename
-ORDER BY SUM(wal_bytes) DESC;
+GROUP BY application_name, usename  
+ORDER BY SUM(wal_bytes) DESC;  
 
 -- Rafraîchir toutes les semaines
 -- SELECT refresh_materialized_view('weekly_app_resource_usage');
@@ -662,8 +662,8 @@ SELECT
     pg_size_pretty(bs.wal_bytes) AS wal,
     ROUND((bs.wal_bytes - ss.avg_wal) / NULLIF(ss.stddev_wal, 0), 2) AS wal_zscore,
     LEFT(bs.query, 80) AS query
-FROM backend_stats bs, stats_summary ss
-WHERE (bs.total_io - ss.avg_io) / NULLIF(ss.stddev_io, 0) > 3  -- 3 écarts-types
+FROM backend_stats bs, stats_summary ss  
+WHERE (bs.total_io - ss.avg_io) / NULLIF(ss.stddev_io, 0) > 3  -- 3 écarts-types  
    OR (bs.wal_bytes - ss.avg_wal) / NULLIF(ss.stddev_wal, 0) > 3
 ORDER BY io_zscore DESC;
 ```
@@ -683,8 +683,8 @@ SELECT
     io_write_time,
     NOW() - backend_start AS duration,
     LEFT(query, 80) AS query
-FROM pg_stat_activity
-WHERE backend_type = 'autovacuum worker'
+FROM pg_stat_activity  
+WHERE backend_type = 'autovacuum worker'  
   AND state = 'active'
 ORDER BY io_blks_read + io_blks_written DESC;
 ```
@@ -716,8 +716,8 @@ Configurez des alertes basées sur des seuils adaptés à votre contexte :
 Créez une vue dédiée pour le monitoring :
 
 ```sql
-CREATE OR REPLACE VIEW v_backend_io_monitoring AS
-SELECT
+CREATE OR REPLACE VIEW v_backend_io_monitoring AS  
+SELECT  
     pid,
     usename,
     application_name,
@@ -734,14 +734,14 @@ SELECT
     wait_event_type,
     wait_event,
     LEFT(query, 100) AS query_preview
-FROM pg_stat_activity
-WHERE backend_type = 'client backend'
+FROM pg_stat_activity  
+WHERE backend_type = 'client backend'  
   AND state != 'idle';
 
 -- Utilisation
-SELECT * FROM v_backend_io_monitoring
-WHERE cache_hit_ratio < 90 OR wal_size > '1 GB'
-ORDER BY io_blks_read + io_blks_written DESC;
+SELECT * FROM v_backend_io_monitoring  
+WHERE cache_hit_ratio < 90 OR wal_size > '1 GB'  
+ORDER BY io_blks_read + io_blks_written DESC;  
 ```
 
 ### 3. Corréler avec d'autres métriques
@@ -768,9 +768,9 @@ SELECT
      FROM pg_locks l
      WHERE l.pid = a.pid AND l.granted) AS held_locks,
     LEFT(a.query, 80) AS query
-FROM pg_stat_activity a
-WHERE a.state = 'active'
-ORDER BY total_io DESC;
+FROM pg_stat_activity a  
+WHERE a.state = 'active'  
+ORDER BY total_io DESC;  
 ```
 
 ### 4. Archiver les statistiques historiques
@@ -791,10 +791,10 @@ CREATE TABLE backend_io_history (
 );
 
 -- Job périodique (via pg_cron ou cron système)
-INSERT INTO backend_io_history (pid, usename, application_name, io_blks_read, io_blks_written, wal_bytes, query)
-SELECT pid, usename, application_name, io_blks_read, io_blks_written, wal_bytes, query
-FROM pg_stat_activity
-WHERE state = 'active' AND (io_blks_read + io_blks_written > 1000 OR wal_bytes > 1048576);
+INSERT INTO backend_io_history (pid, usename, application_name, io_blks_read, io_blks_written, wal_bytes, query)  
+SELECT pid, usename, application_name, io_blks_read, io_blks_written, wal_bytes, query  
+FROM pg_stat_activity  
+WHERE state = 'active' AND (io_blks_read + io_blks_written > 1000 OR wal_bytes > 1048576);  
 ```
 
 ### 5. Documenter les patterns normaux
@@ -813,9 +813,9 @@ Cela vous permettra de détecter plus facilement les anomalies.
 
 ### Ce que ces statistiques NE montrent PAS
 
-1. **Détails des fichiers** : Vous ne savez pas quels fichiers/tables sont lus/écrits
-2. **Décomposition par requête** : Si un backend exécute plusieurs requêtes, les stats sont cumulatives
-3. **I/O système** : Uniquement l'I/O PostgreSQL, pas l'I/O OS global
+1. **Détails des fichiers** : Vous ne savez pas quels fichiers/tables sont lus/écrits  
+2. **Décomposition par requête** : Si un backend exécute plusieurs requêtes, les stats sont cumulatives  
+3. **I/O système** : Uniquement l'I/O PostgreSQL, pas l'I/O OS global  
 4. **Historique** : Statistiques depuis le début de la connexion, pas de breakdown temporel
 
 ### Impact sur les performances
@@ -853,11 +853,11 @@ SELECT
     pg_size_pretty(wal_bytes) AS wal_generated,
     wait_event_type || ': ' || COALESCE(wait_event, 'none') AS wait_status,
     LEFT(query, 60) AS query_preview
-FROM pg_stat_activity
-WHERE state != 'idle'
+FROM pg_stat_activity  
+WHERE state != 'idle'  
   AND backend_type = 'client backend'
-ORDER BY io_blks_read + io_blks_written DESC
-LIMIT 20;
+ORDER BY io_blks_read + io_blks_written DESC  
+LIMIT 20;  
 ```
 
 ### Top 5 des gourmands en ressources
@@ -894,8 +894,8 @@ SELECT
     END AS issue,
     pg_size_pretty(wal_bytes) AS wal,
     LEFT(query, 100) AS query
-FROM pg_stat_activity
-WHERE state = 'active'
+FROM pg_stat_activity  
+WHERE state = 'active'  
   AND (io_blks_read > 1000000
        OR io_blks_written > 1000000
        OR wal_bytes > 10737418240
@@ -923,36 +923,36 @@ Les statistiques I/O et WAL par backend dans PostgreSQL 18 représentent une **r
 ### Transformation du workflow
 
 **Avant PostgreSQL 18** :
-1. "Le serveur est lent" 😰
-2. Analyses laborieuses pendant des heures
+1. "Le serveur est lent" 😰  
+2. Analyses laborieuses pendant des heures  
 3. Redémarrage en dernier recours
 
 **Avec PostgreSQL 18** :
-1. "Le serveur est lent" 🔍
-2. Requête sur `pg_stat_activity` (30 secondes)
-3. Identification du backend coupable
-4. Action ciblée (optimisation ou interruption)
+1. "Le serveur est lent" 🔍  
+2. Requête sur `pg_stat_activity` (30 secondes)  
+3. Identification du backend coupable  
+4. Action ciblée (optimisation ou interruption)  
 5. Problème résolu ✅
 
 ### Points clés à retenir
 
-1. **I/O** : Mesure les accès disque (lent) vs cache (rapide)
-2. **WAL** : Mesure l'intensité des modifications de données
-3. **Backend** : Un processus = une connexion = des statistiques dédiées
-4. Les colonnes `io_blks_*` et `wal_*` dans `pg_stat_activity` sont vos nouveaux meilleurs amis
+1. **I/O** : Mesure les accès disque (lent) vs cache (rapide)  
+2. **WAL** : Mesure l'intensité des modifications de données  
+3. **Backend** : Un processus = une connexion = des statistiques dédiées  
+4. Les colonnes `io_blks_*` et `wal_*` dans `pg_stat_activity` sont vos nouveaux meilleurs amis  
 5. Combinez toujours avec d'autres vues (`pg_stat_statements`, `pg_locks`) pour un diagnostic complet
 
 ### Prochaines étapes
 
-1. **Migrer vers PostgreSQL 18** pour bénéficier de cette fonctionnalité
-2. **Créer des vues personnalisées** adaptées à votre contexte
-3. **Intégrer dans votre monitoring** (Grafana, scripts, alertes)
-4. **Former votre équipe** à l'utilisation de ces nouvelles métriques
+1. **Migrer vers PostgreSQL 18** pour bénéficier de cette fonctionnalité  
+2. **Créer des vues personnalisées** adaptées à votre contexte  
+3. **Intégrer dans votre monitoring** (Grafana, scripts, alertes)  
+4. **Former votre équipe** à l'utilisation de ces nouvelles métriques  
 5. **Documenter les seuils** propres à vos applications
 
 ### Ressources
 
-- [Documentation PostgreSQL 18 - Monitoring](https://www.postgresql.org/docs/18/monitoring-stats.html)
+- [Documentation PostgreSQL 18 - Monitoring](https://www.postgresql.org/docs/18/monitoring-stats.html)  
 - [Release Notes PostgreSQL 18 - I/O Statistics](https://www.postgresql.org/docs/18/release-18.html)
 - Blog : "Deep Dive into PostgreSQL 18 Backend I/O Statistics"
 

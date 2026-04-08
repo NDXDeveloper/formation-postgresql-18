@@ -9,7 +9,7 @@ Jusqu'à présent, nous avons principalement parlé de l'index **B-Tree**, le ty
 ### L'analogie de la boîte à outils
 
 Imaginez que vous devez effectuer différents travaux :
-- **B-Tree** : C'est comme un tournevis multifonction polyvalent qui fonctionne pour la plupart des vis
+- **B-Tree** : C'est comme un tournevis multifonction polyvalent qui fonctionne pour la plupart des vis  
 - **Index spécialisés** : Ce sont des outils spécifiques comme une clé Allen, un tournevis Torx, une perceuse... Chacun excelle dans sa spécialité
 
 De la même manière, PostgreSQL offre différents types d'index, chacun optimisé pour des situations particulières.
@@ -36,8 +36,8 @@ PostgreSQL propose **cinq types d'index spécialisés** principaux :
 **Concept** : Index inversé qui indexe les éléments à l'intérieur des valeurs composites.
 
 **Cas d'usage principaux** :
-- 📦 **Arrays** : Recherche dans des tableaux
-- 📄 **JSONB** : Recherche dans des documents JSON
+- 📦 **Arrays** : Recherche dans des tableaux  
+- 📄 **JSONB** : Recherche dans des documents JSON  
 - 🔍 **Full-Text Search** : Recherche textuelle avancée
 
 **Exemple typique** :
@@ -53,16 +53,16 @@ SELECT * FROM articles WHERE tags @> ARRAY['postgresql'];
 **Concept** : Arbre de recherche généralisé pour données multidimensionnelles.
 
 **Cas d'usage principaux** :
-- 🗺️ **Géométrie** : Points, polygones, lignes (PostGIS)
-- 🌳 **Hiérarchies** : Arbres avec ltree
-- 📝 **Full-Text Search** : Alternative à GIN (meilleur en écriture)
+- 🗺️ **Géométrie** : Points, polygones, lignes (PostGIS)  
+- 🌳 **Hiérarchies** : Arbres avec ltree  
+- 📝 **Full-Text Search** : Alternative à GIN (meilleur en écriture)  
 - 📊 **Ranges** : Intervalles temporels ou numériques
 
 **Exemple typique** :
 ```sql
 -- Trouver tous les restaurants dans un rayon de 1 km
-SELECT * FROM restaurants
-WHERE ST_DWithin(location, mon_point, 1000);
+SELECT * FROM restaurants  
+WHERE ST_DWithin(location, mon_point, 1000);  
 ```
 
 **Métaphore** : Comme une carte avec des régions qui peuvent se chevaucher.
@@ -72,16 +72,16 @@ WHERE ST_DWithin(location, mon_point, 1000);
 **Concept** : Index ultra-compact qui résume des plages de blocs plutôt que chaque valeur.
 
 **Cas d'usage principaux** :
-- 📈 **Tables massives** : Plusieurs Go à plusieurs To
-- 📅 **Données chronologiques** : Logs, métriques, time-series
-- 🔢 **Données séquentielles** : IDs auto-incrémentés
+- 📈 **Tables massives** : Plusieurs Go à plusieurs To  
+- 📅 **Données chronologiques** : Logs, métriques, time-series  
+- 🔢 **Données séquentielles** : IDs auto-incrémentés  
 - 💾 **Économie d'espace** : Index 1000× plus petit que B-Tree
 
 **Exemple typique** :
 ```sql
 -- Logs des 7 derniers jours (table de milliards de lignes)
-SELECT * FROM application_logs
-WHERE timestamp > NOW() - INTERVAL '7 days';
+SELECT * FROM application_logs  
+WHERE timestamp > NOW() - INTERVAL '7 days';  
 ```
 
 **Métaphore** : Comme une table des matières de livre qui indique "le chapitre 3 couvre les pages 50-100".
@@ -91,8 +91,8 @@ WHERE timestamp > NOW() - INTERVAL '7 days';
 **Concept** : Index basé sur des fonctions de hachage pour égalité stricte.
 
 **Cas d'usage principaux** :
-- 🔑 **Égalité uniquement** : WHERE colonne = valeur
-- 🎯 **UUID lookup** : Recherche de tokens, sessions
+- 🔑 **Égalité uniquement** : WHERE colonne = valeur  
+- 🎯 **UUID lookup** : Recherche de tokens, sessions  
 - 🆔 **Clés uniques** : Identifiants, codes
 
 **Exemple typique** :
@@ -110,9 +110,9 @@ SELECT * FROM sessions WHERE session_id = 'abc123...';
 **Concept** : Arbre non-équilibré pour structures partitionnées dans l'espace.
 
 **Cas d'usage principaux** :
-- 🔤 **Préfixes** : Recherches LIKE 'prefix%'
-- 🌐 **Réseaux** : Adresses IP, CIDR
-- 📍 **Points 2D** : Quadtree pour données spatiales
+- 🔤 **Préfixes** : Recherches LIKE 'prefix%'  
+- 🌐 **Réseaux** : Adresses IP, CIDR  
+- 📍 **Points 2D** : Quadtree pour données spatiales  
 - 🔗 **Structures hiérarchiques** : Chemins, clés composées
 
 **Exemple typique** :
@@ -190,9 +190,9 @@ Taille et structure :
 ### Règle d'Or : Commencez par B-Tree
 
 **En cas de doute, utilisez B-Tree.** C'est l'index le plus :
-- ✅ **Polyvalent** : Supporte presque toutes les opérations
-- ✅ **Mature** : 40+ ans d'optimisations
-- ✅ **Fiable** : Comportement prévisible et bien compris
+- ✅ **Polyvalent** : Supporte presque toutes les opérations  
+- ✅ **Mature** : 40+ ans d'optimisations  
+- ✅ **Fiable** : Comportement prévisible et bien compris  
 - ✅ **Performant** : Excellent pour 90% des cas
 
 Ne passez à un index spécialisé que si vous avez une **raison mesurée**.
@@ -200,9 +200,9 @@ Ne passez à un index spécialisé que si vous avez une **raison mesurée**.
 ### Quand envisager un index spécialisé ?
 
 **Considérez un index spécialisé si :**
-1. ✅ B-Tree **ne supporte pas** l'opération (ex: @>, &&, ST_Within)
-2. ✅ Vous avez des **benchmarks** montrant un gain significatif
-3. ✅ Vous avez une **contrainte d'espace** (BRIN pour tables massives)
+1. ✅ B-Tree **ne supporte pas** l'opération (ex: @>, &&, ST_Within)  
+2. ✅ Vous avez des **benchmarks** montrant un gain significatif  
+3. ✅ Vous avez une **contrainte d'espace** (BRIN pour tables massives)  
 4. ✅ Le **type de données** le nécessite (JSONB, geometry)
 
 ### Processus de décision recommandé
@@ -241,14 +241,14 @@ CREATE TABLE articles (
 );
 
 -- Index spécialisés appropriés :
-CREATE INDEX idx_tags_gin ON articles USING GIN (tags);  -- Pour @>
-CREATE INDEX idx_date_brin ON articles USING BRIN (date_publication);  -- Si volume massif
-CREATE INDEX idx_contenu_gin ON articles USING GIN (to_tsvector('french', contenu));  -- Full-text
+CREATE INDEX idx_tags_gin ON articles USING GIN (tags);  -- Pour @>  
+CREATE INDEX idx_date_brin ON articles USING BRIN (date_publication);  -- Si volume massif  
+CREATE INDEX idx_contenu_gin ON articles USING GIN (to_tsvector('french', contenu));  -- Full-text  
 
 -- Requêtes optimisées :
-SELECT * FROM articles WHERE tags @> ARRAY['postgresql'];  -- Utilise GIN
-SELECT * FROM articles WHERE date_publication > NOW() - INTERVAL '30 days';  -- Utilise BRIN
-SELECT * FROM articles WHERE to_tsvector('french', contenu) @@ to_tsquery('french', 'database');  -- Utilise GIN
+SELECT * FROM articles WHERE tags @> ARRAY['postgresql'];  -- Utilise GIN  
+SELECT * FROM articles WHERE date_publication > NOW() - INTERVAL '30 days';  -- Utilise BRIN  
+SELECT * FROM articles WHERE to_tsvector('french', contenu) @@ to_tsquery('french', 'database');  -- Utilise GIN  
 ```
 
 ### Scénario 2 : Application de livraison géolocalisée
@@ -262,15 +262,15 @@ CREATE TABLE restaurants (
 );
 
 -- Index spatial GiST
-CREATE INDEX idx_location_gist ON restaurants USING GIST (location);
-CREATE INDEX idx_zone_gist ON restaurants USING GIST (zone_livraison);
+CREATE INDEX idx_location_gist ON restaurants USING GIST (location);  
+CREATE INDEX idx_zone_gist ON restaurants USING GIST (zone_livraison);  
 
 -- Requêtes spatiales :
-SELECT * FROM restaurants
-WHERE ST_DWithin(location, ST_Point(2.35, 48.86), 5000);  -- Dans 5 km
+SELECT * FROM restaurants  
+WHERE ST_DWithin(location, ST_Point(2.35, 48.86), 5000);  -- Dans 5 km  
 
-SELECT * FROM restaurants
-WHERE ST_Within(ST_Point(2.35, 48.86), zone_livraison);  -- Point dans polygone
+SELECT * FROM restaurants  
+WHERE ST_Within(ST_Point(2.35, 48.86), zone_livraison);  -- Point dans polygone  
 ```
 
 ### Scénario 3 : Système de logs massif (IoT/Metrics)
@@ -287,9 +287,9 @@ CREATE TABLE sensor_data (
 CREATE INDEX idx_timestamp_brin ON sensor_data USING BRIN (timestamp);
 
 -- Requêtes de time-series :
-SELECT AVG(temperature)
-FROM sensor_data
-WHERE timestamp > NOW() - INTERVAL '24 hours';  -- BRIN élimine 99% des blocs
+SELECT AVG(temperature)  
+FROM sensor_data  
+WHERE timestamp > NOW() - INTERVAL '24 hours';  -- BRIN élimine 99% des blocs  
 ```
 
 ### Scénario 4 : API avec catalogue produits flexible
@@ -306,8 +306,8 @@ CREATE TABLE products (
 CREATE INDEX idx_specs_gin ON products USING GIN (specifications jsonb_path_ops);
 
 -- Requêtes JSON :
-SELECT * FROM products
-WHERE specifications @> '{"brand": "Samsung", "screen_size": 6.5}';  -- GIN optimal
+SELECT * FROM products  
+WHERE specifications @> '{"brand": "Samsung", "screen_size": 6.5}';  -- GIN optimal  
 ```
 
 ### Scénario 5 : Système d'autocomplétion
@@ -323,10 +323,10 @@ CREATE TABLE search_terms (
 CREATE INDEX idx_term_spgist ON search_terms USING SPGIST (term);
 
 -- Autocomplétion :
-SELECT term FROM search_terms
-WHERE term LIKE 'postgr%'  -- SP-GiST très efficace
-ORDER BY popularity DESC
-LIMIT 10;
+SELECT term FROM search_terms  
+WHERE term LIKE 'postgr%'  -- SP-GiST très efficace  
+ORDER BY popularity DESC  
+LIMIT 10;  
 ```
 
 ---
@@ -459,11 +459,11 @@ Recherche full-text sur 1M documents :
 
 ```sql
 -- ❌ PROBLÈME : Index sur tout
-CREATE INDEX idx1 ON table(col1);
-CREATE INDEX idx2 ON table(col2);
-CREATE INDEX idx3 ON table(col3);
-CREATE INDEX idx4 ON table(col1, col2);
-CREATE INDEX idx5 ON table(col1, col3);
+CREATE INDEX idx1 ON table(col1);  
+CREATE INDEX idx2 ON table(col2);  
+CREATE INDEX idx3 ON table(col3);  
+CREATE INDEX idx4 ON table(col1, col2);  
+CREATE INDEX idx5 ON table(col1, col3);  
 -- ... 10 index de plus
 
 -- Conséquences :
@@ -496,8 +496,8 @@ CREATE INDEX idx_new ON table(column);
 -- L'index existe mais le planificateur ne sait pas comment l'utiliser
 
 -- ✅ SOLUTION
-CREATE INDEX idx_new ON table(column);
-ANALYZE table;  -- Met à jour les statistiques
+CREATE INDEX idx_new ON table(column);  
+ANALYZE table;  -- Met à jour les statistiques  
 ```
 
 ### Piège 4 : Ne jamais vérifier l'utilisation
@@ -509,8 +509,8 @@ SELECT
     tablename,
     indexname,
     idx_scan
-FROM pg_stat_user_indexes
-WHERE idx_scan = 0  -- Jamais utilisé
+FROM pg_stat_user_indexes  
+WHERE idx_scan = 0  -- Jamais utilisé  
   AND schemaname = 'public';
 
 -- ✅ SOLUTION : Supprimer les index inutilisés
@@ -538,8 +538,8 @@ CREATE INDEX idx_id_btree ON users (id);
 SELECT * FROM articles WHERE tags @> ARRAY['postgresql'];  -- 500 ms
 
 -- 2. EXPLAIN ANALYZE sans index
-EXPLAIN (ANALYZE, BUFFERS)
-SELECT * FROM articles WHERE tags @> ARRAY['postgresql'];
+EXPLAIN (ANALYZE, BUFFERS)  
+SELECT * FROM articles WHERE tags @> ARRAY['postgresql'];  
 -- Seq Scan : 500 ms
 
 -- 3. Créer l'index candidat (CONCURRENTLY en production)
@@ -549,8 +549,8 @@ CREATE INDEX CONCURRENTLY idx_tags_gin ON articles USING GIN (tags);
 ANALYZE articles;
 
 -- 5. EXPLAIN ANALYZE avec index
-EXPLAIN (ANALYZE, BUFFERS)
-SELECT * FROM articles WHERE tags @> ARRAY['postgresql'];
+EXPLAIN (ANALYZE, BUFFERS)  
+SELECT * FROM articles WHERE tags @> ARRAY['postgresql'];  
 -- Bitmap Index Scan using idx_tags_gin : 2 ms (250× plus rapide !)
 
 -- 6. Vérifier l'utilisation sur période
@@ -559,8 +559,8 @@ SELECT
     idx_tup_read,
     idx_tup_fetch,
     pg_size_pretty(pg_relation_size(indexrelid))
-FROM pg_stat_user_indexes
-WHERE indexname = 'idx_tags_gin';
+FROM pg_stat_user_indexes  
+WHERE indexname = 'idx_tags_gin';  
 
 -- 7. Décider : garder ou supprimer
 -- Si utilisé et utile → garder
@@ -573,23 +573,23 @@ WHERE indexname = 'idx_tags_gin';
 
 ### ✅ Questions à se poser
 
-- [ ] **Ai-je essayé B-Tree d'abord ?**
-- [ ] **L'opération est-elle supportée par B-Tree ?**
-- [ ] **Ai-je mesuré les performances actuelles ?**
-- [ ] **Le type de données nécessite-t-il un index spécialisé ?**
-- [ ] **La requête est-elle fréquente ?**
-- [ ] **Ai-je assez d'espace disque ?**
-- [ ] **Ai-je considéré l'impact sur les écritures ?**
-- [ ] **Puis-je tester en préproduction d'abord ?**
+- [ ] **Ai-je essayé B-Tree d'abord ?**  
+- [ ] **L'opération est-elle supportée par B-Tree ?**  
+- [ ] **Ai-je mesuré les performances actuelles ?**  
+- [ ] **Le type de données nécessite-t-il un index spécialisé ?**  
+- [ ] **La requête est-elle fréquente ?**  
+- [ ] **Ai-je assez d'espace disque ?**  
+- [ ] **Ai-je considéré l'impact sur les écritures ?**  
+- [ ] **Puis-je tester en préproduction d'abord ?**  
 - [ ] **Ai-je documenté la raison de ce choix ?**
 
 ### ✅ Actions post-création
 
-- [ ] Exécuter `ANALYZE table`
-- [ ] Vérifier avec `EXPLAIN ANALYZE`
-- [ ] Mesurer le gain réel de performance
-- [ ] Documenter l'index (COMMENT)
-- [ ] Monitorer l'utilisation (pg_stat_user_indexes)
+- [ ] Exécuter `ANALYZE table`  
+- [ ] Vérifier avec `EXPLAIN ANALYZE`  
+- [ ] Mesurer le gain réel de performance  
+- [ ] Documenter l'index (COMMENT)  
+- [ ] Monitorer l'utilisation (pg_stat_user_indexes)  
 - [ ] Planifier la maintenance (REINDEX si nécessaire)
 
 ---
@@ -598,22 +598,22 @@ WHERE indexname = 'idx_tags_gin';
 
 ### Documentation officielle PostgreSQL 18
 
-- [Index Types](https://www.postgresql.org/docs/18/indexes-types.html)
-- [Indexes and Operator Classes](https://www.postgresql.org/docs/18/indexes-opclass.html)
-- [GIN Indexes](https://www.postgresql.org/docs/18/gin.html)
-- [GiST Indexes](https://www.postgresql.org/docs/18/gist.html)
-- [BRIN Indexes](https://www.postgresql.org/docs/18/brin.html)
-- [Hash Indexes](https://www.postgresql.org/docs/18/hash-intro.html)
+- [Index Types](https://www.postgresql.org/docs/18/indexes-types.html)  
+- [Indexes and Operator Classes](https://www.postgresql.org/docs/18/indexes-opclass.html)  
+- [GIN Indexes](https://www.postgresql.org/docs/18/gin.html)  
+- [GiST Indexes](https://www.postgresql.org/docs/18/gist.html)  
+- [BRIN Indexes](https://www.postgresql.org/docs/18/brin.html)  
+- [Hash Indexes](https://www.postgresql.org/docs/18/hash-intro.html)  
 - [SP-GiST Indexes](https://www.postgresql.org/docs/18/spgist.html)
 
 ### Prochains chapitres de ce tutoriel
 
 Dans les sections suivantes, nous explorerons en détail chaque type d'index spécialisé :
 
-1. **13.4.1. GIN** : Index inversés pour arrays, JSONB et full-text search
-2. **13.4.2. GiST** : Index pour géométrie, hiérarchies et données multidimensionnelles
-3. **13.4.3. BRIN** : Index ultra-compacts pour tables massives ordonnées
-4. **13.4.4. Hash** : Index pour égalité stricte uniquement
+1. **13.4.1. GIN** : Index inversés pour arrays, JSONB et full-text search  
+2. **13.4.2. GiST** : Index pour géométrie, hiérarchies et données multidimensionnelles  
+3. **13.4.3. BRIN** : Index ultra-compacts pour tables massives ordonnées  
+4. **13.4.4. Hash** : Index pour égalité stricte uniquement  
 5. **13.4.5. SP-GiST** : Index pour structures partitionnées et préfixes
 
 Chaque section détaillera :
@@ -632,10 +632,10 @@ Les **index spécialisés** de PostgreSQL sont des outils puissants qui étenden
 
 ### Récapitulatif des forces
 
-- **GIN** : Roi des structures composites (arrays, JSON, texte)
-- **GiST** : Champion du spatial et du multidimensionnel
-- **BRIN** : Maître de l'économie d'espace pour données massives
-- **Hash** : Spécialiste de l'égalité stricte (mais B-Tree souvent suffisant)
+- **GIN** : Roi des structures composites (arrays, JSON, texte)  
+- **GiST** : Champion du spatial et du multidimensionnel  
+- **BRIN** : Maître de l'économie d'espace pour données massives  
+- **Hash** : Spécialiste de l'égalité stricte (mais B-Tree souvent suffisant)  
 - **SP-GiST** : Expert des structures hiérarchiques non-équilibrées
 
 ### Philosophie d'utilisation
@@ -643,8 +643,8 @@ Les **index spécialisés** de PostgreSQL sont des outils puissants qui étenden
 **Simplicité d'abord** : Commencez toujours par B-Tree, le couteau suisse fiable et polyvalent.
 
 **Spécialisation quand nécessaire** : Passez à un index spécialisé uniquement quand :
-1. Le type de données l'exige (JSONB, geometry)
-2. B-Tree ne supporte pas l'opération
+1. Le type de données l'exige (JSONB, geometry)  
+2. B-Tree ne supporte pas l'opération  
 3. Les gains de performance sont mesurés et significatifs
 
 **Mesure et validation** : Utilisez toujours `EXPLAIN ANALYZE` et `pg_stat_user_indexes` pour valider vos choix.

@@ -63,10 +63,10 @@ Vous apprendrez :
 ### 2. Maîtriser les Types d'Index
 
 Vous découvrirez :
-- **B-Tree** : L'index par défaut et le plus polyvalent
-- **GIN** : Pour le texte intégral, JSON, et les arrays
-- **GiST** : Pour les données géométriques et spatiales
-- **BRIN** : Pour les très grandes tables séquentielles
+- **B-Tree** : L'index par défaut et le plus polyvalent  
+- **GIN** : Pour le texte intégral, JSON, et les arrays  
+- **GiST** : Pour les données géométriques et spatiales  
+- **BRIN** : Pour les très grandes tables séquentielles  
 - **Hash** : Pour les égalités strictes
 - Comment choisir le bon type d'index pour votre cas d'usage
 
@@ -105,9 +105,9 @@ Vous saurez :
 ### 7. Exploiter les Nouveautés PostgreSQL 18
 
 Vous découvrirez :
-- **Skip Scan optimization** : Utiliser des index multi-colonnes sans la première colonne
-- **Améliorations d'EXPLAIN** : Buffers automatiques avec ANALYZE
-- **Optimisations du planificateur** : Auto-élimination des self-joins, réorganisation DISTINCT
+- **Skip Scan optimization** : Utiliser des index multi-colonnes sans la première colonne  
+- **Améliorations d'EXPLAIN** : Buffers automatiques avec ANALYZE  
+- **Optimisations du planificateur** : Auto-élimination des self-joins, réorganisation DISTINCT  
 - **Prepared Statements** : Mise en cache des plans pour performances maximales
 
 ---
@@ -224,7 +224,7 @@ Chaque section commence par expliquer **pourquoi** avant le **comment** :
 
 ### 2. Théorie et Pratique Équilibrées
 
-- **Théorie** : Comprendre les mécanismes internes de PostgreSQL
+- **Théorie** : Comprendre les mécanismes internes de PostgreSQL  
 - **Pratique** : Exemples SQL concrets et analyses de plans
 
 ### 3. Cas d'Usage Réels
@@ -239,8 +239,8 @@ Chaque concept est illustré avec des scénarios réels :
 ### 4. Bonnes Pratiques et Pièges
 
 À chaque étape, vous apprendrez :
-- ✅ Ce qu'il **faut** faire
-- ❌ Ce qu'il **ne faut pas** faire
+- ✅ Ce qu'il **faut** faire  
+- ❌ Ce qu'il **ne faut pas** faire  
 - ⚠️ Les pièges courants et comment les éviter
 
 ---
@@ -249,10 +249,10 @@ Chaque concept est illustré avec des scénarios réels :
 
 ### Symboles
 
-- ✅ : Bonne pratique, approche recommandée
-- ❌ : Mauvaise pratique, à éviter
-- ⚠️ : Attention, piège courant
-- 🔑 : Point clé à retenir
+- ✅ : Bonne pratique, approche recommandée  
+- ❌ : Mauvaise pratique, à éviter  
+- ⚠️ : Attention, piège courant  
+- 🔑 : Point clé à retenir  
 - 🚀 : Gain de performance significatif
 
 ### Code SQL
@@ -277,8 +277,8 @@ Seq Scan on clients  (cost=0.00..2123.00 rows=35000 width=50)
   Filter: ((ville)::text = 'Paris'::text)
   Rows Removed by Filter: 65013
   Buffers: shared hit=1234 read=150
-Planning Time: 0.234 ms
-Execution Time: 25.891 ms
+Planning Time: 0.234 ms  
+Execution Time: 25.891 ms  
 ```
 
 Chaque élément est ensuite expliqué en détail.
@@ -301,27 +301,27 @@ Les concepts sont souvent résumés dans des tableaux :
 
 Si vous découvrez l'indexation :
 
-1. **Lisez dans l'ordre** : Les sections sont progressives
-2. **Prenez votre temps** : Chaque concept s'appuie sur les précédents
-3. **Testez les exemples** : Reproduisez les exemples SQL (si possible)
+1. **Lisez dans l'ordre** : Les sections sont progressives  
+2. **Prenez votre temps** : Chaque concept s'appuie sur les précédents  
+3. **Testez les exemples** : Reproduisez les exemples SQL (si possible)  
 4. **Revenez aux analogies** : Elles aident à comprendre les concepts abstraits
 
 ### Pour les Intermédiaires
 
 Si vous avez déjà créé des index :
 
-1. **Concentrez-vous sur les sections avancées** : 13.5 à 13.11
-2. **Étudiez les nouveautés PostgreSQL 18** : 13.3, 13.8, 13.9
-3. **Pratiquez EXPLAIN** : Section 13.7 est essentielle
+1. **Concentrez-vous sur les sections avancées** : 13.5 à 13.11  
+2. **Étudiez les nouveautés PostgreSQL 18** : 13.3, 13.8, 13.9  
+3. **Pratiquez EXPLAIN** : Section 13.7 est essentielle  
 4. **Appliquez à vos cas d'usage** : Adaptez les exemples à vos tables
 
 ### Pour les Avancés
 
 Si vous optimisez déjà vos requêtes :
 
-1. **Nouveautés PostgreSQL 18** : Sections 13.3, 13.8, 13.9, 13.11
-2. **Cas d'usage avancés** : Index partiels, covering indexes
-3. **Maintenance et monitoring** : Section 13.11
+1. **Nouveautés PostgreSQL 18** : Sections 13.3, 13.8, 13.9, 13.11  
+2. **Cas d'usage avancés** : Index partiels, covering indexes  
+3. **Maintenance et monitoring** : Section 13.11  
 4. **Prepared Statements** : Section 13.10
 
 ---
@@ -332,13 +332,13 @@ Pour suivre les exemples de ce chapitre, vous aurez besoin de :
 
 ### Obligatoire
 
-- **PostgreSQL 18** (ou version récente)
+- **PostgreSQL 18** (ou version récente)  
 - **psql** (client en ligne de commande)
 - Une base de données de test
 
 ### Recommandé
 
-- **pgAdmin** ou **DBeaver** (interface graphique)
+- **pgAdmin** ou **DBeaver** (interface graphique)  
 - **Extension pgstattuple** (pour analyser le bloat)
 ```sql
 CREATE EXTENSION pgstattuple;
@@ -346,7 +346,7 @@ CREATE EXTENSION pgstattuple;
 
 ### Optionnel (pour aller plus loin)
 
-- **PEV (Postgres EXPLAIN Visualizer)** : https://explain.dalibo.com/
+- **PEV (Postgres EXPLAIN Visualizer)** : https://explain.dalibo.com/  
 - **pg_stat_statements** : Monitoring des requêtes
 ```sql
 CREATE EXTENSION pg_stat_statements;
@@ -368,9 +368,9 @@ Ne créez pas d'index "au cas où". **Mesurez** d'abord les performances, identi
 ### 2. Les Index ont un Coût
 
 Chaque index :
-- ✅ Accélère les lectures (SELECT)
-- ❌ Ralentit les écritures (INSERT, UPDATE, DELETE)
-- ❌ Occupe de l'espace disque
+- ✅ Accélère les lectures (SELECT)  
+- ❌ Ralentit les écritures (INSERT, UPDATE, DELETE)  
+- ❌ Occupe de l'espace disque  
 - ❌ Nécessite de la maintenance
 
 **Règle d'or** : Créez des index **seulement** si le gain en lecture compense le coût en écriture.
@@ -386,10 +386,10 @@ Un index optimal pour une application e-commerce n'est pas le même que pour un 
 ### 4. L'Optimisation est Itérative
 
 L'optimisation n'est jamais "terminée" :
-1. Déployer l'application
-2. Monitorer les performances
-3. Identifier les requêtes lentes
-4. Optimiser (index, requêtes, schéma)
+1. Déployer l'application  
+2. Monitorer les performances  
+3. Identifier les requêtes lentes  
+4. Optimiser (index, requêtes, schéma)  
 5. Répéter
 
 ---
@@ -400,28 +400,28 @@ Ce chapitre couvre l'essentiel de l'indexation et de l'optimisation, mais Postgr
 
 ### Documentation Officielle
 
-- **PostgreSQL Documentation** : https://www.postgresql.org/docs/18/
-- **Section Indexes** : https://www.postgresql.org/docs/18/indexes.html
+- **PostgreSQL Documentation** : https://www.postgresql.org/docs/18/  
+- **Section Indexes** : https://www.postgresql.org/docs/18/indexes.html  
 - **Performance Tips** : https://www.postgresql.org/docs/18/performance-tips.html
 
 ### Livres Recommandés
 
-- **"The Art of PostgreSQL"** par Dimitri Fontaine
-- **"PostgreSQL: Up and Running"** par Regina Obe et Leo Hsu
+- **"The Art of PostgreSQL"** par Dimitri Fontaine  
+- **"PostgreSQL: Up and Running"** par Regina Obe et Leo Hsu  
 - **"Mastering PostgreSQL"** par Hans-Jürgen Schönig
 
 ### Communauté
 
-- **Mailing list** : pgsql-performance@postgresql.org
-- **Reddit** : r/PostgreSQL
-- **Stack Overflow** : Tag [postgresql]
+- **Mailing list** : pgsql-performance@postgresql.org  
+- **Reddit** : r/PostgreSQL  
+- **Stack Overflow** : Tag [postgresql]  
 - **Discord PostgreSQL**
 
 ### Blogs et Articles
 
-- **2ndQuadrant Blog** : https://www.2ndquadrant.com/en/blog/
-- **Percona Blog** : https://www.percona.com/blog/
-- **Citus Data Blog** : https://www.citusdata.com/blog/
+- **2ndQuadrant Blog** : https://www.2ndquadrant.com/en/blog/  
+- **Percona Blog** : https://www.percona.com/blog/  
+- **Citus Data Blog** : https://www.citusdata.com/blog/  
 - **Cybertec Blog** : https://www.cybertec-postgresql.com/en/blog/
 
 ---
@@ -430,10 +430,10 @@ Ce chapitre couvre l'essentiel de l'indexation et de l'optimisation, mais Postgr
 
 Les exemples de ce chapitre sont à des fins **pédagogiques**. Avant d'appliquer ces techniques en production :
 
-1. **Testez dans un environnement de développement** d'abord
-2. **Analysez l'impact** sur votre charge de travail spécifique
-3. **Créez des sauvegardes** avant les opérations de maintenance
-4. **Planifiez des fenêtres de maintenance** pour les opérations intrusives
+1. **Testez dans un environnement de développement** d'abord  
+2. **Analysez l'impact** sur votre charge de travail spécifique  
+3. **Créez des sauvegardes** avant les opérations de maintenance  
+4. **Planifiez des fenêtres de maintenance** pour les opérations intrusives  
 5. **Documentez** vos décisions d'optimisation
 
 **Attention particulière** : Les opérations comme REINDEX, VACUUM FULL peuvent bloquer votre base pendant plusieurs heures sur de grandes tables. Lisez attentivement la section 13.11 avant de les exécuter en production.

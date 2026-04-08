@@ -62,13 +62,13 @@ Le scan séquentiel est privilégié dans les cas suivants :
 
 ### Avantages
 
-- ✅ **Simple et prévisible** : Pas de structure de données complexe à gérer
-- ✅ **Efficace pour grandes sélections** : Lecture continue des blocs, très performant en I/O séquentiel
+- ✅ **Simple et prévisible** : Pas de structure de données complexe à gérer  
+- ✅ **Efficace pour grandes sélections** : Lecture continue des blocs, très performant en I/O séquentiel  
 - ✅ **Pas de maintenance** : Aucun index à créer ou maintenir
 
 ### Inconvénients
 
-- ❌ **Lent sur grandes tables** : Si la table contient des millions de lignes et que vous cherchez quelques enregistrements, le Seq Scan lit inutilement toutes les données
+- ❌ **Lent sur grandes tables** : Si la table contient des millions de lignes et que vous cherchez quelques enregistrements, le Seq Scan lit inutilement toutes les données  
 - ❌ **Consomme beaucoup d'I/O** : Lit tous les blocs même si peu de lignes correspondent
 
 ### Exemple
@@ -120,8 +120,8 @@ Table : commandes
 └────────────────────────────────┘
 ```
 
-1. **Recherche dans l'index** : PostgreSQL parcourt l'index (généralement un arbre B-Tree) pour trouver les valeurs correspondantes
-2. **Récupération des pointeurs** : L'index contient des pointeurs (TID - Tuple ID) vers les lignes de la table
+1. **Recherche dans l'index** : PostgreSQL parcourt l'index (généralement un arbre B-Tree) pour trouver les valeurs correspondantes  
+2. **Récupération des pointeurs** : L'index contient des pointeurs (TID - Tuple ID) vers les lignes de la table  
 3. **Accès aux lignes** : PostgreSQL accède directement aux blocs de la table contenant les lignes
 
 ### Quand PostgreSQL utilise-t-il l'Index Scan ?
@@ -144,15 +144,15 @@ Table : commandes
 
 ### Avantages
 
-- ✅ **Très rapide pour sélections ciblées** : Accès direct aux lignes pertinentes
-- ✅ **Réduit considérablement l'I/O** : Ne lit que les blocs nécessaires
+- ✅ **Très rapide pour sélections ciblées** : Accès direct aux lignes pertinentes  
+- ✅ **Réduit considérablement l'I/O** : Ne lit que les blocs nécessaires  
 - ✅ **Efficace pour les tris** : Si l'index correspond à l'ORDER BY
 
 ### Inconvénients
 
-- ❌ **Coût de maintenance** : Les index doivent être mis à jour à chaque INSERT/UPDATE/DELETE
-- ❌ **Espace disque supplémentaire** : Les index occupent de l'espace
-- ❌ **Random I/O** : Accès aléatoires aux blocs de la table (plus lent que l'I/O séquentiel)
+- ❌ **Coût de maintenance** : Les index doivent être mis à jour à chaque INSERT/UPDATE/DELETE  
+- ❌ **Espace disque supplémentaire** : Les index occupent de l'espace  
+- ❌ **Random I/O** : Accès aléatoires aux blocs de la table (plus lent que l'I/O séquentiel)  
 - ❌ **Inefficace pour grandes sélections** : Si trop de lignes correspondent, le Seq Scan devient plus rapide
 
 ### Exemple
@@ -181,7 +181,7 @@ PostgreSQL utilise l'index pour accéder directement aux lignes.
 
 Le **Bitmap Scan** est une stratégie **hybride** entre le Seq Scan et l'Index Scan. Il se déroule en deux phases :
 
-1. **Bitmap Index Scan** : Construction d'une bitmap (carte de bits) en mémoire indiquant quels blocs contiennent des lignes pertinentes
+1. **Bitmap Index Scan** : Construction d'une bitmap (carte de bits) en mémoire indiquant quels blocs contiennent des lignes pertinentes  
 2. **Bitmap Heap Scan** : Lecture séquentielle des blocs identifiés
 
 **Analogie** : Imaginez que vous cherchez plusieurs mots dans un livre. Au lieu d'aller directement à chaque page individuellement (Index Scan), vous créez d'abord une liste de toutes les pages contenant au moins un des mots, puis vous lisez ces pages dans l'ordre (plus efficace).
@@ -189,8 +189,8 @@ Le **Bitmap Scan** est une stratégie **hybride** entre le Seq Scan et l'Index S
 ### Fonctionnement
 
 ```
-Phase 1 : Bitmap Index Scan
-Index B-Tree sur client_id
+Phase 1 : Bitmap Index Scan  
+Index B-Tree sur client_id  
 ┌─────────────────────┐
 │ 12345 → Bloc 42     │ ← Scan de l'index
 │ 12346 → Bloc 42     │
@@ -204,8 +204,8 @@ Bitmap en mémoire
 │ Bloc 103 : 1       │
 └────────────────────┘
 
-Phase 2 : Bitmap Heap Scan
-Table : commandes
+Phase 2 : Bitmap Heap Scan  
+Table : commandes  
 ┌────────────────────────────────┐
 │ Bloc 42  │ Lignes avec 12345   │ ← Lecture séquentielle
 │ Bloc 103 │ Lignes avec 12347   │ ← Lecture séquentielle
@@ -232,14 +232,14 @@ Le Bitmap Scan est utilisé dans les situations intermédiaires :
 
 ### Avantages
 
-- ✅ **Combine plusieurs index** : Permet d'utiliser plusieurs index simultanément (BitmapAnd, BitmapOr)
-- ✅ **Optimise l'I/O** : Lit chaque bloc une seule fois, dans l'ordre séquentiel
+- ✅ **Combine plusieurs index** : Permet d'utiliser plusieurs index simultanément (BitmapAnd, BitmapOr)  
+- ✅ **Optimise l'I/O** : Lit chaque bloc une seule fois, dans l'ordre séquentiel  
 - ✅ **Bon compromis** : Plus rapide qu'un Seq Scan, moins de Random I/O qu'un Index Scan
 
 ### Inconvénients
 
-- ❌ **Mémoire requise** : La bitmap doit être stockée en mémoire (limitée par `work_mem`)
-- ❌ **Moins précis** : Travaille au niveau du bloc, pas de la ligne (perd de la granularité)
+- ❌ **Mémoire requise** : La bitmap doit être stockée en mémoire (limitée par `work_mem`)  
+- ❌ **Moins précis** : Travaille au niveau du bloc, pas de la ligne (perd de la granularité)  
 - ❌ **Complexité** : Plus complexe à comprendre et à analyser
 
 ### Exemple
@@ -256,8 +256,8 @@ Bitmap Heap Scan on commandes  (cost=104.00..5234.50 rows=5000 width=20)
         Index Cond: ((client_id >= 10000) AND (client_id <= 12000))
 ```
 
-1. **Bitmap Index Scan** : Parcourt l'index et construit la bitmap
-2. **Bitmap Heap Scan** : Lit les blocs identifiés dans la table
+1. **Bitmap Index Scan** : Parcourt l'index et construit la bitmap  
+2. **Bitmap Heap Scan** : Lit les blocs identifiés dans la table  
 3. **Recheck Cond** : Vérifie à nouveau la condition car la bitmap travaille au niveau bloc
 
 ---
@@ -318,13 +318,13 @@ PostgreSQL permet de créer des **index couvrants** avec la clause `INCLUDE` :
 CREATE INDEX idx_commandes_covering ON commandes(client_id) INCLUDE (montant, date_commande);
 
 -- Index-Only Scan possible
-SELECT client_id, montant, date_commande
-FROM commandes
-WHERE client_id = 12345;
+SELECT client_id, montant, date_commande  
+FROM commandes  
+WHERE client_id = 12345;  
 ```
 
 **Différence avec index multi-colonnes** :
-- **Index multi-colonnes** : `CREATE INDEX ON table(col1, col2, col3)` → col2 et col3 sont utilisables pour le filtrage
+- **Index multi-colonnes** : `CREATE INDEX ON table(col1, col2, col3)` → col2 et col3 sont utilisables pour le filtrage  
 - **Index INCLUDE** : `CREATE INDEX ON table(col1) INCLUDE (col2, col3)` → col2 et col3 sont stockées mais pas utilisables pour le filtrage (seulement pour l'Index-Only Scan)
 
 ### Quand PostgreSQL utilise-t-il l'Index-Only Scan ?
@@ -347,14 +347,14 @@ WHERE client_id = 12345;
 
 ### Avantages
 
-- ✅ **Performance maximale** : Pas d'accès disque à la table
-- ✅ **Moins d'I/O** : Seul l'index est lu
+- ✅ **Performance maximale** : Pas d'accès disque à la table  
+- ✅ **Moins d'I/O** : Seul l'index est lu  
 - ✅ **Cache efficace** : Les index sont généralement plus petits et restent en cache
 
 ### Inconvénients
 
-- ❌ **Index plus volumineux** : Les index couvrants (INCLUDE) prennent plus d'espace
-- ❌ **Maintenance plus coûteuse** : Index plus gros à maintenir
+- ❌ **Index plus volumineux** : Les index couvrants (INCLUDE) prennent plus d'espace  
+- ❌ **Maintenance plus coûteuse** : Index plus gros à maintenir  
 - ❌ **Dépendance au VACUUM** : Nécessite une Visibility Map à jour
 
 ### Exemple
@@ -364,8 +364,8 @@ WHERE client_id = 12345;
 CREATE INDEX idx_commandes_io ON commandes(client_id) INCLUDE (montant);
 
 -- Requête
-EXPLAIN (ANALYZE, BUFFERS)
-SELECT client_id, montant FROM commandes WHERE client_id = 12345;
+EXPLAIN (ANALYZE, BUFFERS)  
+SELECT client_id, montant FROM commandes WHERE client_id = 12345;  
 ```
 
 **Plan d'exécution** :
@@ -467,10 +467,10 @@ Bitmap Heap Scan on commandes  (cost=1040.50..12450.00 rows=50000 width=20)
 
 ```sql
 -- Seulement 2 colonnes nécessaires
-SELECT client_id, COUNT(*)
-FROM commandes
-WHERE client_id = 12345
-GROUP BY client_id;
+SELECT client_id, COUNT(*)  
+FROM commandes  
+WHERE client_id = 12345  
+GROUP BY client_id;  
 ```
 
 **Avec index couvrant** → **Index-Only Scan**
@@ -505,8 +505,8 @@ GroupAggregate
 
 ## Ressources pour Aller Plus Loin
 
-- **Documentation officielle PostgreSQL** : [Query Planning](https://www.postgresql.org/docs/current/planner-stats.html)
-- **EXPLAIN et ANALYZE** : Chapitre 13.7 de cette formation
+- **Documentation officielle PostgreSQL** : [Query Planning](https://www.postgresql.org/docs/current/planner-stats.html)  
+- **EXPLAIN et ANALYZE** : Chapitre 13.7 de cette formation  
 - **Indexation avancée** : Chapitres 13.2 à 13.5 de cette formation
 
 ---

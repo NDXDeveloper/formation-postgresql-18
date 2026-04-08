@@ -24,8 +24,8 @@ Le planificateur transforme votre requête SQL (déclarative) en un **plan d'ex�
 Requête SQL                    Plan d'exécution
 (Que veux-tu ?)               (Comment l'obtenir ?)
     ↓                              ↓
-SELECT * FROM clients     →    Index Scan on idx_client
-WHERE id = 12345               Index Cond: (id = 12345)
+SELECT * FROM clients     →    Index Scan on idx_client  
+WHERE id = 12345               Index Cond: (id = 12345)  
                                Estimated cost: 8.44
 ```
 
@@ -48,17 +48,17 @@ WHERE id = 12345               Index Cond: (id = 12345)
 ### 1.3. Exemple Simple
 
 ```sql
-SELECT c.nom, o.montant
-FROM clients c
-JOIN commandes o ON c.id = o.client_id
-WHERE c.ville = 'Paris';
+SELECT c.nom, o.montant  
+FROM clients c  
+JOIN commandes o ON c.id = o.client_id  
+WHERE c.ville = 'Paris';  
 ```
 
 **Plans possibles** (simplifiés) :
 
-**Plan A** : Seq Scan clients → Filter Paris → Join avec commandes
-**Plan B** : Index Scan sur idx_ville → Join avec commandes
-**Plan C** : Seq Scan commandes → Hash Join avec clients filtrés
+**Plan A** : Seq Scan clients → Filter Paris → Join avec commandes  
+**Plan B** : Index Scan sur idx_ville → Join avec commandes  
+**Plan C** : Seq Scan commandes → Hash Join avec clients filtrés  
 
 **Question** : Lequel choisir ?
 
@@ -170,11 +170,11 @@ SELECT * FROM clients WHERE ville = 'Paris';
 
 PostgreSQL collecte plusieurs types de statistiques :
 
-1. **Cardinalité** : Nombre total de lignes
-2. **Valeurs distinctes** : Nombre de valeurs uniques (n_distinct)
-3. **NULL frequency** : Proportion de NULL (null_frac)
-4. **Histogrammes** : Distribution des valeurs
-5. **Most Common Values (MCV)** : Valeurs les plus fréquentes
+1. **Cardinalité** : Nombre total de lignes  
+2. **Valeurs distinctes** : Nombre de valeurs uniques (n_distinct)  
+3. **NULL frequency** : Proportion de NULL (null_frac)  
+4. **Histogrammes** : Distribution des valeurs  
+5. **Most Common Values (MCV)** : Valeurs les plus fréquentes  
 6. **Corrélation** : Ordre physique vs ordre logique
 
 ### 3.3. La Vue pg_stats
@@ -191,8 +191,8 @@ SELECT
     avg_width,         -- Taille moyenne en octets
     most_common_vals,  -- Valeurs les plus communes
     most_common_freqs  -- Fréquences correspondantes
-FROM pg_stats
-WHERE tablename = 'clients';
+FROM pg_stats  
+WHERE tablename = 'clients';  
 ```
 
 ---
@@ -206,9 +206,9 @@ WHERE tablename = 'clients';
 Nombre de valeurs distinctes dans la colonne.
 
 ```sql
-SELECT attname, n_distinct
-FROM pg_stats
-WHERE tablename = 'clients';
+SELECT attname, n_distinct  
+FROM pg_stats  
+WHERE tablename = 'clients';  
 ```
 
 **Exemple** :
@@ -222,8 +222,8 @@ WHERE tablename = 'clients';
 ```
 
 **Interprétation** :
-- `n_distinct = -1` : Toutes les lignes sont uniques (ratio 1:1)
-- `n_distinct > 0` : Nombre absolu de valeurs distinctes
+- `n_distinct = -1` : Toutes les lignes sont uniques (ratio 1:1)  
+- `n_distinct > 0` : Nombre absolu de valeurs distinctes  
 - `n_distinct < 0` : Fraction (ex: -0.5 = 50% des lignes sont uniques)
 
 **Usage par le planificateur** :
@@ -233,9 +233,9 @@ WHERE tablename = 'clients';
 #### null_frac : Proportion de NULL
 
 ```sql
-SELECT attname, null_frac
-FROM pg_stats
-WHERE tablename = 'clients';
+SELECT attname, null_frac  
+FROM pg_stats  
+WHERE tablename = 'clients';  
 ```
 
 **Exemple** :
@@ -258,9 +258,9 @@ SELECT * FROM clients WHERE telephone IS NULL;
 Taille moyenne des valeurs en octets.
 
 ```sql
-SELECT attname, avg_width
-FROM pg_stats
-WHERE tablename = 'clients';
+SELECT attname, avg_width  
+FROM pg_stats  
+WHERE tablename = 'clients';  
 ```
 
 **Exemple** :
@@ -286,8 +286,8 @@ SELECT
     attname,
     most_common_vals,
     most_common_freqs
-FROM pg_stats
-WHERE tablename = 'clients' AND attname = 'ville';
+FROM pg_stats  
+WHERE tablename = 'clients' AND attname = 'ville';  
 ```
 
 **Résultat** :
@@ -324,9 +324,9 @@ SELECT * FROM clients WHERE ville = 'Dijon';
 Pour les valeurs non couvertes par MCV, PostgreSQL construit un histogramme.
 
 ```sql
-SELECT attname, histogram_bounds
-FROM pg_stats
-WHERE tablename = 'commandes' AND attname = 'montant';
+SELECT attname, histogram_bounds  
+FROM pg_stats  
+WHERE tablename = 'commandes' AND attname = 'montant';  
 ```
 
 **Résultat** :
@@ -354,9 +354,9 @@ SELECT * FROM commandes WHERE montant BETWEEN 100 AND 200;
 ### 4.3. Corrélation Physique
 
 ```sql
-SELECT attname, correlation
-FROM pg_stats
-WHERE tablename = 'commandes';
+SELECT attname, correlation  
+FROM pg_stats  
+WHERE tablename = 'commandes';  
 ```
 
 **Résultat** :
@@ -373,16 +373,16 @@ WHERE tablename = 'commandes';
 **Corrélation = 1.0** : Les valeurs sont physiquement triées sur le disque dans le même ordre que les valeurs logiques.
 
 ```
-Ordre logique : id = 1, 2, 3, 4, 5, 6...
-Ordre physique : [Bloc 1: id=1,2,3] [Bloc 2: id=4,5,6]...
+Ordre logique : id = 1, 2, 3, 4, 5, 6...  
+Ordre physique : [Bloc 1: id=1,2,3] [Bloc 2: id=4,5,6]...  
 → Lecture séquentielle efficace
 ```
 
 **Corrélation = 0.0** : Aucun ordre, valeurs dispersées aléatoirement.
 
 ```
-Ordre logique : client_id = 1, 2, 3, 4, 5...
-Ordre physique : [Bloc 1: id=783,45,2] [Bloc 2: id=1,456,99]...
+Ordre logique : client_id = 1, 2, 3, 4, 5...  
+Ordre physique : [Bloc 1: id=783,45,2] [Bloc 2: id=1,456,99]...  
 → Lectures aléatoires (Random I/O)
 ```
 
@@ -419,8 +419,8 @@ ANALYZE VERBOSE clients;
 1. **Échantillonnage** : ANALYZE ne lit PAS toute la table, il échantillonne un sous-ensemble de lignes
 
 ```
-Table : 10 millions de lignes
-ANALYZE lit : ~30,000 lignes (échantillon)
+Table : 10 millions de lignes  
+ANALYZE lit : ~30,000 lignes (échantillon)  
 → Très rapide, même sur grandes tables
 ```
 
@@ -449,8 +449,8 @@ ALTER TABLE clients ALTER COLUMN ville SET STATISTICS 500;
 ```
 
 **Valeurs** :
-- `100` (default) : Bon compromis (échantillon de ~30,000 lignes)
-- `1000` : Maximum (échantillon de ~300,000 lignes) → Plus précis, mais ANALYZE plus lent
+- `100` (default) : Bon compromis (échantillon de ~30,000 lignes)  
+- `1000` : Maximum (échantillon de ~300,000 lignes) → Plus précis, mais ANALYZE plus lent  
 - `10` : Minimum → ANALYZE très rapide, mais statistiques imprécises
 
 **Quand augmenter** :
@@ -472,8 +472,8 @@ SELECT
     last_analyze,
     last_autoanalyze,
     n_mod_since_analyze  -- Nombre de modifications depuis dernier ANALYZE
-FROM pg_stat_user_tables
-WHERE relname = 'clients';
+FROM pg_stat_user_tables  
+WHERE relname = 'clients';  
 ```
 
 **Résultat** :
@@ -489,7 +489,7 @@ n_mod_since_analyze > autovacuum_analyze_threshold + (autovacuum_analyze_scale_f
 ```
 
 **Valeurs par défaut** :
-- `autovacuum_analyze_threshold = 50`
+- `autovacuum_analyze_threshold = 50`  
 - `autovacuum_analyze_scale_factor = 0.1` (10%)
 
 **Exemple** : Table de 100,000 lignes
@@ -505,15 +505,15 @@ Exécutez manuellement `ANALYZE` dans ces cas :
 
 1. **Après un chargement massif de données** :
 ```sql
-COPY clients FROM '/data/clients.csv';
-ANALYZE clients;
+COPY clients FROM '/data/clients.csv';  
+ANALYZE clients;  
 ```
 
 2. **Après une modification importante du schéma** :
 ```sql
-ALTER TABLE clients ADD COLUMN new_field VARCHAR(100);
-UPDATE clients SET new_field = ...;
-ANALYZE clients;
+ALTER TABLE clients ADD COLUMN new_field VARCHAR(100);  
+UPDATE clients SET new_field = ...;  
+ANALYZE clients;  
 ```
 
 3. **Avant une requête critique** (rare) :
@@ -526,8 +526,8 @@ SELECT ...
 4. **Après détection de mauvais plans** :
 ```sql
 -- Si EXPLAIN montre des estimations très fausses
-ANALYZE clients;
-ANALYZE commandes;
+ANALYZE clients;  
+ANALYZE commandes;  
 ```
 
 ---
@@ -547,8 +547,8 @@ Seq Scan on clients  (cost=0.00..2123.00 rows=35000 width=50)
 ```
 
 **Interprétation** :
-- `cost=0.00..2123.00` : Coût estimé (startup..total)
-- `rows=35000` : **Estimation basée sur pg_stats** (35% × 100,000)
+- `cost=0.00..2123.00` : Coût estimé (startup..total)  
+- `rows=35000` : **Estimation basée sur pg_stats** (35% × 100,000)  
 - `width=50` : Taille moyenne des lignes en octets
 
 ### 6.2. EXPLAIN ANALYZE : Comparer Estimations vs Réalité
@@ -563,13 +563,13 @@ Seq Scan on clients  (cost=0.00..2123.00 rows=35000 width=50)
                      (actual time=0.045..23.456 rows=34987 loops=1)
   Filter: (ville = 'Paris'::text)
   Rows Removed by Filter: 65013
-Planning Time: 0.234 ms
-Execution Time: 25.891 ms
+Planning Time: 0.234 ms  
+Execution Time: 25.891 ms  
 ```
 
 **Comparaison** :
-- **Estimé** : `rows=35000`
-- **Réel** : `actual ... rows=34987`
+- **Estimé** : `rows=35000`  
+- **Réel** : `actual ... rows=34987`  
 - **Écart** : 0.04% → Excellente estimation ! ✅
 
 ### 6.3. Détecter les Mauvaises Estimations
@@ -586,8 +586,8 @@ Index Scan using idx_ville on clients  (cost=0.42..8.44 rows=1 width=50)
 ```
 
 **Problème** :
-- **Estimé** : `rows=1` (0.001%)
-- **Réel** : `actual ... rows=25000` (25%)
+- **Estimé** : `rows=1` (0.001%)  
+- **Réel** : `actual ... rows=25000` (25%)  
 - **Écart** : 2,500,000% ! 🔴
 
 **Cause** : Statistiques obsolètes (Dijon était rare, maintenant fréquent)
@@ -607,8 +607,8 @@ ANALYZE clients;
 
 ```sql
 -- Afficher les valeurs
-SHOW seq_page_cost;      -- Default: 1.0
-SHOW random_page_cost;   -- Default: 4.0
+SHOW seq_page_cost;      -- Default: 1.0  
+SHOW random_page_cost;   -- Default: 4.0  
 ```
 
 **Ajustement pour SSD** :
@@ -631,8 +631,8 @@ SHOW effective_cache_size;  -- Default: 4GB
 
 ```sql
 -- Serveur avec 64 GB RAM
-ALTER SYSTEM SET effective_cache_size = '48GB';
-SELECT pg_reload_conf();
+ALTER SYSTEM SET effective_cache_size = '48GB';  
+SELECT pg_reload_conf();  
 ```
 
 **Impact** : Influence le choix entre Index Scan et Seq Scan (planificateur suppose que les données fréquentes sont en cache).
@@ -687,9 +687,9 @@ SELECT
     n_live_tup,
     n_mod_since_analyze,
     last_autoanalyze
-FROM pg_stat_user_tables
-WHERE n_mod_since_analyze > n_live_tup * 0.2  -- Plus de 20% de modifications
-ORDER BY n_mod_since_analyze DESC;
+FROM pg_stat_user_tables  
+WHERE n_mod_since_analyze > n_live_tup * 0.2  -- Plus de 20% de modifications  
+ORDER BY n_mod_since_analyze DESC;  
 ```
 
 **Solution** :
@@ -717,8 +717,8 @@ SELECT * FROM logs WHERE level = 'ERROR';  -- Devrait être rapide (100 lignes)
 
 **Solution 1** : Augmenter statistics_target
 ```sql
-ALTER TABLE logs ALTER COLUMN level SET STATISTICS 1000;
-ANALYZE logs;
+ALTER TABLE logs ALTER COLUMN level SET STATISTICS 1000;  
+ANALYZE logs;  
 ```
 
 **Solution 2** : Index partiel
@@ -741,19 +741,19 @@ SELECT * FROM clients WHERE ma_fonction_custom(nom) = true;
 CREATE OR REPLACE FUNCTION ma_fonction_custom(nom TEXT) RETURNS BOOLEAN AS $$
     ...
 $$ LANGUAGE plpgsql
-IMMUTABLE  -- ou STABLE
-COST 100   -- Coût CPU estimé
-ROWS 50;   -- Nombre de lignes attendues en sortie (pour fonctions set-returning)
+IMMUTABLE  -- ou STABLE  
+COST 100   -- Coût CPU estimé  
+ROWS 50;   -- Nombre de lignes attendues en sortie (pour fonctions set-returning)  
 ```
 
 ### 8.4. Problème : Jointures avec Mauvaises Estimations
 
 **Symptôme** :
 ```sql
-EXPLAIN ANALYZE
-SELECT * FROM clients c
-JOIN commandes o ON c.id = o.client_id
-WHERE c.ville = 'Paris';
+EXPLAIN ANALYZE  
+SELECT * FROM clients c  
+JOIN commandes o ON c.id = o.client_id  
+WHERE c.ville = 'Paris';  
 
 -- Estimation : 100 lignes
 -- Réel : 10,000 lignes
@@ -761,8 +761,8 @@ WHERE c.ville = 'Paris';
 
 **Solution** : ANALYZE les deux tables
 ```sql
-ANALYZE clients;
-ANALYZE commandes;
+ANALYZE clients;  
+ANALYZE commandes;  
 ```
 
 Si problème persiste, vérifier les statistiques de corrélation :
@@ -772,8 +772,8 @@ SELECT
     attname,
     n_distinct,
     correlation
-FROM pg_stats
-WHERE tablename IN ('clients', 'commandes');
+FROM pg_stats  
+WHERE tablename IN ('clients', 'commandes');  
 ```
 
 ---
@@ -795,18 +795,18 @@ SELECT
         WHEN n_mod_since_analyze > n_live_tup * 0.1 THEN '⚠️ Soon'
         ELSE '✓ OK'
     END AS status
-FROM pg_stat_user_tables
-WHERE schemaname = 'public'
-ORDER BY n_mod_since_analyze DESC
-LIMIT 20;
+FROM pg_stat_user_tables  
+WHERE schemaname = 'public'  
+ORDER BY n_mod_since_analyze DESC  
+LIMIT 20;  
 ```
 
 ### 9.2. Script de Maintenance Automatique
 
 ```sql
 -- Créer une fonction pour forcer ANALYZE sur les tables "stale"
-CREATE OR REPLACE FUNCTION maintain_statistics() RETURNS void AS $$
-BEGIN
+CREATE OR REPLACE FUNCTION maintain_statistics() RETURNS void AS $$  
+BEGIN  
     EXECUTE (
         SELECT string_agg('ANALYZE ' || schemaname || '.' || relname || ';', E'\n')
         FROM pg_stat_user_tables
@@ -836,8 +836,8 @@ SELECT
     autovacuum_count,    -- Nouveauté PG 18
     analyze_count,       -- Nouveauté PG 18
     autoanalyze_count    -- Nouveauté PG 18
-FROM pg_stat_all_tables
-WHERE schemaname = 'public';
+FROM pg_stat_all_tables  
+WHERE schemaname = 'public';  
 ```
 
 **Utilité** : Suivre la fréquence de maintenance et détecter les tables sous-maintenues.
@@ -893,10 +893,10 @@ pgAdmin propose une interface graphique pour visualiser :
 
 ```sql
 -- Requête problématique (7 secondes)
-SELECT c.nom, COUNT(o.id)
-FROM clients c
-JOIN commandes o ON c.id = o.client_id
-WHERE c.ville = 'Paris'
+SELECT c.nom, COUNT(o.id)  
+FROM clients c  
+JOIN commandes o ON c.id = o.client_id  
+WHERE c.ville = 'Paris'  
   AND o.created_at > '2024-01-01'
 GROUP BY c.nom;
 ```
@@ -904,11 +904,11 @@ GROUP BY c.nom;
 ### 11.2. Étape 1 : EXPLAIN ANALYZE
 
 ```sql
-EXPLAIN (ANALYZE, BUFFERS)
-SELECT c.nom, COUNT(o.id)
-FROM clients c
-JOIN commandes o ON c.id = o.client_id
-WHERE c.ville = 'Paris'
+EXPLAIN (ANALYZE, BUFFERS)  
+SELECT c.nom, COUNT(o.id)  
+FROM clients c  
+JOIN commandes o ON c.id = o.client_id  
+WHERE c.ville = 'Paris'  
   AND o.created_at > '2024-01-01'
 GROUP BY c.nom;
 ```
@@ -932,8 +932,8 @@ HashAggregate  (cost=250000.00..250500.00 rows=50000 width=20)
                                         (actual time=0.023..98.765 rows=35000 loops=1)
                     Filter: (ville = 'Paris')
                     Rows Removed by Filter: 65000
-Planning Time: 1.234 ms
-Execution Time: 7235.456 ms
+Planning Time: 1.234 ms  
+Execution Time: 7235.456 ms  
 ```
 
 ### 11.3. Étape 2 : Analyser les Estimations
@@ -961,8 +961,8 @@ SELECT
     n_distinct,
     null_frac,
     correlation
-FROM pg_stats
-WHERE tablename = 'commandes' AND attname = 'created_at';
+FROM pg_stats  
+WHERE tablename = 'commandes' AND attname = 'created_at';  
 ```
 
 **Résultat** :
@@ -973,7 +973,7 @@ WHERE tablename = 'commandes' AND attname = 'created_at';
 ```
 
 **Interprétation** :
-- `correlation = 0.95` : Dates physiquement triées → Index très efficace
+- `correlation = 0.95` : Dates physiquement triées → Index très efficace  
 - `n_distinct = 365` : Une année de dates
 
 ### 11.5. Étape 4 : Créer les Index Appropriés
@@ -986,18 +986,18 @@ CREATE INDEX idx_clients_paris ON clients(id) WHERE ville = 'Paris';
 CREATE INDEX idx_commandes_date ON commandes(created_at);
 
 -- Mettre à jour les statistiques
-ANALYZE clients;
-ANALYZE commandes;
+ANALYZE clients;  
+ANALYZE commandes;  
 ```
 
 ### 11.6. Étape 5 : Retester
 
 ```sql
-EXPLAIN (ANALYZE, BUFFERS)
-SELECT c.nom, COUNT(o.id)
-FROM clients c
-JOIN commandes o ON c.id = o.client_id
-WHERE c.ville = 'Paris'
+EXPLAIN (ANALYZE, BUFFERS)  
+SELECT c.nom, COUNT(o.id)  
+FROM clients c  
+JOIN commandes o ON c.id = o.client_id  
+WHERE c.ville = 'Paris'  
   AND o.created_at > '2024-01-01'
 GROUP BY c.nom;
 ```
@@ -1020,18 +1020,18 @@ HashAggregate  (cost=8500.00..8550.00 rows=5000 width=20)
                     (cost=0.42..3800.00 rows=35000 width=12)
                     (actual time=0.023..30.567 rows=35000 loops=1)
                     Index Cond: (ville = 'Paris')
-Planning Time: 0.345 ms
-Execution Time: 124.123 ms
+Planning Time: 0.345 ms  
+Execution Time: 124.123 ms  
 ```
 
 **Résultat** :
-- **Avant** : 7235 ms
-- **Après** : 124 ms
+- **Avant** : 7235 ms  
+- **Après** : 124 ms  
 - **Gain** : **58×** plus rapide ! 🚀
 
 **Clés du succès** :
-1. Index bien placés
-2. Statistiques à jour
+1. Index bien placés  
+2. Statistiques à jour  
 3. Planificateur a choisi les bons plans grâce aux statistiques
 
 ---
@@ -1060,9 +1060,9 @@ Execution Time: 124.123 ms
 
 ## Ressources pour Aller Plus Loin
 
-- **Documentation PostgreSQL** : [Planner Statistics](https://www.postgresql.org/docs/current/planner-stats.html)
-- **Section précédente** : 13.5. Stratégies d'indexation avancées
-- **Section suivante** : 13.7. Lecture et analyse d'un EXPLAIN
+- **Documentation PostgreSQL** : [Planner Statistics](https://www.postgresql.org/docs/current/planner-stats.html)  
+- **Section précédente** : 13.5. Stratégies d'indexation avancées  
+- **Section suivante** : 13.7. Lecture et analyse d'un EXPLAIN  
 - **Livre recommandé** : "The Art of PostgreSQL" par Dimitri Fontaine
 
 ---

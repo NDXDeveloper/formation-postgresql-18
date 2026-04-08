@@ -73,7 +73,7 @@ Cela transforme votre capacité à diagnostiquer et résoudre les problèmes de 
 ### Qu'est-ce que pg_stat_all_tables ?
 
 `pg_stat_all_tables` est une **vue système** qui fournit des statistiques sur toutes les tables de votre base de données (utilisateur et système). Il existe aussi :
-- `pg_stat_user_tables` : Uniquement les tables utilisateur (recommandé pour le monitoring)
+- `pg_stat_user_tables` : Uniquement les tables utilisateur (recommandé pour le monitoring)  
 - `pg_stat_sys_tables` : Uniquement les tables système
 
 ### Accéder à la vue
@@ -138,8 +138,8 @@ SELECT
     n_dead_tup,
     last_autovacuum,
     autovacuum_count
-FROM pg_stat_user_tables
-WHERE last_autovacuum IS NULL
+FROM pg_stat_user_tables  
+WHERE last_autovacuum IS NULL  
   AND n_dead_tup > 1000
 ORDER BY n_dead_tup DESC;
 ```
@@ -159,9 +159,9 @@ SELECT
     vacuum_completed,
     vacuum_cancelled,
     (vacuum_started - vacuum_completed) AS vacuum_failures
-FROM pg_stat_user_tables
-WHERE (vacuum_started - vacuum_completed) > 0
-ORDER BY vacuum_failures DESC;
+FROM pg_stat_user_tables  
+WHERE (vacuum_started - vacuum_completed) > 0  
+ORDER BY vacuum_failures DESC;  
 ```
 
 **Interprétation** :
@@ -180,8 +180,8 @@ SELECT
     ROUND(100.0 * n_dead_tup / NULLIF(n_live_tup + n_dead_tup, 0), 2) AS dead_ratio,
     autovacuum_count,
     last_autovacuum
-FROM pg_stat_user_tables
-WHERE n_dead_tup > 10000
+FROM pg_stat_user_tables  
+WHERE n_dead_tup > 10000  
   AND autovacuum_count > 0
 ORDER BY dead_ratio DESC;
 ```
@@ -205,9 +205,9 @@ SELECT
     autoanalyze_count,
     last_autoanalyze,
     AGE(NOW(), last_autoanalyze) AS time_since_last_analyze
-FROM pg_stat_user_tables
-WHERE n_live_tup > 100000
-ORDER BY time_since_last_analyze DESC NULLS FIRST;
+FROM pg_stat_user_tables  
+WHERE n_live_tup > 100000  
+ORDER BY time_since_last_analyze DESC NULLS FIRST;  
 ```
 
 **Interprétation** :
@@ -228,9 +228,9 @@ SELECT
         WHEN autovacuum_count > vacuum_count THEN 'Mostly automatic'
         ELSE 'Mixed'
     END AS vacuum_strategy
-FROM pg_stat_user_tables
-WHERE vacuum_count + autovacuum_count > 0
-ORDER BY (vacuum_count + autovacuum_count) DESC;
+FROM pg_stat_user_tables  
+WHERE vacuum_count + autovacuum_count > 0  
+ORDER BY (vacuum_count + autovacuum_count) DESC;  
 ```
 
 **Interprétation** :
@@ -260,8 +260,8 @@ SELECT
     vacuum_completed,
     (vacuum_started - vacuum_completed) AS incomplete_vacuums,
     last_autovacuum
-FROM pg_stat_user_tables
-WHERE relname = 'ma_table_problematique';
+FROM pg_stat_user_tables  
+WHERE relname = 'ma_table_problematique';  
 ```
 
 **Analyse** :
@@ -270,8 +270,8 @@ WHERE relname = 'ma_table_problematique';
 - Si `n_dead_tup` reste élevé : Les VACUUM ne sont pas efficaces (transactions longues)
 
 **Actions possibles** :
-1. Identifier et terminer les transactions longues
-2. Augmenter la fréquence d'autovacuum
+1. Identifier et terminer les transactions longues  
+2. Augmenter la fréquence d'autovacuum  
 3. Exécuter un VACUUM FULL (attention : bloque la table)
 
 ### Scénario 2 : Requêtes lentes après des modifications massives
@@ -289,9 +289,9 @@ SELECT
     autoanalyze_count,
     last_autoanalyze,
     AGE(NOW(), last_autoanalyze) AS time_since_analyze
-FROM pg_stat_user_tables
-WHERE n_tup_ins + n_tup_upd + n_tup_del > 100000
-ORDER BY time_since_analyze DESC NULLS FIRST;
+FROM pg_stat_user_tables  
+WHERE n_tup_ins + n_tup_upd + n_tup_del > 100000  
+ORDER BY time_since_analyze DESC NULLS FIRST;  
 ```
 
 **Analyse** :
@@ -318,8 +318,8 @@ SELECT
     last_autovacuum,
     vacuum_started - vacuum_completed AS pending_vacuums,
     autovacuum_count
-FROM pg_stat_user_tables
-WHERE last_autovacuum < NOW() - INTERVAL '1 day'
+FROM pg_stat_user_tables  
+WHERE last_autovacuum < NOW() - INTERVAL '1 day'  
   AND n_dead_tup > 10000;
 
 -- Vérifier les processus en cours
@@ -330,8 +330,8 @@ SELECT
     state,
     query,
     query_start
-FROM pg_stat_activity
-WHERE query LIKE '%autovacuum%'
+FROM pg_stat_activity  
+WHERE query LIKE '%autovacuum%'  
   AND state != 'idle';
 ```
 
@@ -371,9 +371,9 @@ SELECT
          AND n_live_tup > 50000 THEN '🟠 Warning'
         ELSE '🟢 OK'
     END AS analyze_status
-FROM pg_stat_user_tables
-WHERE n_live_tup > 1000
-ORDER BY dead_ratio DESC NULLS LAST;
+FROM pg_stat_user_tables  
+WHERE n_live_tup > 1000  
+ORDER BY dead_ratio DESC NULLS LAST;  
 ```
 
 ### Requête 2 : Alertes pour VACUUM qui échouent
@@ -387,9 +387,9 @@ SELECT
     vacuum_completed,
     vacuum_cancelled,
     (vacuum_started - vacuum_completed) AS stuck_vacuums
-FROM pg_stat_user_tables
-WHERE (vacuum_started - vacuum_completed) > 3  -- Plus de 3 échecs
-ORDER BY stuck_vacuums DESC;
+FROM pg_stat_user_tables  
+WHERE (vacuum_started - vacuum_completed) > 3  -- Plus de 3 échecs  
+ORDER BY stuck_vacuums DESC;  
 ```
 
 **Utilisation** : Configurez cette requête dans votre outil de monitoring (Grafana, Prometheus) pour générer une alerte automatique.
@@ -424,9 +424,9 @@ SELECT
         WHEN hours_since_vacuum > 168 THEN 'Check autovacuum config'
         ELSE 'OK'
     END AS recommendation
-FROM table_health
-WHERE dead_ratio > 10 OR hours_since_vacuum > 48
-ORDER BY dead_ratio DESC;
+FROM table_health  
+WHERE dead_ratio > 10 OR hours_since_vacuum > 48  
+ORDER BY dead_ratio DESC;  
 ```
 
 ---
@@ -475,13 +475,13 @@ Voici un exemple de script shell pour vérifier la santé quotidienne :
 #!/bin/bash
 # check_vacuum_health.sh
 
-psql -U postgres -d ma_base -t -c "
-SELECT
+psql -U postgres -d ma_base -t -c "  
+SELECT  
     relname,
     n_dead_tup,
     vacuum_started - vacuum_completed AS stuck_vacuums
-FROM pg_stat_user_tables
-WHERE (vacuum_started - vacuum_completed) > 2
+FROM pg_stat_user_tables  
+WHERE (vacuum_started - vacuum_completed) > 2  
    OR (n_dead_tup > 10000 AND last_autovacuum < NOW() - INTERVAL '2 days')
 " | while read line; do
     if [ ! -z "$line" ]; then
@@ -501,9 +501,9 @@ done
 
 **Ce que vous voyiez** :
 ```sql
-SELECT relname, last_autovacuum, n_dead_tup
-FROM pg_stat_user_tables
-WHERE relname = 'orders';
+SELECT relname, last_autovacuum, n_dead_tup  
+FROM pg_stat_user_tables  
+WHERE relname = 'orders';  
 
   relname  |     last_autovacuum      | n_dead_tup
 -----------+--------------------------+------------
@@ -511,8 +511,8 @@ WHERE relname = 'orders';
 ```
 
 **Vos questions sans réponse** :
-- ❓ Pourquoi `n_dead_tup` est si élevé alors qu'un autovacuum a tourné ?
-- ❓ L'autovacuum a-t-il vraiment terminé ou a-t-il été interrompu ?
+- ❓ Pourquoi `n_dead_tup` est si élevé alors qu'un autovacuum a tourné ?  
+- ❓ L'autovacuum a-t-il vraiment terminé ou a-t-il été interrompu ?  
 - ❓ Combien de fois l'autovacuum a-t-il tenté de nettoyer cette table ?
 
 #### Après PostgreSQL 18
@@ -527,8 +527,8 @@ SELECT
     vacuum_started,
     vacuum_completed,
     vacuum_cancelled
-FROM pg_stat_user_tables
-WHERE relname = 'orders';
+FROM pg_stat_user_tables  
+WHERE relname = 'orders';  
 
   relname  |     last_autovacuum      | n_dead_tup | autovacuum_count | vacuum_started | vacuum_completed | vacuum_cancelled
 -----------+--------------------------+------------+------------------+----------------+------------------+-----------------
@@ -536,9 +536,9 @@ WHERE relname = 'orders';
 ```
 
 **Vos réponses** :
-- ✅ L'autovacuum a été lancé 23 fois mais n'a terminé que 15 fois
-- ✅ 8 VACUUM ont été annulés ou interrompus
-- ✅ Cela explique pourquoi `n_dead_tup` reste élevé malgré `last_autovacuum` récent
+- ✅ L'autovacuum a été lancé 23 fois mais n'a terminé que 15 fois  
+- ✅ 8 VACUUM ont été annulés ou interrompus  
+- ✅ Cela explique pourquoi `n_dead_tup` reste élevé malgré `last_autovacuum` récent  
 - ✅ Action : Investiguer pourquoi les VACUUM sont interrompus (locks, timeout)
 
 **Gain** : Diagnostic passant de plusieurs heures à quelques minutes !
@@ -577,8 +577,8 @@ last_autoanalyze < NOW() - INTERVAL '7 days' AND n_live_tup > 100000
 ### 3. Corréler avec d'autres métriques
 
 Les statistiques de VACUUM/ANALYZE sont plus utiles quand combinées avec :
-- `pg_stat_activity` : Transactions longues bloquant le VACUUM
-- `pg_locks` : Verrous empêchant les opérations de maintenance
+- `pg_stat_activity` : Transactions longues bloquant le VACUUM  
+- `pg_locks` : Verrous empêchant les opérations de maintenance  
 - `pg_stat_statements` : Requêtes lentes après des statistiques obsolètes
 - Métriques système : I/O, CPU pendant les VACUUM
 
@@ -615,8 +615,8 @@ autovacuum_max_workers = 4;  -- Par défaut: 3
 
 Ces métriques sont puissantes, mais elles ne capturent pas tout :
 
-1. **Pourquoi un VACUUM a été annulé** : Vous voyez qu'il y a eu annulation, mais pas la cause (lock, timeout, erreur)
-2. **Détails de performance** : Combien de temps a duré chaque VACUUM, combien de pages ont été nettoyées
+1. **Pourquoi un VACUUM a été annulé** : Vous voyez qu'il y a eu annulation, mais pas la cause (lock, timeout, erreur)  
+2. **Détails de performance** : Combien de temps a duré chaque VACUUM, combien de pages ont été nettoyées  
 3. **Historique détaillé** : Les compteurs sont cumulatifs, pas horodatés individuellement
 
 Pour ces informations, vous devez consulter :
@@ -653,8 +653,8 @@ La collecte de ces statistiques a un **impact négligeable** sur les performance
 ### Vue synthétique pour monitoring quotidien
 
 ```sql
-CREATE OR REPLACE VIEW v_vacuum_analyze_health AS
-SELECT
+CREATE OR REPLACE VIEW v_vacuum_analyze_health AS  
+SELECT  
     schemaname,
     relname,
     n_live_tup,
@@ -673,13 +673,13 @@ SELECT
     last_autoanalyze,
     EXTRACT(EPOCH FROM (NOW() - last_autovacuum))/3600 AS hours_since_vacuum,
     EXTRACT(EPOCH FROM (NOW() - last_autoanalyze))/3600 AS hours_since_analyze
-FROM pg_stat_user_tables
-WHERE n_live_tup > 100;
+FROM pg_stat_user_tables  
+WHERE n_live_tup > 100;  
 
 -- Utilisation
-SELECT * FROM v_vacuum_analyze_health
-WHERE vacuum_failures > 0 OR dead_pct > 10
-ORDER BY dead_pct DESC;
+SELECT * FROM v_vacuum_analyze_health  
+WHERE vacuum_failures > 0 OR dead_pct > 10  
+ORDER BY dead_pct DESC;  
 ```
 
 ### Identifier les tables "à risque"
@@ -698,17 +698,17 @@ SELECT
         WHEN hours_since_vacuum > 48 THEN 'INFO - Check autovacuum config'
         ELSE 'OK'
     END AS risk_level
-FROM pg_stat_user_tables
-WHERE n_live_tup > 1000
-ORDER BY n_dead_tup DESC
-LIMIT 20;
+FROM pg_stat_user_tables  
+WHERE n_live_tup > 1000  
+ORDER BY n_dead_tup DESC  
+LIMIT 20;  
 ```
 
 ### Export pour monitoring externe (format JSON)
 
 ```sql
-SELECT json_agg(t)
-FROM (
+SELECT json_agg(t)  
+FROM (  
     SELECT
         schemaname,
         relname,
@@ -741,18 +741,18 @@ Les nouvelles statistiques de VACUUM et ANALYZE dans PostgreSQL 18 représentent
 
 ### Points clés à retenir
 
-1. **VACUUM** récupère l'espace et prévient le wraparound
-2. **ANALYZE** met à jour les statistiques pour le planificateur
-3. Les nouvelles colonnes (`vacuum_started`, `vacuum_completed`, `vacuum_cancelled`) donnent une visibilité sans précédent
-4. Surveillez le ratio `vacuum_failures / vacuum_started` et le `dead_ratio`
+1. **VACUUM** récupère l'espace et prévient le wraparound  
+2. **ANALYZE** met à jour les statistiques pour le planificateur  
+3. Les nouvelles colonnes (`vacuum_started`, `vacuum_completed`, `vacuum_cancelled`) donnent une visibilité sans précédent  
+4. Surveillez le ratio `vacuum_failures / vacuum_started` et le `dead_ratio`  
 5. Combinez ces métriques avec `pg_stat_activity` et `pg_locks` pour un diagnostic complet
 
 ### Prochaines étapes recommandées
 
-1. **Mettre à jour vers PostgreSQL 18** dès que possible pour bénéficier de ces statistiques
-2. **Créer des vues personnalisées** adaptées à vos besoins de monitoring
-3. **Configurer des alertes** dans votre outil de monitoring (Grafana, Prometheus, Datadog)
-4. **Former l'équipe** à interpréter ces nouvelles métriques
+1. **Mettre à jour vers PostgreSQL 18** dès que possible pour bénéficier de ces statistiques  
+2. **Créer des vues personnalisées** adaptées à vos besoins de monitoring  
+3. **Configurer des alertes** dans votre outil de monitoring (Grafana, Prometheus, Datadog)  
+4. **Former l'équipe** à interpréter ces nouvelles métriques  
 5. **Documenter** les seuils d'alerte spécifiques à votre contexte
 
 ### Ressources complémentaires

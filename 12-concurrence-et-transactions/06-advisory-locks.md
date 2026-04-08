@@ -8,9 +8,9 @@ Dans les sections précédentes, nous avons découvert les verrous automatiques 
 
 Mais imaginez ces situations :
 
-- 🔧 Vous voulez empêcher deux workers de traiter le **même job** en même temps
-- 📊 Vous voulez qu'un seul processus génère un **rapport mensuel** à la fois
-- 🔄 Vous voulez coordonner des **tâches distribuées** entre plusieurs serveurs
+- 🔧 Vous voulez empêcher deux workers de traiter le **même job** en même temps  
+- 📊 Vous voulez qu'un seul processus génère un **rapport mensuel** à la fois  
+- 🔄 Vous voulez coordonner des **tâches distribuées** entre plusieurs serveurs  
 - 🎯 Vous voulez implémenter un **mutex** (exclusion mutuelle) pour une ressource métier
 
 Pour ces cas, les verrous automatiques de PostgreSQL ne suffisent pas. Vous avez besoin de **verrous applicatifs** : les **Advisory Locks**.
@@ -38,8 +38,8 @@ Pour ces cas, les verrous automatiques de PostgreSQL ne suffisent pas. Vous avez
 **Verrous normaux** :
 
 ```sql
-BEGIN;
-UPDATE produits SET stock = stock - 1 WHERE id = 123;
+BEGIN;  
+UPDATE produits SET stock = stock - 1 WHERE id = 123;  
 -- PostgreSQL pose AUTOMATIQUEMENT un verrou sur cette ligne
 -- Toute autre transaction doit attendre pour modifier cette ligne
 COMMIT;
@@ -109,8 +109,8 @@ PostgreSQL fournit plusieurs fonctions pour gérer les Advisory Locks :
 
 **Syntaxe** :
 ```sql
-SELECT pg_advisory_lock(key bigint);
-SELECT pg_advisory_lock(key1 integer, key2 integer);
+SELECT pg_advisory_lock(key bigint);  
+SELECT pg_advisory_lock(key1 integer, key2 integer);  
 ```
 
 **Comportement** :
@@ -163,8 +163,8 @@ SELECT pg_try_advisory_lock(42);
 -- Résultat : false (déjà pris, n'attend pas)
 
 -- Session 2 peut réagir
-DO $$
-BEGIN
+DO $$  
+BEGIN  
     IF pg_try_advisory_lock(42) THEN
         RAISE NOTICE 'Verrou obtenu, je traite';
         -- [Traitement]
@@ -183,19 +183,19 @@ SELECT pg_advisory_unlock(key bigint) RETURNS boolean;
 ```
 
 **Retour** :
-- **true** : Verrou libéré avec succès
+- **true** : Verrou libéré avec succès  
 - **false** : Vous ne déteniez pas ce verrou (erreur)
 
 **Important** : Vous devez libérer **exactement** le nombre de fois que vous avez acquis le verrou.
 
 ```sql
 -- Acquérir deux fois
-SELECT pg_advisory_lock(42);
-SELECT pg_advisory_lock(42);  -- Même session, même verrou
+SELECT pg_advisory_lock(42);  
+SELECT pg_advisory_lock(42);  -- Même session, même verrou  
 
 -- Libérer deux fois
-SELECT pg_advisory_unlock(42);  -- true
-SELECT pg_advisory_unlock(42);  -- true
+SELECT pg_advisory_unlock(42);  -- true  
+SELECT pg_advisory_unlock(42);  -- true  
 
 -- Libérer une troisième fois
 SELECT pg_advisory_unlock(42);  -- false (plus détenu)
@@ -206,7 +206,7 @@ SELECT pg_advisory_unlock(42);  -- false (plus détenu)
 Les verrous partagés permettent à **plusieurs sessions** d'obtenir le même verrou, mais bloquent les verrous **exclusifs**.
 
 **Fonctions** :
-- `pg_advisory_lock_shared(key)` : Obtenir un verrou partagé
+- `pg_advisory_lock_shared(key)` : Obtenir un verrou partagé  
 - `pg_advisory_unlock_shared(key)` : Libérer un verrou partagé
 
 **Exemple** :
@@ -288,9 +288,9 @@ END IF;
 
 ### Pourquoi préférer les verrous transactionnels ?
 
-- ✅ **Pas de fuite de verrous** : Libération automatique garantie
-- ✅ **Plus simple** : Pas besoin de gérer la libération manuellement
-- ✅ **Plus sûr** : En cas d'erreur, pas de verrou orphelin
+- ✅ **Pas de fuite de verrous** : Libération automatique garantie  
+- ✅ **Plus simple** : Pas besoin de gérer la libération manuellement  
+- ✅ **Plus sûr** : En cas d'erreur, pas de verrou orphelin  
 - ✅ **Recommandé** pour la plupart des cas d'usage
 
 ⚠️ **Limitation** : Ne convient pas si vous avez besoin d'un verrou qui persiste entre plusieurs transactions.
@@ -354,8 +354,8 @@ SELECT pg_advisory_xact_lock(
 
 ```sql
 -- Chaque worker exécute ceci en boucle
-DO $$
-DECLARE
+DO $$  
+DECLARE  
     job_record RECORD;
 BEGIN
     -- Trouver un job en attente
@@ -403,8 +403,8 @@ END $$;
 
 ```sql
 -- Script de génération de rapport
-DO $$
-DECLARE
+DO $$  
+DECLARE  
     report_id INTEGER := 202401;  -- Janvier 2024
 BEGIN
     -- Essayer d'obtenir le verrou
@@ -439,8 +439,8 @@ END $$;
 
 ```sql
 -- Fonction de migration avec protection
-CREATE OR REPLACE FUNCTION run_migration_v2() RETURNS void AS $$
-DECLARE
+CREATE OR REPLACE FUNCTION run_migration_v2() RETURNS void AS $$  
+DECLARE  
     migration_id BIGINT := 20240115001;  -- ID unique de la migration
 BEGIN
     -- Essayer d'obtenir le verrou (non-bloquant)
@@ -488,9 +488,9 @@ SELECT run_migration_v2();
 **Solution** :
 
 ```sql
-CREATE OR REPLACE FUNCTION check_rate_limit(user_id INTEGER, max_requests INTEGER)
-RETURNS boolean AS $$
-DECLARE
+CREATE OR REPLACE FUNCTION check_rate_limit(user_id INTEGER, max_requests INTEGER)  
+RETURNS boolean AS $$  
+DECLARE  
     lock_key BIGINT;
     current_count INTEGER;
 BEGIN
@@ -536,9 +536,9 @@ SELECT check_rate_limit(42, 10);  -- true ou false
 **Solution** :
 
 ```sql
-CREATE OR REPLACE FUNCTION try_become_leader(worker_id INTEGER)
-RETURNS boolean AS $$
-DECLARE
+CREATE OR REPLACE FUNCTION try_become_leader(worker_id INTEGER)  
+RETURNS boolean AS $$  
+DECLARE  
     leader_lock_key BIGINT := 999999;  -- ID fixe pour le rôle de leader
 BEGIN
     IF pg_try_advisory_lock(leader_lock_key) THEN
@@ -583,9 +583,9 @@ SELECT
     mode,
     granted,
     fastpath
-FROM pg_locks
-WHERE locktype = 'advisory'
-ORDER BY pid;
+FROM pg_locks  
+WHERE locktype = 'advisory'  
+ORDER BY pid;  
 ```
 
 **Résultat exemple** :
@@ -593,8 +593,8 @@ ORDER BY pid;
 ```
 locktype | classid | objid | objsubid | pid   | mode        | granted
 ---------|---------|-------|----------|-------|-------------|--------
-advisory | 0       | 42    | 1        | 12345 | ExclusiveLock | t
-advisory | 0       | 100   | 1        | 12346 | ShareLock     | t
+advisory | 0       | 42    | 1        | 12345 | ExclusiveLock | t  
+advisory | 0       | 100   | 1        | 12346 | ShareLock     | t  
 ```
 
 ### Identifier les Advisory Locks par session
@@ -612,9 +612,9 @@ SELECT
     a.client_addr,
     a.query_start,
     a.state
-FROM pg_locks l
-JOIN pg_stat_activity a ON l.pid = a.pid
-WHERE l.locktype = 'advisory';
+FROM pg_locks l  
+JOIN pg_stat_activity a ON l.pid = a.pid  
+WHERE l.locktype = 'advisory';  
 ```
 
 ### Trouver qui bloque qui (Advisory Locks)
@@ -626,14 +626,14 @@ SELECT
     blocking.pid AS blocking_pid,
     blocking_activity.usename AS blocking_user,
     blocked.objid AS lock_key
-FROM pg_locks blocked
-JOIN pg_stat_activity blocked_activity ON blocked_activity.pid = blocked.pid
-JOIN pg_locks blocking ON blocking.objid = blocked.objid
+FROM pg_locks blocked  
+JOIN pg_stat_activity blocked_activity ON blocked_activity.pid = blocked.pid  
+JOIN pg_locks blocking ON blocking.objid = blocked.objid  
     AND blocking.locktype = blocked.locktype
     AND blocking.pid != blocked.pid
     AND blocking.granted = true
-JOIN pg_stat_activity blocking_activity ON blocking_activity.pid = blocking.pid
-WHERE blocked.locktype = 'advisory'
+JOIN pg_stat_activity blocking_activity ON blocking_activity.pid = blocking.pid  
+WHERE blocked.locktype = 'advisory'  
   AND NOT blocked.granted;
 ```
 
@@ -655,8 +655,8 @@ SELECT pg_terminate_backend(12345);
 
 ```sql
 -- ✅ BON : Libération automatique
-BEGIN;
-SELECT pg_advisory_xact_lock(42);
+BEGIN;  
+SELECT pg_advisory_xact_lock(42);  
 -- ...
 COMMIT;  -- Verrou libéré automatiquement
 
@@ -671,13 +671,13 @@ SELECT pg_advisory_unlock(42);
 
 ```sql
 -- ❌ MAUVAIS : Magic numbers
-SELECT pg_advisory_lock(42);
-SELECT pg_advisory_lock(123);
+SELECT pg_advisory_lock(42);  
+SELECT pg_advisory_lock(123);  
 -- Que représentent ces nombres ?
 
 -- ✅ BON : Constantes nommées
-DO $$
-DECLARE
+DO $$  
+DECLARE  
     LOCK_MONTHLY_REPORT CONSTANT BIGINT := 1000001;
     LOCK_DAILY_SYNC CONSTANT BIGINT := 1000002;
 BEGIN
@@ -712,8 +712,8 @@ SET lock_timeout = '30s';
 
 BEGIN;
 -- Si le verrou n'est pas disponible en 30s, erreur
-SELECT pg_advisory_xact_lock(42);
-COMMIT;
+SELECT pg_advisory_xact_lock(42);  
+COMMIT;  
 ```
 
 ### 5. Toujours libérer dans un bloc EXCEPTION
@@ -721,8 +721,8 @@ COMMIT;
 Pour les verrous de session :
 
 ```sql
-DO $$
-BEGIN
+DO $$  
+BEGIN  
     -- Obtenir le verrou
     PERFORM pg_advisory_lock(42);
 
@@ -748,28 +748,28 @@ Même règle que pour les verrous normaux : **ordre cohérent d'acquisition**.
 ```sql
 -- ❌ MAUVAIS : Ordre différent
 -- Transaction A
-SELECT pg_advisory_lock(1);
-SELECT pg_advisory_lock(2);
+SELECT pg_advisory_lock(1);  
+SELECT pg_advisory_lock(2);  
 
 -- Transaction B
-SELECT pg_advisory_lock(2);  -- Ordre inversé !
-SELECT pg_advisory_lock(1);
+SELECT pg_advisory_lock(2);  -- Ordre inversé !  
+SELECT pg_advisory_lock(1);  
 
 -- ✅ BON : Toujours le même ordre
 -- Transaction A
-SELECT pg_advisory_lock(1);
-SELECT pg_advisory_lock(2);
+SELECT pg_advisory_lock(1);  
+SELECT pg_advisory_lock(2);  
 
 -- Transaction B
-SELECT pg_advisory_lock(1);  -- Même ordre
-SELECT pg_advisory_lock(2);
+SELECT pg_advisory_lock(1);  -- Même ordre  
+SELECT pg_advisory_lock(2);  
 ```
 
 ### 7. Implémenter un retry avec backoff
 
 ```python
-import time
-import psycopg2
+import time  
+import psycopg2  
 
 def execute_with_advisory_lock(conn, lock_key, operation, max_retries=5):
     """
@@ -836,8 +836,8 @@ CREATE OR REPLACE FUNCTION acquire_lock_with_ttl(
     p_acquirer VARCHAR(100),
     p_ttl_seconds INTEGER DEFAULT 300
 )
-RETURNS boolean AS $$
-BEGIN
+RETURNS boolean AS $$  
+BEGIN  
     -- Nettoyer les verrous expirés
     DELETE FROM lock_registry
     WHERE lock_key = p_lock_key
@@ -875,8 +875,8 @@ CREATE OR REPLACE FUNCTION acquire_semaphore(
     p_key VARCHAR(100),
     p_max INTEGER
 )
-RETURNS boolean AS $$
-DECLARE
+RETURNS boolean AS $$  
+DECLARE  
     v_lock_key BIGINT;
 BEGIN
     -- Utiliser un advisory lock pour protéger le compteur
@@ -909,9 +909,9 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE OR REPLACE FUNCTION release_semaphore(p_key VARCHAR(100))
-RETURNS void AS $$
-DECLARE
+CREATE OR REPLACE FUNCTION release_semaphore(p_key VARCHAR(100))  
+RETURNS void AS $$  
+DECLARE  
     v_lock_key BIGINT;
 BEGIN
     v_lock_key := hashtext(p_key);
@@ -926,10 +926,10 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Utilisation : max 3 workers simultanés
-SELECT acquire_semaphore('api_heavy_task', 3);  -- true
-SELECT acquire_semaphore('api_heavy_task', 3);  -- true
-SELECT acquire_semaphore('api_heavy_task', 3);  -- true
-SELECT acquire_semaphore('api_heavy_task', 3);  -- false (limite atteinte)
+SELECT acquire_semaphore('api_heavy_task', 3);  -- true  
+SELECT acquire_semaphore('api_heavy_task', 3);  -- true  
+SELECT acquire_semaphore('api_heavy_task', 3);  -- true  
+SELECT acquire_semaphore('api_heavy_task', 3);  -- false (limite atteinte)  
 
 -- Libérer
 SELECT release_semaphore('api_heavy_task');
@@ -948,9 +948,9 @@ CREATE TABLE task_queue (
     locked_by VARCHAR(100)
 );
 
-CREATE OR REPLACE FUNCTION dequeue_task(worker_id VARCHAR(100))
-RETURNS TABLE(task_id INTEGER, task_data JSONB) AS $$
-DECLARE
+CREATE OR REPLACE FUNCTION dequeue_task(worker_id VARCHAR(100))  
+RETURNS TABLE(task_id INTEGER, task_data JSONB) AS $$  
+DECLARE  
     v_task RECORD;
 BEGIN
     -- Trouver la prochaine tâche
@@ -980,11 +980,11 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Worker récupère une tâche
-BEGIN;
-SELECT * FROM dequeue_task('worker-1');
+BEGIN;  
+SELECT * FROM dequeue_task('worker-1');  
 -- Traiter la tâche
-UPDATE task_queue SET status = 'completed' WHERE task_id = ...;
-COMMIT;
+UPDATE task_queue SET status = 'completed' WHERE task_id = ...;  
+COMMIT;  
 ```
 
 ---
@@ -1001,16 +1001,16 @@ COMMIT;
 
 **Quand utiliser Advisory Locks** :
 
-- ✅ Vos workers sont tous connectés à la même base PostgreSQL
-- ✅ Vous voulez une solution simple sans dépendance externe
-- ✅ La performance est importante (pas de latence réseau)
+- ✅ Vos workers sont tous connectés à la même base PostgreSQL  
+- ✅ Vous voulez une solution simple sans dépendance externe  
+- ✅ La performance est importante (pas de latence réseau)  
 - ✅ Vous gérez des jobs, reports, migrations
 
 **Quand NE PAS utiliser Advisory Locks** :
 
-- ❌ Coordination entre services qui n'utilisent pas PostgreSQL
-- ❌ Architecture microservices avec bases séparées
-- ❌ Besoin de locks qui survivent à la perte de connexion DB
+- ❌ Coordination entre services qui n'utilisent pas PostgreSQL  
+- ❌ Architecture microservices avec bases séparées  
+- ❌ Besoin de locks qui survivent à la perte de connexion DB  
 - ❌ Locks inter-datacenter (géo-distribution)
 
 ---
@@ -1033,11 +1033,11 @@ SELECT * FROM pg_locks WHERE locktype = 'advisory';
 **Solution** :
 ```sql
 -- Identifier le PID
-SELECT pid, objid, age(NOW(), query_start)
-FROM pg_locks l
-JOIN pg_stat_activity a ON l.pid = a.pid
-WHERE locktype = 'advisory'
-ORDER BY query_start;
+SELECT pid, objid, age(NOW(), query_start)  
+FROM pg_locks l  
+JOIN pg_stat_activity a ON l.pid = a.pid  
+WHERE locktype = 'advisory'  
+ORDER BY query_start;  
 
 -- Tuer la session si nécessaire
 SELECT pg_terminate_backend(pid_problematique);
@@ -1063,9 +1063,9 @@ ERROR: deadlock detected
 **Diagnostic** :
 ```sql
 -- Trop de sessions en attente d'advisory locks ?
-SELECT COUNT(*)
-FROM pg_locks
-WHERE locktype = 'advisory' AND NOT granted;
+SELECT COUNT(*)  
+FROM pg_locks  
+WHERE locktype = 'advisory' AND NOT granted;  
 ```
 
 **Solution** :
@@ -1088,25 +1088,25 @@ WHERE locktype = 'advisory' AND NOT granted;
 
 ### Checklist de bonnes pratiques
 
-- ✅ Utiliser les verrous **transactionnels** (`xact`) par défaut
-- ✅ Documenter vos **schémas de clés** (table de registry)
-- ✅ Utiliser des **constantes nommées** pour les clés
-- ✅ Gérer les **exceptions** avec libération garantie
-- ✅ Acquérir les verrous dans un **ordre cohérent**
-- ✅ Définir des **timeouts** appropriés
-- ✅ **Monitorer** les advisory locks actifs
-- ✅ Utiliser `pg_try_advisory_lock` pour éviter les blocages
-- ✅ Implémenter des **retries** avec backoff exponentiel
+- ✅ Utiliser les verrous **transactionnels** (`xact`) par défaut  
+- ✅ Documenter vos **schémas de clés** (table de registry)  
+- ✅ Utiliser des **constantes nommées** pour les clés  
+- ✅ Gérer les **exceptions** avec libération garantie  
+- ✅ Acquérir les verrous dans un **ordre cohérent**  
+- ✅ Définir des **timeouts** appropriés  
+- ✅ **Monitorer** les advisory locks actifs  
+- ✅ Utiliser `pg_try_advisory_lock` pour éviter les blocages  
+- ✅ Implémenter des **retries** avec backoff exponentiel  
 - ✅ **Tester** vos scénarios de concurrence
 
 ### Erreurs à éviter
 
-- ❌ Oublier de libérer un verrou de session
-- ❌ Utiliser des magic numbers sans documentation
-- ❌ Acquérir des verrous dans un ordre incohérent
-- ❌ Garder un verrou pendant des opérations longues
-- ❌ Ne pas gérer les exceptions/erreurs
-- ❌ Ne pas monitorer les verrous actifs
+- ❌ Oublier de libérer un verrou de session  
+- ❌ Utiliser des magic numbers sans documentation  
+- ❌ Acquérir des verrous dans un ordre incohérent  
+- ❌ Garder un verrou pendant des opérations longues  
+- ❌ Ne pas gérer les exceptions/erreurs  
+- ❌ Ne pas monitorer les verrous actifs  
 - ❌ Utiliser les advisory locks pour des use cases inappropriés
 
 ---
@@ -1115,24 +1115,24 @@ WHERE locktype = 'advisory' AND NOT granted;
 
 Les **Advisory Locks** sont un outil puissant pour implémenter une **coordination applicative** au sein de PostgreSQL. Ils vous permettent de :
 
-- ✅ Coordonner des workers distribués simplement
-- ✅ Implémenter des mutex et sémaphores
-- ✅ Garantir l'unicité d'exécution de tâches
-- ✅ Créer des files d'attente robustes
+- ✅ Coordonner des workers distribués simplement  
+- ✅ Implémenter des mutex et sémaphores  
+- ✅ Garantir l'unicité d'exécution de tâches  
+- ✅ Créer des files d'attente robustes  
 - ✅ Gérer des élections de leader
 
 **Avantages** :
-- 🚀 Performance excellente (pas de latence réseau)
-- 🔧 Simplicité (pas de dépendance externe)
-- 🛡️ Atomicité garantie par PostgreSQL
+- 🚀 Performance excellente (pas de latence réseau)  
+- 🔧 Simplicité (pas de dépendance externe)  
+- 🛡️ Atomicité garantie par PostgreSQL  
 - 🔍 Observable (pg_locks)
 
 **Points clés à retenir** :
 
-1. Les advisory locks sont **consultatifs** : c'est à vous de les respecter
-2. Préférez les verrous **transactionnels** (libération automatique)
-3. Documentez votre **schéma de clés**
-4. Suivez les **bonnes pratiques** (ordre, timeouts, monitoring)
+1. Les advisory locks sont **consultatifs** : c'est à vous de les respecter  
+2. Préférez les verrous **transactionnels** (libération automatique)  
+3. Documentez votre **schéma de clés**  
+4. Suivez les **bonnes pratiques** (ordre, timeouts, monitoring)  
 5. C'est idéal pour coordonner des **workers PostgreSQL**, moins pour l'inter-service
 
 Dans les prochaines sections du chapitre 12, nous continuerons à explorer la concurrence dans PostgreSQL, en abordant des sujets comme les stratégies de résolution de conflits et les patterns de haute concurrence.
@@ -1141,13 +1141,13 @@ Dans les prochaines sections du chapitre 12, nous continuerons à explorer la co
 
 **Points clés à retenir :**
 
-- 🔑 Advisory Locks = verrous applicatifs personnalisés
-- 🔑 Deux types : session (manuel) et transactionnel (auto-libération)
-- 🔑 pg_advisory_xact_lock() = version recommandée (transactionnel)
-- 🔑 Parfait pour job queues, élections de leader, migrations
-- 🔑 Clés numériques : utilisez des constantes documentées
-- 🔑 Monitoring via pg_locks WHERE locktype = 'advisory'
-- 🔑 Respecter l'ordre d'acquisition pour éviter les deadlocks
+- 🔑 Advisory Locks = verrous applicatifs personnalisés  
+- 🔑 Deux types : session (manuel) et transactionnel (auto-libération)  
+- 🔑 pg_advisory_xact_lock() = version recommandée (transactionnel)  
+- 🔑 Parfait pour job queues, élections de leader, migrations  
+- 🔑 Clés numériques : utilisez des constantes documentées  
+- 🔑 Monitoring via pg_locks WHERE locktype = 'advisory'  
+- 🔑 Respecter l'ordre d'acquisition pour éviter les deadlocks  
 - 🔑 Alternative simple à Redis/ZooKeeper pour la coordination DB
 
 ⏭️ [Stratégies de détection et résolution des deadlocks](/12-concurrence-et-transactions/07-strategies-detection-resolution-deadlocks.md)

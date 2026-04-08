@@ -7,7 +7,7 @@
 Une **transaction** est un concept fondamental dans les bases de données. Elle représente une unité de travail complète qui regroupe une ou plusieurs opérations SQL. Le principe essentiel d'une transaction est simple : **toutes les opérations réussissent ensemble, ou aucune ne réussit**.
 
 Imaginez que vous effectuez un virement bancaire entre deux comptes. Cette opération nécessite deux étapes :
-1. Retirer de l'argent du compte A
+1. Retirer de l'argent du compte A  
 2. Ajouter cet argent au compte B
 
 Si la première étape réussit mais que la seconde échoue, l'argent disparaît dans la nature ! C'est là qu'intervient la transaction : elle garantit que soit les deux opérations s'effectuent, soit aucune.
@@ -35,7 +35,7 @@ Lorsque vous démarrez explicitement une transaction avec `BEGIN`, PostgreSQL en
 ### 3. État terminé
 
 Une transaction se termine de deux façons possibles :
-- **Validation (COMMIT)** : Les modifications sont enregistrées définitivement
+- **Validation (COMMIT)** : Les modifications sont enregistrées définitivement  
 - **Annulation (ROLLBACK)** : Les modifications sont complètement abandonnées
 
 ---
@@ -53,8 +53,8 @@ BEGIN;
 
 **Variantes équivalentes :**
 ```sql
-START TRANSACTION;  -- Équivalent à BEGIN
-BEGIN WORK;         -- Autre variante
+START TRANSACTION;  -- Équivalent à BEGIN  
+BEGIN WORK;         -- Autre variante  
 ```
 
 **Analogie :** `BEGIN` est comme ouvrir un brouillon dans un éditeur de texte. Vous pouvez faire toutes les modifications que vous voulez, mais elles ne sont pas encore "sauvegardées" de manière permanente.
@@ -66,17 +66,17 @@ La commande `COMMIT` valide toutes les modifications effectuées dans la transac
 ```sql
 BEGIN;
 
-INSERT INTO produits (nom, prix) VALUES ('Ordinateur', 999.99);
-UPDATE stock SET quantite = quantite - 1 WHERE produit = 'Ordinateur';
+INSERT INTO produits (nom, prix) VALUES ('Ordinateur', 999.99);  
+UPDATE stock SET quantite = quantite - 1 WHERE produit = 'Ordinateur';  
 
 COMMIT;  -- Toutes les modifications sont maintenant permanentes
 ```
 
 **Variantes équivalentes :**
 ```sql
-COMMIT WORK;        -- Équivalent à COMMIT
-END TRANSACTION;    -- Autre variante
-END;               -- Forme courte
+COMMIT WORK;        -- Équivalent à COMMIT  
+END TRANSACTION;    -- Autre variante  
+END;               -- Forme courte  
 ```
 
 **Analogie :** `COMMIT` est comme cliquer sur "Sauvegarder" dans votre éditeur. Vos modifications deviennent définitives.
@@ -98,8 +98,8 @@ ROLLBACK;  -- Annule la suppression, la commande 123 est toujours là
 
 **Variantes équivalentes :**
 ```sql
-ROLLBACK WORK;     -- Équivalent à ROLLBACK
-ABORT;             -- Autre variante
+ROLLBACK WORK;     -- Équivalent à ROLLBACK  
+ABORT;             -- Autre variante  
 ```
 
 **Analogie :** `ROLLBACK` est comme cliquer sur "Annuler" ou "Ne pas sauvegarder" dans votre éditeur. Toutes vos modifications depuis l'ouverture du brouillon sont perdues.
@@ -127,22 +127,22 @@ SAVEPOINT nom_du_point;
 BEGIN;
 
 -- Opération 1 : Créer un utilisateur
-INSERT INTO utilisateurs (nom, email)
-VALUES ('Bob', 'bob@example.com');
+INSERT INTO utilisateurs (nom, email)  
+VALUES ('Bob', 'bob@example.com');  
 
 -- Créer un point de sauvegarde après cette opération
 SAVEPOINT after_user_creation;
 
 -- Opération 2 : Créer l'adresse de l'utilisateur
-INSERT INTO adresses (user_id, ville, rue)
-VALUES (123, 'Paris', '10 rue de la Paix');
+INSERT INTO adresses (user_id, ville, rue)  
+VALUES (123, 'Paris', '10 rue de la Paix');  
 
 -- Créer un second point de sauvegarde
 SAVEPOINT after_address_creation;
 
 -- Opération 3 : Créer les préférences (oups, erreur!)
-INSERT INTO preferences (user_id, langue)
-VALUES (999, 'fr');  -- user_id incorrect !
+INSERT INTO preferences (user_id, langue)  
+VALUES (999, 'fr');  -- user_id incorrect !  
 
 -- Annuler uniquement depuis le dernier savepoint
 ROLLBACK TO SAVEPOINT after_address_creation;
@@ -150,8 +150,8 @@ ROLLBACK TO SAVEPOINT after_address_creation;
 -- Mais l'utilisateur et son adresse sont toujours dans la transaction
 
 -- Corriger l'erreur
-INSERT INTO preferences (user_id, langue)
-VALUES (123, 'fr');  -- Maintenant c'est correct
+INSERT INTO preferences (user_id, langue)  
+VALUES (123, 'fr');  -- Maintenant c'est correct  
 
 COMMIT;  -- Valider toutes les opérations (sauf celle qu'on a annulée)
 ```
@@ -227,8 +227,8 @@ Voici le cycle de vie d'une transaction avec toutes ses possibilités :
 -- Virement bancaire de 100€ du compte A vers le compte B
 BEGIN;
 
-UPDATE comptes SET solde = solde - 100 WHERE id = 'A';
-UPDATE comptes SET solde = solde + 100 WHERE id = 'B';
+UPDATE comptes SET solde = solde - 100 WHERE id = 'A';  
+UPDATE comptes SET solde = solde + 100 WHERE id = 'B';  
 
 COMMIT;  -- Les deux opérations sont validées ensemble
 ```
@@ -252,23 +252,23 @@ ROLLBACK;  -- Annuler immédiatement !
 BEGIN;
 
 -- Créer une commande
-INSERT INTO commandes (client_id, date)
-VALUES (42, CURRENT_DATE)
-RETURNING id AS commande_id;  -- Supposons que ça retourne 100
+INSERT INTO commandes (client_id, date)  
+VALUES (42, CURRENT_DATE)  
+RETURNING id AS commande_id;  -- Supposons que ça retourne 100  
 
 SAVEPOINT commande_creee;
 
 -- Ajouter des produits à la commande
-INSERT INTO lignes_commande (commande_id, produit_id, quantite)
-VALUES
+INSERT INTO lignes_commande (commande_id, produit_id, quantite)  
+VALUES  
   (100, 1, 5),
   (100, 2, 3);
 
 SAVEPOINT produits_ajoutes;
 
 -- Appliquer une réduction (mais le code de promo est invalide !)
-UPDATE commandes SET reduction = 20
-WHERE id = 100 AND code_promo = 'INVALID';
+UPDATE commandes SET reduction = 20  
+WHERE id = 100 AND code_promo = 'INVALID';  
 
 -- Aucune ligne n'a été mise à jour, le code promo est invalide
 -- On annule juste la tentative de réduction
@@ -286,8 +286,8 @@ Très utile pour tester des requêtes en production sans risque :
 BEGIN;
 
 -- Tester une requête de mise à jour massive
-UPDATE utilisateurs SET statut = 'inactif'
-WHERE derniere_connexion < CURRENT_DATE - INTERVAL '1 year';
+UPDATE utilisateurs SET statut = 'inactif'  
+WHERE derniere_connexion < CURRENT_DATE - INTERVAL '1 year';  
 
 -- Vérifier le nombre de lignes affectées
 -- Si le résultat semble correct, vous pouvez COMMIT
@@ -341,8 +341,8 @@ ROLLBACK;  -- Obligatoire pour sortir de l'état d'erreur
 
 Une transaction qui reste ouverte trop longtemps peut causer des problèmes :
 
-- **Verrous maintenus** : Les lignes modifiées restent verrouillées, bloquant potentiellement d'autres utilisateurs
-- **Bloat de la base** : PostgreSQL ne peut pas nettoyer les anciennes versions des lignes
+- **Verrous maintenus** : Les lignes modifiées restent verrouillées, bloquant potentiellement d'autres utilisateurs  
+- **Bloat de la base** : PostgreSQL ne peut pas nettoyer les anciennes versions des lignes  
 - **Risque de wraparound** : Dans les cas extrêmes, problèmes avec les identifiants de transaction
 
 **Bonne pratique :** Gardez vos transactions aussi courtes que possible. Faites-les, validez-les, et passez à autre chose.
@@ -407,9 +407,9 @@ Certains outils (comme psql) ont un mode autocommit activé par défaut. Dans ce
 
 Les savepoints sont utiles dans ces situations :
 
-- **Opérations en plusieurs étapes** où certaines étapes peuvent échouer sans invalider toute l'opération
-- **Boucles et traitements par lots** pour pouvoir continuer en cas d'erreur sur un élément
-- **Logique métier complexe** avec plusieurs chemins de décision
+- **Opérations en plusieurs étapes** où certaines étapes peuvent échouer sans invalider toute l'opération  
+- **Boucles et traitements par lots** pour pouvoir continuer en cas d'erreur sur un élément  
+- **Logique métier complexe** avec plusieurs chemins de décision  
 - **Intégration avec des langages procéduraux** (PL/pgSQL) pour une gestion d'erreur fine
 
 ---
@@ -429,10 +429,10 @@ Dans le prochain chapitre (12.2), nous approfondirons le mécanisme **MVCC (Mult
 
 **Points clés à retenir :**
 
-- ✅ Une transaction = une unité de travail atomique (tout ou rien)
-- ✅ `BEGIN` démarre, `COMMIT` valide, `ROLLBACK` annule
-- ✅ Les `SAVEPOINT` permettent des annulations partielles
-- ✅ Gardez vos transactions courtes et gérez toujours les erreurs
+- ✅ Une transaction = une unité de travail atomique (tout ou rien)  
+- ✅ `BEGIN` démarre, `COMMIT` valide, `ROLLBACK` annule  
+- ✅ Les `SAVEPOINT` permettent des annulations partielles  
+- ✅ Gardez vos transactions courtes et gérez toujours les erreurs  
 - ✅ PostgreSQL entre en "état d'erreur" après une erreur SQL dans une transaction
 
 ⏭️ [MVCC (Multiversion Concurrency Control) : Le cœur de PostgreSQL](/12-concurrence-et-transactions/02-mvcc-multiversion-concurrency.md)

@@ -50,14 +50,14 @@ DELETE FROM produits WHERE id <= 5000;
 
 Dans l'index `idx_produits_prix` :
 ```
-Avant DELETE :
-Page 1 : [Prix: 10 → TID1, Prix: 20 → TID2, Prix: 30 → TID3, ...]
-Page 2 : [Prix: 50 → TID5, Prix: 60 → TID6, ...]
+Avant DELETE :  
+Page 1 : [Prix: 10 → TID1, Prix: 20 → TID2, Prix: 30 → TID3, ...]  
+Page 2 : [Prix: 50 → TID5, Prix: 60 → TID6, ...]  
 ...
 
-Après DELETE :
-Page 1 : [VIDE, VIDE, VIDE, Prix: 40 → TID4, ...]   ← Espaces morts
-Page 2 : [VIDE, Prix: 60 → TID6, ...]                ← Espaces morts
+Après DELETE :  
+Page 1 : [VIDE, VIDE, VIDE, Prix: 40 → TID4, ...]   ← Espaces morts  
+Page 2 : [VIDE, Prix: 60 → TID6, ...]                ← Espaces morts  
 ...
 ```
 
@@ -82,16 +82,16 @@ UPDATE produits SET prix = prix * 1.1 WHERE id > 5000;
 Avec le temps, les entrées d'index sont insérées dans un ordre non optimal :
 
 ```
-Index B-Tree idéal (séquentiel) :
-Page 1 : [1, 2, 3, 4]
-Page 2 : [5, 6, 7, 8]
-Page 3 : [9, 10, 11, 12]
+Index B-Tree idéal (séquentiel) :  
+Page 1 : [1, 2, 3, 4]  
+Page 2 : [5, 6, 7, 8]  
+Page 3 : [9, 10, 11, 12]  
 
-Index fragmenté (après beaucoup d'INSERT/DELETE) :
-Page 1 : [1, 7, 12]
-Page 2 : [2, 9]
-Page 3 : [3, 4, 5, 6, 8, 10, 11]   ← Page "chaude" (overused)
-Page 4 : []                         ← Page vide
+Index fragmenté (après beaucoup d'INSERT/DELETE) :  
+Page 1 : [1, 7, 12]  
+Page 2 : [2, 9]  
+Page 3 : [3, 4, 5, 6, 8, 10, 11]   ← Page "chaude" (overused)  
+Page 4 : []                         ← Page vide  
 ```
 
 **Conséquence** : Plus de pages à lire pour la même quantité de données = performances dégradées.
@@ -118,9 +118,9 @@ Page 4 : []                         ← Page vide
 SELECT
     indexrelname AS index_name,
     pg_size_pretty(pg_relation_size(indexrelid)) AS index_size
-FROM pg_stat_user_indexes
-WHERE schemaname = 'public'
-ORDER BY pg_relation_size(indexrelid) DESC;
+FROM pg_stat_user_indexes  
+WHERE schemaname = 'public'  
+ORDER BY pg_relation_size(indexrelid) DESC;  
 ```
 
 **Résultat avec bloat** :
@@ -151,8 +151,8 @@ SELECT * FROM pgstatindex('idx_produits_prix');
 ```
 
 **Colonnes importantes** :
-- `avg_leaf_density` : Densité moyenne des pages feuilles (idéal > 90%)
-- `leaf_fragmentation` : Fragmentation (idéal < 10%)
+- `avg_leaf_density` : Densité moyenne des pages feuilles (idéal > 90%)  
+- `leaf_fragmentation` : Fragmentation (idéal < 10%)  
 - `deleted_pages` : Pages mortes
 
 **Calcul du bloat** :
@@ -160,8 +160,8 @@ SELECT * FROM pgstatindex('idx_produits_prix');
 SELECT
     indexrelname,
     round(100 * (1 - avg_leaf_density / 100), 1) AS bloat_pct
-FROM pgstatindex('idx_produits_prix')
-JOIN pg_stat_user_indexes ON indexrelid = indexrelid;
+FROM pgstatindex('idx_produits_prix')  
+JOIN pg_stat_user_indexes ON indexrelid = indexrelid;  
 ```
 
 **Seuil d'alerte** :
@@ -180,8 +180,8 @@ SELECT
     idx_scan AS index_scans,
     idx_tup_read AS tuples_read,
     idx_tup_fetch AS tuples_fetched
-FROM pg_stat_user_indexes
-WHERE schemaname = 'public'
+FROM pg_stat_user_indexes  
+WHERE schemaname = 'public'  
   AND idx_scan > 0
 ORDER BY pg_relation_size(indexrelid) DESC;
 ```
@@ -195,8 +195,8 @@ ORDER BY pg_relation_size(indexrelid) DESC;
 ### 2.1. Qu'est-ce que REINDEX ?
 
 `REINDEX` reconstruit complètement un index en :
-1. Créant un **nouvel index** depuis zéro
-2. Supprimant l'**ancien index** bloaté
+1. Créant un **nouvel index** depuis zéro  
+2. Supprimant l'**ancien index** bloaté  
 3. Renommant le nouvel index
 
 **Résultat** : Index compact, sans bloat, performant.
@@ -275,12 +275,12 @@ REINDEX INDEX CONCURRENTLY idx_produits_prix;
 ```
 
 **Avantages** :
-- ✅ Aucun blocage des écritures (ou très bref, < 1 seconde)
+- ✅ Aucun blocage des écritures (ou très bref, < 1 seconde)  
 - ✅ Application reste disponible
 
 **Inconvénients** :
-- ❌ Plus lent (2-3× le temps d'un REINDEX normal)
-- ❌ Consomme plus d'espace disque temporairement (2× l'index)
+- ❌ Plus lent (2-3× le temps d'un REINDEX normal)  
+- ❌ Consomme plus d'espace disque temporairement (2× l'index)  
 - ❌ Ne peut pas être exécuté dans une transaction
 
 **Comparaison** :
@@ -325,9 +325,9 @@ REINDEX INDEX CONCURRENTLY idx_orders_date;
 
 -- En cas d'échec (rare), l'index reste INVALID
 -- Vérifier :
-SELECT indexname, indexdef
-FROM pg_indexes
-WHERE indexname LIKE '%_ccnew';
+SELECT indexname, indexdef  
+FROM pg_indexes  
+WHERE indexname LIKE '%_ccnew';  
 
 -- Nettoyer si nécessaire
 DROP INDEX CONCURRENTLY idx_orders_date_ccnew;
@@ -337,15 +337,15 @@ DROP INDEX CONCURRENTLY idx_orders_date_ccnew;
 
 ✅ **Cas d'usage** :
 
-1. **Bloat > 30-40%** : Performances dégradées
-2. **Après DELETE massif** : Beaucoup d'entrées mortes
-3. **Après corruption** : Erreur "index corrupted"
+1. **Bloat > 30-40%** : Performances dégradées  
+2. **Après DELETE massif** : Beaucoup d'entrées mortes  
+3. **Après corruption** : Erreur "index corrupted"  
 4. **Optimisation périodique** : Maintenance préventive (ex: mensuelle)
 
 ❌ **Quand NE PAS utiliser** :
 
-1. **Index récemment créé** : Aucun bloat
-2. **Bloat < 20%** : Coût/bénéfice défavorable
+1. **Index récemment créé** : Aucun bloat  
+2. **Bloat < 20%** : Coût/bénéfice défavorable  
 3. **Système en surcharge** : REINDEX consomme CPU/I/O
 
 ---
@@ -368,11 +368,11 @@ VACUUM ANALYZE produits;
 
 **Effet sur un index** :
 ```
-Avant VACUUM :
-Index : 100 MB (60 MB actifs, 40 MB morts)
+Avant VACUUM :  
+Index : 100 MB (60 MB actifs, 40 MB morts)  
 
-Après VACUUM :
-Index : 100 MB (60 MB actifs, 40 MB réutilisables)
+Après VACUUM :  
+Index : 100 MB (60 MB actifs, 40 MB réutilisables)  
         ↑ Taille inchangée sur disque !
 ```
 
@@ -393,23 +393,23 @@ VACUUM FULL produits;
 
 **Effet** :
 ```
-Avant VACUUM FULL :
-Table : 500 MB (300 MB actifs, 200 MB morts)
-Index : 100 MB (60 MB actifs, 40 MB morts)
+Avant VACUUM FULL :  
+Table : 500 MB (300 MB actifs, 200 MB morts)  
+Index : 100 MB (60 MB actifs, 40 MB morts)  
 
-Après VACUUM FULL :
-Table : 300 MB (300 MB actifs, 0 MB morts)  ← Taille réduite !
-Index : 60 MB (60 MB actifs, 0 MB morts)    ← Taille réduite !
+Après VACUUM FULL :  
+Table : 300 MB (300 MB actifs, 0 MB morts)  ← Taille réduite !  
+Index : 60 MB (60 MB actifs, 0 MB morts)    ← Taille réduite !  
 ```
 
 **Avantages** :
-- ✅ Récupération réelle d'espace disque
+- ✅ Récupération réelle d'espace disque  
 - ✅ Table et index compacts (comme neufs)
 
 **Inconvénients** :
-- ❌ Verrou exclusif (bloque tout)
-- ❌ Très lent (réécrit tout)
-- ❌ Nécessite 2× l'espace disque temporairement
+- ❌ Verrou exclusif (bloque tout)  
+- ❌ Très lent (réécrit tout)  
+- ❌ Nécessite 2× l'espace disque temporairement  
 - ❌ Ne peut pas être interrompu (CTRL+C ne fonctionne pas)
 
 ### 3.3. Comparaison
@@ -426,8 +426,8 @@ Index : 60 MB (60 MB actifs, 0 MB morts)    ← Taille réduite !
 
 ✅ **Cas d'usage rares** :
 
-1. **Espace disque critique** : Disque à 95% plein
-2. **Après DELETE massif** : 70-80% des lignes supprimées
+1. **Espace disque critique** : Disque à 95% plein  
+2. **Après DELETE massif** : 70-80% des lignes supprimées  
 3. **Réduction de table** : Table historique purgée
 
 **Exemple** :
@@ -472,8 +472,8 @@ pg_repack -d mabase
 ```
 
 **Avantages sur VACUUM FULL** :
-- ✅ Pas de verrou exclusif (< 1 seconde)
-- ✅ Application reste disponible
+- ✅ Pas de verrou exclusif (< 1 seconde)  
+- ✅ Application reste disponible  
 - ✅ Récupération réelle d'espace disque
 
 **Inconvénient** :
@@ -489,25 +489,25 @@ PostgreSQL exécute automatiquement `VACUUM` via le processus **autovacuum**.
 
 **Configuration** (dans `postgresql.conf`) :
 ```ini
-autovacuum = on                              # Activé par défaut
-autovacuum_max_workers = 3                   # 3 workers simultanés
-autovacuum_naptime = 1min                    # Vérification toutes les 1 minute
+autovacuum = on                              # Activé par défaut  
+autovacuum_max_workers = 3                   # 3 workers simultanés  
+autovacuum_naptime = 1min                    # Vérification toutes les 1 minute  
 
 # Seuils de déclenchement
-autovacuum_vacuum_threshold = 50             # Nombre minimum de tuples modifiés
-autovacuum_vacuum_scale_factor = 0.2         # 20% de la table modifiée
+autovacuum_vacuum_threshold = 50             # Nombre minimum de tuples modifiés  
+autovacuum_vacuum_scale_factor = 0.2         # 20% de la table modifiée  
 
 # Seuils pour ANALYZE
-autovacuum_analyze_threshold = 50
-autovacuum_analyze_scale_factor = 0.1        # 10% de la table modifiée
+autovacuum_analyze_threshold = 50  
+autovacuum_analyze_scale_factor = 0.1        # 10% de la table modifiée  
 ```
 
 **Formule de déclenchement** :
 ```
 Seuil VACUUM = autovacuum_vacuum_threshold + (autovacuum_vacuum_scale_factor × nb_tuples)
 
-Exemple : Table de 100,000 lignes
-Seuil = 50 + (0.2 × 100,000) = 20,050 modifications
+Exemple : Table de 100,000 lignes  
+Seuil = 50 + (0.2 × 100,000) = 20,050 modifications  
 ```
 
 Autovacuum se déclenche après 20,050 INSERT/UPDATE/DELETE.
@@ -525,9 +525,9 @@ autovacuum_vacuum_max_threshold = 100000000   # 100 millions (défaut: infini)
 
 **Exemple** :
 ```
-Table : 10 milliards de lignes
-Seuil PG ≤ 17 : 50 + (0.2 × 10,000,000,000) = 2,000,000,050 (2 milliards !)
-Seuil PG 18  : min(2,000,000,050, 100,000,000) = 100,000,000 (100 millions)
+Table : 10 milliards de lignes  
+Seuil PG ≤ 17 : 50 + (0.2 × 10,000,000,000) = 2,000,000,050 (2 milliards !)  
+Seuil PG 18  : min(2,000,000,050, 100,000,000) = 100,000,000 (100 millions)  
 ```
 
 → Autovacuum se déclenche plus fréquemment sur grandes tables.
@@ -556,13 +556,13 @@ SELECT
     last_autovacuum,
     n_mod_since_analyze,
     autovacuum_count
-FROM pg_stat_user_tables
-WHERE schemaname = 'public'
-ORDER BY n_mod_since_analyze DESC;
+FROM pg_stat_user_tables  
+WHERE schemaname = 'public'  
+ORDER BY n_mod_since_analyze DESC;  
 ```
 
 **Indicateurs** :
-- `last_autovacuum IS NULL` → Autovacuum jamais exécuté (problème !)
+- `last_autovacuum IS NULL` → Autovacuum jamais exécuté (problème !)  
 - `n_mod_since_analyze` élevé → Table "en retard"
 
 **Requête : Tables nécessitant VACUUM** :
@@ -573,14 +573,14 @@ SELECT
     n_live_tup,
     n_dead_tup,
     round(100.0 * n_dead_tup / nullif(n_live_tup + n_dead_tup, 0), 1) AS dead_pct
-FROM pg_stat_user_tables
-WHERE n_dead_tup > 1000
+FROM pg_stat_user_tables  
+WHERE n_dead_tup > 1000  
   AND n_live_tup > 0
 ORDER BY dead_pct DESC;
 ```
 
 **Seuil d'alerte** :
-- `dead_pct > 20%` → Autovacuum en retard, forcer VACUUM manuel
+- `dead_pct > 20%` → Autovacuum en retard, forcer VACUUM manuel  
 - `dead_pct > 50%` → Critique, VACUUM immédiat
 
 ---
@@ -604,8 +604,8 @@ ORDER BY dead_pct DESC;
 **Script de maintenance hebdomadaire** :
 ```sql
 -- Créer une fonction de maintenance
-CREATE OR REPLACE FUNCTION maintenance_hebdomadaire() RETURNS void AS $$
-BEGIN
+CREATE OR REPLACE FUNCTION maintenance_hebdomadaire() RETURNS void AS $$  
+BEGIN  
     -- 1. Analyser les tables critiques
     ANALYZE clients;
     ANALYZE commandes;
@@ -647,10 +647,10 @@ SELECT
     indexrelname,
     pg_size_pretty(pg_relation_size(indexrelid)) AS size,
     idx_scan
-FROM pg_stat_user_indexes
-WHERE schemaname = 'public'
-ORDER BY pg_relation_size(indexrelid) DESC
-LIMIT 10;
+FROM pg_stat_user_indexes  
+WHERE schemaname = 'public'  
+ORDER BY pg_relation_size(indexrelid) DESC  
+LIMIT 10;  
 
 -- 2. Analyser un index suspect avec pgstatindex
 SELECT * FROM pgstatindex('idx_commandes_date');
@@ -688,8 +688,8 @@ SELECT
     wait_event,
     state,
     query
-FROM pg_stat_activity
-WHERE wait_event IS NOT NULL;
+FROM pg_stat_activity  
+WHERE wait_event IS NOT NULL;  
 ```
 
 4. **Planifier aux heures creuses** (même si non bloquant)
@@ -706,10 +706,10 @@ SELECT
     schemaname,
     tablename,
     pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename)) AS total_size
-FROM pg_tables
-WHERE schemaname = 'public'
-ORDER BY pg_total_relation_size(schemaname||'.'||tablename) DESC
-LIMIT 5;
+FROM pg_tables  
+WHERE schemaname = 'public'  
+ORDER BY pg_total_relation_size(schemaname||'.'||tablename) DESC  
+LIMIT 5;  
 ```
 
 **Étape 2** : Purger les données anciennes
@@ -746,9 +746,9 @@ SELECT
     indexrelname,
     round(100 * (1 - avg_leaf_density / 100), 1) AS bloat_pct,
     pg_size_pretty(pg_relation_size(indexrelid)) AS index_size
-FROM pg_stat_user_indexes
-CROSS JOIN LATERAL pgstatindex(indexrelid)
-WHERE schemaname = 'public'
+FROM pg_stat_user_indexes  
+CROSS JOIN LATERAL pgstatindex(indexrelid)  
+WHERE schemaname = 'public'  
   AND (1 - avg_leaf_density / 100) > 0.3  -- Bloat > 30%
 ORDER BY bloat_pct DESC;
 ```
@@ -766,8 +766,8 @@ SELECT
     NOW() - last_autovacuum AS time_since_vacuum,
     n_dead_tup,
     n_live_tup
-FROM pg_stat_user_tables
-WHERE last_autovacuum IS NULL
+FROM pg_stat_user_tables  
+WHERE last_autovacuum IS NULL  
    OR NOW() - last_autovacuum > INTERVAL '7 days'
 ORDER BY n_dead_tup DESC;
 ```
@@ -783,10 +783,10 @@ SELECT
     pg_size_pretty(pg_relation_size(indexrelid)) AS current_size,
     idx_scan AS scans,
     idx_tup_read AS reads
-FROM pg_stat_user_indexes
-WHERE schemaname = 'public'
-ORDER BY pg_relation_size(indexrelid) DESC
-LIMIT 10;
+FROM pg_stat_user_indexes  
+WHERE schemaname = 'public'  
+ORDER BY pg_relation_size(indexrelid) DESC  
+LIMIT 10;  
 ```
 
 **Alerte** : Si taille augmente anormalement (croissance > 20% par mois).
@@ -798,9 +798,9 @@ LIMIT 10;
 #### Prometheus + Grafana
 
 **Métriques exportées** (via postgres_exporter) :
-- `pg_stat_user_indexes_idx_blks_read`
-- `pg_stat_user_indexes_idx_blks_hit`
-- `pg_stat_user_tables_n_dead_tup`
+- `pg_stat_user_indexes_idx_blks_read`  
+- `pg_stat_user_indexes_idx_blks_hit`  
+- `pg_stat_user_tables_n_dead_tup`  
 - `pg_database_size_bytes`
 
 **Dashboard exemple** : https://grafana.com/grafana/dashboards/9628
@@ -817,8 +817,8 @@ Service SaaS spécialisé PostgreSQL :
 ```python
 import psycopg2
 
-conn = psycopg2.connect("dbname=mabase")
-cur = conn.cursor()
+conn = psycopg2.connect("dbname=mabase")  
+cur = conn.cursor()  
 
 # Vérifier le bloat
 cur.execute("""
@@ -841,12 +841,12 @@ for index, bloat in cur.fetchall():
 
 ### 7.1. Checklist de Maintenance
 
-- [ ] Autovacuum activé et configuré correctement
-- [ ] Monitoring du bloat (hebdomadaire)
-- [ ] REINDEX planifié (mensuel) sur index critiques
-- [ ] Alerting configuré (bloat > 40%, dead_tup élevé)
-- [ ] Documentation des fenêtres de maintenance
-- [ ] Tests de REINDEX CONCURRENTLY avant production
+- [ ] Autovacuum activé et configuré correctement  
+- [ ] Monitoring du bloat (hebdomadaire)  
+- [ ] REINDEX planifié (mensuel) sur index critiques  
+- [ ] Alerting configuré (bloat > 40%, dead_tup élevé)  
+- [ ] Documentation des fenêtres de maintenance  
+- [ ] Tests de REINDEX CONCURRENTLY avant production  
 - [ ] Backup avant VACUUM FULL
 
 ### 7.2. Optimisations de Configuration
@@ -895,8 +895,8 @@ df -h
 
 **Solution** : Toujours faire
 ```sql
-REINDEX INDEX idx_name;
-ANALYZE table_name;
+REINDEX INDEX idx_name;  
+ANALYZE table_name;  
 ```
 
 ❌ **Piège 4** : REINDEX pendant heures de pointe
@@ -1016,10 +1016,10 @@ psql -d mabase -c "
 
 ## Ressources pour Aller Plus Loin
 
-- **Documentation PostgreSQL** : [REINDEX](https://www.postgresql.org/docs/current/sql-reindex.html), [VACUUM](https://www.postgresql.org/docs/current/sql-vacuum.html)
-- **Extension pgstattuple** : [Documentation](https://www.postgresql.org/docs/current/pgstattuple.html)
-- **pg_repack** : [GitHub](https://github.com/reorg/pg_repack)
-- **Section précédente** : 13.10. Prepared Statements et performance
+- **Documentation PostgreSQL** : [REINDEX](https://www.postgresql.org/docs/current/sql-reindex.html), [VACUUM](https://www.postgresql.org/docs/current/sql-vacuum.html)  
+- **Extension pgstattuple** : [Documentation](https://www.postgresql.org/docs/current/pgstattuple.html)  
+- **pg_repack** : [GitHub](https://github.com/reorg/pg_repack)  
+- **Section précédente** : 13.10. Prepared Statements et performance  
 - **Section suivante** : Chapitre 14. Observabilité et Monitoring
 
 ---

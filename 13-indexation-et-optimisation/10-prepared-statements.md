@@ -9,8 +9,8 @@ Les **Prepared Statements** (requêtes préparées) sont un mécanisme puissant 
 **Analogie** : Imaginez une recette de cuisine. Au lieu de relire toute la recette à chaque fois que vous cuisinez (planification), vous la mémorisez une fois (prepare), puis vous la suivez en changeant juste les ingrédients (paramètres). C'est beaucoup plus rapide !
 
 **Avantages** :
-- ⚡ **Performance** : Évite la re-planification des requêtes répétitives
-- 🔒 **Sécurité** : Protection contre les injections SQL
+- ⚡ **Performance** : Évite la re-planification des requêtes répétitives  
+- 🔒 **Sécurité** : Protection contre les injections SQL  
 - 📉 **Réduction de la charge CPU** : Moins de travail pour le planificateur
 
 **Prérequis** : Avoir lu les sections 13.6 (Planificateur) et 13.7 (EXPLAIN ANALYZE).
@@ -70,9 +70,9 @@ PREPARE get_client (INT) AS
     SELECT * FROM clients WHERE id = $1;
 
 -- Phase 2 : Exécutions (multiples)
-EXECUTE get_client(12345);   -- Première exécution
-EXECUTE get_client(67890);   -- Réutilise le plan !
-EXECUTE get_client(11111);   -- Réutilise le plan !
+EXECUTE get_client(12345);   -- Première exécution  
+EXECUTE get_client(67890);   -- Réutilise le plan !  
+EXECUTE get_client(11111);   -- Réutilise le plan !  
 ```
 
 **Gain** : Parse et Rewrite ne sont faits qu'**une seule fois** !
@@ -98,8 +98,8 @@ PREPARE get_client (INT) AS
 ```
 
 **Explication** :
-- `get_client` : Nom du prepared statement
-- `(INT)` : Type du paramètre (optionnel mais recommandé)
+- `get_client` : Nom du prepared statement  
+- `(INT)` : Type du paramètre (optionnel mais recommandé)  
 - `$1` : Placeholder pour le premier paramètre
 
 #### Exemple 2 : Plusieurs paramètres
@@ -111,7 +111,7 @@ PREPARE search_orders (INT, DATE) AS
 ```
 
 **Paramètres** :
-- `$1` : Premier paramètre (INT = client_id)
+- `$1` : Premier paramètre (INT = client_id)  
 - `$2` : Deuxième paramètre (DATE = date_commande)
 
 #### Exemple 3 : INSERT
@@ -140,16 +140,16 @@ EXECUTE nom_statement (valeur1, valeur2, ...);
 **Exemples** :
 ```sql
 -- Utilisation de get_client
-EXECUTE get_client(12345);
-EXECUTE get_client(67890);
+EXECUTE get_client(12345);  
+EXECUTE get_client(67890);  
 
 -- Utilisation de search_orders
-EXECUTE search_orders(12345, '2024-01-01');
-EXECUTE search_orders(67890, '2024-06-01');
+EXECUTE search_orders(12345, '2024-01-01');  
+EXECUTE search_orders(67890, '2024-06-01');  
 
 -- Utilisation de insert_client
-EXECUTE insert_client('Dupont', 'dupont@example.com', 35);
-EXECUTE insert_client('Martin', 'martin@example.com', 42);
+EXECUTE insert_client('Dupont', 'dupont@example.com', 35);  
+EXECUTE insert_client('Martin', 'martin@example.com', 42);  
 ```
 
 ### 2.3. DEALLOCATE : Supprimer un Prepared Statement
@@ -279,10 +279,10 @@ PostgreSQL doit faire un choix stratégique :
 PostgreSQL utilise une **stratégie adaptative** :
 
 **Algorithme** :
-1. **5 premières exécutions** : Custom Plans (plans spécifiques)
-2. Après 5 exécutions : Calcul du **coût moyen** des custom plans
-3. **6ème exécution** : Création d'un Generic Plan
-4. **Comparaison** : Generic Plan vs coût moyen des custom plans
+1. **5 premières exécutions** : Custom Plans (plans spécifiques)  
+2. Après 5 exécutions : Calcul du **coût moyen** des custom plans  
+3. **6ème exécution** : Création d'un Generic Plan  
+4. **Comparaison** : Generic Plan vs coût moyen des custom plans  
 5. **Décision** :
    - Si Generic Plan ≤ coût moyen × 1.1 → Utiliser Generic Plan
    - Sinon → Continuer avec Custom Plans
@@ -305,10 +305,10 @@ EXECUTE get_clients_by_city('Paris');
 -- Plan : Index Scan (coût estimé: 100)
 
 -- 2ème à 5ème : Custom Plans
-EXECUTE get_clients_by_city('Lyon');
-EXECUTE get_clients_by_city('Marseille');
-EXECUTE get_clients_by_city('Toulouse');
-EXECUTE get_clients_by_city('Nice');
+EXECUTE get_clients_by_city('Lyon');  
+EXECUTE get_clients_by_city('Marseille');  
+EXECUTE get_clients_by_city('Toulouse');  
+EXECUTE get_clients_by_city('Nice');  
 -- Coût moyen : 100
 
 -- 6ème exécution : Generic Plan créé
@@ -326,8 +326,8 @@ EXECUTE get_clients_by_city('Lille');
 ### 4.4. Exemple : Distribution Inégale
 
 **Scénario** : Table commandes avec 1 million de lignes, répartition très inégale par statut :
-- 'shipped' : 950,000 lignes (95%)
-- 'pending' : 45,000 lignes (4.5%)
+- 'shipped' : 950,000 lignes (95%)  
+- 'pending' : 45,000 lignes (4.5%)  
 - 'cancelled' : 5,000 lignes (0.5%)
 
 ```sql
@@ -340,11 +340,11 @@ PREPARE get_orders_by_status (TEXT) AS
 **Exécutions** :
 ```sql
 -- 1ère à 5ème : Custom Plans
-EXECUTE get_orders_by_status('pending');    -- Custom Plan : Index Scan (coût: 200)
-EXECUTE get_orders_by_status('cancelled');  -- Custom Plan : Index Scan (coût: 50)
-EXECUTE get_orders_by_status('pending');    -- Custom Plan : Index Scan (coût: 200)
-EXECUTE get_orders_by_status('cancelled');  -- Custom Plan : Index Scan (coût: 50)
-EXECUTE get_orders_by_status('pending');    -- Custom Plan : Index Scan (coût: 200)
+EXECUTE get_orders_by_status('pending');    -- Custom Plan : Index Scan (coût: 200)  
+EXECUTE get_orders_by_status('cancelled');  -- Custom Plan : Index Scan (coût: 50)  
+EXECUTE get_orders_by_status('pending');    -- Custom Plan : Index Scan (coût: 200)  
+EXECUTE get_orders_by_status('cancelled');  -- Custom Plan : Index Scan (coût: 50)  
+EXECUTE get_orders_by_status('pending');    -- Custom Plan : Index Scan (coût: 200)  
 -- Coût moyen : (200 + 50 + 200 + 50 + 200) / 5 = 140
 
 -- 6ème exécution : Generic Plan créé
@@ -390,8 +390,8 @@ Index Scan using idx_clients_ville on clients
 -- Forcer l'utilisation immédiate d'un Generic Plan
 SET plan_cache_mode = 'force_generic_plan';
 
-PREPARE stmt AS SELECT * FROM clients WHERE ville = $1;
-EXECUTE stmt('Paris');  -- Utilise Generic Plan dès la 1ère fois
+PREPARE stmt AS SELECT * FROM clients WHERE ville = $1;  
+EXECUTE stmt('Paris');  -- Utilise Generic Plan dès la 1ère fois  
 ```
 
 #### Forcer des Custom Plans
@@ -400,13 +400,13 @@ EXECUTE stmt('Paris');  -- Utilise Generic Plan dès la 1ère fois
 -- Forcer des Custom Plans (jamais de generic)
 SET plan_cache_mode = 'force_custom_plan';
 
-PREPARE stmt AS SELECT * FROM clients WHERE ville = $1;
-EXECUTE stmt('Paris');  -- Custom Plan à chaque fois
+PREPARE stmt AS SELECT * FROM clients WHERE ville = $1;  
+EXECUTE stmt('Paris');  -- Custom Plan à chaque fois  
 ```
 
 **Valeurs de plan_cache_mode** :
-- `auto` (défaut) : Stratégie adaptative (5 custom → décision)
-- `force_generic_plan` : Toujours generic
+- `auto` (défaut) : Stratégie adaptative (5 custom → décision)  
+- `force_generic_plan` : Toujours generic  
 - `force_custom_plan` : Toujours custom
 
 ---
@@ -427,8 +427,8 @@ PREPARE get_user_profile (INT) AS
     SELECT * FROM users WHERE id = $1;
 
 -- Exécuté des milliers de fois
-EXECUTE get_user_profile(12345);
-EXECUTE get_user_profile(67890);
+EXECUTE get_user_profile(12345);  
+EXECUTE get_user_profile(67890);  
 ...
 ```
 
@@ -485,11 +485,11 @@ PreparedStatement stmt = conn.prepareStatement(
 );
 
 // Réutilisation
-stmt.setString(1, "Electronics");
-ResultSet rs = stmt.executeQuery();
+stmt.setString(1, "Electronics");  
+ResultSet rs = stmt.executeQuery();  
 
-stmt.setString(1, "Books");
-rs = stmt.executeQuery();
+stmt.setString(1, "Books");  
+rs = stmt.executeQuery();  
 ```
 
 ### 5.2. Quand NE PAS Utiliser les Prepared Statements
@@ -505,11 +505,11 @@ SELECT
     status,
     COUNT(*),
     AVG(amount)
-FROM orders
-WHERE created_at > '2024-01-01'
+FROM orders  
+WHERE created_at > '2024-01-01'  
   AND country IN ('FR', 'BE', 'CH')
-GROUP BY 1, 2
-ORDER BY 1 DESC, 2;
+GROUP BY 1, 2  
+ORDER BY 1 DESC, 2;  
 ```
 
 **Raison** : Exécutée une seule fois, pas de gain à préparer.
@@ -518,8 +518,8 @@ ORDER BY 1 DESC, 2;
 
 ```python
 # Colonnes et filtres variables
-columns = ['id', 'nom', 'email']  # Variable
-filters = {'ville': 'Paris', 'age': 35}  # Variable
+columns = ['id', 'nom', 'email']  # Variable  
+filters = {'ville': 'Paris', 'age': 35}  # Variable  
 
 # Construction dynamique nécessaire
 query = f"SELECT {', '.join(columns)} FROM clients WHERE ..."
@@ -549,8 +549,8 @@ Si vous savez que les valeurs de paramètres ont des distributions très différ
 PREPARE search (TEXT) AS SELECT * FROM logs WHERE message LIKE $1;
 
 -- Exécutions
-EXECUTE search('%ERROR%');    -- 0.1% des logs → Index Scan optimal
-EXECUTE search('%INFO%');     -- 99% des logs → Seq Scan optimal
+EXECUTE search('%ERROR%');    -- 0.1% des logs → Index Scan optimal  
+EXECUTE search('%INFO%');     -- 99% des logs → Seq Scan optimal  
 
 -- Generic Plan choisirait un compromis suboptimal
 ```
@@ -606,8 +606,8 @@ conn.execute("SET plan_cache_mode = 'force_generic_plan'")
 **Prepared Statements automatiques** :
 
 ```javascript
-const { Client } = require('pg');
-const client = new Client({ database: 'mabase' });
+const { Client } = require('pg');  
+const client = new Client({ database: 'mabase' });  
 
 await client.connect();
 
@@ -633,8 +633,8 @@ const query = {
 await client.query(query);
 
 // Réutilisation (même nom)
-query.values = [67890];
-await client.query(query);
+query.values = [67890];  
+await client.query(query);  
 ```
 
 ### 6.3. Java : JDBC
@@ -650,11 +650,11 @@ PreparedStatement pstmt = conn.prepareStatement(
 );
 
 // Exécutions
-pstmt.setInt(1, 12345);
-ResultSet rs = pstmt.executeQuery();
+pstmt.setInt(1, 12345);  
+ResultSet rs = pstmt.executeQuery();  
 
-pstmt.setInt(1, 67890);
-rs = pstmt.executeQuery();
+pstmt.setInt(1, 67890);  
+rs = pstmt.executeQuery();  
 
 // Nettoyage
 pstmt.close();
@@ -724,10 +724,10 @@ SELECT
     calls,
     mean_exec_time,
     total_exec_time
-FROM pg_stat_statements
-WHERE query LIKE 'EXECUTE%'
-ORDER BY total_exec_time DESC
-LIMIT 10;
+FROM pg_stat_statements  
+WHERE query LIKE 'EXECUTE%'  
+ORDER BY total_exec_time DESC  
+LIMIT 10;  
 ```
 
 ### 7.3. Debugging : Plan Choisi
@@ -760,13 +760,13 @@ Index Scan using idx_clients_id on clients
 PREPARE stmt AS SELECT * FROM commandes WHERE statut = $1;
 
 -- Forcer Custom Plan
-SET plan_cache_mode = 'force_custom_plan';
-EXPLAIN ANALYZE EXECUTE stmt('pending');
+SET plan_cache_mode = 'force_custom_plan';  
+EXPLAIN ANALYZE EXECUTE stmt('pending');  
 -- Noter le temps d'exécution
 
 -- Forcer Generic Plan
-SET plan_cache_mode = 'force_generic_plan';
-EXPLAIN ANALYZE EXECUTE stmt('pending');
+SET plan_cache_mode = 'force_generic_plan';  
+EXPLAIN ANALYZE EXECUTE stmt('pending');  
 -- Comparer le temps
 
 -- Remettre en auto
@@ -823,8 +823,8 @@ for i in range(10000):
 
 ```sql
 -- Préparation avec statistiques obsolètes
-PREPARE stmt AS SELECT * FROM clients WHERE ville = $1;
-EXECUTE stmt('Paris');  -- Generic Plan créé basé sur anciennes stats
+PREPARE stmt AS SELECT * FROM clients WHERE ville = $1;  
+EXECUTE stmt('Paris');  -- Generic Plan créé basé sur anciennes stats  
 
 -- Mise à jour des données (changement de distribution)
 -- Maintenant 95% des clients sont à Paris
@@ -837,8 +837,8 @@ EXECUTE stmt('Paris');  -- Utilise encore l'ancien Generic Plan !
 **Solution** : Re-préparer après ANALYZE significatif
 
 ```sql
-DEALLOCATE stmt;
-PREPARE stmt AS SELECT * FROM clients WHERE ville = $1;
+DEALLOCATE stmt;  
+PREPARE stmt AS SELECT * FROM clients WHERE ville = $1;  
 ```
 
 Ou simplement fermer/rouvrir la session (prepared statements sont liés à la session).
@@ -848,9 +848,9 @@ Ou simplement fermer/rouvrir la session (prepared statements sont liés à la se
 **Attention** : Les prepared statements survivent aux transactions :
 
 ```sql
-BEGIN;
-PREPARE stmt AS SELECT * FROM clients WHERE id = $1;
-ROLLBACK;
+BEGIN;  
+PREPARE stmt AS SELECT * FROM clients WHERE id = $1;  
+ROLLBACK;  
 
 -- Le prepared statement existe encore !
 EXECUTE stmt(12345);  -- ✅ Fonctionne
@@ -884,16 +884,16 @@ EXECUTE stmt(12345);
 
 ❌ **Mauvais** :
 ```sql
-PREPARE s1 AS SELECT ...;
-PREPARE stmt AS SELECT ...;
-PREPARE q AS SELECT ...;
+PREPARE s1 AS SELECT ...;  
+PREPARE stmt AS SELECT ...;  
+PREPARE q AS SELECT ...;  
 ```
 
 ✅ **Bon** :
 ```sql
-PREPARE get_client_by_id AS SELECT ...;
-PREPARE search_orders_by_date AS SELECT ...;
-PREPARE insert_new_user AS INSERT ...;
+PREPARE get_client_by_id AS SELECT ...;  
+PREPARE search_orders_by_date AS SELECT ...;  
+PREPARE insert_new_user AS INSERT ...;  
 ```
 
 ### 9.2. Utiliser les Drivers Modernes
@@ -929,10 +929,10 @@ SELECT
     usename,
     application_name,
     COUNT(*) as nb_prepared
-FROM pg_prepared_statements
-JOIN pg_stat_activity USING (pid)
-GROUP BY pid, usename, application_name
-ORDER BY nb_prepared DESC;
+FROM pg_prepared_statements  
+JOIN pg_stat_activity USING (pid)  
+GROUP BY pid, usename, application_name  
+ORDER BY nb_prepared DESC;  
 ```
 
 **Alerte** : Si nb_prepared > 100 par session → Investiguer (possible fuite).
@@ -945,21 +945,21 @@ ORDER BY nb_prepared DESC;
 import time
 
 # Sans prepared statement
-start = time.time()
-for i in range(1000):
+start = time.time()  
+for i in range(1000):  
     cursor.execute("SELECT * FROM clients WHERE id = %s", (i,))
 duration_without = time.time() - start
 
 # Avec prepared statement
-cursor.execute("PREPARE stmt AS SELECT * FROM clients WHERE id = $1")
-start = time.time()
-for i in range(1000):
+cursor.execute("PREPARE stmt AS SELECT * FROM clients WHERE id = $1")  
+start = time.time()  
+for i in range(1000):  
     cursor.execute("EXECUTE stmt(%s)", (i,))
 duration_with = time.time() - start
 
-print(f"Sans: {duration_without:.2f}s")
-print(f"Avec: {duration_with:.2f}s")
-print(f"Gain: {(1 - duration_with/duration_without) * 100:.1f}%")
+print(f"Sans: {duration_without:.2f}s")  
+print(f"Avec: {duration_with:.2f}s")  
+print(f"Gain: {(1 - duration_with/duration_without) * 100:.1f}%")  
 ```
 
 ---
@@ -999,9 +999,9 @@ print(f"Gain: {(1 - duration_with/duration_without) * 100:.1f}%")
 **Fonctions** : Logique métier côté serveur
 
 ```sql
-CREATE FUNCTION get_client(client_id INT)
-RETURNS TABLE(nom TEXT, email TEXT) AS $$
-BEGIN
+CREATE FUNCTION get_client(client_id INT)  
+RETURNS TABLE(nom TEXT, email TEXT) AS $$  
+BEGIN  
     RETURN QUERY SELECT nom, email FROM clients WHERE id = client_id;
 END;
 $$ LANGUAGE plpgsql;
@@ -1104,9 +1104,9 @@ EXECUTE search_cities(ARRAY['Paris', 'Lyon', 'Marseille']);
 
 ## Ressources pour Aller Plus Loin
 
-- **Documentation PostgreSQL** : [PREPARE](https://www.postgresql.org/docs/current/sql-prepare.html) et [EXECUTE](https://www.postgresql.org/docs/current/sql-execute.html)
-- **Article approfondi** : [Prepared Statements and Plan Caching](https://www.postgresql.org/docs/current/sql-prepare.html#SQL-PREPARE-NOTES)
-- **Section précédente** : 13.9. Optimisations du planificateur
+- **Documentation PostgreSQL** : [PREPARE](https://www.postgresql.org/docs/current/sql-prepare.html) et [EXECUTE](https://www.postgresql.org/docs/current/sql-execute.html)  
+- **Article approfondi** : [Prepared Statements and Plan Caching](https://www.postgresql.org/docs/current/sql-prepare.html#SQL-PREPARE-NOTES)  
+- **Section précédente** : 13.9. Optimisations du planificateur  
 - **Section suivante** : 13.11. Maintenance des index (REINDEX, VACUUM FULL)
 
 ---

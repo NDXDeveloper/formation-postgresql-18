@@ -56,9 +56,9 @@ SELECT * FROM produits WHERE LOWER(nom) = 'iphone 15 pro';
 #### Scénario 3 : Requête avec SELECT de Nombreuses Colonnes
 ```sql
 -- Requête fréquente
-SELECT id, nom, email, telephone, ville
-FROM clients
-WHERE pays = 'France';
+SELECT id, nom, email, telephone, ville  
+FROM clients  
+WHERE pays = 'France';  
 
 -- Index sur pays
 CREATE INDEX idx_pays ON clients(pays);
@@ -105,13 +105,13 @@ CREATE INDEX nom_index ON table(colonne) WHERE condition;
 **Exemple :**
 ```sql
 -- Indexer uniquement les utilisateurs actifs
-CREATE INDEX idx_email_actifs ON utilisateurs(email)
-WHERE est_supprime = FALSE;
+CREATE INDEX idx_email_actifs ON utilisateurs(email)  
+WHERE est_supprime = FALSE;  
 ```
 
 **Avantages :**
-- ✅ Index **beaucoup plus petit** (moins d'espace disque)
-- ✅ **Plus rapide** à parcourir
+- ✅ Index **beaucoup plus petit** (moins d'espace disque)  
+- ✅ **Plus rapide** à parcourir  
 - ✅ **Maintenance réduite** (INSERT/UPDATE moins coûteux)
 
 **Cas d'usage :**
@@ -145,13 +145,13 @@ SELECT * FROM utilisateurs WHERE LOWER(email) = 'john@example.com';
 ```
 
 **Avantages :**
-- ✅ Recherches **insensibles à la casse**
-- ✅ Indexation de **calculs** (prix TTC, surface, âge)
+- ✅ Recherches **insensibles à la casse**  
+- ✅ Indexation de **calculs** (prix TTC, surface, âge)  
 - ✅ Extraction de **composants** (année d'une date, champ JSON)
 
 **Cas d'usage :**
-- `LOWER()` / `UPPER()` pour recherches texte
-- `DATE()` pour extraire date d'un timestamp
+- `LOWER()` / `UPPER()` pour recherches texte  
+- `DATE()` pour extraire date d'un timestamp  
 - `data->>'field'` pour extraire champ JSON
 - Calculs métier (montant * TVA, longueur * largeur)
 
@@ -174,9 +174,9 @@ CREATE INDEX nom_index ON table(col1, col2, col3);
 CREATE INDEX idx_client_date ON commandes(client_id, date_commande DESC);
 
 -- Requête optimisée
-SELECT * FROM commandes
-WHERE client_id = 12345
-ORDER BY date_commande DESC;
+SELECT * FROM commandes  
+WHERE client_id = 12345  
+ORDER BY date_commande DESC;  
 -- Utilise l'index pour filtrage ET tri !
 ```
 
@@ -184,26 +184,26 @@ ORDER BY date_commande DESC;
 
 **Syntaxe :**
 ```sql
-CREATE INDEX nom_index ON table(colonnes_indexées)
-INCLUDE (colonnes_couvertes);
+CREATE INDEX nom_index ON table(colonnes_indexées)  
+INCLUDE (colonnes_couvertes);  
 ```
 
 **Exemple :**
 ```sql
 -- Covering index
-CREATE INDEX idx_client_covering ON commandes(client_id)
-INCLUDE (date_commande, montant, statut);
+CREATE INDEX idx_client_covering ON commandes(client_id)  
+INCLUDE (date_commande, montant, statut);  
 
 -- Requête : Tout dans l'index, pas d'accès à la table !
-SELECT client_id, date_commande, montant, statut
-FROM commandes
-WHERE client_id = 12345;
+SELECT client_id, date_commande, montant, statut  
+FROM commandes  
+WHERE client_id = 12345;  
 -- Index Only Scan (pas de Heap Fetches) !
 ```
 
 **Avantages :**
-- ✅ **Index Multi-Colonnes :** Optimise requêtes avec plusieurs filtres/tris
-- ✅ **INCLUDE :** Élimine les accès à la table (Heap Fetches)
+- ✅ **Index Multi-Colonnes :** Optimise requêtes avec plusieurs filtres/tris  
+- ✅ **INCLUDE :** Élimine les accès à la table (Heap Fetches)  
 - ✅ **Performances :** Réduction des I/O de 3-10×
 
 **Cas d'usage :**
@@ -241,14 +241,14 @@ CREATE TABLE produits (
 CREATE INDEX idx_metadata ON produits USING gin(metadata jsonb_path_ops);
 
 -- Requête : Recherche dans JSON
-SELECT * FROM produits
-WHERE metadata @> '{"marque": "Dell", "en_stock": true}';
+SELECT * FROM produits  
+WHERE metadata @> '{"marque": "Dell", "en_stock": true}';  
 -- Utilise l'index GIN !
 ```
 
 **Avantages :**
-- ✅ Recherche **ultra-rapide** dans JSON (50-200× plus rapide)
-- ✅ Flexibilité des **données semi-structurées**
+- ✅ Recherche **ultra-rapide** dans JSON (50-200× plus rapide)  
+- ✅ Flexibilité des **données semi-structurées**  
 - ✅ `jsonb_path_ops` : **3× plus compact** que GIN standard
 
 **Cas d'usage :**
@@ -306,9 +306,9 @@ La puissance de ces techniques réside dans leur **combinaison** !
 
 ```sql
 -- Index sur email en minuscules, uniquement pour utilisateurs actifs
-CREATE INDEX idx_email_lower_actifs
-ON utilisateurs((LOWER(email)))
-WHERE est_supprime = FALSE;
+CREATE INDEX idx_email_lower_actifs  
+ON utilisateurs((LOWER(email)))  
+WHERE est_supprime = FALSE;  
 ```
 
 **Avantages :**
@@ -319,10 +319,10 @@ WHERE est_supprime = FALSE;
 
 ```sql
 -- L'index ultime pour requêtes sur commandes récentes
-CREATE INDEX idx_commandes_ultimate
-ON commandes(client_id, date_commande DESC)
-INCLUDE (montant, statut)
-WHERE date_commande >= '2025-01-01';
+CREATE INDEX idx_commandes_ultimate  
+ON commandes(client_id, date_commande DESC)  
+INCLUDE (montant, statut)  
+WHERE date_commande >= '2025-01-01';  
 ```
 
 **Avantages :**
@@ -334,9 +334,9 @@ WHERE date_commande >= '2025-01-01';
 
 ```sql
 -- Index GIN sur metadata JSON, uniquement produits disponibles
-CREATE INDEX idx_metadata_disponibles
-ON produits USING gin(metadata jsonb_path_ops)
-WHERE (metadata->>'disponible')::boolean = TRUE;
+CREATE INDEX idx_metadata_disponibles  
+ON produits USING gin(metadata jsonb_path_ops)  
+WHERE (metadata->>'disponible')::boolean = TRUE;  
 ```
 
 **Avantages :**
@@ -356,21 +356,21 @@ SELECT
     calls,
     mean_exec_time,
     total_exec_time
-FROM pg_stat_statements
-ORDER BY mean_exec_time DESC
-LIMIT 20;
+FROM pg_stat_statements  
+ORDER BY mean_exec_time DESC  
+LIMIT 20;  
 ```
 
 ### Étape 2 : Analyser avec EXPLAIN
 
 ```sql
-EXPLAIN (ANALYZE, BUFFERS)
-SELECT ... FROM ... WHERE ...;
+EXPLAIN (ANALYZE, BUFFERS)  
+SELECT ... FROM ... WHERE ...;  
 ```
 
 **Cherchez :**
-- `Seq Scan` → Besoin d'un index
-- `Heap Fetches: 1000+` → Candidat pour INCLUDE
+- `Seq Scan` → Besoin d'un index  
+- `Heap Fetches: 1000+` → Candidat pour INCLUDE  
 - `Filter: (lower(...)` → Index sur expression
 - Fonction sur colonne → Index sur expression
 - `Rows Removed by Filter: 99%` → Index partiel
@@ -413,8 +413,8 @@ SELECT
     idx_scan AS utilisations,
     idx_tup_read,
     pg_size_pretty(pg_relation_size(indexrelid)) AS taille
-FROM pg_stat_user_indexes
-WHERE indexname = 'nom_de_votre_index';
+FROM pg_stat_user_indexes  
+WHERE indexname = 'nom_de_votre_index';  
 ```
 
 **Si `idx_scan = 0` après quelques jours :** L'index n'est pas utilisé → À supprimer.
@@ -468,9 +468,9 @@ SELECT
     pg_size_pretty(pg_relation_size(schemaname||'.'||tablename)) AS "Taille table",
     pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename) -
                    pg_relation_size(schemaname||'.'||tablename)) AS "Taille index"
-FROM pg_tables
-WHERE schemaname = 'public'
-ORDER BY pg_total_relation_size(schemaname||'.'||tablename) DESC;
+FROM pg_tables  
+WHERE schemaname = 'public'  
+ORDER BY pg_total_relation_size(schemaname||'.'||tablename) DESC;  
 ```
 
 **Résultat typique :**
@@ -488,9 +488,9 @@ Table: commandes
 
 ```sql
 -- ❌ MAUVAIS : 10 index sur une table OLTP
-CREATE INDEX idx1 ON table(col1);
-CREATE INDEX idx2 ON table(col2);
-CREATE INDEX idx3 ON table(col3);
+CREATE INDEX idx1 ON table(col1);  
+CREATE INDEX idx2 ON table(col2);  
+CREATE INDEX idx3 ON table(col3);  
 -- ... 10 index au total
 -- Problème : INSERT/UPDATE très lents !
 ```
@@ -501,9 +501,9 @@ CREATE INDEX idx3 ON table(col3);
 
 ```sql
 -- ❌ MAUVAIS : Index redondants
-CREATE INDEX idx1 ON table(a, b, c);
-CREATE INDEX idx2 ON table(a, b);     -- Redondant avec idx1 !
-CREATE INDEX idx3 ON table(a);        -- Redondant avec idx1 !
+CREATE INDEX idx1 ON table(a, b, c);  
+CREATE INDEX idx2 ON table(a, b);     -- Redondant avec idx1 !  
+CREATE INDEX idx3 ON table(a);        -- Redondant avec idx1 !  
 ```
 
 **Solution :** Un index sur (a, b, c) couvre automatiquement (a, b) et (a).
@@ -596,7 +596,7 @@ CREATE INDEX idx_good ON commandes(client_id, statut);
    DROP INDEX CONCURRENTLY idx_ancien;
    ```
 
-3. **Ne pas créer d'index sur petites tables**
+3. **Ne pas créer d'index sur petites tables**  
    - < 1000 lignes : Seq Scan souvent plus rapide
 
 4. **Ne pas indexer les colonnes rarement utilisées**
@@ -623,9 +623,9 @@ CREATE EXTENSION pg_qualstats;
 
 ### Outils Externes
 
-- **pgBadger** : Analyse de logs PostgreSQL
-- **pg_hero** : Suggestions d'index et détection de problèmes
-- **pgtune** : Aide à la configuration PostgreSQL
+- **pgBadger** : Analyse de logs PostgreSQL  
+- **pg_hero** : Suggestions d'index et détection de problèmes  
+- **pgtune** : Aide à la configuration PostgreSQL  
 - **explain.depesz.com** : Visualiser et analyser EXPLAIN
 
 ### Commandes Utiles
@@ -638,18 +638,18 @@ CREATE EXTENSION pg_qualstats;
 SELECT
     indexname,
     pg_size_pretty(pg_relation_size(indexrelid))
-FROM pg_stat_user_indexes
-WHERE tablename = 'nom_table';
+FROM pg_stat_user_indexes  
+WHERE tablename = 'nom_table';  
 
 -- Index inutilisés
 SELECT
     schemaname || '.' || tablename AS table,
     indexname,
     pg_size_pretty(pg_relation_size(indexrelid)) AS taille
-FROM pg_stat_user_indexes
-WHERE idx_scan = 0
-AND indexrelname NOT LIKE '%_pkey'
-ORDER BY pg_relation_size(indexrelid) DESC;
+FROM pg_stat_user_indexes  
+WHERE idx_scan = 0  
+AND indexrelname NOT LIKE '%_pkey'  
+ORDER BY pg_relation_size(indexrelid) DESC;  
 ```
 
 ---

@@ -8,7 +8,7 @@ Imaginez une bibliothèque où plusieurs personnes veulent consulter et modifier
 
 Les bases de données doivent résoudre deux problèmes majeurs :
 
-1. **La cohérence** : Garantir que les données restent valides et respectent les règles métier
+1. **La cohérence** : Garantir que les données restent valides et respectent les règles métier  
 2. **La concurrence** : Permettre à plusieurs utilisateurs de travailler simultanément sans se bloquer mutuellement
 
 La solution de PostgreSQL à ce défi s'appelle **MVCC : Multiversion Concurrency Control** (Contrôle de Concurrence Multi-versions).
@@ -46,8 +46,8 @@ Transaction A lit une ligne (version 1)
   ↓
 Transaction B modifie la ligne → Crée une version 2
   ↓
-Transaction A continue de voir la version 1 (sa "photographie")
-Transaction B voit la version 2 (ses modifications)
+Transaction A continue de voir la version 1 (sa "photographie")  
+Transaction B voit la version 2 (ses modifications)  
   ↓
 Les deux transactions travaillent sans se bloquer !
 ```
@@ -75,16 +75,16 @@ Maintenant, deux transactions s'exécutent en parallèle :
 
 **Transaction A (lecture)** :
 ```sql
-BEGIN;
-SELECT * FROM produits WHERE id = 1;
+BEGIN;  
+SELECT * FROM produits WHERE id = 1;  
 -- Voit : Laptop, 1000€
 ```
 
 **Transaction B (modification)** :
 ```sql
-BEGIN;
-UPDATE produits SET prix = 1200 WHERE id = 1;
-COMMIT;
+BEGIN;  
+UPDATE produits SET prix = 1200 WHERE id = 1;  
+COMMIT;  
 ```
 
 **Ce qui se passe en interne** :
@@ -92,19 +92,22 @@ COMMIT;
 PostgreSQL crée une **nouvelle version** de la ligne au lieu de modifier l'ancienne :
 
 ```
-Version 1 (ancienne) : id=1, nom='Laptop', prix=1000  [créée par transaction X]
-Version 2 (nouvelle) : id=1, nom='Laptop', prix=1200  [créée par transaction B]
+Version 1 (ancienne) : id=1, nom='Laptop', prix=1000  [créée par transaction X]  
+Version 2 (nouvelle) : id=1, nom='Laptop', prix=1200  [créée par transaction B]  
 ```
 
 **Transaction A continue** :
 ```sql
--- Transaction A, toujours active
+-- Transaction A, toujours active (niveau Read Committed par défaut)
 SELECT * FROM produits WHERE id = 1;
--- Voit TOUJOURS : Laptop, 1000€ (version 1)
--- Même après le COMMIT de B !
+-- Voit : Laptop, 1200€ (version 2) ← Voit le COMMIT de B !
 ```
 
-Transaction A voit toujours la version 1 car c'est la version qui existait quand elle a commencé. C'est comme si elle avait une photo de la base de données prise au début de sa transaction.
+> ⚠️ **Attention au niveau d'isolation** : En **Read Committed** (défaut de PostgreSQL), chaque **instruction** prend un nouveau snapshot. Donc après le COMMIT de B, un nouveau SELECT dans A verra le prix mis à jour (1200€).  
+>  
+> En **Repeatable Read**, Transaction A verrait TOUJOURS 1000€ pendant toute sa durée, car elle utilise un snapshot figé au début de la transaction. C'est ce niveau qui se comporte comme "une photo prise au début de la transaction".  
+>  
+> Les niveaux d'isolation seront détaillés dans la section 12.3.
 
 ---
 
@@ -152,9 +155,9 @@ Pour chaque ligne, PostgreSQL se pose cette question :
 
 La réponse dépend de plusieurs règles :
 
-1. **Si xmin > ID de ma transaction** → La ligne a été créée APRÈS mon début → **Invisible**
-2. **Si xmin < ID de ma transaction et xmax = 0** → Ligne créée avant moi et toujours active → **Visible**
-3. **Si xmax > 0 et xmax < ID de ma transaction** → Ligne supprimée avant mon début → **Invisible**
+1. **Si xmin > ID de ma transaction** → La ligne a été créée APRÈS mon début → **Invisible**  
+2. **Si xmin < ID de ma transaction et xmax = 0** → Ligne créée avant moi et toujours active → **Visible**  
+3. **Si xmax > 0 et xmax < ID de ma transaction** → Ligne supprimée avant mon début → **Invisible**  
 4. **Si xmax > ID de ma transaction** → Ligne supprimée après mon début → **Visible** (je vois l'ancienne version)
 
 **Analogie** : Imaginez que vous regardez une vidéo. Chaque transaction voit la base de données à un "instant T" spécifique. Les modifications faites après cet instant sont invisibles pour cette transaction.
@@ -169,9 +172,9 @@ Suivons le cycle de vie d'une ligne à travers plusieurs modifications :
 
 ```sql
 -- Transaction 100
-BEGIN;
-INSERT INTO employes (id, nom, salaire) VALUES (1, 'Alice', 50000);
-COMMIT;
+BEGIN;  
+INSERT INTO employes (id, nom, salaire) VALUES (1, 'Alice', 50000);  
+COMMIT;  
 ```
 
 **État interne** :
@@ -187,9 +190,9 @@ Version 1:
 
 ```sql
 -- Transaction 105
-BEGIN;
-UPDATE employes SET salaire = 55000 WHERE id = 1;
-COMMIT;
+BEGIN;  
+UPDATE employes SET salaire = 55000 WHERE id = 1;  
+COMMIT;  
 ```
 
 **État interne** :
@@ -212,9 +215,9 @@ PostgreSQL conserve **les deux versions** temporairement !
 
 ```sql
 -- Transaction 110
-BEGIN;
-UPDATE employes SET salaire = 60000 WHERE id = 1;
-COMMIT;
+BEGIN;  
+UPDATE employes SET salaire = 60000 WHERE id = 1;  
+COMMIT;  
 ```
 
 **État interne** :
@@ -242,9 +245,9 @@ Maintenant, il y a **trois versions** de la même ligne !
 
 ```sql
 -- Transaction 115
-BEGIN;
-DELETE FROM employes WHERE id = 1;
-COMMIT;
+BEGIN;  
+DELETE FROM employes WHERE id = 1;  
+COMMIT;  
 ```
 
 **État interne** :
@@ -339,8 +342,8 @@ BEGIN TRANSACTION ISOLATION LEVEL SERIALIZABLE;
 
 Un **snapshot** (instantané) est une vue cohérente de la base de données à un instant précis. Il contient :
 
-1. **L'ID de transaction actuelle**
-2. **La liste des transactions en cours** au moment où le snapshot est pris
+1. **L'ID de transaction actuelle**  
+2. **La liste des transactions en cours** au moment où le snapshot est pris  
 3. **La liste des transactions validées (committed)**
 
 Grâce à ces informations, PostgreSQL peut déterminer quelles versions de lignes sont visibles pour votre transaction.
@@ -358,8 +361,8 @@ Snapshot au moment T:
 
 **Règles de visibilité** :
 
-- ✅ Les lignes créées par des transactions < 118 et validées sont **visibles**
-- ❌ Les lignes créées par les transactions 118, 119 (en cours) sont **invisibles**
+- ✅ Les lignes créées par des transactions < 118 et validées sont **visibles**  
+- ❌ Les lignes créées par les transactions 118, 119 (en cours) sont **invisibles**  
 - ❌ Les lignes créées par des transactions > 120 (futures) sont **invisibles**
 
 ---
@@ -372,13 +375,13 @@ Le principal avantage : **les lecteurs ne bloquent jamais les écrivains**, et v
 
 ```sql
 -- Transaction A (lecture)
-BEGIN;
-SELECT * FROM produits;  -- Lit des millions de lignes
+BEGIN;  
+SELECT * FROM produits;  -- Lit des millions de lignes  
 
 -- Transaction B (écriture) - En parallèle !
-BEGIN;
-UPDATE produits SET prix = prix * 1.1;  -- Ne bloque PAS
-COMMIT;
+BEGIN;  
+UPDATE produits SET prix = prix * 1.1;  -- Ne bloque PAS  
+COMMIT;  
 ```
 
 Les deux transactions s'exécutent sans se bloquer mutuellement.
@@ -393,12 +396,12 @@ Une transaction ne voit JAMAIS les modifications non validées d'une autre trans
 
 ```sql
 -- Transaction A
-BEGIN;
-UPDATE produits SET prix = 0 WHERE id = 1;  -- Pas encore commitée
+BEGIN;  
+UPDATE produits SET prix = 0 WHERE id = 1;  -- Pas encore commitée  
 
 -- Transaction B
-BEGIN;
-SELECT prix FROM produits WHERE id = 1;
+BEGIN;  
+SELECT prix FROM produits WHERE id = 1;  
 -- Voit l'ANCIEN prix, pas 0 !
 ```
 
@@ -448,9 +451,9 @@ Les UPDATE et DELETE ne modifient pas en place : ils créent de nouvelles versio
 Reprenons notre exemple précédent avec trois versions d'une ligne :
 
 ```
-Version 1: xmin=100, xmax=105, salaire=50000
-Version 2: xmin=105, xmax=110, salaire=55000
-Version 3: xmin=110, xmax=0,   salaire=60000
+Version 1: xmin=100, xmax=105, salaire=50000  
+Version 2: xmin=105, xmax=110, salaire=55000  
+Version 3: xmin=110, xmax=0,   salaire=60000  
 ```
 
 Si plus aucune transaction n'a besoin de voir les versions 1 et 2 (parce que toutes les transactions actives ont un ID > 110), ces versions sont **mortes** (dead tuples) et peuvent être supprimées pour libérer de l'espace.
@@ -459,8 +462,8 @@ Si plus aucune transaction n'a besoin de voir les versions 1 et 2 (parce que tou
 
 `VACUUM` est le processus qui :
 
-1. **Identifie les tuples morts** (versions de lignes qui ne seront jamais plus visibles par aucune transaction)
-2. **Marque leur espace comme réutilisable**
+1. **Identifie les tuples morts** (versions de lignes qui ne seront jamais plus visibles par aucune transaction)  
+2. **Marque leur espace comme réutilisable**  
 3. **Met à jour les statistiques** pour le planificateur de requêtes
 
 **Attention** : `VACUUM` ne rend généralement pas l'espace disque au système d'exploitation. Il marque simplement l'espace comme réutilisable pour de futures insertions.
@@ -470,8 +473,8 @@ Si plus aucune transaction n'a besoin de voir les versions 1 et 2 (parce que tou
 #### 1. VACUUM (standard)
 
 ```sql
-VACUUM;              -- Vacuum toutes les tables
-VACUUM produits;     -- Vacuum une table spécifique
+VACUUM;              -- Vacuum toutes les tables  
+VACUUM produits;     -- Vacuum une table spécifique  
 ```
 
 - Fonctionne en **mode non-bloquant**
@@ -501,8 +504,8 @@ PostgreSQL dispose d'un démon **autovacuum** qui fonctionne en arrière-plan et
 autovacuum = on  # Activé par défaut
 
 # Seuil de déclenchement
-autovacuum_vacuum_threshold = 50       # Nb minimum de tuples morts
-autovacuum_vacuum_scale_factor = 0.2   # 20% de tuples morts
+autovacuum_vacuum_threshold = 50       # Nb minimum de tuples morts  
+autovacuum_vacuum_scale_factor = 0.2   # 20% de tuples morts  
 
 # Calcul : VACUUM se déclenche si :
 # dead_tuples > threshold + (scale_factor * total_tuples)
@@ -522,12 +525,12 @@ PostgreSQL utilise des **identifiants de transaction sur 32 bits**, ce qui signi
 Si PostgreSQL ne nettoie pas les anciennes transactions, il peut arriver un moment où :
 
 ```
-Transaction actuelle : 4 000 000 000
-Ancienne transaction non nettoyée : 100
+Transaction actuelle : 4 000 000 000  
+Ancienne transaction non nettoyée : 100  
 
-Après wraparound :
-Transaction actuelle : 5 (wraparound ! On repart de 0)
-Ancienne transaction : 100 (semble maintenant FUTURE !)
+Après wraparound :  
+Transaction actuelle : 5 (wraparound ! On repart de 0)  
+Ancienne transaction : 100 (semble maintenant FUTURE !)  
 ```
 
 **Résultat catastrophique** : Les données anciennes deviennent subitement "invisibles" !
@@ -586,18 +589,18 @@ xmin | xmax | ctid  | id | nom   | solde
 
 **Terminal 1 (Transaction A)** :
 ```sql
-BEGIN;
-SELECT pg_current_xact_id();  -- Retourne : 201
-SELECT * FROM comptes WHERE id = 1;
+BEGIN;  
+SELECT pg_current_xact_id();  -- Retourne : 201  
+SELECT * FROM comptes WHERE id = 1;  
 -- Alice, 1000.00
 ```
 
 **Terminal 2 (Transaction B)** :
 ```sql
-BEGIN;
-SELECT pg_current_xact_id();  -- Retourne : 202
-UPDATE comptes SET solde = 1500.00 WHERE id = 1;
-COMMIT;
+BEGIN;  
+SELECT pg_current_xact_id();  -- Retourne : 202  
+UPDATE comptes SET solde = 1500.00 WHERE id = 1;  
+COMMIT;  
 ```
 
 **Vérifier les versions** :
@@ -635,8 +638,8 @@ Index sur 'id':
 ```
 
 Quand PostgreSQL utilise un index, il doit :
-1. Suivre le pointeur de l'index
-2. Vérifier **toutes les versions** du tuple
+1. Suivre le pointeur de l'index  
+2. Vérifier **toutes les versions** du tuple  
 3. Appliquer les règles de visibilité pour trouver la bonne version
 
 **Conséquence** : Un index sur une table avec beaucoup de dead tuples peut causer des ralentissements car PostgreSQL doit vérifier de nombreuses versions inutiles.
@@ -659,8 +662,8 @@ Ligne logique (vue utilisateur)
            |
            | (peut avoir plusieurs versions physiques)
            ↓
-Version 1: xmin=100, xmax=105, données=[...]
-Version 2: xmin=105, xmax=0,   données=[...]
+Version 1: xmin=100, xmax=105, données=[...]  
+Version 2: xmin=105, xmax=0,   données=[...]  
            ↑
            | (règles de visibilité)
            |
@@ -680,8 +683,8 @@ Marquage ancienne version (xmax = transaction actuelle)
            ↓
 COMMIT
            ↓
-Ancienne version devient "dead tuple" (après que toutes les
-transactions qui pouvaient la voir se terminent)
+Ancienne version devient "dead tuple" (après que toutes les  
+transactions qui pouvaient la voir se terminent)  
            ↓
 VACUUM identifie et nettoie les dead tuples
            ↓
@@ -703,9 +706,9 @@ SELECT
   n_dead_tup,
   n_live_tup,
   round(n_dead_tup * 100.0 / NULLIF(n_live_tup + n_dead_tup, 0), 2) AS dead_ratio
-FROM pg_stat_user_tables
-WHERE n_dead_tup > 1000
-ORDER BY n_dead_tup DESC;
+FROM pg_stat_user_tables  
+WHERE n_dead_tup > 1000  
+ORDER BY n_dead_tup DESC;  
 ```
 
 ### 2. Configurez autovacuum correctement
@@ -725,8 +728,8 @@ Les transactions qui restent ouvertes longtemps empêchent VACUUM de nettoyer le
 
 ```sql
 -- MAUVAIS : Transaction ouverte pendant des heures
-BEGIN;
-SELECT * FROM huge_table;
+BEGIN;  
+SELECT * FROM huge_table;  
 -- [Application fait un traitement long...]
 COMMIT;  -- Des heures plus tard !
 ```
@@ -751,9 +754,9 @@ SELECT
   age(backend_xid) AS xid_age,
   age(backend_xmin) AS xmin_age,
   query
-FROM pg_stat_activity
-WHERE backend_xid IS NOT NULL OR backend_xmin IS NOT NULL
-ORDER BY greatest(age(backend_xid), age(backend_xmin)) DESC;
+FROM pg_stat_activity  
+WHERE backend_xid IS NOT NULL OR backend_xmin IS NOT NULL  
+ORDER BY greatest(age(backend_xid), age(backend_xmin)) DESC;  
 ```
 
 ---
@@ -774,15 +777,15 @@ ORDER BY greatest(age(backend_xid), age(backend_xmin)) DESC;
 
 ### Quand MVCC excelle
 
-- ✅ Applications avec **beaucoup de lectures** simultanées
-- ✅ Applications **OLTP** (Online Transaction Processing)
-- ✅ Rapports/analytics en parallèle avec des modifications
+- ✅ Applications avec **beaucoup de lectures** simultanées  
+- ✅ Applications **OLTP** (Online Transaction Processing)  
+- ✅ Rapports/analytics en parallèle avec des modifications  
 - ✅ Besoin de **cohérence de lecture** stricte
 
 ### Quand MVCC peut poser problème
 
-- ❌ Tables avec **très nombreuses modifications** (high update rate)
-- ❌ Transactions **très longues** qui empêchent le nettoyage
+- ❌ Tables avec **très nombreuses modifications** (high update rate)  
+- ❌ Transactions **très longues** qui empêchent le nettoyage  
 - ❌ Ressources disque **limitées** (bloat peut être problématique)
 
 ---
@@ -791,15 +794,15 @@ ORDER BY greatest(age(backend_xid), age(backend_xmin)) DESC;
 
 Le **MVCC** est l'innovation majeure qui fait de PostgreSQL un SGBD performant et fiable pour les environnements hautement concurrents. En maintenant plusieurs versions des données, PostgreSQL permet :
 
-- ✅ **Aucun blocage entre lecteurs et écrivains**
-- ✅ **Cohérence de lecture** garantie
-- ✅ **Niveaux d'isolation** flexibles
+- ✅ **Aucun blocage entre lecteurs et écrivains**  
+- ✅ **Cohérence de lecture** garantie  
+- ✅ **Niveaux d'isolation** flexibles  
 - ✅ **Performance** excellente pour les workloads mixtes
 
 Mais cette puissance a un prix :
 
-- ⚠️ **Bloat** à surveiller
-- ⚠️ **VACUUM** à configurer correctement
+- ⚠️ **Bloat** à surveiller  
+- ⚠️ **VACUUM** à configurer correctement  
 - ⚠️ **Transaction wraparound** à comprendre
 
 Comprendre MVCC est essentiel pour :
@@ -814,12 +817,12 @@ Dans la prochaine section (12.3), nous approfondirons les **niveaux d'isolation*
 
 **Points clés à retenir :**
 
-- 🔑 MVCC = Multiversion Concurrency Control = Plusieurs versions d'une ligne
-- 🔑 xmin = transaction créatrice, xmax = transaction suppressive
-- 🔑 Les lecteurs ne bloquent jamais les écrivains
-- 🔑 VACUUM nettoie les versions mortes (dead tuples)
-- 🔑 Le bloat est l'effet secondaire du MVCC
-- 🔑 Les snapshots déterminent quelle version est visible
+- 🔑 MVCC = Multiversion Concurrency Control = Plusieurs versions d'une ligne  
+- 🔑 xmin = transaction créatrice, xmax = transaction suppressive  
+- 🔑 Les lecteurs ne bloquent jamais les écrivains  
+- 🔑 VACUUM nettoie les versions mortes (dead tuples)  
+- 🔑 Le bloat est l'effet secondaire du MVCC  
+- 🔑 Les snapshots déterminent quelle version est visible  
 - 🔑 Évitez les transactions longues pour permettre le nettoyage
 
 ⏭️ [Niveaux d'isolation ANSI (Read Uncommitted, Read Committed, Repeatable Read, Serializable)](/12-concurrence-et-transactions/03-niveaux-isolation-ansi.md)

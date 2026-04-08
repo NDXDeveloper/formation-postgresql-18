@@ -21,11 +21,11 @@ La **concurrence** (ou *concurrency* en anglais) désigne la capacité d'un syst
 **Exemple du monde réel** :
 
 Imaginez un site e-commerce pendant les soldes :
-- **10:00:00.001** : Alice consulte le produit "Laptop XYZ" → Stock : 5 exemplaires
-- **10:00:00.005** : Bob consulte aussi "Laptop XYZ" → Stock : 5 exemplaires
-- **10:00:00.010** : Alice achète 1 exemplaire → Stock : 4
-- **10:00:00.015** : Bob achète 1 exemplaire → Stock : 3
-- **10:00:00.020** : Claire achète 2 exemplaires → Stock : 1
+- **10:00:00.001** : Alice consulte le produit "Laptop XYZ" → Stock : 5 exemplaires  
+- **10:00:00.005** : Bob consulte aussi "Laptop XYZ" → Stock : 5 exemplaires  
+- **10:00:00.010** : Alice achète 1 exemplaire → Stock : 4  
+- **10:00:00.015** : Bob achète 1 exemplaire → Stock : 3  
+- **10:00:00.020** : Claire achète 2 exemplaires → Stock : 1  
 - **10:00:00.025** : David achète 1 exemplaire → Stock : 0
 
 Tout cela en **25 millisecondes** ! Et pourtant, le stock reste cohérent. C'est la magie de la gestion de la concurrence.
@@ -37,12 +37,12 @@ Que se passerait-il sans un système de gestion de la concurrence ?
 **Scénario catastrophique** :
 
 ```
-Alice lit : stock = 5
-Bob lit : stock = 5 (en même temps qu'Alice)
-Alice achète 1 → calcule : nouveau stock = 5 - 1 = 4
-Bob achète 1 → calcule : nouveau stock = 5 - 1 = 4 (basé sur l'ancienne valeur !)
-Alice écrit : stock = 4
-Bob écrit : stock = 4 (ÉCRASE la mise à jour d'Alice !)
+Alice lit : stock = 5  
+Bob lit : stock = 5 (en même temps qu'Alice)  
+Alice achète 1 → calcule : nouveau stock = 5 - 1 = 4  
+Bob achète 1 → calcule : nouveau stock = 5 - 1 = 4 (basé sur l'ancienne valeur !)  
+Alice écrit : stock = 4  
+Bob écrit : stock = 4 (ÉCRASE la mise à jour d'Alice !)  
 
 Résultat : stock = 4 (MAUVAIS ! Devrait être 3)
 → Un exemplaire vendu a "disparu" dans les comptes
@@ -55,8 +55,8 @@ C'est ce qu'on appelle une **anomalie de concurrence** ou un **Lost Update** (mi
 PostgreSQL utilise des mécanismes sophistiqués pour **garantir** que ces situations ne se produisent jamais :
 
 ```
-Alice : BEGIN → UPDATE stock = stock - 1 → COMMIT
-Bob : BEGIN → UPDATE stock = stock - 1 → COMMIT (attend qu'Alice finisse)
+Alice : BEGIN → UPDATE stock = stock - 1 → COMMIT  
+Bob : BEGIN → UPDATE stock = stock - 1 → COMMIT (attend qu'Alice finisse)  
 
 Résultat : stock = 3 ✅ (correct)
 ```
@@ -74,8 +74,8 @@ Une **transaction** est une **unité de travail complète** qui regroupe une ou 
 **Analogie** : Une transaction, c'est comme une recette de cuisine complète.
 
 Si vous préparez un gâteau :
-1. Mélanger les ingrédients
-2. Verser dans un moule
+1. Mélanger les ingrédients  
+2. Verser dans un moule  
 3. Mettre au four
 
 Soit vous faites **toutes** les étapes et vous obtenez un gâteau, soit vous abandonnez et vous **n'avez rien** (pas de demi-gâteau).
@@ -123,11 +123,11 @@ PostgreSQL garantit quatre propriétés fondamentales pour chaque transaction, r
 
 **Exemple** :
 ```sql
-BEGIN;
-INSERT INTO commandes (client_id, montant) VALUES (42, 100);
-INSERT INTO lignes_commande (commande_id, produit_id) VALUES (1001, 'ABC');
-INSERT INTO lignes_commande (commande_id, produit_id) VALUES (1001, 'DEF');
-COMMIT;
+BEGIN;  
+INSERT INTO commandes (client_id, montant) VALUES (42, 100);  
+INSERT INTO lignes_commande (commande_id, produit_id) VALUES (1001, 'ABC');  
+INSERT INTO lignes_commande (commande_id, produit_id) VALUES (1001, 'DEF');  
+COMMIT;  
 ```
 
 Si l'une des trois insertions échoue → **aucune** n'est enregistrée.
@@ -151,11 +151,11 @@ Le total reste cohérent. Les contraintes (solde ≥ 0, clés étrangères, etc.
 
 **Exemple** :
 ```
-Transaction A : Transfert de 100€ de Alice vers Bob
-Transaction B : Calcul du solde total de tous les comptes
+Transaction A : Transfert de 100€ de Alice vers Bob  
+Transaction B : Calcul du solde total de tous les comptes  
 
-Transaction B voit SOIT l'état avant le transfert, SOIT l'état après,
-mais JAMAIS un état intermédiaire incohérent (Alice débitée mais Bob pas encore crédité)
+Transaction B voit SOIT l'état avant le transfert, SOIT l'état après,  
+mais JAMAIS un état intermédiaire incohérent (Alice débitée mais Bob pas encore crédité)  
 ```
 
 C'est grâce au **MVCC** (Multiversion Concurrency Control) que PostgreSQL réalise cela brillamment.
@@ -168,9 +168,9 @@ C'est grâce au **MVCC** (Multiversion Concurrency Control) que PostgreSQL réal
 
 **Garantie** :
 ```sql
-BEGIN;
-INSERT INTO commandes (client_id, montant) VALUES (42, 1000000);
-COMMIT;  -- À partir de cet instant, la commande est GARANTIE enregistrée
+BEGIN;  
+INSERT INTO commandes (client_id, montant) VALUES (42, 1000000);  
+COMMIT;  -- À partir de cet instant, la commande est GARANTIE enregistrée  
 
 -- Même si le serveur plante 1 milliseconde après, la commande sera là au redémarrage
 ```
@@ -196,8 +196,8 @@ Gérer la concurrence n'est pas trivial. Voici les principaux défis que Postgre
 
 **Le problème** :
 ```
-Transaction A : verrouille la ligne 1, attend la ligne 2
-Transaction B : verrouille la ligne 2, attend la ligne 1
+Transaction A : verrouille la ligne 1, attend la ligne 2  
+Transaction B : verrouille la ligne 2, attend la ligne 1  
 → DEADLOCK ! (Attente circulaire)
 ```
 
@@ -209,8 +209,8 @@ Transaction B : verrouille la ligne 2, attend la ligne 1
 ### 3. Garantir l'isolation sans pénalité excessive
 
 **Niveaux d'isolation** (du moins au plus strict) :
-1. **Read Committed** (défaut) : Bonne performance, permet certaines anomalies
-2. **Repeatable Read** : Vue cohérente, plus strict
+1. **Read Committed** (défaut) : Bonne performance, permet certaines anomalies  
+2. **Repeatable Read** : Vue cohérente, plus strict  
 3. **Serializable** : Cohérence maximale, comme si les transactions s'exécutaient une par une
 
 Le choix du niveau d'isolation dépend de vos besoins métier.
@@ -219,10 +219,10 @@ Le choix du niveau d'isolation dépend de vos besoins métier.
 
 Sans protection adéquate, ces anomalies peuvent survenir :
 
-- **Dirty Read** : Lire des données non validées d'une autre transaction
-- **Non-Repeatable Read** : Lire la même ligne deux fois et obtenir des résultats différents
-- **Phantom Read** : Relire et trouver de nouvelles lignes apparues
-- **Lost Update** : Une modification en écrase une autre silencieusement
+- **Dirty Read** : Lire des données non validées d'une autre transaction  
+- **Non-Repeatable Read** : Lire la même ligne deux fois et obtenir des résultats différents  
+- **Phantom Read** : Relire et trouver de nouvelles lignes apparues  
+- **Lost Update** : Une modification en écrase une autre silencieusement  
 - **Write Skew** : Deux transactions violent une contrainte métier ensemble
 
 PostgreSQL vous protège de ces anomalies selon le niveau d'isolation choisi.
@@ -239,15 +239,15 @@ Le **MVCC** (Multiversion Concurrency Control) est la pierre angulaire de Postgr
 
 **Résultat** :
 ```
-Transaction A lit la ligne → Voit la version 1
-Transaction B modifie la ligne → Crée la version 2
-Transaction A lit à nouveau → Voit TOUJOURS la version 1 (cohérence)
-Transaction C commence après le COMMIT de B → Voit la version 2
+Transaction A lit la ligne → Voit la version 1  
+Transaction B modifie la ligne → Crée la version 2  
+Transaction A lit à nouveau → Voit TOUJOURS la version 1 (cohérence)  
+Transaction C commence après le COMMIT de B → Voit la version 2  
 ```
 
 **Avantages** :
-- ⚡ Haute performance (pas de blocage lecteur/écrivain)
-- ✅ Cohérence forte
+- ⚡ Haute performance (pas de blocage lecteur/écrivain)  
+- ✅ Cohérence forte  
 - 🎯 Isolation naturelle
 
 **Inconvénient** :
@@ -257,16 +257,16 @@ Transaction C commence après le COMMIT de B → Voit la version 2
 
 PostgreSQL propose une **hiérarchie de verrous** granulaires :
 
-- **Verrous de table** : Pour les opérations DDL (ALTER TABLE, etc.)
-- **Verrous de ligne** : Pour les UPDATE/DELETE spécifiques
+- **Verrous de table** : Pour les opérations DDL (ALTER TABLE, etc.)  
+- **Verrous de ligne** : Pour les UPDATE/DELETE spécifiques  
 - **Advisory Locks** : Pour la coordination applicative
 
 **Exemple** : Vous pouvez verrouiller une seule ligne sans bloquer toute la table.
 
 ### 3. Détection automatique des problèmes
 
-- **Deadlocks** : Détectés et résolus automatiquement en 1 seconde (par défaut)
-- **Wraparound XID** : Prévenu par autovacuum
+- **Deadlocks** : Détectés et résolus automatiquement en 1 seconde (par défaut)  
+- **Wraparound XID** : Prévenu par autovacuum  
 - **Anomalies** : Selon le niveau d'isolation, PostgreSQL rejette les transactions conflictuelles
 
 ### 4. Flexibilité des niveaux d'isolation
@@ -275,15 +275,15 @@ PostgreSQL vous laisse choisir le **bon équilibre** pour chaque transaction :
 
 ```sql
 -- Transaction simple : Read Committed (défaut, rapide)
-BEGIN;
-UPDATE produits SET prix = 100 WHERE id = 1;
-COMMIT;
+BEGIN;  
+UPDATE produits SET prix = 100 WHERE id = 1;  
+COMMIT;  
 
 -- Rapport financier : Repeatable Read (vue cohérente)
-BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ;
-SELECT SUM(montant) FROM commandes WHERE mois = 'Janvier';
-SELECT AVG(montant) FROM commandes WHERE mois = 'Janvier';
-COMMIT;
+BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ;  
+SELECT SUM(montant) FROM commandes WHERE mois = 'Janvier';  
+SELECT AVG(montant) FROM commandes WHERE mois = 'Janvier';  
+COMMIT;  
 
 -- Transfert bancaire : Serializable (cohérence maximale)
 BEGIN TRANSACTION ISOLATION LEVEL SERIALIZABLE;
@@ -353,9 +353,9 @@ Vous appliquerez :
 ### Vous êtes **développeur** ?
 
 Ce chapitre est **essentiel** pour vous car :
-- ✅ Vous éviterez les bugs subtils de concurrence
-- ✅ Vous concevrez des applications robustes
-- ✅ Vous comprendrez pourquoi certaines requêtes échouent avec des erreurs de sérialisation
+- ✅ Vous éviterez les bugs subtils de concurrence  
+- ✅ Vous concevrez des applications robustes  
+- ✅ Vous comprendrez pourquoi certaines requêtes échouent avec des erreurs de sérialisation  
 - ✅ Vous optimiserez les performances de vos transactions
 
 **Vous apprendrez** à écrire du code qui gère correctement la concurrence, implémente des retries, et choisit les bons niveaux d'isolation.
@@ -363,9 +363,9 @@ Ce chapitre est **essentiel** pour vous car :
 ### Vous êtes **DevOps/SRE** ?
 
 Ce chapitre vous permettra de :
-- ✅ Diagnostiquer les problèmes de performance liés aux verrous
-- ✅ Surveiller les deadlocks et transactions longues
-- ✅ Configurer PostgreSQL pour votre workload
+- ✅ Diagnostiquer les problèmes de performance liés aux verrous  
+- ✅ Surveiller les deadlocks et transactions longues  
+- ✅ Configurer PostgreSQL pour votre workload  
 - ✅ Résoudre les incidents de blocage en production
 
 **Vous apprendrez** à utiliser pg_locks, pg_stat_activity, et les logs pour identifier et résoudre les problèmes.
@@ -373,9 +373,9 @@ Ce chapitre vous permettra de :
 ### Vous êtes **architecte** ?
 
 Ce chapitre vous aidera à :
-- ✅ Concevoir des architectures résilientes
-- ✅ Choisir les bons patterns de concurrence
-- ✅ Évaluer les trade-offs (cohérence vs performance)
+- ✅ Concevoir des architectures résilientes  
+- ✅ Choisir les bons patterns de concurrence  
+- ✅ Évaluer les trade-offs (cohérence vs performance)  
 - ✅ Prévoir la scalabilité
 
 **Vous apprendrez** les principes fondamentaux pour des architectures solides.
@@ -405,8 +405,8 @@ Avant de plonger dans ce chapitre, vous devriez être à l'aise avec :
 
 Ces connaissances aideront, mais nous les expliquerons au fur et à mesure :
 
-⚡ Indexation et performance
-⚡ Contraintes (PRIMARY KEY, FOREIGN KEY)
+⚡ Indexation et performance  
+⚡ Contraintes (PRIMARY KEY, FOREIGN KEY)  
 ⚡ Architecture client-serveur
 
 ---
@@ -416,10 +416,10 @@ Ces connaissances aideront, mais nous les expliquerons au fur et à mesure :
 ### Pour les débutants 🌱
 
 **Approche recommandée** :
-1. Lisez **dans l'ordre**, ne sautez pas de sections
-2. Testez chaque concept dans psql ou pgAdmin
-3. Prenez le temps de comprendre les analogies
-4. Revenez sur les sections complexes après avoir progressé
+1. Lisez **dans l'ordre**, ne sautez pas de sections  
+2. Testez chaque concept dans psql ou pgAdmin  
+3. Prenez le temps de comprendre les analogies  
+4. Revenez sur les sections complexes après avoir progressé  
 5. **Focus** sur les sections 12.1, 12.2 et 12.3 en priorité
 
 **Objectif** : Comprendre les concepts fondamentaux, savoir utiliser BEGIN/COMMIT, comprendre pourquoi MVCC est important.
@@ -427,10 +427,10 @@ Ces connaissances aideront, mais nous les expliquerons au fur et à mesure :
 ### Pour les intermédiaires 📈
 
 **Approche recommandée** :
-1. Survolez les sections 12.1-12.3 si vous êtes déjà familier
-2. **Concentrez-vous** sur 12.4, 12.5 et 12.7
-3. Testez les scénarios de deadlocks
-4. Implémentez des retries dans votre langage préféré
+1. Survolez les sections 12.1-12.3 si vous êtes déjà familier  
+2. **Concentrez-vous** sur 12.4, 12.5 et 12.7  
+3. Testez les scénarios de deadlocks  
+4. Implémentez des retries dans votre langage préféré  
 5. Appliquez à vos projets existants
 
 **Objectif** : Maîtriser les anomalies, comprendre les verrous, savoir diagnostiquer et résoudre les problèmes.
@@ -438,10 +438,10 @@ Ces connaissances aideront, mais nous les expliquerons au fur et à mesure :
 ### Pour les experts 🚀
 
 **Approche recommandée** :
-1. Utilisez ce chapitre comme **référence**
-2. Explorez les **patterns avancés** dans 12.6 et 12.7
-3. Étudiez les cas réels en fin de chaque section
-4. Comparez avec d'autres SGBD (MySQL, Oracle)
+1. Utilisez ce chapitre comme **référence**  
+2. Explorez les **patterns avancés** dans 12.6 et 12.7  
+3. Étudiez les cas réels en fin de chaque section  
+4. Comparez avec d'autres SGBD (MySQL, Oracle)  
 5. Contribuez à l'amélioration de vos pratiques d'équipe
 
 **Objectif** : Peaufiner vos connaissances, découvrir des subtilités, optimiser vos architectures.
@@ -493,10 +493,10 @@ CREATE TABLE lignes_commande (
 
 Tout au long du chapitre, nous verrons comment gérer :
 
-1. **Plusieurs clients achètent le même produit** (concurrence sur le stock)
-2. **Un client passe une commande multi-articles** (atomicité de la transaction)
-3. **Des rapports générés pendant les achats** (isolation des lectures)
-4. **Des workers qui traitent les commandes** (verrous et coordination)
+1. **Plusieurs clients achètent le même produit** (concurrence sur le stock)  
+2. **Un client passe une commande multi-articles** (atomicité de la transaction)  
+3. **Des rapports générés pendant les achats** (isolation des lectures)  
+4. **Des workers qui traitent les commandes** (verrous et coordination)  
 5. **Des mises à jour massives de prix** (deadlocks et prévention)
 
 Ces scénarios couvrent les situations les plus courantes dans les applications réelles.
@@ -550,21 +550,21 @@ id | nom         | stock
 
 ### Documentation officielle PostgreSQL
 
-- [PostgreSQL Concurrency Control](https://www.postgresql.org/docs/current/mvcc.html)
-- [Transaction Isolation](https://www.postgresql.org/docs/current/transaction-iso.html)
+- [PostgreSQL Concurrency Control](https://www.postgresql.org/docs/current/mvcc.html)  
+- [Transaction Isolation](https://www.postgresql.org/docs/current/transaction-iso.html)  
 - [Explicit Locking](https://www.postgresql.org/docs/current/explicit-locking.html)
 
 ### Articles recommandés
 
-- "Understanding MVCC in PostgreSQL" par 2ndQuadrant
-- "PostgreSQL Anti-Patterns: Avoiding Pitfalls" par Percona
+- "Understanding MVCC in PostgreSQL" par 2ndQuadrant  
+- "PostgreSQL Anti-Patterns: Avoiding Pitfalls" par Percona  
 - "A Primer on PostgreSQL Transactions" par Citus Data
 
 ### Outils utiles
 
-- **psql** : Client en ligne de commande
-- **pgAdmin** : Interface graphique
-- **pg_stat_activity** : Vue système pour surveiller l'activité
+- **psql** : Client en ligne de commande  
+- **pgAdmin** : Interface graphique  
+- **pg_stat_activity** : Vue système pour surveiller l'activité  
 - **pg_locks** : Vue système pour voir les verrous actifs
 
 ---
@@ -596,11 +596,11 @@ La **concurrence** et les **transactions** sont au cœur de toute application de
 Vous êtes maintenant prêt à explorer l'un des aspects les plus puissants et fascinants de PostgreSQL. Chaque section s'appuie sur la précédente pour construire une **compréhension complète** de la gestion de la concurrence.
 
 **Objectif final** : À la fin de ce chapitre, vous serez capable de :
-- ✅ Concevoir des transactions robustes et efficaces
-- ✅ Choisir le bon niveau d'isolation pour chaque situation
-- ✅ Comprendre et prévenir les anomalies transactionnelles
-- ✅ Diagnostiquer et résoudre les problèmes de verrous et deadlocks
-- ✅ Implémenter des patterns de concurrence avancés
+- ✅ Concevoir des transactions robustes et efficaces  
+- ✅ Choisir le bon niveau d'isolation pour chaque situation  
+- ✅ Comprendre et prévenir les anomalies transactionnelles  
+- ✅ Diagnostiquer et résoudre les problèmes de verrous et deadlocks  
+- ✅ Implémenter des patterns de concurrence avancés  
 - ✅ Surveiller et optimiser la concurrence en production
 
 **Commençons par le début : le cycle de vie d'une transaction.**
@@ -617,13 +617,13 @@ Vous êtes maintenant prêt à explorer l'un des aspects les plus puissants et f
 
 **Points clés de l'introduction :**
 
-- 🔑 Concurrence = gérer plusieurs opérations simultanées sans conflits
-- 🔑 Transaction = unité de travail atomique (tout ou rien)
-- 🔑 ACID = Atomicité, Cohérence, Isolation, Durabilité
-- 🔑 MVCC = innovation majeure de PostgreSQL (versions multiples)
-- 🔑 Anomalies transactionnelles = comportements indésirables à prévenir
-- 🔑 Verrous = mécanisme de coordination des accès concurrents
-- 🔑 Deadlocks = attentes circulaires, détectés automatiquement
+- 🔑 Concurrence = gérer plusieurs opérations simultanées sans conflits  
+- 🔑 Transaction = unité de travail atomique (tout ou rien)  
+- 🔑 ACID = Atomicité, Cohérence, Isolation, Durabilité  
+- 🔑 MVCC = innovation majeure de PostgreSQL (versions multiples)  
+- 🔑 Anomalies transactionnelles = comportements indésirables à prévenir  
+- 🔑 Verrous = mécanisme de coordination des accès concurrents  
+- 🔑 Deadlocks = attentes circulaires, détectés automatiquement  
 - 🔑 Ce chapitre est essentiel pour tout développeur/DevOps sérieux
 
 ⏭️ [Cycle de vie d'une transaction (BEGIN, SAVEPOINT, COMMIT, ROLLBACK)](/12-concurrence-et-transactions/01-cycle-de-vie-transaction.md)

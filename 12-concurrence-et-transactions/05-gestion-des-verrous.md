@@ -9,8 +9,8 @@ Imaginez une bibliothèque où plusieurs personnes veulent emprunter, retourner 
 Les **verrous (locks)** sont le mécanisme que PostgreSQL utilise pour **coordonner l'accès concurrent** aux données. Ils garantissent que les opérations se déroulent de manière ordonnée et cohérente, même lorsque des centaines de transactions travaillent simultanément.
 
 **Analogie centrale** : Les verrous sont comme les règles de circulation sur une route :
-- 🚦 **Feu rouge** : Stop, attendez (verrou exclusif)
-- 🚦 **Feu vert** : Passez (pas de verrou)
+- 🚦 **Feu rouge** : Stop, attendez (verrou exclusif)  
+- 🚦 **Feu vert** : Passez (pas de verrou)  
 - 🚦 **Feu orange** : Certains peuvent passer, d'autres attendent (verrous partagés)
 
 ---
@@ -22,26 +22,26 @@ Les **verrous (locks)** sont le mécanisme que PostgreSQL utilise pour **coordon
 Nous avons vu que PostgreSQL utilise **MVCC** (Multiversion Concurrency Control) pour gérer la concurrence. Mais MVCC ne suffit pas dans tous les cas :
 
 **MVCC gère** :
-- ✅ Les lectures concurrentes (multiples versions)
-- ✅ Les lectures pendant les écritures (snapshots)
+- ✅ Les lectures concurrentes (multiples versions)  
+- ✅ Les lectures pendant les écritures (snapshots)  
 - ✅ La visibilité des données
 
 **Les verrous gèrent** :
-- 🔒 Les écritures concurrentes sur la **même ligne**
-- 🔒 Les modifications de structure (DDL)
+- 🔒 Les écritures concurrentes sur la **même ligne**  
+- 🔒 Les modifications de structure (DDL)  
 - 🔒 La coordination entre transactions qui modifient les mêmes données
 
 **Exemple** :
 
 ```sql
 -- Transaction A
-BEGIN;
-UPDATE comptes SET solde = solde - 100 WHERE id = 1;
+BEGIN;  
+UPDATE comptes SET solde = solde - 100 WHERE id = 1;  
 -- PostgreSQL pose automatiquement un VERROU sur la ligne id=1
 
 -- Transaction B (en parallèle)
-BEGIN;
-UPDATE comptes SET solde = solde + 50 WHERE id = 1;
+BEGIN;  
+UPDATE comptes SET solde = solde + 50 WHERE id = 1;  
 -- Doit ATTENDRE que Transaction A libère le verrou
 -- Sinon, les deux modifications pourraient s'écraser (Lost Update)
 ```
@@ -84,9 +84,9 @@ PostgreSQL définit **8 modes de verrous de table**, de moins restrictif à plus
 |------|-------------|--------|---------------|
 | **ACCESS SHARE** | Lecture simple | ACCESS EXCLUSIVE | SELECT |
 | **ROW SHARE** | Lecture avec intention de mise à jour | EXCLUSIVE, ACCESS EXCLUSIVE | SELECT FOR UPDATE |
-| **ROW EXCLUSIVE** | Modification de lignes | SHARE, EXCLUSIVE, ACCESS EXCLUSIVE | INSERT, UPDATE, DELETE |
-| **SHARE UPDATE EXCLUSIVE** | Modification non-concurrente | Lui-même, SHARE, EXCLUSIVE, ACCESS EXCLUSIVE | VACUUM, CREATE INDEX CONCURRENTLY |
-| **SHARE** | Lecture partagée protégée | ROW EXCLUSIVE, SHARE UPDATE EXCLUSIVE, EXCLUSIVE, ACCESS EXCLUSIVE | CREATE INDEX |
+| **ROW EXCLUSIVE** | Modification de lignes | SHARE, SHARE ROW EXCLUSIVE, EXCLUSIVE, ACCESS EXCLUSIVE | INSERT, UPDATE, DELETE |
+| **SHARE UPDATE EXCLUSIVE** | Modification non-concurrente | Lui-même, SHARE, SHARE ROW EXCLUSIVE, EXCLUSIVE, ACCESS EXCLUSIVE | VACUUM, CREATE INDEX CONCURRENTLY |
+| **SHARE** | Lecture partagée protégée | ROW EXCLUSIVE, SHARE UPDATE EXCLUSIVE, SHARE ROW EXCLUSIVE, EXCLUSIVE, ACCESS EXCLUSIVE | CREATE INDEX |
 | **SHARE ROW EXCLUSIVE** | Lecture partagée exclusive | ROW EXCLUSIVE, SHARE, SHARE UPDATE EXCLUSIVE, EXCLUSIVE, ACCESS EXCLUSIVE | Rarement utilisé |
 | **EXCLUSIVE** | Exclusion des écritures | ROW SHARE, ROW EXCLUSIVE, SHARE UPDATE EXCLUSIVE, SHARE, SHARE ROW EXCLUSIVE, EXCLUSIVE, ACCESS EXCLUSIVE | REFRESH MATERIALIZED VIEW |
 | **ACCESS EXCLUSIVE** | Exclusion totale | TOUS | DROP TABLE, TRUNCATE, ALTER TABLE (certains cas) |
@@ -96,26 +96,26 @@ PostgreSQL définit **8 modes de verrous de table**, de moins restrictif à plus
 Deux transactions peuvent tenir des verrous sur la même table **si ces verrous sont compatibles**.
 
 **Règle simple** :
-- ✅ **ACCESS SHARE** (SELECT) est compatible avec presque tout
-- ✅ Plusieurs **ROW EXCLUSIVE** (UPDATE) sont compatibles entre eux
+- ✅ **ACCESS SHARE** (SELECT) est compatible avec presque tout  
+- ✅ Plusieurs **ROW EXCLUSIVE** (UPDATE) sont compatibles entre eux  
 - ❌ **ACCESS EXCLUSIVE** est incompatible avec tout
 
 **Exemple de compatibilité** :
 
 ```sql
 -- Transaction A
-BEGIN;
-SELECT * FROM produits;  -- Pose un verrou ACCESS SHARE
+BEGIN;  
+SELECT * FROM produits;  -- Pose un verrou ACCESS SHARE  
 -- N'empêche pas les autres de lire ou modifier
 
 -- Transaction B (en parallèle, compatible)
-BEGIN;
-UPDATE produits SET prix = 100 WHERE id = 1;  -- Pose un verrou ROW EXCLUSIVE
+BEGIN;  
+UPDATE produits SET prix = 100 WHERE id = 1;  -- Pose un verrou ROW EXCLUSIVE  
 -- Fonctionne ! Les deux verrous sont compatibles
 
 -- Transaction C (en parallèle, compatible aussi)
-BEGIN;
-SELECT * FROM produits;  -- Pose aussi un ACCESS SHARE
+BEGIN;  
+SELECT * FROM produits;  -- Pose aussi un ACCESS SHARE  
 -- Fonctionne !
 ```
 
@@ -123,13 +123,13 @@ SELECT * FROM produits;  -- Pose aussi un ACCESS SHARE
 
 ```sql
 -- Transaction A
-BEGIN;
-TRUNCATE TABLE produits;  -- Pose un verrou ACCESS EXCLUSIVE
+BEGIN;  
+TRUNCATE TABLE produits;  -- Pose un verrou ACCESS EXCLUSIVE  
 -- Bloque TOUT accès à la table !
 
 -- Transaction B (en parallèle)
-BEGIN;
-SELECT * FROM produits;  -- Pose un ACCESS SHARE
+BEGIN;  
+SELECT * FROM produits;  -- Pose un ACCESS SHARE  
 -- BLOQUÉE ! Doit attendre que A termine
 ```
 
@@ -241,8 +241,8 @@ COMMIT;
 ### Comparaison visuelle des verrous de ligne
 
 ```
-Restrictivité croissante :
-FOR KEY SHARE < FOR SHARE < FOR NO KEY UPDATE < FOR UPDATE
+Restrictivité croissante :  
+FOR KEY SHARE < FOR SHARE < FOR NO KEY UPDATE < FOR UPDATE  
 
 Lectures simples (SELECT)
     ↓
@@ -302,19 +302,19 @@ COMMIT;
 **Modes disponibles** :
 
 ```sql
-LOCK TABLE ma_table IN ACCESS SHARE MODE;
-LOCK TABLE ma_table IN ROW SHARE MODE;
-LOCK TABLE ma_table IN ROW EXCLUSIVE MODE;
-LOCK TABLE ma_table IN SHARE UPDATE EXCLUSIVE MODE;
-LOCK TABLE ma_table IN SHARE MODE;
-LOCK TABLE ma_table IN SHARE ROW EXCLUSIVE MODE;
-LOCK TABLE ma_table IN EXCLUSIVE MODE;
-LOCK TABLE TABLE ma_table IN ACCESS EXCLUSIVE MODE;
+LOCK TABLE ma_table IN ACCESS SHARE MODE;  
+LOCK TABLE ma_table IN ROW SHARE MODE;  
+LOCK TABLE ma_table IN ROW EXCLUSIVE MODE;  
+LOCK TABLE ma_table IN SHARE UPDATE EXCLUSIVE MODE;  
+LOCK TABLE ma_table IN SHARE MODE;  
+LOCK TABLE ma_table IN SHARE ROW EXCLUSIVE MODE;  
+LOCK TABLE ma_table IN EXCLUSIVE MODE;  
+LOCK TABLE TABLE ma_table IN ACCESS EXCLUSIVE MODE;  
 ```
 
 **Quand utiliser LOCK TABLE** :
-- ✅ Opérations en batch nécessitant un accès exclusif
-- ✅ Éviter les deadlocks dans des scénarios complexes
+- ✅ Opérations en batch nécessitant un accès exclusif  
+- ✅ Éviter les deadlocks dans des scénarios complexes  
 - ⚠️ Rarement nécessaire (PostgreSQL gère bien automatiquement)
 
 #### SELECT ... FOR UPDATE / FOR SHARE
@@ -387,8 +387,8 @@ UPDATE comptes SET solde = solde + 50 WHERE id = 'A';
 **Situation finale** : DEADLOCK ! 🔴
 
 ```
-Transaction 1 : détient A, attend B
-Transaction 2 : détient B, attend A
+Transaction 1 : détient A, attend B  
+Transaction 2 : détient B, attend A  
 
      ┌───────────────┐
      │ Transaction 1 │
@@ -428,17 +428,17 @@ Transaction 2 : détient B, attend A
 
 PostgreSQL a un **détecteur de deadlocks** qui s'exécute automatiquement :
 
-1. **Timeout** : Par défaut, toutes les secondes (paramètre `deadlock_timeout`)
-2. **Détection** : PostgreSQL analyse le graphe des attentes de verrous
+1. **Timeout** : Par défaut, toutes les secondes (paramètre `deadlock_timeout`)  
+2. **Détection** : PostgreSQL analyse le graphe des attentes de verrous  
 3. **Résolution** : Si un cycle est détecté, PostgreSQL **annule** l'une des transactions
 
 **Message d'erreur** :
 
 ```
-ERROR: deadlock detected
-DETAIL: Process 12345 waits for ShareLock on transaction 67890; blocked by process 12346.
-Process 12346 waits for ShareLock on transaction 67889; blocked by process 12345.
-HINT: See server log for query details.
+ERROR: deadlock detected  
+DETAIL: Process 12345 waits for ShareLock on transaction 67890; blocked by process 12346.  
+Process 12346 waits for ShareLock on transaction 67889; blocked by process 12345.  
+HINT: See server log for query details.  
 ```
 
 La transaction annulée reçoit cette erreur et doit faire un **ROLLBACK**.
@@ -469,9 +469,9 @@ Le cas classique vu précédemment : T1 attend T2, T2 attend T1.
 ### 2. Deadlock circulaire (3+ transactions)
 
 ```
-T1 détient A, attend B
-T2 détient B, attend C
-T3 détient C, attend A
+T1 détient A, attend B  
+T2 détient B, attend C  
+T3 détient C, attend A  
 
 Cycle : T1 → T2 → T3 → T1
 ```
@@ -480,20 +480,20 @@ Cycle : T1 → T2 → T3 → T1
 
 ```sql
 -- Transaction 1
-BEGIN;
-UPDATE t1 SET ... WHERE id = 1;  -- Verrouille t1 ligne 1
+BEGIN;  
+UPDATE t1 SET ... WHERE id = 1;  -- Verrouille t1 ligne 1  
 -- [attend]
 UPDATE t2 SET ... WHERE id = 1;  -- Veut t2 ligne 1 (détenue par T2)
 
 -- Transaction 2
-BEGIN;
-UPDATE t2 SET ... WHERE id = 1;  -- Verrouille t2 ligne 1
+BEGIN;  
+UPDATE t2 SET ... WHERE id = 1;  -- Verrouille t2 ligne 1  
 -- [attend]
 UPDATE t3 SET ... WHERE id = 1;  -- Veut t3 ligne 1 (détenue par T3)
 
 -- Transaction 3
-BEGIN;
-UPDATE t3 SET ... WHERE id = 1;  -- Verrouille t3 ligne 1
+BEGIN;  
+UPDATE t3 SET ... WHERE id = 1;  -- Verrouille t3 ligne 1  
 -- [attend]
 UPDATE t1 SET ... WHERE id = 1;  -- Veut t1 ligne 1 (détenue par T1)
 
@@ -504,14 +504,14 @@ UPDATE t1 SET ... WHERE id = 1;  -- Veut t1 ligne 1 (détenue par T1)
 
 ```sql
 -- Transaction 1
-BEGIN;
-UPDATE produits SET prix = 100 WHERE id = 1;  -- Verrou ligne
+BEGIN;  
+UPDATE produits SET prix = 100 WHERE id = 1;  -- Verrou ligne  
 -- [attend]
 ALTER TABLE produits ADD COLUMN description TEXT;  -- Veut verrou table (T2 l'a)
 
 -- Transaction 2
-BEGIN;
-ALTER TABLE produits ADD COLUMN stock INT;  -- Verrou table (ACCESS EXCLUSIVE)
+BEGIN;  
+ALTER TABLE produits ADD COLUMN stock INT;  -- Verrou table (ACCESS EXCLUSIVE)  
 -- [attend]
 UPDATE produits SET stock = 10 WHERE id = 1;  -- Veut verrou ligne (T1 l'a)
 
@@ -522,18 +522,18 @@ UPDATE produits SET stock = 10 WHERE id = 1;  -- Veut verrou ligne (T1 l'a)
 
 ```sql
 -- Transaction 1
-BEGIN;
-UPDATE commandes SET montant = 500 WHERE id = 100;  -- Verrouille commande 100
+BEGIN;  
+UPDATE commandes SET montant = 500 WHERE id = 100;  -- Verrouille commande 100  
 -- [attend]
-INSERT INTO lignes_commande (commande_id, produit_id)
-VALUES (200, 1);  -- Veut verrouiller commande 200 (FK, détenue par T2)
+INSERT INTO lignes_commande (commande_id, produit_id)  
+VALUES (200, 1);  -- Veut verrouiller commande 200 (FK, détenue par T2)  
 
 -- Transaction 2
-BEGIN;
-UPDATE commandes SET montant = 300 WHERE id = 200;  -- Verrouille commande 200
+BEGIN;  
+UPDATE commandes SET montant = 300 WHERE id = 200;  -- Verrouille commande 200  
 -- [attend]
-INSERT INTO lignes_commande (commande_id, produit_id)
-VALUES (100, 2);  -- Veut verrouiller commande 100 (FK, détenue par T1)
+INSERT INTO lignes_commande (commande_id, produit_id)  
+VALUES (100, 2);  -- Veut verrouiller commande 100 (FK, détenue par T1)  
 
 -- DEADLOCK !
 ```
@@ -550,12 +550,12 @@ VALUES (100, 2);  -- Veut verrouiller commande 100 (FK, détenue par T1)
 
 ```sql
 -- Transaction A
-UPDATE comptes SET ... WHERE id = 'A';  -- A puis B
-UPDATE comptes SET ... WHERE id = 'B';
+UPDATE comptes SET ... WHERE id = 'A';  -- A puis B  
+UPDATE comptes SET ... WHERE id = 'B';  
 
 -- Transaction B
-UPDATE comptes SET ... WHERE id = 'B';  -- B puis A (ordre inversé!)
-UPDATE comptes SET ... WHERE id = 'A';
+UPDATE comptes SET ... WHERE id = 'B';  -- B puis A (ordre inversé!)  
+UPDATE comptes SET ... WHERE id = 'A';  
 
 -- Risque de deadlock !
 ```
@@ -564,12 +564,12 @@ UPDATE comptes SET ... WHERE id = 'A';
 
 ```sql
 -- Transaction A
-UPDATE comptes SET ... WHERE id = 'A';  -- A puis B
-UPDATE comptes SET ... WHERE id = 'B';
+UPDATE comptes SET ... WHERE id = 'A';  -- A puis B  
+UPDATE comptes SET ... WHERE id = 'B';  
 
 -- Transaction B
-UPDATE comptes SET ... WHERE id = 'A';  -- A puis B (même ordre)
-UPDATE comptes SET ... WHERE id = 'B';
+UPDATE comptes SET ... WHERE id = 'A';  -- A puis B (même ordre)  
+UPDATE comptes SET ... WHERE id = 'B';  
 
 -- Pas de deadlock possible !
 ```
@@ -588,34 +588,34 @@ Plus une transaction est courte, moins elle a de chances de rentrer en conflit a
 
 ```sql
 -- ❌ MAUVAIS : Transaction longue
-BEGIN;
-UPDATE comptes SET ... WHERE id = 1;
+BEGIN;  
+UPDATE comptes SET ... WHERE id = 1;  
 -- [Traitement long dans l'application : 30 secondes]
 -- [Appels API externes]
 -- [Calculs complexes]
-UPDATE autre_table SET ...;
-COMMIT;
+UPDATE autre_table SET ...;  
+COMMIT;  
 
 -- ✅ BON : Transaction courte
 -- [Faire tous les calculs AVANT]
-BEGIN;
-UPDATE comptes SET ... WHERE id = 1;
-UPDATE autre_table SET ...;
-COMMIT;  -- Rapide !
+BEGIN;  
+UPDATE comptes SET ... WHERE id = 1;  
+UPDATE autre_table SET ...;  
+COMMIT;  -- Rapide !  
 ```
 
 ### 3. Utiliser des timeouts
 
 ```sql
 -- Au niveau de la session
-SET lock_timeout = '10s';
-SET statement_timeout = '30s';
+SET lock_timeout = '10s';  
+SET statement_timeout = '30s';  
 
 BEGIN;
 -- Si un verrou n'est pas obtenu en 10s → erreur
 -- Si la requête prend plus de 30s → erreur
-UPDATE ...;
-COMMIT;
+UPDATE ...;  
+COMMIT;  
 ```
 
 ### 4. Verrouillage explicite avec LOCK TABLE
@@ -626,12 +626,12 @@ Pour des opérations complexes, verrouillez les tables **au début** dans le bon
 BEGIN;
 
 -- Verrouiller toutes les tables nécessaires immédiatement
-LOCK TABLE comptes IN SHARE ROW EXCLUSIVE MODE;
-LOCK TABLE transactions IN SHARE ROW EXCLUSIVE MODE;
+LOCK TABLE comptes IN SHARE ROW EXCLUSIVE MODE;  
+LOCK TABLE transactions IN SHARE ROW EXCLUSIVE MODE;  
 
 -- Faire toutes les opérations
-UPDATE comptes ...;
-INSERT INTO transactions ...;
+UPDATE comptes ...;  
+INSERT INTO transactions ...;  
 
 COMMIT;
 ```
@@ -670,30 +670,30 @@ COMMIT;
 
 ```sql
 -- ❌ MAUVAIS : Verrouiller ligne par ligne dans une boucle
-BEGIN;
-FOR each_id IN (SELECT id FROM comptes WHERE ...) LOOP
+BEGIN;  
+FOR each_id IN (SELECT id FROM comptes WHERE ...) LOOP  
     UPDATE comptes SET ... WHERE id = each_id;
-END LOOP;
-COMMIT;
+END LOOP;  
+COMMIT;  
 
 -- ✅ BON : Une seule opération SQL
-BEGIN;
-UPDATE comptes SET ... WHERE id IN (SELECT id FROM comptes WHERE ...);
-COMMIT;
+BEGIN;  
+UPDATE comptes SET ... WHERE id IN (SELECT id FROM comptes WHERE ...);  
+COMMIT;  
 ```
 
 ### 7. Éviter les transactions interactives
 
 ```sql
 -- ❌ TRÈS MAUVAIS : Transaction ouverte pendant une interaction utilisateur
-BEGIN;
-UPDATE comptes SET statut = 'En modification' WHERE id = 1;
+BEGIN;  
+UPDATE comptes SET statut = 'En modification' WHERE id = 1;  
 
 -- [Attente de validation utilisateur : peut prendre des minutes !]
 -- [Pendant ce temps, le verrou est détenu]
 
-UPDATE comptes SET solde = nouveau_solde WHERE id = 1;
-COMMIT;
+UPDATE comptes SET solde = nouveau_solde WHERE id = 1;  
+COMMIT;  
 
 -- ✅ BON : Pas de transaction pendant l'interaction
 -- 1. Lire les données
@@ -702,9 +702,9 @@ SELECT * FROM comptes WHERE id = 1;
 -- 2. [Interaction utilisateur]
 
 -- 3. Transaction courte pour écrire
-BEGIN;
-UPDATE comptes SET solde = nouveau_solde WHERE id = 1;
-COMMIT;
+BEGIN;  
+UPDATE comptes SET solde = nouveau_solde WHERE id = 1;  
+COMMIT;  
 ```
 
 ---
@@ -717,8 +717,8 @@ PostgreSQL enregistre les deadlocks dans ses logs si configuré :
 
 ```ini
 # Dans postgresql.conf
-log_lock_waits = on  # Logger les attentes de verrous longues
-deadlock_timeout = 1s  # Temps avant de vérifier les deadlocks
+log_lock_waits = on  # Logger les attentes de verrous longues  
+deadlock_timeout = 1s  # Temps avant de vérifier les deadlocks  
 ```
 
 **Exemple de log** :
@@ -743,8 +743,8 @@ SELECT
     relation::regclass AS table_name,
     mode,
     granted
-FROM pg_locks
-WHERE NOT granted;  -- Verrous non accordés (en attente)
+FROM pg_locks  
+WHERE NOT granted;  -- Verrous non accordés (en attente)  
 ```
 
 ### Identifier qui bloque qui
@@ -759,9 +759,9 @@ SELECT
     blocked_activity.query AS blocked_query,
     blocking_activity.query AS blocking_query,
     blocked_activity.application_name AS blocked_app
-FROM pg_catalog.pg_locks blocked_locks
-JOIN pg_catalog.pg_stat_activity blocked_activity ON blocked_activity.pid = blocked_locks.pid
-JOIN pg_catalog.pg_locks blocking_locks
+FROM pg_catalog.pg_locks blocked_locks  
+JOIN pg_catalog.pg_stat_activity blocked_activity ON blocked_activity.pid = blocked_locks.pid  
+JOIN pg_catalog.pg_locks blocking_locks  
     ON blocking_locks.locktype = blocked_locks.locktype
     AND blocking_locks.database IS NOT DISTINCT FROM blocked_locks.database
     AND blocking_locks.relation IS NOT DISTINCT FROM blocked_locks.relation
@@ -773,8 +773,8 @@ JOIN pg_catalog.pg_locks blocking_locks
     AND blocking_locks.objid IS NOT DISTINCT FROM blocked_locks.objid
     AND blocking_locks.objsubid IS NOT DISTINCT FROM blocked_locks.objsubid
     AND blocking_locks.pid != blocked_locks.pid
-JOIN pg_catalog.pg_stat_activity blocking_activity ON blocking_activity.pid = blocking_locks.pid
-WHERE NOT blocked_locks.granted;
+JOIN pg_catalog.pg_stat_activity blocking_activity ON blocking_activity.pid = blocking_locks.pid  
+WHERE NOT blocked_locks.granted;  
 ```
 
 ### Fonction PostgreSQL pour voir les blocages (simplifié)
@@ -808,9 +808,9 @@ Les **advisory locks** sont des verrous que vous créez **manuellement** pour co
 
 ### Pourquoi utiliser des advisory locks ?
 
-- ✅ Coordonner des tâches distribuées (jobs, workers)
-- ✅ Implémenter des mutex au niveau base de données
-- ✅ Empêcher l'exécution simultanée d'une opération critique
+- ✅ Coordonner des tâches distribuées (jobs, workers)  
+- ✅ Implémenter des mutex au niveau base de données  
+- ✅ Empêcher l'exécution simultanée d'une opération critique  
 - ✅ Créer des sémaphores ou des compteurs partagés
 
 ### Types d'advisory locks
@@ -930,8 +930,8 @@ SELECT
     pid,
     mode,
     granted
-FROM pg_locks
-WHERE locktype = 'advisory';
+FROM pg_locks  
+WHERE locktype = 'advisory';  
 ```
 
 ---
@@ -943,12 +943,12 @@ WHERE locktype = 'advisory';
 Connaissez quel type de verrou pose chaque opération :
 
 ```sql
-SELECT → ACCESS SHARE (lecture)
-UPDATE/DELETE → ROW EXCLUSIVE (table) + verrou ligne
-INSERT → ROW EXCLUSIVE (table)
-CREATE INDEX → SHARE
-TRUNCATE/DROP → ACCESS EXCLUSIVE
-ALTER TABLE → Varie selon l'opération
+SELECT → ACCESS SHARE (lecture)  
+UPDATE/DELETE → ROW EXCLUSIVE (table) + verrou ligne  
+INSERT → ROW EXCLUSIVE (table)  
+CREATE INDEX → SHARE  
+TRUNCATE/DROP → ACCESS EXCLUSIVE  
+ALTER TABLE → Varie selon l'opération  
 ```
 
 ### 2. Éviter les opérations DDL en production aux heures de pointe
@@ -982,8 +982,8 @@ SELECT
     pg_blocking_pids(pid) as blocked_by,
     query as query_text,
     age(clock_timestamp(), query_start) AS duration
-FROM pg_stat_activity
-WHERE (now() - pg_stat_activity.query_start) > interval '5 minutes'
+FROM pg_stat_activity  
+WHERE (now() - pg_stat_activity.query_start) > interval '5 minutes'  
   AND state = 'active';
 ```
 
@@ -1003,16 +1003,16 @@ SELECT
     state,
     query,
     age(clock_timestamp(), state_change) AS idle_duration
-FROM pg_stat_activity
-WHERE state = 'idle in transaction'
+FROM pg_stat_activity  
+WHERE state = 'idle in transaction'  
   AND age(clock_timestamp(), state_change) > interval '5 minutes';
 ```
 
 ### 6. Implémenter une logique de retry
 
 ```python
-import time
-import psycopg2
+import time  
+import psycopg2  
 
 def execute_with_deadlock_retry(conn, operation, max_retries=3):
     """
@@ -1120,11 +1120,11 @@ UPDATE stats SET compteur = compteur + 1 WHERE id = 1;
 BEGIN;
 
 -- Prendre un job disponible en sautant les verrouillés
-SELECT * FROM jobs
-WHERE status = 'En attente'
-ORDER BY priority DESC, created_at ASC
-LIMIT 1
-FOR UPDATE SKIP LOCKED;
+SELECT * FROM jobs  
+WHERE status = 'En attente'  
+ORDER BY priority DESC, created_at ASC  
+LIMIT 1  
+FOR UPDATE SKIP LOCKED;  
 
 -- Si un job est trouvé
 IF FOUND THEN
@@ -1156,23 +1156,23 @@ COMMIT;
 
 ### Checklist anti-deadlock
 
-- ✅ Accéder aux ressources dans un **ordre cohérent** (trier les IDs)
-- ✅ Garder les transactions **courtes**
-- ✅ Éviter les transactions **interactives**
-- ✅ Utiliser **NOWAIT** ou **SKIP LOCKED** quand approprié
-- ✅ Configurer des **timeouts** (lock_timeout, statement_timeout)
-- ✅ Implémenter une **logique de retry** avec backoff exponentiel
-- ✅ **Monitorer** les deadlocks dans les logs
-- ✅ Préférer les opérations **atomiques SQL** au Read-Modify-Write
+- ✅ Accéder aux ressources dans un **ordre cohérent** (trier les IDs)  
+- ✅ Garder les transactions **courtes**  
+- ✅ Éviter les transactions **interactives**  
+- ✅ Utiliser **NOWAIT** ou **SKIP LOCKED** quand approprié  
+- ✅ Configurer des **timeouts** (lock_timeout, statement_timeout)  
+- ✅ Implémenter une **logique de retry** avec backoff exponentiel  
+- ✅ **Monitorer** les deadlocks dans les logs  
+- ✅ Préférer les opérations **atomiques SQL** au Read-Modify-Write  
 - ✅ Éviter les **DDL** pendant les heures de pointe
 
 ### Signaux d'alarme
 
-- 🚨 Transactions en "idle in transaction" pour longtemps
-- 🚨 Nombreux processus en attente de verrous
-- 🚨 Deadlocks fréquents dans les logs
-- 🚨 Lock timeout dépassé régulièrement
-- 🚨 Requêtes bloquées pendant plusieurs minutes
+- 🚨 Transactions en "idle in transaction" pour longtemps  
+- 🚨 Nombreux processus en attente de verrous  
+- 🚨 Deadlocks fréquents dans les logs  
+- 🚨 Lock timeout dépassé régulièrement  
+- 🚨 Requêtes bloquées pendant plusieurs minutes  
 - 🚨 Opérations DDL en production active
 
 ---
@@ -1181,18 +1181,18 @@ COMMIT;
 
 Les verrous sont un mécanisme essentiel de PostgreSQL pour coordonner l'accès concurrent aux données. Bien comprendre leur fonctionnement vous permet de :
 
-- ✅ Concevoir des transactions robustes sans Lost Updates
-- ✅ Éviter les deadlocks par une approche méthodique
-- ✅ Diagnostiquer et résoudre les problèmes de performance liés aux blocages
-- ✅ Utiliser les bons types de verrous pour chaque situation
+- ✅ Concevoir des transactions robustes sans Lost Updates  
+- ✅ Éviter les deadlocks par une approche méthodique  
+- ✅ Diagnostiquer et résoudre les problèmes de performance liés aux blocages  
+- ✅ Utiliser les bons types de verrous pour chaque situation  
 - ✅ Implémenter une coordination applicative avec Advisory Locks
 
 **Principes clés** :
 
-1. **MVCC** gère la visibilité, **verrous** gèrent les modifications concurrentes
-2. Les verrous de **ligne** permettent plus de concurrence que les verrous de **table**
-3. Les **deadlocks** sont détectés et résolus automatiquement, mais il faut les **prévenir**
-4. L'**ordre d'accès cohérent** est la meilleure défense contre les deadlocks
+1. **MVCC** gère la visibilité, **verrous** gèrent les modifications concurrentes  
+2. Les verrous de **ligne** permettent plus de concurrence que les verrous de **table**  
+3. Les **deadlocks** sont détectés et résolus automatiquement, mais il faut les **prévenir**  
+4. L'**ordre d'accès cohérent** est la meilleure défense contre les deadlocks  
 5. Les **advisory locks** offrent une flexibilité pour la coordination applicative
 
 Dans la prochaine section (12.6), nous explorerons les **Advisory Locks en profondeur** et des patterns avancés de coordination.
@@ -1201,13 +1201,13 @@ Dans la prochaine section (12.6), nous explorerons les **Advisory Locks en profo
 
 **Points clés à retenir :**
 
-- 🔑 MVCC + Verrous = Gestion complète de la concurrence
-- 🔑 8 modes de verrous de table, du moins au plus restrictif
-- 🔑 FOR UPDATE = verrou exclusif de ligne
-- 🔑 Deadlock = attente circulaire, détecté automatiquement
-- 🔑 Ordre cohérent d'accès = prévention #1 des deadlocks
-- 🔑 Transactions courtes = moins de conflits
-- 🔑 SKIP LOCKED = utile pour les queues de travail
+- 🔑 MVCC + Verrous = Gestion complète de la concurrence  
+- 🔑 8 modes de verrous de table, du moins au plus restrictif  
+- 🔑 FOR UPDATE = verrou exclusif de ligne  
+- 🔑 Deadlock = attente circulaire, détecté automatiquement  
+- 🔑 Ordre cohérent d'accès = prévention #1 des deadlocks  
+- 🔑 Transactions courtes = moins de conflits  
+- 🔑 SKIP LOCKED = utile pour les queues de travail  
 - 🔑 Advisory locks = coordination applicative personnalisée
 
 ⏭️ [Advisory Locks : Verrouillage applicatif personnalisé](/12-concurrence-et-transactions/06-advisory-locks.md)

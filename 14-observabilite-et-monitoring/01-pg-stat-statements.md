@@ -35,10 +35,10 @@ C'est un outil de diagnostic essentiel pour tout développeur ou administrateur 
 
 Pour chaque requête unique (normalisée), pg_stat_statements enregistre :
 
-- **Nombre d'exécutions** : Combien de fois la requête a été exécutée
-- **Temps d'exécution** : Temps total, moyen, minimum et maximum
-- **Lignes traitées** : Nombre de lignes lues, insérées, mises à jour ou supprimées
-- **Blocs I/O** : Accès disque (lectures, écritures, cache hits)
+- **Nombre d'exécutions** : Combien de fois la requête a été exécutée  
+- **Temps d'exécution** : Temps total, moyen, minimum et maximum  
+- **Lignes traitées** : Nombre de lignes lues, insérées, mises à jour ou supprimées  
+- **Blocs I/O** : Accès disque (lectures, écritures, cache hits)  
 - **Timestamp** : Dernière exécution
 
 ### Normalisation des requêtes
@@ -47,8 +47,8 @@ Un concept clé à comprendre : **la normalisation**.
 
 Considérez ces deux requêtes :
 ```sql
-SELECT * FROM users WHERE id = 1;
-SELECT * FROM users WHERE id = 42;
+SELECT * FROM users WHERE id = 1;  
+SELECT * FROM users WHERE id = 42;  
 ```
 
 Même si les valeurs sont différentes, ce sont structurellement la même requête. pg_stat_statements les **normalise** en remplaçant les valeurs littérales par des placeholders :
@@ -96,8 +96,8 @@ L'extension pg_stat_statements doit être chargée au démarrage du serveur. Pou
 #### Localiser postgresql.conf
 
 La localisation dépend de votre installation :
-- **Linux** : Généralement dans `/etc/postgresql/18/main/postgresql.conf` ou `/var/lib/pgsql/18/data/postgresql.conf`
-- **macOS (Homebrew)** : `/opt/homebrew/var/postgresql@18/postgresql.conf`
+- **Linux** : Généralement dans `/etc/postgresql/18/main/postgresql.conf` ou `/var/lib/pgsql/18/data/postgresql.conf`  
+- **macOS (Homebrew)** : `/opt/homebrew/var/postgresql@18/postgresql.conf`  
 - **Windows** : `C:\Program Files\PostgreSQL\18\data\postgresql.conf`
 
 Pour trouver le chemin exact depuis psql :
@@ -154,8 +154,8 @@ pg_stat_statements.save = on
 - Recommandation : 10 000 pour un serveur de production actif
 
 **pg_stat_statements.track**
-- `top` : Suit uniquement les requêtes de niveau supérieur (par défaut)
-- `all` : Suit aussi les requêtes exécutées dans les fonctions PL/pgSQL
+- `top` : Suit uniquement les requêtes de niveau supérieur (par défaut)  
+- `all` : Suit aussi les requêtes exécutées dans les fonctions PL/pgSQL  
 - `none` : Désactive le suivi
 - Recommandation : `all` pour une visibilité complète
 
@@ -277,9 +277,9 @@ SELECT COUNT(*) FROM pg_stat_statements;
 
 ### 4. Vérifier les paramètres actuels
 ```sql
-SELECT name, setting, unit
-FROM pg_settings
-WHERE name LIKE 'pg_stat_statements%';
+SELECT name, setting, unit  
+FROM pg_settings  
+WHERE name LIKE 'pg_stat_statements%';  
 ```
 
 Exemple de sortie :
@@ -383,11 +383,11 @@ SELECT pg_stat_statements_reset(userid, dbid, queryid);
 
 Voici un récapitulatif rapide des étapes d'installation :
 
-- [ ] **Étape 1** : Vérifier que le paquet contrib est installé
-- [ ] **Étape 2** : Ajouter `pg_stat_statements` à `shared_preload_libraries` dans postgresql.conf
-- [ ] **Étape 3** : Configurer les paramètres optionnels (max, track, track_planning, track_utility)
-- [ ] **Étape 4** : Redémarrer PostgreSQL
-- [ ] **Étape 5** : Créer l'extension avec `CREATE EXTENSION pg_stat_statements;`
+- [ ] **Étape 1** : Vérifier que le paquet contrib est installé  
+- [ ] **Étape 2** : Ajouter `pg_stat_statements` à `shared_preload_libraries` dans postgresql.conf  
+- [ ] **Étape 3** : Configurer les paramètres optionnels (max, track, track_planning, track_utility)  
+- [ ] **Étape 4** : Redémarrer PostgreSQL  
+- [ ] **Étape 5** : Créer l'extension avec `CREATE EXTENSION pg_stat_statements;`  
 - [ ] **Étape 6** : Vérifier avec `SELECT * FROM pg_stat_statements LIMIT 5;`
 
 ---
@@ -401,11 +401,11 @@ Voici un exemple de configuration recommandée pour PostgreSQL 18 dans `postgres
 shared_preload_libraries = 'pg_stat_statements'
 
 # === Configuration de pg_stat_statements ===
-pg_stat_statements.max = 10000              # Nombre max de requêtes distinctes
-pg_stat_statements.track = all              # Suit toutes les requêtes (y compris dans les fonctions)
-pg_stat_statements.track_planning = on      # Inclut le temps de planification
-pg_stat_statements.track_utility = on       # Suit VACUUM, ANALYZE, etc.
-pg_stat_statements.save = on                # Sauvegarde sur disque à l'arrêt
+pg_stat_statements.max = 10000              # Nombre max de requêtes distinctes  
+pg_stat_statements.track = all              # Suit toutes les requêtes (y compris dans les fonctions)  
+pg_stat_statements.track_planning = on      # Inclut le temps de planification  
+pg_stat_statements.track_utility = on       # Suit VACUUM, ANALYZE, etc.  
+pg_stat_statements.save = on                # Sauvegarde sur disque à l'arrêt  
 ```
 
 Après avoir édité ce fichier, n'oubliez pas de redémarrer PostgreSQL !
@@ -427,12 +427,12 @@ L'extension est maintenant votre alliée principale pour comprendre et optimiser
 
 **🎯 Points clés à retenir :**
 
-1. **pg_stat_statements** est une extension essentielle pour le monitoring des performances SQL
-2. Elle **normalise** les requêtes pour agréger les statistiques de manière pertinente
-3. L'installation nécessite une modification de `postgresql.conf` et un **redémarrage** du serveur
-4. L'extension capture automatiquement le temps d'exécution, les I/O, et le nombre d'exécutions
-5. Elle a un **impact minimal** sur les performances (< 5%)
-6. Elle doit être créée dans chaque base de données avec `CREATE EXTENSION`
+1. **pg_stat_statements** est une extension essentielle pour le monitoring des performances SQL  
+2. Elle **normalise** les requêtes pour agréger les statistiques de manière pertinente  
+3. L'installation nécessite une modification de `postgresql.conf` et un **redémarrage** du serveur  
+4. L'extension capture automatiquement le temps d'exécution, les I/O, et le nombre d'exécutions  
+5. Elle a un **impact minimal** sur les performances (< 5%)  
+6. Elle doit être créée dans chaque base de données avec `CREATE EXTENSION`  
 7. Les paramètres recommandés pour PostgreSQL 18 : `max=10000`, `track=all`, `track_planning=on`
 
 **💡 Conseil de pro :**

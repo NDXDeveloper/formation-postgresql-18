@@ -29,8 +29,8 @@ Seq Scan on clients  (cost=0.00..2123.00 rows=35000 width=50)
                      (actual time=0.045..23.456 rows=34987 loops=1)
   Filter: ((ville)::text = 'Paris'::text)
   Rows Removed by Filter: 65013
-Planning Time: 0.234 ms
-Execution Time: 25.891 ms
+Planning Time: 0.234 ms  
+Execution Time: 25.891 ms  
 ```
 
 **Problème** : **Aucune information sur les I/O** !
@@ -52,8 +52,8 @@ Seq Scan on clients  (cost=0.00..2123.00 rows=35000 width=50)
   Filter: ((ville)::text = 'Paris'::text)
   Rows Removed by Filter: 65013
   Buffers: shared hit=1234 read=150
-Planning Time: 0.234 ms
-Execution Time: 25.891 ms
+Planning Time: 0.234 ms  
+Execution Time: 25.891 ms  
 ```
 
 ### 1.2. Conséquences de l'Oubli
@@ -69,15 +69,15 @@ Sans les statistiques de buffers, il est **impossible** de savoir si une requêt
 
 **Requête A** :
 ```
-Execution Time: 500 ms
-Buffers: shared hit=50000   ← Tout en cache
+Execution Time: 500 ms  
+Buffers: shared hit=50000   ← Tout en cache  
 ```
 → Problème : Algorithme inefficace ou trop de données traitées
 
 **Requête B** :
 ```
-Execution Time: 500 ms
-Buffers: shared hit=100 read=49900   ← Presque tout depuis le disque
+Execution Time: 500 ms  
+Buffers: shared hit=100 read=49900   ← Presque tout depuis le disque  
 ```
 → Problème : I/O disque, index manquant, cache trop petit
 
@@ -94,10 +94,10 @@ Les DBA et développeurs oublient souvent d'ajouter `BUFFERS`, surtout dans :
 
 ```sql
 -- Différentes syntaxes à retenir
-EXPLAIN ANALYZE SELECT ...;
-EXPLAIN (ANALYZE) SELECT ...;
-EXPLAIN (ANALYZE, BUFFERS) SELECT ...;
-EXPLAIN (ANALYZE, BUFFERS, VERBOSE) SELECT ...;
+EXPLAIN ANALYZE SELECT ...;  
+EXPLAIN (ANALYZE) SELECT ...;  
+EXPLAIN (ANALYZE, BUFFERS) SELECT ...;  
+EXPLAIN (ANALYZE, BUFFERS, VERBOSE) SELECT ...;  
 ```
 
 → Complexité cognitive inutile.
@@ -124,8 +124,8 @@ Seq Scan on clients  (cost=0.00..2123.00 rows=35000 width=50)
   Buffers: shared hit=1234 read=150
 Planning:
   Buffers: shared hit=12
-Planning Time: 0.234 ms
-Execution Time: 25.891 ms
+Planning Time: 0.234 ms  
+Execution Time: 25.891 ms  
 ```
 
 **Changement** : Ligne `Buffers: shared hit=1234 read=150` présente sans option supplémentaire !
@@ -151,10 +151,10 @@ Les anciennes syntaxes fonctionnent toujours :
 
 ```sql
 -- Toutes ces commandes fonctionnent dans PG 18
-EXPLAIN ANALYZE SELECT ...;                    -- ✅ BUFFERS inclus par défaut
-EXPLAIN (ANALYZE) SELECT ...;                  -- ✅ BUFFERS inclus par défaut
-EXPLAIN (ANALYZE, BUFFERS) SELECT ...;         -- ✅ Explicite (identique)
-EXPLAIN (ANALYZE, BUFFERS, VERBOSE) SELECT ...; -- ✅ Avec détails supplémentaires
+EXPLAIN ANALYZE SELECT ...;                    -- ✅ BUFFERS inclus par défaut  
+EXPLAIN (ANALYZE) SELECT ...;                  -- ✅ BUFFERS inclus par défaut  
+EXPLAIN (ANALYZE, BUFFERS) SELECT ...;         -- ✅ Explicite (identique)  
+EXPLAIN (ANALYZE, BUFFERS, VERBOSE) SELECT ...; -- ✅ Avec détails supplémentaires  
 ```
 
 ---
@@ -176,8 +176,8 @@ Seq Scan on clients  (cost=0.00..2123.00 rows=35000 width=50)
                      (actual time=0.045..23.456 rows=34987 loops=1)
   Filter: ((ville)::text = 'Paris'::text)
   Rows Removed by Filter: 65013
-Planning Time: 0.234 ms
-Execution Time: 25.891 ms
+Planning Time: 0.234 ms  
+Execution Time: 25.891 ms  
 ```
 
 **Cas d'usage pour `BUFFERS OFF`** :
@@ -192,7 +192,7 @@ Execution Time: 25.891 ms
 **Note** : PostgreSQL 18 n'introduit pas de paramètre `explain_buffers` pour désactiver globalement, mais cela pourrait venir dans une version future si la communauté en exprime le besoin.
 
 Pour l'instant, le comportement est :
-- `EXPLAIN ANALYZE` → Buffers **ON** par défaut
+- `EXPLAIN ANALYZE` → Buffers **ON** par défaut  
 - `EXPLAIN` (sans ANALYZE) → Pas de buffers (pas d'exécution)
 
 ---
@@ -216,8 +216,8 @@ Seq Scan on clients  (cost=0.00..2123.00 rows=35000 width=50)
   Buffers: shared hit=1234 read=150
 Planning:
   Buffers: shared hit=12
-Planning Time: 0.234 ms
-Execution Time: 25.891 ms
+Planning Time: 0.234 ms  
+Execution Time: 25.891 ms  
 ```
 
 **Nouvelle section** : `Planning: Buffers: shared hit=12`
@@ -246,16 +246,16 @@ Index Scan using idx_clients_id on clients
   Buffers: shared hit=5
 Planning:
   Buffers: shared hit=12   ← Coût de planification
-Planning Time: 0.234 ms
-Execution Time: 0.056 ms
+Planning Time: 0.234 ms  
+Execution Time: 0.056 ms  
 ```
 
 **Total** : 0.234 + 0.056 = **0.29 ms**
 
 **Avec Prepared Statement** :
 ```sql
-PREPARE stmt AS SELECT * FROM clients WHERE id = $1;
-EXPLAIN ANALYZE EXECUTE stmt(12345);
+PREPARE stmt AS SELECT * FROM clients WHERE id = $1;  
+EXPLAIN ANALYZE EXECUTE stmt(12345);  
 ```
 
 **Résultat** :
@@ -263,8 +263,8 @@ EXPLAIN ANALYZE EXECUTE stmt(12345);
 Index Scan using idx_clients_id on clients
   (actual time=0.023..0.045 rows=1 loops=1)
   Buffers: shared hit=5
-Planning Time: 0.001 ms   ← Plan en cache !
-Execution Time: 0.056 ms
+Planning Time: 0.001 ms   ← Plan en cache !  
+Execution Time: 0.056 ms  
 ```
 
 **Total** : 0.001 + 0.056 = **0.057 ms**
@@ -298,9 +298,9 @@ Planning Time: 5.234 ms
 #### Avant PostgreSQL 18
 
 **Étapes** :
-1. Exécuter `EXPLAIN ANALYZE SELECT ...;`
-2. Constater qu'il manque les buffers 😞
-3. Re-exécuter avec `EXPLAIN (ANALYZE, BUFFERS) SELECT ...;`
+1. Exécuter `EXPLAIN ANALYZE SELECT ...;`  
+2. Constater qu'il manque les buffers 😞  
+3. Re-exécuter avec `EXPLAIN (ANALYZE, BUFFERS) SELECT ...;`  
 4. Analyser le résultat
 
 **Temps perdu** : 2× exécution de la requête
@@ -308,7 +308,7 @@ Planning Time: 5.234 ms
 #### Avec PostgreSQL 18
 
 **Étapes** :
-1. Exécuter `EXPLAIN ANALYZE SELECT ...;`
+1. Exécuter `EXPLAIN ANALYZE SELECT ...;`  
 2. Analyser le résultat complet (avec buffers) ✅
 
 **Gain** : 1× exécution, résultat immédiat
@@ -321,11 +321,11 @@ Planning Time: 5.234 ms
 
 ```ini
 # postgresql.conf
-shared_preload_libraries = 'auto_explain'
-auto_explain.log_min_duration = 1000  # Log si > 1s
-auto_explain.log_analyze = on
-auto_explain.log_buffers = on          # ← Nécessaire !
-auto_explain.log_timing = on
+shared_preload_libraries = 'auto_explain'  
+auto_explain.log_min_duration = 1000  # Log si > 1s  
+auto_explain.log_analyze = on  
+auto_explain.log_buffers = on          # ← Nécessaire !  
+auto_explain.log_timing = on  
 ```
 
 **Problème** : Si vous oubliez `auto_explain.log_buffers = on`, les logs ne contiennent pas les I/O.
@@ -334,10 +334,10 @@ auto_explain.log_timing = on
 
 ```ini
 # postgresql.conf
-shared_preload_libraries = 'auto_explain'
-auto_explain.log_min_duration = 1000
-auto_explain.log_analyze = on
-auto_explain.log_timing = on
+shared_preload_libraries = 'auto_explain'  
+auto_explain.log_min_duration = 1000  
+auto_explain.log_analyze = on  
+auto_explain.log_timing = on  
 # auto_explain.log_buffers → Inutile, inclus par défaut !
 ```
 
@@ -366,15 +366,15 @@ SELECT * FROM pg_stat_io WHERE backend_type = 'client backend';
 ```
 
 **Colonnes** :
-- `backend_type` : Type de processus (client backend, autovacuum, etc.)
-- `object` : Type d'objet (table, index, toast, etc.)
-- `context` : Contexte (normal, vacuum, bulkwrite)
-- `reads` : Nombre de lectures
-- `writes` : Nombre d'écritures
-- `extends` : Nombre d'extensions de fichiers
-- `op_bytes` : Octets lus/écrits
-- `evictions` : Évictions du cache
-- `reuses` : Réutilisations de blocs
+- `backend_type` : Type de processus (client backend, autovacuum, etc.)  
+- `object` : Type d'objet (table, index, toast, etc.)  
+- `context` : Contexte (normal, vacuum, bulkwrite)  
+- `reads` : Nombre de lectures  
+- `writes` : Nombre d'écritures  
+- `extends` : Nombre d'extensions de fichiers  
+- `op_bytes` : Octets lus/écrits  
+- `evictions` : Évictions du cache  
+- `reuses` : Réutilisations de blocs  
 - `fsyncs` : Nombre de fsyncs
 
 **Utilité** : Corrélation entre les plans EXPLAIN et les statistiques système.
@@ -439,8 +439,8 @@ Seq Scan on clients  (cost=0.00..2123.00 rows=35000 width=50)
   Buffers: shared hit=1234 read=150   ← Automatique !
 Planning:
   Buffers: shared hit=12
-Planning Time: 0.234 ms
-Execution Time: 25.891 ms
+Planning Time: 0.234 ms  
+Execution Time: 25.891 ms  
 ```
 
 **Analyse immédiate** :
@@ -451,11 +451,11 @@ Execution Time: 25.891 ms
 ### 7.2. Requête avec Jointure
 
 ```sql
-EXPLAIN ANALYZE
-SELECT c.nom, o.montant
-FROM clients c
-JOIN commandes o ON c.id = o.client_id
-WHERE c.ville = 'Paris';
+EXPLAIN ANALYZE  
+SELECT c.nom, o.montant  
+FROM clients c  
+JOIN commandes o ON c.id = o.client_id  
+WHERE c.ville = 'Paris';  
 ```
 
 **Résultat** :
@@ -478,8 +478,8 @@ Hash Join  (cost=8500.00..20000.00 rows=10000 width=20)
               Buffers: shared hit=1111 read=84
 Planning:
   Buffers: shared hit=18
-Planning Time: 0.567 ms
-Execution Time: 235.123 ms
+Planning Time: 0.567 ms  
+Execution Time: 235.123 ms  
 ```
 
 **Analyse détaillée automatique** :
@@ -495,8 +495,8 @@ Execution Time: 235.123 ms
 ### 7.3. Requête avec Fichiers Temporaires
 
 ```sql
-EXPLAIN ANALYZE
-SELECT DISTINCT user_id FROM events ORDER BY user_id;
+EXPLAIN ANALYZE  
+SELECT DISTINCT user_id FROM events ORDER BY user_id;  
 ```
 
 **Résultat** :
@@ -565,8 +565,8 @@ Si vous avez des scripts qui parsent la sortie d'`EXPLAIN ANALYZE`, ils continue
 **Script qui parse sans buffers (PG ≤ 17)** :
 ```python
 # Ce script cherche "Execution Time"
-pattern = r"Execution Time: ([\d.]+) ms"
-match = re.search(pattern, explain_output)
+pattern = r"Execution Time: ([\d.]+) ms"  
+match = re.search(pattern, explain_output)  
 ```
 
 **Avec PG 18** : Le script fonctionne toujours (ligne `Execution Time` toujours présente).
@@ -574,8 +574,8 @@ match = re.search(pattern, explain_output)
 **Script qui parse les buffers (PG ≤ 17)** :
 ```python
 # Ce script cherche "Buffers: shared hit"
-pattern = r"Buffers: shared hit=(\d+)"
-match = re.search(pattern, explain_output)
+pattern = r"Buffers: shared hit=(\d+)"  
+match = re.search(pattern, explain_output)  
 ```
 
 **Avec PG 18** : Le script trouve maintenant les buffers même sans `BUFFERS` explicite ! ✅
@@ -617,21 +617,21 @@ Toutes les commandes existantes fonctionnent :
 
 ```sql
 -- Toutes ces commandes sont valides dans PG 18
-EXPLAIN SELECT ...;                              -- Plan seul
-EXPLAIN ANALYZE SELECT ...;                      -- Plan + Execution + Buffers
-EXPLAIN (ANALYZE) SELECT ...;                    -- Idem
-EXPLAIN (ANALYZE, BUFFERS) SELECT ...;           -- Idem (BUFFERS redondant mais valide)
-EXPLAIN (ANALYZE, BUFFERS OFF) SELECT ...;       -- Sans buffers
-EXPLAIN (ANALYZE, VERBOSE) SELECT ...;           -- + Détails colonnes + Buffers
-EXPLAIN (ANALYZE, BUFFERS, VERBOSE) SELECT ...;  -- Idem (BUFFERS redondant)
+EXPLAIN SELECT ...;                              -- Plan seul  
+EXPLAIN ANALYZE SELECT ...;                      -- Plan + Execution + Buffers  
+EXPLAIN (ANALYZE) SELECT ...;                    -- Idem  
+EXPLAIN (ANALYZE, BUFFERS) SELECT ...;           -- Idem (BUFFERS redondant mais valide)  
+EXPLAIN (ANALYZE, BUFFERS OFF) SELECT ...;       -- Sans buffers  
+EXPLAIN (ANALYZE, VERBOSE) SELECT ...;           -- + Détails colonnes + Buffers  
+EXPLAIN (ANALYZE, BUFFERS, VERBOSE) SELECT ...;  -- Idem (BUFFERS redondant)  
 ```
 
 ### 9.3. Tests de Migration
 
 **Checklist** :
-- [ ] Scripts de parsing testés avec la nouvelle sortie
-- [ ] Outils de monitoring configurés (peuvent nécessiter mise à jour)
-- [ ] Documentation mise à jour (retirer mentions de `BUFFERS` obligatoire)
+- [ ] Scripts de parsing testés avec la nouvelle sortie  
+- [ ] Outils de monitoring configurés (peuvent nécessiter mise à jour)  
+- [ ] Documentation mise à jour (retirer mentions de `BUFFERS` obligatoire)  
 - [ ] Formation des équipes (nouvelle commande simplifiée)
 
 ---
@@ -668,13 +668,13 @@ EXPLAIN (ANALYZE, BUFFERS OFF) SELECT ...;
 
 ```ini
 # postgresql.conf (PostgreSQL 18)
-shared_preload_libraries = 'auto_explain'
-auto_explain.log_min_duration = 1000        # Log si > 1s
-auto_explain.log_analyze = on               # Exécuter pour stats réelles
-auto_explain.log_timing = on                # Timings détaillés
-auto_explain.log_verbose = off              # Off par défaut (trop verbeux)
-auto_explain.log_format = 'json'            # JSON pour parsing facile
-auto_explain.log_nested_statements = on     # Inclure sous-requêtes
+shared_preload_libraries = 'auto_explain'  
+auto_explain.log_min_duration = 1000        # Log si > 1s  
+auto_explain.log_analyze = on               # Exécuter pour stats réelles  
+auto_explain.log_timing = on                # Timings détaillés  
+auto_explain.log_verbose = off              # Off par défaut (trop verbeux)  
+auto_explain.log_format = 'json'            # JSON pour parsing facile  
+auto_explain.log_nested_statements = on     # Inclure sous-requêtes  
 # Note : auto_explain.log_buffers n'est plus nécessaire !
 ```
 
@@ -699,9 +699,9 @@ FROM (
 **Métrique 2** : Fichiers Temporaires
 ```sql
 -- Compter les requêtes avec temp files dans les logs
-SELECT count(*)
-FROM explain_logs
-WHERE buffers_output LIKE '%temp read%';
+SELECT count(*)  
+FROM explain_logs  
+WHERE buffers_output LIKE '%temp read%';  
 ```
 
 **Seuil** : > 10% des requêtes → Augmenter `work_mem`
@@ -803,9 +803,9 @@ L'affichage automatique des buffers encourage :
 
 ## Ressources pour Aller Plus Loin
 
-- **Release Notes PostgreSQL 18** : [EXPLAIN Improvements](https://www.postgresql.org/docs/18/release-18.html)
-- **Section précédente** : 13.7. Lecture et analyse d'un EXPLAIN
-- **Section suivante** : 13.9. Nouveauté PG 18 : Optimisations du planificateur
+- **Release Notes PostgreSQL 18** : [EXPLAIN Improvements](https://www.postgresql.org/docs/18/release-18.html)  
+- **Section précédente** : 13.7. Lecture et analyse d'un EXPLAIN  
+- **Section suivante** : 13.9. Nouveauté PG 18 : Optimisations du planificateur  
 - **Documentation officielle** : [EXPLAIN Command](https://www.postgresql.org/docs/18/sql-explain.html)
 
 ---

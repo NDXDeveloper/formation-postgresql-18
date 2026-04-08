@@ -10,15 +10,15 @@ Quand vous créez un index sans préciser de type, PostgreSQL utilise automatiqu
 
 ```sql
 -- Ces deux commandes sont équivalentes
-CREATE INDEX idx_nom ON clients(nom);
-CREATE INDEX idx_nom ON clients USING BTREE(nom);
+CREATE INDEX idx_nom ON clients(nom);  
+CREATE INDEX idx_nom ON clients USING BTREE(nom);  
 ```
 
 ### Pourquoi étudier les B-Tree ?
 
-- **Omniprésence** : ~90% des index que vous créerez seront des B-Tree
-- **Performance** : Recherche, insertion, suppression en O(log n)
-- **Polyvalence** : Supporte égalité, comparaisons, tri, ranges
+- **Omniprésence** : ~90% des index que vous créerez seront des B-Tree  
+- **Performance** : Recherche, insertion, suppression en O(log n)  
+- **Polyvalence** : Supporte égalité, comparaisons, tri, ranges  
 - **Robustesse** : Structure équilibrée automatiquement
 
 **Prérequis** : Avoir lu la section 13.1 sur les stratégies de scan.
@@ -53,7 +53,7 @@ Table (Heap)                      Index B-Tree
 ```
 
 L'index stocke :
-- **Clés** : Les valeurs de la colonne indexée (triées)
+- **Clés** : Les valeurs de la colonne indexée (triées)  
 - **Pointeurs** : Les TID (Tuple ID) vers les lignes de la table
 
 ---
@@ -85,8 +85,8 @@ Un **B-Tree** (Balanced Tree) est une structure d'arbre où :
 
 #### Les Composants
 
-1. **Nœud Racine (Root Node)** : Point d'entrée de l'arbre
-2. **Nœuds Internes (Internal Nodes)** : Nœuds de navigation
+1. **Nœud Racine (Root Node)** : Point d'entrée de l'arbre  
+2. **Nœuds Internes (Internal Nodes)** : Nœuds de navigation  
 3. **Nœuds Feuilles (Leaf Nodes)** : Contiennent les données réelles (clés + pointeurs vers la table)
 
 ### Exemple Concret : Index sur les Noms
@@ -179,8 +179,8 @@ PostgreSQL utilise TID3 pour accéder directement à la ligne dans la table
 
 ### Complexité
 
-- **Hauteur de l'arbre** : O(log n)
-- **Recherche dans un nœud** : O(log k) où k = nombre de clés dans le nœud (recherche binaire)
+- **Hauteur de l'arbre** : O(log n)  
+- **Recherche dans un nœud** : O(log k) où k = nombre de clés dans le nœud (recherche binaire)  
 - **Complexité totale** : O(log n)
 
 **Traduction** : Même avec 1 million de lignes, PostgreSQL ne fait que ~3-4 sauts pour trouver une valeur !
@@ -279,7 +279,7 @@ SELECT * FROM commandes WHERE date_commande > '2024-01-01';
 ✅ **B-Tree fonctionne** : Les clés sont triées, PostgreSQL peut naviguer efficacement.
 
 **Algorithme** :
-1. Trouver la première clé ≥ '2024-01-01'
+1. Trouver la première clé ≥ '2024-01-01'  
 2. Scanner séquentiellement les feuilles suivantes jusqu'à la fin
 
 ### 5.3. Ranges (BETWEEN)
@@ -363,15 +363,15 @@ L'index `(nom, prenom)` peut être utilisé pour :
 
 ✅ **Utilisable** :
 ```sql
-WHERE nom = 'Dupont'                     -- Colonne 1 seule
-WHERE nom = 'Dupont' AND prenom = 'Alice' -- Colonnes 1 + 2
-WHERE nom LIKE 'Dup%'                    -- Préfixe colonne 1
+WHERE nom = 'Dupont'                     -- Colonne 1 seule  
+WHERE nom = 'Dupont' AND prenom = 'Alice' -- Colonnes 1 + 2  
+WHERE nom LIKE 'Dup%'                    -- Préfixe colonne 1  
 ```
 
 ❌ **NON utilisable** :
 ```sql
-WHERE prenom = 'Alice'                   -- Saut de colonne 1
-WHERE nom = 'Dupont' OR prenom = 'Alice' -- OR entre colonnes
+WHERE prenom = 'Alice'                   -- Saut de colonne 1  
+WHERE nom = 'Dupont' OR prenom = 'Alice' -- OR entre colonnes  
 ```
 
 **Analogie** : Un annuaire téléphonique trié par Nom puis Prénom. Vous pouvez chercher par Nom seul, mais pas par Prénom seul.
@@ -380,12 +380,12 @@ WHERE nom = 'Dupont' OR prenom = 'Alice' -- OR entre colonnes
 
 ```sql
 -- ❓ Quel ordre choisir ?
-CREATE INDEX idx_a ON commandes(client_id, date_commande);
-CREATE INDEX idx_b ON commandes(date_commande, client_id);
+CREATE INDEX idx_a ON commandes(client_id, date_commande);  
+CREATE INDEX idx_b ON commandes(date_commande, client_id);  
 ```
 
 **Règle d'or** : Mettez en **premier** la colonne :
-1. La plus **sélective** (qui filtre le plus de données)
+1. La plus **sélective** (qui filtre le plus de données)  
 2. La plus **fréquemment utilisée seule** dans les WHERE
 
 **Exemple** :
@@ -443,8 +443,8 @@ Pour rechercher du texte (`'%mot%'`), utilisez :
 SELECT * FROM articles WHERE contenu LIKE '%PostgreSQL%';
 
 -- Efficace avec GIN + tsvector
-CREATE INDEX idx_fts ON articles USING GIN(to_tsvector('french', contenu));
-SELECT * FROM articles WHERE to_tsvector('french', contenu) @@ to_tsquery('PostgreSQL');
+CREATE INDEX idx_fts ON articles USING GIN(to_tsvector('french', contenu));  
+SELECT * FROM articles WHERE to_tsvector('french', contenu) @@ to_tsquery('PostgreSQL');  
 ```
 
 ### ❌ Pas Optimal pour Données Géométriques
@@ -454,8 +454,8 @@ Pour des points, polygones, distances spatiales, utilisez :
 - Extension **PostGIS**
 
 ```sql
-CREATE INDEX idx_geo ON restaurants USING GIST(localisation);
-SELECT * FROM restaurants WHERE ST_DWithin(localisation, ST_Point(2.3522, 48.8566), 1000);
+CREATE INDEX idx_geo ON restaurants USING GIST(localisation);  
+SELECT * FROM restaurants WHERE ST_DWithin(localisation, ST_Point(2.3522, 48.8566), 1000);  
 ```
 
 ### ❌ Coût de Maintenance
@@ -528,11 +528,11 @@ REINDEX TABLE clients;
 
 ### ❌ Quand NE PAS Utiliser un B-Tree
 
-1. **Full-text search** → Utilisez GIN
-2. **Géométrie/Spatial** → Utilisez GiST (PostGIS)
-3. **Arrays complexes** → Utilisez GIN
-4. **JSONB avec recherches imbriquées** → Utilisez GIN
-5. **Données séquentielles massives (time-series)** → Utilisez BRIN
+1. **Full-text search** → Utilisez GIN  
+2. **Géométrie/Spatial** → Utilisez GiST (PostGIS)  
+3. **Arrays complexes** → Utilisez GIN  
+4. **JSONB avec recherches imbriquées** → Utilisez GIN  
+5. **Données séquentielles massives (time-series)** → Utilisez BRIN  
 6. **Colonnes avec très peu de valeurs distinctes** (faible cardinalité)
    ```sql
    -- Mauvais : colonne booléenne
@@ -552,8 +552,8 @@ Indexer seulement un **sous-ensemble** de la table :
 
 ```sql
 -- Index uniquement les commandes non traitées
-CREATE INDEX idx_commandes_pending ON commandes(date_creation)
-WHERE statut = 'pending';
+CREATE INDEX idx_commandes_pending ON commandes(date_creation)  
+WHERE statut = 'pending';  
 ```
 
 **Avantages** :
@@ -584,9 +584,9 @@ Inclure des colonnes supplémentaires dans l'index pour permettre des **Index-On
 CREATE INDEX idx_commandes_covering ON commandes(client_id) INCLUDE (montant, date_commande);
 
 -- Index-Only Scan possible
-SELECT client_id, montant, date_commande
-FROM commandes
-WHERE client_id = 12345;
+SELECT client_id, montant, date_commande  
+FROM commandes  
+WHERE client_id = 12345;  
 ```
 
 **Voir aussi** : Section 13.1 sur l'Index-Only Scan.
@@ -627,8 +627,8 @@ PostgreSQL "saute" (skip) les valeurs de `status` pour accéder directement à `
 SELECT
     indexname,
     pg_size_pretty(pg_relation_size(indexname::regclass)) AS size
-FROM pg_indexes
-WHERE tablename = 'clients';
+FROM pg_indexes  
+WHERE tablename = 'clients';  
 ```
 
 #### Détecter le Bloat
@@ -677,7 +677,7 @@ VACUUM FULL clients;
 ```
 
 **Différence** :
-- `VACUUM` : Marque l'espace comme réutilisable (pas de verrou exclusif)
+- `VACUUM` : Marque l'espace comme réutilisable (pas de verrou exclusif)  
 - `VACUUM FULL` : Réécrit complètement (libère réellement l'espace, mais bloque la table)
 
 ### 11.4. Automatisation : Autovacuum
@@ -687,9 +687,9 @@ PostgreSQL exécute automatiquement `VACUUM` en arrière-plan via le processus *
 Configuration recommandée (dans `postgresql.conf`) :
 
 ```ini
-autovacuum = on
-autovacuum_max_workers = 3
-autovacuum_naptime = 1min
+autovacuum = on  
+autovacuum_max_workers = 3  
+autovacuum_naptime = 1min  
 ```
 
 **Vérifier l'activité autovacuum** :
@@ -700,8 +700,8 @@ SELECT
     relname,
     last_autovacuum,
     last_autoanalyze
-FROM pg_stat_user_tables
-WHERE relname = 'clients';
+FROM pg_stat_user_tables  
+WHERE relname = 'clients';  
 ```
 
 ---
@@ -750,12 +750,12 @@ CREATE INDEX idx_commandes_date ON commandes(date_creation DESC);
 CREATE INDEX idx_commandes_client_date ON commandes(client_id, date_creation DESC);
 
 -- Index 4 : Partiel sur commandes en attente (optimisation)
-CREATE INDEX idx_commandes_pending ON commandes(client_id, date_creation)
-WHERE statut = 'pending';
+CREATE INDEX idx_commandes_pending ON commandes(client_id, date_creation)  
+WHERE statut = 'pending';  
 
 -- Index 5 : Covering index pour dashboard
-CREATE INDEX idx_commandes_covering ON commandes(client_id)
-INCLUDE (montant, date_creation, statut);
+CREATE INDEX idx_commandes_covering ON commandes(client_id)  
+INCLUDE (montant, date_creation, statut);  
 ```
 
 ### Requêtes et Plans d'Exécution
@@ -775,9 +775,9 @@ Index Scan using idx_commandes_client on commandes
 **Requête 2** : Commandes d'un client par date
 
 ```sql
-EXPLAIN SELECT * FROM commandes
-WHERE client_id = 12345
-ORDER BY date_creation DESC;
+EXPLAIN SELECT * FROM commandes  
+WHERE client_id = 12345  
+ORDER BY date_creation DESC;  
 ```
 
 **Plan** :
@@ -791,10 +791,10 @@ Index composite utilisé pour filtrage ET tri !
 **Requête 3** : Dashboard (Index-Only Scan)
 
 ```sql
-EXPLAIN (ANALYZE, BUFFERS)
-SELECT client_id, montant, date_creation
-FROM commandes
-WHERE client_id = 12345;
+EXPLAIN (ANALYZE, BUFFERS)  
+SELECT client_id, montant, date_creation  
+FROM commandes  
+WHERE client_id = 12345;  
 ```
 
 **Plan** :
@@ -848,9 +848,9 @@ Analysez les requêtes suivantes et déterminez si un B-Tree serait approprié :
 
 ## Ressources pour Aller Plus Loin
 
-- **Documentation PostgreSQL** : [B-Tree Index Type](https://www.postgresql.org/docs/current/btree.html)
-- **Section précédente** : 13.1. Stratégies de scan
-- **Section suivante** : 13.3. Nouveauté PG 18 : Skip Scan optimization
+- **Documentation PostgreSQL** : [B-Tree Index Type](https://www.postgresql.org/docs/current/btree.html)  
+- **Section précédente** : 13.1. Stratégies de scan  
+- **Section suivante** : 13.3. Nouveauté PG 18 : Skip Scan optimization  
 - **Indexation avancée** : Chapitres 13.4 (GIN, GiST, BRIN, Hash)
 
 ---

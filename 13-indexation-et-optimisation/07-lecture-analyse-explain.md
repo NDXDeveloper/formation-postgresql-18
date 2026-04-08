@@ -49,12 +49,12 @@ Seq Scan on clients  (cost=0.00..2123.00 rows=35000 width=50)
 #### Le Type d'Opération
 
 **Types courants** :
-- `Seq Scan` : Scan séquentiel (lecture complète)
-- `Index Scan` : Scan via index
-- `Index Only Scan` : Toutes données dans l'index
-- `Bitmap Heap Scan` : Scan par bitmap
-- `Nested Loop` : Jointure en boucles imbriquées
-- `Hash Join` : Jointure par hash
+- `Seq Scan` : Scan séquentiel (lecture complète)  
+- `Index Scan` : Scan via index  
+- `Index Only Scan` : Toutes données dans l'index  
+- `Bitmap Heap Scan` : Scan par bitmap  
+- `Nested Loop` : Jointure en boucles imbriquées  
+- `Hash Join` : Jointure par hash  
 - `Merge Join` : Jointure par fusion
 
 #### Le Coût (cost)
@@ -73,8 +73,8 @@ cost=0.00..2123.00
 
 **Exemples** :
 ```
-cost=0.00..100.00   → Démarrage instantané, coût total faible
-cost=500.00..600.00 → Démarrage coûteux (ex: tri), puis peu de travail supplémentaire
+cost=0.00..100.00   → Démarrage instantané, coût total faible  
+cost=500.00..600.00 → Démarrage coûteux (ex: tri), puis peu de travail supplémentaire  
 ```
 
 #### Les Lignes (rows)
@@ -92,11 +92,11 @@ Taille moyenne d'une ligne en octets. Utilisé pour estimer la mémoire nécessa
 Les plans complexes sont **hiérarchiques** :
 
 ```sql
-EXPLAIN
-SELECT c.nom, o.montant
-FROM clients c
-JOIN commandes o ON c.id = o.client_id
-WHERE c.ville = 'Paris';
+EXPLAIN  
+SELECT c.nom, o.montant  
+FROM clients c  
+JOIN commandes o ON c.id = o.client_id  
+WHERE c.ville = 'Paris';  
 ```
 
 **Résultat** :
@@ -131,8 +131,8 @@ Hash Join  (cost=5000.00..15000.00 rows=10000 width=20)
 ### 2.1. Différence avec EXPLAIN Simple
 
 ```
-EXPLAIN          → Montre le PLAN (estimations)
-EXPLAIN ANALYZE  → EXÉCUTE la requête ET montre les RÉSULTATS RÉELS
+EXPLAIN          → Montre le PLAN (estimations)  
+EXPLAIN ANALYZE  → EXÉCUTE la requête ET montre les RÉSULTATS RÉELS  
 ```
 
 **⚠️ ATTENTION** : `EXPLAIN ANALYZE` exécute réellement la requête !
@@ -142,8 +142,8 @@ EXPLAIN ANALYZE  → EXÉCUTE la requête ET montre les RÉSULTATS RÉELS
 ### 2.2. Syntaxe
 
 ```sql
-EXPLAIN ANALYZE
-SELECT * FROM clients WHERE ville = 'Paris';
+EXPLAIN ANALYZE  
+SELECT * FROM clients WHERE ville = 'Paris';  
 ```
 
 **Résultat** :
@@ -152,8 +152,8 @@ Seq Scan on clients  (cost=0.00..2123.00 rows=35000 width=50)
                      (actual time=0.045..23.456 rows=34987 loops=1)
   Filter: ((ville)::text = 'Paris'::text)
   Rows Removed by Filter: 65013
-Planning Time: 0.234 ms
-Execution Time: 25.891 ms
+Planning Time: 0.234 ms  
+Execution Time: 25.891 ms  
 ```
 
 ### 2.3. Nouvelles Informations
@@ -221,8 +221,8 @@ Nombre de lignes **lues mais rejetées** par le filtre.
 #### Planning Time et Execution Time
 
 ```
-Planning Time: 0.234 ms    ← Temps de génération du plan
-Execution Time: 25.891 ms  ← Temps d'exécution réel
+Planning Time: 0.234 ms    ← Temps de génération du plan  
+Execution Time: 25.891 ms  ← Temps d'exécution réel  
 ```
 
 **Total** : 0.234 + 25.891 = 26.125 ms
@@ -236,8 +236,8 @@ Execution Time: 25.891 ms  ← Temps d'exécution réel
 ### 3.1. Comprendre les Buffers
 
 PostgreSQL utilise plusieurs niveaux de cache :
-- **Shared Buffers** : Cache PostgreSQL en RAM (paramètre `shared_buffers`)
-- **OS Cache** : Cache du système d'exploitation
+- **Shared Buffers** : Cache PostgreSQL en RAM (paramètre `shared_buffers`)  
+- **OS Cache** : Cache du système d'exploitation  
 - **Disque** : Lecture physique
 
 `BUFFERS` montre combien de blocs (pages de 8 KB) sont lus depuis chaque niveau.
@@ -245,8 +245,8 @@ PostgreSQL utilise plusieurs niveaux de cache :
 ### 3.2. Syntaxe
 
 ```sql
-EXPLAIN (ANALYZE, BUFFERS)
-SELECT * FROM clients WHERE ville = 'Paris';
+EXPLAIN (ANALYZE, BUFFERS)  
+SELECT * FROM clients WHERE ville = 'Paris';  
 ```
 
 **Résultat** :
@@ -256,8 +256,8 @@ Seq Scan on clients  (cost=0.00..2123.00 rows=35000 width=50)
   Filter: ((ville)::text = 'Paris'::text)
   Rows Removed by Filter: 65013
   Buffers: shared hit=1234 read=150
-Planning Time: 0.234 ms
-Execution Time: 25.891 ms
+Planning Time: 0.234 ms  
+Execution Time: 25.891 ms  
 ```
 
 ### 3.3. Interprétation des Buffers
@@ -272,11 +272,11 @@ Buffers: shared hit=1234 read=150
 #### Métriques des Buffers
 
 **Types de buffers** :
-- `shared hit` : Blocs trouvés dans Shared Buffers (RAM PostgreSQL) → **Très rapide**
-- `shared read` : Blocs lus depuis l'OS ou le disque → **Plus lent**
-- `shared dirtied` : Blocs modifiés (écriture)
-- `shared written` : Blocs écrits sur disque
-- `temp read/written` : Fichiers temporaires (sorts, hashes trop gros)
+- `shared hit` : Blocs trouvés dans Shared Buffers (RAM PostgreSQL) → **Très rapide**  
+- `shared read` : Blocs lus depuis l'OS ou le disque → **Plus lent**  
+- `shared dirtied` : Blocs modifiés (écriture)  
+- `shared written` : Blocs écrits sur disque  
+- `temp read/written` : Fichiers temporaires (sorts, hashes trop gros)  
 - `local hit/read` : Buffers locaux à la session
 
 #### Cache Hit Ratio
@@ -294,9 +294,9 @@ Hit Ratio = 1234 / (1234 + 150) × 100 = 89.2%
 ```
 
 **Interprétation** :
-- **> 99%** : ✅ Excellent (presque tout en cache)
-- **90-99%** : ✅ Bon (données souvent accédées)
-- **< 90%** : ⚠️ Moyen (augmenter `shared_buffers` ou données froides)
+- **> 99%** : ✅ Excellent (presque tout en cache)  
+- **90-99%** : ✅ Bon (données souvent accédées)  
+- **< 90%** : ⚠️ Moyen (augmenter `shared_buffers` ou données froides)  
 - **< 50%** : 🔴 Problème (cache trop petit ou scan de données rarement utilisées)
 
 #### Fichiers Temporaires
@@ -348,8 +348,8 @@ EXPLAIN (ANALYZE, BUFFERS OFF) SELECT ...;
 ### 4.2. Syntaxe
 
 ```sql
-EXPLAIN (VERBOSE)
-SELECT nom, ville FROM clients WHERE ville = 'Paris';
+EXPLAIN (VERBOSE)  
+SELECT nom, ville FROM clients WHERE ville = 'Paris';  
 ```
 
 **Résultat** :
@@ -391,8 +391,8 @@ Seq Scan on public.clients  (cost=0.00..2123.00 rows=35000 width=50)
 Combinaison puissante :
 
 ```sql
-EXPLAIN (ANALYZE, VERBOSE, BUFFERS)
-SELECT nom, ville FROM clients WHERE ville = 'Paris';
+EXPLAIN (ANALYZE, VERBOSE, BUFFERS)  
+SELECT nom, ville FROM clients WHERE ville = 'Paris';  
 ```
 
 **Résultat complet** :
@@ -405,8 +405,8 @@ Seq Scan on public.clients  (cost=0.00..2123.00 rows=35000 width=50)
   Buffers: shared hit=1234 read=150
 Planning:
   Buffers: shared hit=8 read=2
-Planning Time: 0.234 ms
-Execution Time: 25.891 ms
+Planning Time: 0.234 ms  
+Execution Time: 25.891 ms  
 ```
 
 ---
@@ -416,17 +416,17 @@ Execution Time: 25.891 ms
 ### 5.1. Formats Disponibles
 
 PostgreSQL supporte 4 formats :
-- `TEXT` : Format par défaut (lisible)
-- `JSON` : Format structuré (parsing automatique)
-- `XML` : Format XML (rare)
+- `TEXT` : Format par défaut (lisible)  
+- `JSON` : Format structuré (parsing automatique)  
+- `XML` : Format XML (rare)  
 - `YAML` : Format YAML (rare)
 
 ### 5.2. FORMAT JSON
 
 **Syntaxe** :
 ```sql
-EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON)
-SELECT * FROM clients WHERE ville = 'Paris';
+EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON)  
+SELECT * FROM clients WHERE ville = 'Paris';  
 ```
 
 **Résultat** :
@@ -461,43 +461,43 @@ SELECT * FROM clients WHERE ville = 'Paris';
 
 #### Pour les Outils
 
-- **Parsing automatique** : Plus besoin de parser du texte
-- **Analyse programmatique** : Scripts Python, Node.js, etc.
+- **Parsing automatique** : Plus besoin de parser du texte  
+- **Analyse programmatique** : Scripts Python, Node.js, etc.  
 - **Visualisation** : Outils comme PEV (Postgres EXPLAIN Visualizer)
 
 #### Exemple d'Utilisation
 
 **Python** :
 ```python
-import json
-import psycopg2
+import json  
+import psycopg2  
 
-conn = psycopg2.connect("dbname=mabase")
-cur = conn.cursor()
+conn = psycopg2.connect("dbname=mabase")  
+cur = conn.cursor()  
 
-cur.execute("EXPLAIN (ANALYZE, FORMAT JSON) SELECT * FROM clients WHERE ville = 'Paris'")
-plan = json.loads(cur.fetchone()[0])
+cur.execute("EXPLAIN (ANALYZE, FORMAT JSON) SELECT * FROM clients WHERE ville = 'Paris'")  
+plan = json.loads(cur.fetchone()[0])  
 
-execution_time = plan[0]["Execution Time"]
-actual_rows = plan[0]["Plan"]["Actual Rows"]
+execution_time = plan[0]["Execution Time"]  
+actual_rows = plan[0]["Plan"]["Actual Rows"]  
 
-print(f"Temps d'exécution: {execution_time} ms")
-print(f"Lignes retournées: {actual_rows}")
+print(f"Temps d'exécution: {execution_time} ms")  
+print(f"Lignes retournées: {actual_rows}")  
 ```
 
 **Node.js** :
 ```javascript
-const { Client } = require('pg');
-const client = new Client({ database: 'mabase' });
+const { Client } = require('pg');  
+const client = new Client({ database: 'mabase' });  
 
-await client.connect();
-const result = await client.query(
+await client.connect();  
+const result = await client.query(  
   "EXPLAIN (ANALYZE, FORMAT JSON) SELECT * FROM clients WHERE ville = 'Paris'"
 );
 
-const plan = result.rows[0]["QUERY PLAN"][0];
-console.log(`Execution Time: ${plan["Execution Time"]} ms`);
-console.log(`Actual Rows: ${plan.Plan["Actual Rows"]}`);
+const plan = result.rows[0]["QUERY PLAN"][0];  
+console.log(`Execution Time: ${plan["Execution Time"]} ms`);  
+console.log(`Actual Rows: ${plan.Plan["Actual Rows"]}`);  
 ```
 
 ### 5.4. Outils de Visualisation
@@ -507,9 +507,9 @@ console.log(`Actual Rows: ${plan.Plan["Actual Rows"]}`);
 **URL** : https://explain.dalibo.com/
 
 **Utilisation** :
-1. Exécuter : `EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) SELECT ...`
-2. Copier le JSON
-3. Coller sur https://explain.dalibo.com/
+1. Exécuter : `EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) SELECT ...`  
+2. Copier le JSON  
+3. Coller sur https://explain.dalibo.com/  
 4. Visualisation interactive !
 
 **Avantages** :
@@ -521,8 +521,8 @@ console.log(`Actual Rows: ${plan.Plan["Actual Rows"]}`);
 #### pgAdmin
 
 pgAdmin inclut un visualiseur graphique d'EXPLAIN :
-1. Onglet "Query Tool"
-2. Bouton "Explain" ou "Explain Analyze"
+1. Onglet "Query Tool"  
+2. Bouton "Explain" ou "Explain Analyze"  
 3. Visualisation sous forme d'arbre
 
 ---
@@ -532,19 +532,19 @@ pgAdmin inclut un visualiseur graphique d'EXPLAIN :
 ### 6.1. Exemple Complet : Jointure Multi-Tables
 
 ```sql
-EXPLAIN (ANALYZE, BUFFERS)
-SELECT
+EXPLAIN (ANALYZE, BUFFERS)  
+SELECT  
     c.nom AS client,
     p.nom AS produit,
     o.quantite,
     o.montant
-FROM commandes o
-JOIN clients c ON o.client_id = c.id
-JOIN produits p ON o.produit_id = p.id
-WHERE c.ville = 'Paris'
+FROM commandes o  
+JOIN clients c ON o.client_id = c.id  
+JOIN produits p ON o.produit_id = p.id  
+WHERE c.ville = 'Paris'  
   AND o.date_commande > '2024-01-01'
-ORDER BY o.montant DESC
-LIMIT 100;
+ORDER BY o.montant DESC  
+LIMIT 100;  
 ```
 
 **Plan d'exécution** :
@@ -588,8 +588,8 @@ Limit  (cost=25234.56..25234.81 rows=100 width=50)
                           Buffers: shared hit=2222 read=111
 Planning:
   Buffers: shared hit=12
-Planning Time: 1.234 ms
-Execution Time: 157.234 ms
+Planning Time: 1.234 ms  
+Execution Time: 157.234 ms  
 ```
 
 ### 6.2. Analyse Pas à Pas
@@ -623,8 +623,8 @@ Execution Time: 157.234 ms
 | **Total** | **157.234** | **100%** |
 
 **Goulots identifiés** :
-1. **Hash Join 2** (36%) : Jointure avec produits
-2. **Hash Join 1** (35%) : Jointure avec clients
+1. **Hash Join 2** (36%) : Jointure avec produits  
+2. **Hash Join 1** (35%) : Jointure avec clients  
 3. **Seq Scan commandes** (22%) : Lecture de la table
 
 #### Étape 3 : Analyser les Estimations vs Réalité
@@ -642,8 +642,8 @@ Execution Time: 157.234 ms
 
 **Cache Hit Ratio Global** :
 ```
-Total shared hit = 5678
-Total shared read = 234
+Total shared hit = 5678  
+Total shared read = 234  
 
 Hit Ratio = 5678 / (5678 + 234) × 100 = 96.0%
 ```
@@ -660,8 +660,8 @@ Hit Ratio = 5678 / (5678 + 234) × 100 = 96.0%
 **Optimisation 1** : Index sur `commandes.date_commande`
 
 ```
-Seq Scan on commandes (Filter: date > '2024-01-01')
-Rows Removed by Filter: 50,000
+Seq Scan on commandes (Filter: date > '2024-01-01')  
+Rows Removed by Filter: 50,000  
 ```
 
 25% des lignes rejetées → Index bénéfique !
@@ -673,8 +673,8 @@ CREATE INDEX idx_commandes_date ON commandes(date_commande);
 **Optimisation 2** : Index partiel sur `clients.ville`
 
 ```
-Seq Scan on clients (Filter: ville='Paris')
-Rows Removed by Filter: 64,877
+Seq Scan on clients (Filter: ville='Paris')  
+Rows Removed by Filter: 64,877  
 ```
 
 35% des clients à Paris → Index partiel intéressant :
@@ -801,13 +801,13 @@ Hash Join  (cost=15000.00..50000.00 rows=100000 width=50)
 **Interprétation** :
 - Phase 1 : Construction de la table de hash (clients) → 44 ms
 - Phase 2 : Scan de orders et probe dans la hash table → 190 ms
-- `Batches: 1` → Tout tient en mémoire (work_mem suffisant) ✅
+- `Batches: 1` → Tout tient en mémoire (work_mem suffisant) ✅  
 - `Memory Usage: 6144kB` → 6 MB utilisés
 
 **Mauvais signe si** :
 ```
-Batches: 4
-Buffers: temp read=10000 temp written=10000
+Batches: 4  
+Buffers: temp read=10000 temp written=10000  
 ```
 → Hash table trop grosse, déborde sur disque (fichiers temporaires) → Augmenter `work_mem`
 
@@ -857,12 +857,12 @@ Sort  (cost=25000.00..27500.00 rows=100000 width=50)
 
 **Interprétation** :
 - Tri de 100,000 lignes
-- `Sort Method: external merge` → Tri déborde sur disque 🔴
+- `Sort Method: external merge` → Tri déborde sur disque 🔴  
 - `Disk: 8192kB` → 8 MB de fichiers temporaires
 
 **Sort Methods** :
-- `quicksort  Memory: 2048kB` → ✅ Tri en mémoire (rapide)
-- `top-N heapsort  Memory: 128kB` → ✅ Tri optimisé pour LIMIT
+- `quicksort  Memory: 2048kB` → ✅ Tri en mémoire (rapide)  
+- `top-N heapsort  Memory: 128kB` → ✅ Tri optimisé pour LIMIT  
 - `external merge  Disk: 8192kB` → 🔴 Tri sur disque (lent)
 
 **Solution pour external merge** :
@@ -884,8 +884,8 @@ SELECT * FROM orders WHERE created_at > '2024-01-01';
 
 **Diagnostic** :
 ```sql
-EXPLAIN (ANALYZE, BUFFERS)
-SELECT * FROM orders WHERE created_at > '2024-01-01';
+EXPLAIN (ANALYZE, BUFFERS)  
+SELECT * FROM orders WHERE created_at > '2024-01-01';  
 ```
 
 **Plan** :
@@ -903,8 +903,8 @@ Seq Scan on orders  (cost=0.00..250000.00 rows=1000000 width=100)
 
 **Solution** :
 ```sql
-CREATE INDEX idx_orders_date ON orders(created_at);
-ANALYZE orders;
+CREATE INDEX idx_orders_date ON orders(created_at);  
+ANALYZE orders;  
 ```
 
 **Résultat après index** :
@@ -933,8 +933,8 @@ Seq Scan on products  (cost=0.00..5000.00 rows=100 width=50)
 ```
 
 **Problème** :
-- **Estimation** : 100 lignes (0.02%)
-- **Réalité** : 500,000 lignes (91%)
+- **Estimation** : 100 lignes (0.02%)  
+- **Réalité** : 500,000 lignes (91%)  
 - **Écart** : 5000× ! 🔴
 
 **Cause** : Statistiques obsolètes (avant, Electronics était rare)
@@ -983,8 +983,8 @@ Unique  (cost=500000.00..550000.00 rows=1000000 width=4)
 SET work_mem = '512MB';
 
 -- Ou globalement
-ALTER SYSTEM SET work_mem = '256MB';
-SELECT pg_reload_conf();
+ALTER SYSTEM SET work_mem = '256MB';  
+SELECT pg_reload_conf();  
 ```
 
 **Alternative** : Créer un index
@@ -1009,21 +1009,21 @@ Plus besoin de tri (index déjà trié) ! Temps divisé par 100.
 
 ### 9.1. Workflow d'Analyse
 
-1. **Commencer simple** : `EXPLAIN ANALYZE`
-2. **Ajouter BUFFERS** : `EXPLAIN (ANALYZE, BUFFERS)`
-3. **Si nécessaire, VERBOSE** : Pour colonnes et expressions
-4. **Comparer estimations vs réalité** : Écart > 50% → ANALYZE
-5. **Identifier les goulots** : Nœuds avec le plus de temps
+1. **Commencer simple** : `EXPLAIN ANALYZE`  
+2. **Ajouter BUFFERS** : `EXPLAIN (ANALYZE, BUFFERS)`  
+3. **Si nécessaire, VERBOSE** : Pour colonnes et expressions  
+4. **Comparer estimations vs réalité** : Écart > 50% → ANALYZE  
+5. **Identifier les goulots** : Nœuds avec le plus de temps  
 6. **Optimiser progressivement** : Une amélioration à la fois
 
 ### 9.2. Checklist de Diagnostic
 
-- [ ] Estimations cohérentes ? (< 10% d'écart)
-- [ ] Cache Hit Ratio > 95% ?
-- [ ] Pas de fichiers temporaires ?
-- [ ] Index utilisés quand approprié ?
-- [ ] Pas de Nested Loop avec outer side > 1000 lignes ?
-- [ ] Sorts en mémoire (quicksort ou top-N heapsort) ?
+- [ ] Estimations cohérentes ? (< 10% d'écart)  
+- [ ] Cache Hit Ratio > 95% ?  
+- [ ] Pas de fichiers temporaires ?  
+- [ ] Index utilisés quand approprié ?  
+- [ ] Pas de Nested Loop avec outer side > 1000 lignes ?  
+- [ ] Sorts en mémoire (quicksort ou top-N heapsort) ?  
 - [ ] Heap Fetches = 0 pour Index Only Scans ?
 
 ### 9.3. Commandes Utiles
@@ -1036,15 +1036,15 @@ EXPLAIN (ANALYZE, BUFFERS, VERBOSE, COSTS, TIMING) SELECT ...;
 EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) SELECT ...;
 
 -- Désactiver temporairement l'exécution (juste le plan)
-BEGIN;
-EXPLAIN ANALYZE INSERT/UPDATE/DELETE ...;
-ROLLBACK;
+BEGIN;  
+EXPLAIN ANALYZE INSERT/UPDATE/DELETE ...;  
+ROLLBACK;  
 
 -- Comparer plans avec différentes configurations
-BEGIN;
-SET enable_seqscan = off;
-EXPLAIN ANALYZE SELECT ...;
-ROLLBACK;
+BEGIN;  
+SET enable_seqscan = off;  
+EXPLAIN ANALYZE SELECT ...;  
+ROLLBACK;  
 ```
 
 ### 9.4. Ce qu'il Faut Éviter
@@ -1067,12 +1067,12 @@ Extension qui log automatiquement les plans des requêtes lentes.
 
 **Configuration** (dans `postgresql.conf`) :
 ```ini
-shared_preload_libraries = 'auto_explain'
-auto_explain.log_min_duration = 1000  # Log si > 1 seconde
-auto_explain.log_analyze = on
-auto_explain.log_buffers = on
-auto_explain.log_timing = on
-auto_explain.log_nested_statements = on
+shared_preload_libraries = 'auto_explain'  
+auto_explain.log_min_duration = 1000  # Log si > 1 seconde  
+auto_explain.log_analyze = on  
+auto_explain.log_buffers = on  
+auto_explain.log_timing = on  
+auto_explain.log_nested_statements = on  
 ```
 
 **Redémarrage nécessaire** :
@@ -1096,14 +1096,14 @@ SELECT
     total_exec_time,
     mean_exec_time,
     max_exec_time
-FROM pg_stat_statements
-ORDER BY total_exec_time DESC
-LIMIT 10;
+FROM pg_stat_statements  
+ORDER BY total_exec_time DESC  
+LIMIT 10;  
 ```
 
 **Combinaison avec EXPLAIN** :
-1. Identifier requêtes lentes avec `pg_stat_statements`
-2. Copier la requête
+1. Identifier requêtes lentes avec `pg_stat_statements`  
+2. Copier la requête  
 3. Analyser avec `EXPLAIN ANALYZE`
 
 ### 10.3. pgBadger
@@ -1116,13 +1116,13 @@ Outil d'analyse de logs PostgreSQL.
 sudo apt install pgbadger
 
 # Configuration PostgreSQL pour logs détaillés
-log_min_duration_statement = 0
-log_line_prefix = '%t [%p]: [%l-1] user=%u,db=%d,app=%a,client=%h '
-log_checkpoints = on
-log_connections = on
-log_disconnections = on
-log_lock_waits = on
-log_temp_files = 0
+log_min_duration_statement = 0  
+log_line_prefix = '%t [%p]: [%l-1] user=%u,db=%d,app=%a,client=%h '  
+log_checkpoints = on  
+log_connections = on  
+log_disconnections = on  
+log_lock_waits = on  
+log_temp_files = 0  
 ```
 
 **Génération du rapport** :
@@ -1164,9 +1164,9 @@ pgbadger /var/log/postgresql/postgresql-*.log -o report.html
 
 ## Ressources pour Aller Plus Loin
 
-- **Documentation PostgreSQL** : [Using EXPLAIN](https://www.postgresql.org/docs/current/using-explain.html)
-- **Visualiseur PEV** : https://explain.dalibo.com/
-- **Section précédente** : 13.6. Le planificateur de requêtes et les statistiques
+- **Documentation PostgreSQL** : [Using EXPLAIN](https://www.postgresql.org/docs/current/using-explain.html)  
+- **Visualiseur PEV** : https://explain.dalibo.com/  
+- **Section précédente** : 13.6. Le planificateur de requêtes et les statistiques  
 - **Section suivante** : 13.8. Nouveauté PG 18 : Améliorations d'EXPLAIN
 
 ---

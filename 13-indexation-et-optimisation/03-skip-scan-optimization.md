@@ -48,8 +48,8 @@ SELECT * FROM orders WHERE status = 'pending';
 
 ✅ **Requête 2** : Première ET deuxième colonnes présentes
 ```sql
-SELECT * FROM orders
-WHERE status = 'pending' AND created_at > '2024-01-01';
+SELECT * FROM orders  
+WHERE status = 'pending' AND created_at > '2024-01-01';  
 ```
 → **Index utilisé** : Accès optimal via l'index composite.
 
@@ -83,8 +83,8 @@ CREATE INDEX idx_orders_date ON orders(created_at);
 ```
 
 **Inconvénients** :
-- 🔴 **Double maintenance** : Chaque écriture met à jour 2 index
-- 🔴 **Double espace disque** : La colonne `created_at` est stockée 2 fois
+- 🔴 **Double maintenance** : Chaque écriture met à jour 2 index  
+- 🔴 **Double espace disque** : La colonne `created_at` est stockée 2 fois  
 - 🔴 **Complexité** : Plus d'index à gérer et surveiller
 
 **Analogie** : C'est comme avoir deux annuaires téléphoniques différents pour la même ville, un trié par Nom+Prénom et un autre trié seulement par Date de Naissance, au lieu d'avoir un seul annuaire intelligent.
@@ -190,10 +190,10 @@ Où :
 
 Pour que PostgreSQL active le Skip Scan, **toutes** les conditions suivantes doivent être remplies :
 
-1. ✅ **Index composite disponible** : Au moins 2 colonnes
-2. ✅ **Première colonne absente du WHERE** : Seulement la 2ème, 3ème, etc.
-3. ✅ **Cardinalité faible de la 1ère colonne** : Peu de valeurs distinctes (généralement < 100-1000)
-4. ✅ **Sélectivité élevée de la 2ème colonne** : Filtre efficace (< 10% des lignes)
+1. ✅ **Index composite disponible** : Au moins 2 colonnes  
+2. ✅ **Première colonne absente du WHERE** : Seulement la 2ème, 3ème, etc.  
+3. ✅ **Cardinalité faible de la 1ère colonne** : Peu de valeurs distinctes (généralement < 100-1000)  
+4. ✅ **Sélectivité élevée de la 2ème colonne** : Filtre efficace (< 10% des lignes)  
 5. ✅ **Statistiques à jour** : `ANALYZE` exécuté récemment
 
 ### 4.2. Exemples de Cas Favorables
@@ -208,7 +208,7 @@ SELECT * FROM orders WHERE created_at > '2024-11-01';
 ```
 
 **Analyse** :
-- `status` : 3-5 valeurs distinctes (pending, shipped, cancelled, returned, failed)
+- `status` : 3-5 valeurs distinctes (pending, shipped, cancelled, returned, failed)  
 - `created_at` : Très sélectif (ex: dernières 24h = 0.1% des données)
 
 → ✅ **Skip Scan activé** (PostgreSQL 18)
@@ -223,7 +223,7 @@ SELECT * FROM products WHERE price > 1000;
 ```
 
 **Analyse** :
-- `category` : 10-20 catégories (Electronics, Books, Clothing, etc.)
+- `category` : 10-20 catégories (Electronics, Books, Clothing, etc.)  
 - `price > 1000` : Sélectif (ex: 5% des produits)
 
 → ✅ **Skip Scan activé**
@@ -255,7 +255,7 @@ SELECT * FROM users WHERE created_at > '2020-01-01';
 ```
 
 **Analyse** :
-- `email` : Millions de valeurs distinctes (très élevé)
+- `email` : Millions de valeurs distinctes (très élevé)  
 - `created_at > '2020-01-01'` : 99% des lignes (peu sélectif)
 
 → ❌ **Skip Scan NON activé** → Seq Scan plus approprié
@@ -289,8 +289,8 @@ CREATE INDEX idx_orders_status_date ON orders(status, created_at);
 
 ```sql
 -- Trouver les commandes des 7 derniers jours
-SELECT * FROM orders
-WHERE created_at > NOW() - INTERVAL '7 days';
+SELECT * FROM orders  
+WHERE created_at > NOW() - INTERVAL '7 days';  
 ```
 
 ### 5.3. PostgreSQL ≤ 17 : Seq Scan
@@ -363,8 +363,8 @@ Pour forcer un Seq Scan (comparaison de performances) :
 -- Désactiver temporairement
 SET enable_indexskipscan = off;
 
-EXPLAIN ANALYZE
-SELECT * FROM orders WHERE created_at > NOW() - INTERVAL '7 days';
+EXPLAIN ANALYZE  
+SELECT * FROM orders WHERE created_at > NOW() - INTERVAL '7 days';  
 
 -- Réactiver
 SET enable_indexskipscan = on;
@@ -379,8 +379,8 @@ Si PostgreSQL ne choisit pas le Skip Scan alors qu'il devrait :
 ANALYZE orders;
 
 -- Ajuster le coût du Seq Scan (rendre le Skip Scan plus attractif)
-SET seq_page_cost = 1.5;  -- Valeur par défaut : 1.0
-SET random_page_cost = 3.0;  -- Valeur par défaut : 4.0
+SET seq_page_cost = 1.5;  -- Valeur par défaut : 1.0  
+SET random_page_cost = 3.0;  -- Valeur par défaut : 4.0  
 ```
 
 ---
@@ -403,8 +403,8 @@ SELECT * FROM orders WHERE created_at > '2024-11-01';
 
 ✅ 2ème et 3ème colonnes
 ```sql
-SELECT * FROM orders
-WHERE payment_method = 'credit_card' AND created_at > '2024-11-01';
+SELECT * FROM orders  
+WHERE payment_method = 'credit_card' AND created_at > '2024-11-01';  
 -- Skip seulement sur status
 ```
 
@@ -420,12 +420,12 @@ SELECT * FROM orders WHERE payment_method = 'credit_card';
 
 ```sql
 -- Index partiel sur commandes récentes
-CREATE INDEX idx_orders_recent ON orders(status, created_at)
-WHERE created_at > '2024-01-01';
+CREATE INDEX idx_orders_recent ON orders(status, created_at)  
+WHERE created_at > '2024-01-01';  
 
 -- Requête sur période récente
-SELECT * FROM orders
-WHERE created_at > '2024-11-01';
+SELECT * FROM orders  
+WHERE created_at > '2024-11-01';  
 ```
 
 → Skip Scan sur un index plus petit = encore plus rapide !
@@ -433,13 +433,13 @@ WHERE created_at > '2024-11-01';
 #### Covering Index + Skip Scan
 
 ```sql
-CREATE INDEX idx_orders_covering ON orders(status, created_at)
-INCLUDE (total_amount);
+CREATE INDEX idx_orders_covering ON orders(status, created_at)  
+INCLUDE (total_amount);  
 
 -- Index-Only Scan possible avec Skip Scan
-SELECT total_amount
-FROM orders
-WHERE created_at > '2024-11-01';
+SELECT total_amount  
+FROM orders  
+WHERE created_at > '2024-11-01';  
 ```
 
 → **Combinaison ultime** : Skip Scan + Index-Only Scan = performance maximale !
@@ -467,9 +467,9 @@ CREATE INDEX idx3 ON orders(customer_id, created_at);
 ```
 
 **Problèmes** :
-- 🔴 Redondance massive
-- 🔴 Maintenance lourde (4 index à maintenir)
-- 🔴 Espace disque × 4
+- 🔴 Redondance massive  
+- 🔴 Maintenance lourde (4 index à maintenir)  
+- 🔴 Espace disque × 4  
 - 🔴 Écritures ralenties
 
 ### 8.2. Avec PostgreSQL 18 : Stratégie Optimisée
@@ -482,14 +482,14 @@ CREATE INDEX idx_orders_optimized ON orders(status, created_at);
 ```
 
 **Couverture** :
-- ✅ `WHERE status = '...'`
-- ✅ `WHERE status = '...' AND created_at > '...'`
+- ✅ `WHERE status = '...'`  
+- ✅ `WHERE status = '...' AND created_at > '...'`  
 - ✅ `WHERE created_at > '...'` → **Skip Scan !**
 
 **Avantages** :
-- ✅ Un seul index à maintenir
-- ✅ Espace disque divisé par 2-3
-- ✅ Écritures plus rapides
+- ✅ Un seul index à maintenir  
+- ✅ Espace disque divisé par 2-3  
+- ✅ Écritures plus rapides  
 - ✅ Gestion simplifiée
 
 ### 8.3. Nouvelle Règle de Conception
@@ -501,8 +501,8 @@ CREATE INDEX idx_orders_optimized ON orders(status, created_at);
 **Exemple** :
 
 Table `events` avec :
-- `user_id` : 1M valeurs distinctes
-- `event_type` : 10 valeurs distinctes
+- `user_id` : 1M valeurs distinctes  
+- `event_type` : 10 valeurs distinctes  
 - `timestamp` : Continu
 
 **Avant PG 18** :
@@ -534,9 +534,9 @@ CREATE INDEX idx_events ON events(event_type, timestamp);
 #### EXPLAIN ANALYZE
 
 ```sql
-EXPLAIN (ANALYZE, BUFFERS)
-SELECT * FROM orders
-WHERE created_at > NOW() - INTERVAL '7 days';
+EXPLAIN (ANALYZE, BUFFERS)  
+SELECT * FROM orders  
+WHERE created_at > NOW() - INTERVAL '7 days';  
 ```
 
 **Plan avec Skip Scan** :
@@ -547,13 +547,13 @@ Index Scan using idx_orders_status_date on orders
   Skip Scan: status
   Loops: 4
   Buffers: shared hit=1234
-Planning Time: 0.234 ms
-Execution Time: 197.891 ms
+Planning Time: 0.234 ms  
+Execution Time: 197.891 ms  
 ```
 
 **Indicateurs** :
-- `Skip Scan: status` → Confirmation du Skip Scan
-- `Loops: 4` → 4 valeurs distinctes de `status` parcourues
+- `Skip Scan: status` → Confirmation du Skip Scan  
+- `Loops: 4` → 4 valeurs distinctes de `status` parcourues  
 - `Buffers: shared hit` → Lecture depuis le cache (performant)
 
 #### Comparaison avec Seq Scan
@@ -562,9 +562,9 @@ Execution Time: 197.891 ms
 -- Forcer Seq Scan pour comparaison
 SET enable_indexskipscan = off;
 
-EXPLAIN (ANALYZE, BUFFERS)
-SELECT * FROM orders
-WHERE created_at > NOW() - INTERVAL '7 days';
+EXPLAIN (ANALYZE, BUFFERS)  
+SELECT * FROM orders  
+WHERE created_at > NOW() - INTERVAL '7 days';  
 ```
 
 **Plan sans Skip Scan** :
@@ -574,8 +574,8 @@ Seq Scan on orders
   Filter: (created_at > (now() - '7 days'::interval))
   Rows Removed by Filter: 9949877
   Buffers: shared hit=125000
-Planning Time: 0.087 ms
-Execution Time: 2147.234 ms
+Planning Time: 0.087 ms  
+Execution Time: 2147.234 ms  
 ```
 
 **Comparaison** :
@@ -594,8 +594,8 @@ SELECT
     n_distinct,
     null_frac,
     avg_width
-FROM pg_stats
-WHERE tablename = 'orders' AND attname = 'status';
+FROM pg_stats  
+WHERE tablename = 'orders' AND attname = 'status';  
 ```
 
 **Résultat** :
@@ -606,8 +606,8 @@ WHERE tablename = 'orders' AND attname = 'status';
 ```
 
 **Interprétation** :
-- `n_distinct = 4` → Très faible (Skip Scan efficace)
-- `null_frac = 0` → Pas de NULL
+- `n_distinct = 4` → Très faible (Skip Scan efficace)  
+- `null_frac = 0` → Pas de NULL  
 - `avg_width = 9` → Petite taille
 
 → ✅ Candidat idéal pour Skip Scan !
@@ -637,8 +637,8 @@ SELECT * FROM users WHERE created_at > '2024-11-01';
 Skip Scan fonctionne moins bien avec des conditions OR complexes :
 
 ```sql
-SELECT * FROM orders
-WHERE created_at > '2024-11-01' OR status = 'pending';
+SELECT * FROM orders  
+WHERE created_at > '2024-11-01' OR status = 'pending';  
 ```
 
 → PostgreSQL peut préférer un Bitmap Scan ou Seq Scan.
@@ -673,9 +673,9 @@ SELECT
     tablename,
     indexname,
     indexdef
-FROM pg_indexes
-WHERE schemaname = 'public'
-ORDER BY tablename, indexname;
+FROM pg_indexes  
+WHERE schemaname = 'public'  
+ORDER BY tablename, indexname;  
 ```
 
 **Rechercher** :
@@ -696,17 +696,17 @@ ORDER BY tablename, indexname;
 EXPLAIN ANALYZE SELECT * FROM orders WHERE created_at > '2024-11-01';
 
 -- 3. Simuler la suppression (désactiver temporairement)
-UPDATE pg_index
-SET indisvalid = false
-WHERE indexrelid = 'idx_orders_date'::regclass;
+UPDATE pg_index  
+SET indisvalid = false  
+WHERE indexrelid = 'idx_orders_date'::regclass;  
 
 -- 4. Re-tester
 EXPLAIN ANALYZE SELECT * FROM orders WHERE created_at > '2024-11-01';
 
 -- 5. Réactiver si nécessaire
-UPDATE pg_index
-SET indisvalid = true
-WHERE indexrelid = 'idx_orders_date'::regclass;
+UPDATE pg_index  
+SET indisvalid = true  
+WHERE indexrelid = 'idx_orders_date'::regclass;  
 ```
 
 **Si performances équivalentes ou meilleures** → Supprimez l'index redondant !
@@ -715,8 +715,8 @@ WHERE indexrelid = 'idx_orders_date'::regclass;
 
 **Étape 1** : Upgrade vers PostgreSQL 18
 ```bash
-pg_upgrade --check
-pg_upgrade --link
+pg_upgrade --check  
+pg_upgrade --link  
 ```
 
 **Étape 2** : Analyser toutes les tables
@@ -768,8 +768,8 @@ SELECT * FROM orders WHERE created_at > '2024-11-15';
 SELECT * FROM orders WHERE status = 'pending' AND created_at > '2024-11-01';
 
 -- Requête 3 : Par méthode de paiement + date (Skip sur status)
-SELECT * FROM orders
-WHERE payment_method = 'credit_card' AND created_at > '2024-11-01';
+SELECT * FROM orders  
+WHERE payment_method = 'credit_card' AND created_at > '2024-11-01';  
 ```
 
 **Résultat** : Un seul index couvre les 3 requêtes ! ✅
@@ -793,12 +793,12 @@ CREATE INDEX idx_events_opt ON sensor_events(sensor_type, location_id, timestamp
 SELECT * FROM sensor_events WHERE timestamp > NOW() - INTERVAL '1 hour';
 
 -- Requête 2 : Type spécifique (Skip sur location_id)
-SELECT * FROM sensor_events
-WHERE sensor_type = 'temperature' AND timestamp > NOW() - INTERVAL '1 hour';
+SELECT * FROM sensor_events  
+WHERE sensor_type = 'temperature' AND timestamp > NOW() - INTERVAL '1 hour';  
 
 -- Requête 3 : Type + Location (Index direct)
-SELECT * FROM sensor_events
-WHERE sensor_type = 'temperature'
+SELECT * FROM sensor_events  
+WHERE sensor_type = 'temperature'  
   AND location_id = 42
   AND timestamp > NOW() - INTERVAL '1 hour';
 ```
@@ -829,9 +829,9 @@ WHERE sensor_type = 'temperature'
 
 ## Ressources pour Aller Plus Loin
 
-- **Documentation PostgreSQL 18** : [Release Notes - Index Skip Scan](https://www.postgresql.org/docs/18/release-18.html)
-- **Section précédente** : 13.2. L'index B-Tree : Le couteau suisse
-- **Section suivante** : 13.4. Index spécialisés (GIN, GiST, BRIN, Hash, SP-GiST)
+- **Documentation PostgreSQL 18** : [Release Notes - Index Skip Scan](https://www.postgresql.org/docs/18/release-18.html)  
+- **Section précédente** : 13.2. L'index B-Tree : Le couteau suisse  
+- **Section suivante** : 13.4. Index spécialisés (GIN, GiST, BRIN, Hash, SP-GiST)  
 - **Blog Officiel** : "PostgreSQL 18: Skip Scan Optimization Explained"
 
 ---

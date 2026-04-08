@@ -31,11 +31,11 @@ Un **log** (ou journal) est un fichier texte où PostgreSQL enregistre des évé
 ### Que trouve-t-on dans les logs ?
 
 PostgreSQL peut enregistrer :
-- **Erreurs** : Connexions échouées, requêtes invalides, deadlocks
-- **Avertissements** : Problèmes potentiels, dépréciations
-- **Informations** : Démarrage/arrêt du serveur, checkpoints, connexions
-- **Requêtes** : Les requêtes SQL exécutées (si configuré)
-- **Performances** : Temps d'exécution des requêtes lentes
+- **Erreurs** : Connexions échouées, requêtes invalides, deadlocks  
+- **Avertissements** : Problèmes potentiels, dépréciations  
+- **Informations** : Démarrage/arrêt du serveur, checkpoints, connexions  
+- **Requêtes** : Les requêtes SQL exécutées (si configuré)  
+- **Performances** : Temps d'exécution des requêtes lentes  
 - **Audit** : Qui s'est connecté, quand, depuis où
 
 ### Où sont les logs ?
@@ -64,29 +64,29 @@ C:\Program Files\PostgreSQL\18\data\log\
 
 Pour trouver l'emplacement exact depuis psql :
 ```sql
-SHOW log_directory;
-SHOW log_filename;
+SHOW log_directory;  
+SHOW log_filename;  
 ```
 
 ### Types de destination des logs
 
 PostgreSQL peut envoyer les logs vers différentes destinations :
 
-1. **stderr** : Sortie d'erreur standard (capture par systemd/journald sur Linux)
-2. **csvlog** : Format CSV structuré (plus facile à analyser)
-3. **jsonlog** : Format JSON (PostgreSQL 15+, idéal pour Elasticsearch/Splunk)
-4. **syslog** : Système de logs Unix/Linux centralisé
+1. **stderr** : Sortie d'erreur standard (capture par systemd/journald sur Linux)  
+2. **csvlog** : Format CSV structuré (plus facile à analyser)  
+3. **jsonlog** : Format JSON (PostgreSQL 15+, idéal pour Elasticsearch/Splunk)  
+4. **syslog** : Système de logs Unix/Linux centralisé  
 5. **eventlog** : Journal d'événements Windows
 
 **Configuration recommandée** :
 ```conf
 # Dans postgresql.conf
-logging_collector = on            # Active la collecte de logs
-log_destination = 'stderr'        # Ou 'csvlog' pour analyse automatisée
-log_directory = 'log'             # Répertoire relatif à PGDATA
-log_filename = 'postgresql-%Y-%m-%d_%H%M%S.log'  # Un fichier par démarrage
-log_rotation_age = 1d             # Rotation quotidienne
-log_rotation_size = 100MB         # Rotation si > 100 MB
+logging_collector = on            # Active la collecte de logs  
+log_destination = 'stderr'        # Ou 'csvlog' pour analyse automatisée  
+log_directory = 'log'             # Répertoire relatif à PGDATA  
+log_filename = 'postgresql-%Y-%m-%d_%H%M%S.log'  # Un fichier par démarrage  
+log_rotation_age = 1d             # Rotation quotidienne  
+log_rotation_size = 100MB         # Rotation si > 100 MB  
 ```
 
 ---
@@ -117,13 +117,13 @@ PostgreSQL offre plus de 30 paramètres pour contrôler le logging. Voici les pl
 Contrôle le niveau minimum de gravité des messages à enregistrer.
 
 **Niveaux disponibles (du moins au plus grave)** :
-- `DEBUG5`, `DEBUG4`, `DEBUG3`, `DEBUG2`, `DEBUG1` : Débogage très verbeux
-- `INFO` : Informations générales
-- `NOTICE` : Notifications
-- `WARNING` : Avertissements
-- `ERROR` : Erreurs (transaction annulée)
-- `LOG` : Messages importants pour l'administrateur
-- `FATAL` : Erreur grave (connexion fermée)
+- `DEBUG5`, `DEBUG4`, `DEBUG3`, `DEBUG2`, `DEBUG1` : Débogage très verbeux  
+- `INFO` : Informations générales  
+- `NOTICE` : Notifications  
+- `WARNING` : Avertissements  
+- `ERROR` : Erreurs (transaction annulée)  
+- `LOG` : Messages importants pour l'administrateur  
+- `FATAL` : Erreur grave (connexion fermée)  
 - `PANIC` : Erreur critique (arrêt du serveur)
 
 **Configuration recommandée** :
@@ -155,8 +155,8 @@ log_min_duration_statement = -1
 ```
 
 **Recommandation** :
-- **Développement** : 100-500 ms
-- **Production** : 1000-5000 ms (1-5 secondes)
+- **Développement** : 100-500 ms  
+- **Production** : 1000-5000 ms (1-5 secondes)  
 - **Analyse ponctuelle** : 0 (toutes les requêtes)
 
 **Exemple de log généré** :
@@ -169,8 +169,8 @@ log_min_duration_statement = -1
 Enregistre toutes les connexions et déconnexions.
 
 ```conf
-log_connections = on
-log_disconnections = on
+log_connections = on  
+log_disconnections = on  
 ```
 
 **Utilité** :
@@ -204,12 +204,12 @@ log_statement = 'all'
 ```
 
 **Recommandation** :
-- **Production normale** : `none` (utiliser `log_min_duration_statement` à la place)
-- **Audit strict** : `ddl` ou `mod`
+- **Production normale** : `none` (utiliser `log_min_duration_statement` à la place)  
+- **Audit strict** : `ddl` ou `mod`  
 - **Débogage** : `all` (temporairement)
 
 **Différence avec log_min_duration_statement** :
-- `log_statement` : Basé sur le **type** de requête
+- `log_statement` : Basé sur le **type** de requête  
 - `log_min_duration_statement` : Basé sur la **durée** d'exécution
 
 #### 5. log_checkpoints
@@ -233,8 +233,8 @@ log_checkpoints = on
 Logger quand un processus attend un verrou (lock) depuis plus de `deadlock_timeout` (1 seconde par défaut).
 
 ```conf
-log_lock_waits = on
-deadlock_timeout = 1s
+log_lock_waits = on  
+deadlock_timeout = 1s  
 ```
 
 **Exemple de log** :
@@ -327,10 +327,10 @@ log_line_prefix = '%t [%p]: [%l-1] user=%u,db=%d,app=%a,client=%h '
 ```
 
 **Avantages** :
-- ✅ Timestamp précis (`%t`)
-- ✅ PID du processus (`%p`)
-- ✅ Numéro de ligne (`%l`)
-- ✅ Contexte complet : utilisateur, base, application, client
+- ✅ Timestamp précis (`%t`)  
+- ✅ PID du processus (`%p`)  
+- ✅ Numéro de ligne (`%l`)  
+- ✅ Contexte complet : utilisateur, base, application, client  
 - ✅ Facile à parser avec des outils d'analyse
 
 ### Configuration enrichie avec transaction ID
@@ -398,7 +398,7 @@ log_destination = 'csvlog'  # Utiliser le format CSV natif plutôt que log_line_
 **Analogie** : Imaginez un médecin qui prend automatiquement votre température chaque fois que vous avez de la fièvre. auto_explain fait la même chose pour vos requêtes : il "radiographie" automatiquement celles qui sont lentes.
 
 **Pourquoi c'est génial ?**
-- ❌ Sans auto_explain : Vous devez deviner quelles requêtes sont lentes, puis manuellement faire `EXPLAIN ANALYZE`
+- ❌ Sans auto_explain : Vous devez deviner quelles requêtes sont lentes, puis manuellement faire `EXPLAIN ANALYZE`  
 - ✅ Avec auto_explain : PostgreSQL le fait automatiquement et vous avez l'historique dans les logs
 
 ### Installation et activation
@@ -432,11 +432,11 @@ Toujours dans `postgresql.conf`, ajoutez les paramètres de configuration :
 auto_explain.log_min_duration = 1000  # Logger les requêtes > 1 seconde (en ms)
 
 # Niveau de détail du plan d'exécution
-auto_explain.log_analyze = on         # Inclure les statistiques d'exécution réelles
-auto_explain.log_buffers = on         # Inclure les statistiques de buffers
-auto_explain.log_timing = on          # Inclure le timing détaillé par nœud
-auto_explain.log_triggers = on        # Inclure les triggers
-auto_explain.log_verbose = off        # Mode verbose (très verbeux)
+auto_explain.log_analyze = on         # Inclure les statistiques d'exécution réelles  
+auto_explain.log_buffers = on         # Inclure les statistiques de buffers  
+auto_explain.log_timing = on          # Inclure le timing détaillé par nœud  
+auto_explain.log_triggers = on        # Inclure les triggers  
+auto_explain.log_verbose = off        # Mode verbose (très verbeux)  
 
 # Format du plan
 auto_explain.log_format = 'text'      # Options: 'text', 'xml', 'json', 'yaml'
@@ -462,29 +462,29 @@ SELECT pg_reload_conf();
 
 #### Développement
 ```conf
-auto_explain.log_min_duration = 100   # 100 ms
-auto_explain.log_analyze = on
-auto_explain.log_buffers = on
-auto_explain.log_timing = on
-auto_explain.sample_rate = 1.0        # Tout logger
+auto_explain.log_min_duration = 100   # 100 ms  
+auto_explain.log_analyze = on  
+auto_explain.log_buffers = on  
+auto_explain.log_timing = on  
+auto_explain.sample_rate = 1.0        # Tout logger  
 ```
 
 #### Production
 ```conf
-auto_explain.log_min_duration = 5000  # 5 secondes
-auto_explain.log_analyze = on
-auto_explain.log_buffers = on
-auto_explain.log_timing = off         # Réduit l'overhead
-auto_explain.sample_rate = 0.1        # Échantillonner 10% des requêtes lentes
+auto_explain.log_min_duration = 5000  # 5 secondes  
+auto_explain.log_analyze = on  
+auto_explain.log_buffers = on  
+auto_explain.log_timing = off         # Réduit l'overhead  
+auto_explain.sample_rate = 0.1        # Échantillonner 10% des requêtes lentes  
 ```
 
 #### Analyse ponctuelle (troubleshooting)
 ```conf
-auto_explain.log_min_duration = 0     # Tout logger (temporairement !)
-auto_explain.log_analyze = on
-auto_explain.log_buffers = on
-auto_explain.log_verbose = on
-auto_explain.sample_rate = 1.0
+auto_explain.log_min_duration = 0     # Tout logger (temporairement !)  
+auto_explain.log_analyze = on  
+auto_explain.log_buffers = on  
+auto_explain.log_verbose = on  
+auto_explain.sample_rate = 1.0  
 ```
 
 ### Paramètres détaillés
@@ -515,7 +515,7 @@ auto_explain.log_analyze = on  # Recommandé
 ```
 
 **Différence** :
-- `EXPLAIN` : Estimation du planificateur (rapide, pas d'exécution)
+- `EXPLAIN` : Estimation du planificateur (rapide, pas d'exécution)  
 - `EXPLAIN ANALYZE` : Exécution réelle + statistiques (plus lent, plus précis)
 
 **Impact** : Ajoute environ 10-20% d'overhead sur la requête loggée.
@@ -567,8 +567,8 @@ Voici ce que vous verrez dans les logs quand auto_explain capture une requête :
 
 ```
 2025-11-21 15:30:45 CET [12567]: [1-1] user=webapp,db=production,app=MyApp,client=192.168.1.50 LOG:  duration: 1234.567 ms  plan:
-Query Text: SELECT o.*, u.email FROM orders o JOIN users u ON o.user_id = u.id WHERE o.created_at > '2025-01-01' ORDER BY o.created_at DESC LIMIT 100
-Hash Join  (cost=1234.56..45678.90 rows=5000 width=200) (actual time=45.123..1200.456 rows=4876 loops=1)
+Query Text: SELECT o.*, u.email FROM orders o JOIN users u ON o.user_id = u.id WHERE o.created_at > '2025-01-01' ORDER BY o.created_at DESC LIMIT 100  
+Hash Join  (cost=1234.56..45678.90 rows=5000 width=200) (actual time=45.123..1200.456 rows=4876 loops=1)  
   Hash Cond: (o.user_id = u.id)
   Buffers: shared hit=12345 read=6789
   ->  Index Scan using orders_created_at_idx on orders o  (cost=0.43..34567.89 rows=5000 width=150) (actual time=0.123..800.456 rows=4876 loops=1)
@@ -579,8 +579,8 @@ Hash Join  (cost=1234.56..45678.90 rows=5000 width=200) (actual time=45.123..120
         Buffers: shared hit=3444 read=3333
         ->  Seq Scan on users u  (cost=0.00..987.65 rows=10000 width=50) (actual time=0.012..25.678 rows=9876 loops=1)
               Buffers: shared hit=3444 read=3333
-Planning Time: 2.345 ms
-Execution Time: 1234.567 ms
+Planning Time: 2.345 ms  
+Execution Time: 1234.567 ms  
 ```
 
 **Informations capturées** :
@@ -607,14 +607,14 @@ log_line_prefix = '%t [%p]: [%l-1] user=%u,db=%d,app=%a,client=%h '
 ```
 
 **Décomposition** :
-1. `2025-11-21 15:45:23 CET` : Timestamp exact
-2. `[12678]` : Process ID (PID) du backend
-3. `[1-1]` : Numéro de ligne de log pour cette session
-4. `user=webapp` : Utilisateur PostgreSQL
-5. `db=production` : Base de données
-6. `app=MyApp` : Nom de l'application
-7. `client=192.168.1.50` : Adresse IP du client
-8. `ERROR:` : Niveau de gravité
+1. `2025-11-21 15:45:23 CET` : Timestamp exact  
+2. `[12678]` : Process ID (PID) du backend  
+3. `[1-1]` : Numéro de ligne de log pour cette session  
+4. `user=webapp` : Utilisateur PostgreSQL  
+5. `db=production` : Base de données  
+6. `app=MyApp` : Nom de l'application  
+7. `client=192.168.1.50` : Adresse IP du client  
+8. `ERROR:` : Niveau de gravité  
 9. Le message d'erreur
 
 ### Niveaux de gravité et leur signification
@@ -635,9 +635,9 @@ log_line_prefix = '%t [%p]: [%l-1] user=%u,db=%d,app=%a,client=%h '
 #### Erreur 1 : Violation de contrainte unique
 
 ```
-ERROR:  duplicate key value violates unique constraint "users_email_key"
-DETAIL:  Key (email)=(user@example.com) already exists.
-STATEMENT:  INSERT INTO users (email, name) VALUES ('user@example.com', 'John Doe')
+ERROR:  duplicate key value violates unique constraint "users_email_key"  
+DETAIL:  Key (email)=(user@example.com) already exists.  
+STATEMENT:  INSERT INTO users (email, name) VALUES ('user@example.com', 'John Doe')  
 ```
 
 **Interprétation** :
@@ -651,11 +651,11 @@ STATEMENT:  INSERT INTO users (email, name) VALUES ('user@example.com', 'John Do
 #### Erreur 2 : Deadlock détecté
 
 ```
-ERROR:  deadlock detected
-DETAIL:  Process 12678 waits for ShareLock on transaction 123456; blocked by process 12679.
-Process 12679 waits for ShareLock on transaction 123457; blocked by process 12678.
-HINT:  See server log for query details.
-STATEMENT:  UPDATE accounts SET balance = balance - 100 WHERE id = 42
+ERROR:  deadlock detected  
+DETAIL:  Process 12678 waits for ShareLock on transaction 123456; blocked by process 12679.  
+Process 12679 waits for ShareLock on transaction 123457; blocked by process 12678.  
+HINT:  See server log for query details.  
+STATEMENT:  UPDATE accounts SET balance = balance - 100 WHERE id = 42  
 ```
 
 **Interprétation** :
@@ -669,8 +669,8 @@ STATEMENT:  UPDATE accounts SET balance = balance - 100 WHERE id = 42
 #### Erreur 3 : Fichier temporaire créé
 
 ```
-LOG:  temporary file: path "base/pgsql_tmp/pgsql_tmp12678.0", size 524288000
-STATEMENT:  SELECT * FROM huge_table ORDER BY created_at
+LOG:  temporary file: path "base/pgsql_tmp/pgsql_tmp12678.0", size 524288000  
+STATEMENT:  SELECT * FROM huge_table ORDER BY created_at  
 ```
 
 **Interprétation** :
@@ -685,8 +685,8 @@ STATEMENT:  SELECT * FROM huge_table ORDER BY created_at
 #### Erreur 4 : Connexion échouée
 
 ```
-FATAL:  password authentication failed for user "webapp"
-DETAIL:  Connection matched pg_hba.conf line 95: "host all all 192.168.1.0/24 scram-sha-256"
+FATAL:  password authentication failed for user "webapp"  
+DETAIL:  Connection matched pg_hba.conf line 95: "host all all 192.168.1.0/24 scram-sha-256"  
 ```
 
 **Interprétation** :
@@ -700,9 +700,9 @@ DETAIL:  Connection matched pg_hba.conf line 95: "host all all 192.168.1.0/24 sc
 #### Erreur 5 : Lock wait
 
 ```
-LOG:  process 12678 still waiting for ShareLock on transaction 123456 after 1000.123 ms
-DETAIL:  Process holding the lock: 12679. Wait queue: 12678.
-STATEMENT:  UPDATE orders SET status = 'shipped' WHERE id = 42
+LOG:  process 12678 still waiting for ShareLock on transaction 123456 after 1000.123 ms  
+DETAIL:  Process holding the lock: 12679. Wait queue: 12678.  
+STATEMENT:  UPDATE orders SET status = 'shipped' WHERE id = 42  
 ```
 
 **Interprétation** :
@@ -745,9 +745,9 @@ grep "duration:" postgresql.log | \
 #### Pattern 3 : Erreurs en cascade
 
 ```
-ERROR:  canceling statement due to user request
-ERROR:  current transaction is aborted, commands ignored until end of transaction block
-ERROR:  current transaction is aborted, commands ignored until end of transaction block
+ERROR:  canceling statement due to user request  
+ERROR:  current transaction is aborted, commands ignored until end of transaction block  
+ERROR:  current transaction is aborted, commands ignored until end of transaction block  
 ```
 
 **Interprétation** :
@@ -797,13 +797,13 @@ pgbadger --begin "2025-11-20 00:00:00" --end "2025-11-21 00:00:00" postgresql.lo
 #### Rapports générés
 
 pgBadger génère un rapport HTML avec :
-- **Statistiques globales** : Nombre de requêtes, durée totale, erreurs
-- **Requêtes les plus lentes** : Top N avec temps moyen/max
-- **Requêtes les plus fréquentes** : Top N avec nombre d'appels
-- **Requêtes normalisées** : Agrégation des requêtes similaires
-- **Erreurs et avertissements** : Liste complète avec contexte
-- **Connexions et sessions** : Patterns de connexion
-- **Checkpoints et autovacuum** : Activité de maintenance
+- **Statistiques globales** : Nombre de requêtes, durée totale, erreurs  
+- **Requêtes les plus lentes** : Top N avec temps moyen/max  
+- **Requêtes les plus fréquentes** : Top N avec nombre d'appels  
+- **Requêtes normalisées** : Agrégation des requêtes similaires  
+- **Erreurs et avertissements** : Liste complète avec contexte  
+- **Connexions et sessions** : Patterns de connexion  
+- **Checkpoints et autovacuum** : Activité de maintenance  
 - **Graphiques temporels** : Évolution au fil du temps
 
 #### Configuration pour pgBadger
@@ -812,15 +812,15 @@ Pour des résultats optimaux, configurez PostgreSQL pour générer des logs comp
 
 ```conf
 # Dans postgresql.conf
-log_min_duration_statement = 0       # Logger toutes les requêtes (temporairement)
-log_line_prefix = '%t [%p]: [%l-1] user=%u,db=%d,app=%a,client=%h '
-log_checkpoints = on
-log_connections = on
-log_disconnections = on
-log_duration = off
-log_lock_waits = on
-log_temp_files = 0
-log_autovacuum_min_duration = 0
+log_min_duration_statement = 0       # Logger toutes les requêtes (temporairement)  
+log_line_prefix = '%t [%p]: [%l-1] user=%u,db=%d,app=%a,client=%h '  
+log_checkpoints = on  
+log_connections = on  
+log_disconnections = on  
+log_duration = off  
+log_lock_waits = on  
+log_temp_files = 0  
+log_autovacuum_min_duration = 0  
 ```
 
 **Attention** : `log_min_duration_statement = 0` génère BEAUCOUP de logs. À utiliser temporairement pour analyse.
@@ -846,15 +846,15 @@ grep "duration:" postgresql.log | \
 #### 2. Splunk / ELK Stack
 
 Pour les grandes entreprises, les logs peuvent être envoyés vers :
-- **Elasticsearch + Logstash + Kibana (ELK)**
-- **Splunk**
-- **Datadog Logs**
+- **Elasticsearch + Logstash + Kibana (ELK)**  
+- **Splunk**  
+- **Datadog Logs**  
 - **Graylog**
 
 Configuration pour JSON logs (PostgreSQL 15+) :
 ```conf
-log_destination = 'jsonlog'
-logging_collector = on
+log_destination = 'jsonlog'  
+logging_collector = on  
 ```
 
 #### 3. Extensions PostgreSQL
@@ -867,9 +867,9 @@ SELECT
     calls,
     mean_exec_time,
     max_exec_time
-FROM pg_stat_statements
-ORDER BY mean_exec_time DESC
-LIMIT 10;
+FROM pg_stat_statements  
+ORDER BY mean_exec_time DESC  
+LIMIT 10;  
 ```
 
 ---
@@ -880,31 +880,31 @@ LIMIT 10;
 
 #### Développement
 ```conf
-log_min_messages = info
-log_min_duration_statement = 100
-log_statement = 'all'  # Temporairement
-log_connections = on
-log_disconnections = on
+log_min_messages = info  
+log_min_duration_statement = 100  
+log_statement = 'all'  # Temporairement  
+log_connections = on  
+log_disconnections = on  
 
-auto_explain.log_min_duration = 100
-auto_explain.log_analyze = on
+auto_explain.log_min_duration = 100  
+auto_explain.log_analyze = on  
 ```
 
 #### Production
 ```conf
-log_min_messages = warning
-log_min_duration_statement = 5000  # 5 secondes
-log_statement = 'ddl'
-log_connections = on
-log_disconnections = on
-log_checkpoints = on
-log_lock_waits = on
-log_temp_files = 10240  # > 10 MB
+log_min_messages = warning  
+log_min_duration_statement = 5000  # 5 secondes  
+log_statement = 'ddl'  
+log_connections = on  
+log_disconnections = on  
+log_checkpoints = on  
+log_lock_waits = on  
+log_temp_files = 10240  # > 10 MB  
 
-auto_explain.log_min_duration = 5000
-auto_explain.log_analyze = on
-auto_explain.log_buffers = on
-auto_explain.sample_rate = 0.1  # 10%
+auto_explain.log_min_duration = 5000  
+auto_explain.log_analyze = on  
+auto_explain.log_buffers = on  
+auto_explain.sample_rate = 0.1  # 10%  
 ```
 
 ### 2. Rotation des logs
@@ -913,10 +913,10 @@ Sans rotation, les logs peuvent remplir le disque !
 
 ```conf
 # Rotation automatique
-logging_collector = on
-log_rotation_age = 1d          # Nouveau fichier chaque jour
-log_rotation_size = 100MB      # Nouveau fichier si > 100 MB
-log_truncate_on_rotation = on  # Écraser l'ancien fichier
+logging_collector = on  
+log_rotation_age = 1d          # Nouveau fichier chaque jour  
+log_rotation_size = 100MB      # Nouveau fichier si > 100 MB  
+log_truncate_on_rotation = on  # Écraser l'ancien fichier  
 
 # Nom de fichier avec date
 log_filename = 'postgresql-%Y-%m-%d_%H%M%S.log'
@@ -959,28 +959,28 @@ Pour une analyse ponctuelle sans redémarrage :
 
 ```sql
 -- Augmenter temporairement le niveau de log
-ALTER SYSTEM SET log_min_duration_statement = 0;
-SELECT pg_reload_conf();
+ALTER SYSTEM SET log_min_duration_statement = 0;  
+SELECT pg_reload_conf();  
 
 -- Analyser pendant quelques minutes...
 
 -- Revenir à la normale
-ALTER SYSTEM SET log_min_duration_statement = 5000;
-SELECT pg_reload_conf();
+ALTER SYSTEM SET log_min_duration_statement = 5000;  
+SELECT pg_reload_conf();  
 ```
 
 **Ou au niveau session** :
 
 ```sql
 -- Uniquement pour cette session
-SET log_min_duration_statement = 0;
-SET client_min_messages = debug;
+SET log_min_duration_statement = 0;  
+SET client_min_messages = debug;  
 
 -- Exécuter les requêtes à analyser...
 
 -- Revenir à la normale
-RESET log_min_duration_statement;
-RESET client_min_messages;
+RESET log_min_duration_statement;  
+RESET client_min_messages;  
 ```
 
 ### 5. Sécurité et confidentialité
@@ -992,8 +992,8 @@ RESET client_min_messages;
 log_statement = 'none'  # Évite de logger les CREATE USER avec mot de passe
 
 # Restreindre l'accès aux logs
-chmod 600 /var/log/postgresql/*.log
-chown postgres:postgres /var/log/postgresql/*.log
+chmod 600 /var/log/postgresql/*.log  
+chown postgres:postgres /var/log/postgresql/*.log  
 ```
 
 **Anonymiser les logs** pour les partager :
@@ -1006,19 +1006,19 @@ sed 's/[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}/XXX.XXX.XXX.XXX/g'
 
 ### 6. Checklist de configuration des logs
 
-- [ ] `logging_collector = on`
-- [ ] `log_destination` configuré (stderr ou csvlog)
-- [ ] `log_line_prefix` personnalisé avec contexte suffisant
-- [ ] `log_min_duration_statement` adapté à votre charge
-- [ ] `log_connections = on`
-- [ ] `log_disconnections = on`
-- [ ] `log_checkpoints = on`
-- [ ] `log_lock_waits = on`
-- [ ] `log_temp_files` configuré
-- [ ] Rotation des logs activée
-- [ ] `auto_explain` configuré et chargé
-- [ ] Tests de génération et lecture des logs
-- [ ] pgBadger installé et testé
+- [ ] `logging_collector = on`  
+- [ ] `log_destination` configuré (stderr ou csvlog)  
+- [ ] `log_line_prefix` personnalisé avec contexte suffisant  
+- [ ] `log_min_duration_statement` adapté à votre charge  
+- [ ] `log_connections = on`  
+- [ ] `log_disconnections = on`  
+- [ ] `log_checkpoints = on`  
+- [ ] `log_lock_waits = on`  
+- [ ] `log_temp_files` configuré  
+- [ ] Rotation des logs activée  
+- [ ] `auto_explain` configuré et chargé  
+- [ ] Tests de génération et lecture des logs  
+- [ ] pgBadger installé et testé  
 - [ ] Monitoring de la taille des logs
 
 ---
@@ -1033,8 +1033,8 @@ sed 's/[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}/XXX.XXX.XXX.XXX/g'
 SHOW logging_collector;
 
 -- Vérifier le répertoire de logs
-SHOW log_directory;
-SHOW log_filename;
+SHOW log_directory;  
+SHOW log_filename;  
 
 -- Vérifier les permissions
 ls -la /var/log/postgresql/
@@ -1057,9 +1057,9 @@ SELECT pg_sleep(2);
 ### Q3 : Les logs sont trop volumineux
 
 **Solutions** :
-1. Augmenter `log_min_duration_statement` (moins de requêtes loggées)
-2. Réduire `auto_explain.sample_rate` (échantillonnage)
-3. Désactiver `log_statement = 'all'`
+1. Augmenter `log_min_duration_statement` (moins de requêtes loggées)  
+2. Réduire `auto_explain.sample_rate` (échantillonnage)  
+3. Désactiver `log_statement = 'all'`  
 4. Configurer une rotation plus agressive
 
 ### Q4 : Comment analyser les logs en temps réel ?
@@ -1091,9 +1091,9 @@ output.elasticsearch:
 **Option 2 : rsyslog**
 ```conf
 # Dans postgresql.conf
-log_destination = 'syslog'
-syslog_facility = 'LOCAL0'
-syslog_ident = 'postgres'
+log_destination = 'syslog'  
+syslog_facility = 'LOCAL0'  
+syslog_ident = 'postgres'  
 ```
 
 ---
@@ -1104,52 +1104,52 @@ La configuration et l'analyse des logs PostgreSQL sont des compétences essentie
 
 ### Points clés à retenir
 
-1. **log_line_prefix** : Personnalisez pour avoir le contexte nécessaire
-2. **log_min_duration_statement** : Le paramètre le plus important pour la performance
-3. **auto_explain** : Capture automatiquement les plans des requêtes lentes
-4. **pgBadger** : Outil d'analyse indispensable
-5. **Rotation** : Essentielle pour éviter de remplir le disque
+1. **log_line_prefix** : Personnalisez pour avoir le contexte nécessaire  
+2. **log_min_duration_statement** : Le paramètre le plus important pour la performance  
+3. **auto_explain** : Capture automatiquement les plans des requêtes lentes  
+4. **pgBadger** : Outil d'analyse indispensable  
+5. **Rotation** : Essentielle pour éviter de remplir le disque  
 6. **Équilibre** : Loggez suffisamment, mais pas trop (overhead et taille)
 
 ### Configuration minimale recommandée
 
 ```conf
 # Logging de base
-logging_collector = on
-log_destination = 'stderr'
-log_line_prefix = '%t [%p]: [%l-1] user=%u,db=%d,app=%a,client=%h '
-log_min_duration_statement = 5000
-log_connections = on
-log_disconnections = on
-log_checkpoints = on
-log_lock_waits = on
-log_temp_files = 10240
+logging_collector = on  
+log_destination = 'stderr'  
+log_line_prefix = '%t [%p]: [%l-1] user=%u,db=%d,app=%a,client=%h '  
+log_min_duration_statement = 5000  
+log_connections = on  
+log_disconnections = on  
+log_checkpoints = on  
+log_lock_waits = on  
+log_temp_files = 10240  
 
 # Rotation
-log_rotation_age = 1d
-log_rotation_size = 100MB
+log_rotation_age = 1d  
+log_rotation_size = 100MB  
 
 # auto_explain
-shared_preload_libraries = 'auto_explain'
-auto_explain.log_min_duration = 5000
-auto_explain.log_analyze = on
-auto_explain.log_buffers = on
-auto_explain.sample_rate = 0.1
+shared_preload_libraries = 'auto_explain'  
+auto_explain.log_min_duration = 5000  
+auto_explain.log_analyze = on  
+auto_explain.log_buffers = on  
+auto_explain.sample_rate = 0.1  
 ```
 
 ### Workflow recommandé
 
-1. **Configurer** les logs dès le début du projet
-2. **Monitorer** régulièrement avec pgBadger ou équivalent
-3. **Analyser** les patterns et anomalies
-4. **Optimiser** les requêtes identifiées comme problématiques
+1. **Configurer** les logs dès le début du projet  
+2. **Monitorer** régulièrement avec pgBadger ou équivalent  
+3. **Analyser** les patterns et anomalies  
+4. **Optimiser** les requêtes identifiées comme problématiques  
 5. **Itérer** : Ajuster la configuration selon vos besoins
 
 ### Ressources complémentaires
 
-- [Documentation PostgreSQL - Error Reporting and Logging](https://www.postgresql.org/docs/18/runtime-config-logging.html)
-- [pgBadger Documentation](https://pgbadger.darold.net/)
-- [Guide auto_explain](https://www.postgresql.org/docs/18/auto-explain.html)
+- [Documentation PostgreSQL - Error Reporting and Logging](https://www.postgresql.org/docs/18/runtime-config-logging.html)  
+- [pgBadger Documentation](https://pgbadger.darold.net/)  
+- [Guide auto_explain](https://www.postgresql.org/docs/18/auto-explain.html)  
 - [PostgreSQL Log Analysis Best Practices](https://wiki.postgresql.org/wiki/Logging_Difficult_Queries)
 
 ---
@@ -1163,28 +1163,28 @@ auto_explain.sample_rate = 0.1
 cat >> /etc/postgresql/18/main/postgresql.conf <<EOF
 
 # === Logging Configuration ===
-logging_collector = on
-log_destination = 'stderr'
-log_line_prefix = '%t [%p]: [%l-1] user=%u,db=%d,app=%a,client=%h '
-log_min_duration_statement = 5000
-log_connections = on
-log_disconnections = on
-log_checkpoints = on
-log_lock_waits = on
-log_temp_files = 10240
-log_rotation_age = 1d
-log_rotation_size = 100MB
+logging_collector = on  
+log_destination = 'stderr'  
+log_line_prefix = '%t [%p]: [%l-1] user=%u,db=%d,app=%a,client=%h '  
+log_min_duration_statement = 5000  
+log_connections = on  
+log_disconnections = on  
+log_checkpoints = on  
+log_lock_waits = on  
+log_temp_files = 10240  
+log_rotation_age = 1d  
+log_rotation_size = 100MB  
 
 # === auto_explain ===
-shared_preload_libraries = 'auto_explain'
-auto_explain.log_min_duration = 5000
-auto_explain.log_analyze = on
-auto_explain.log_buffers = on
-auto_explain.sample_rate = 0.1
-EOF
+shared_preload_libraries = 'auto_explain'  
+auto_explain.log_min_duration = 5000  
+auto_explain.log_analyze = on  
+auto_explain.log_buffers = on  
+auto_explain.sample_rate = 0.1  
+EOF  
 
-systemctl restart postgresql
-echo "Logging configuration complete!"
+systemctl restart postgresql  
+echo "Logging configuration complete!"  
 ```
 
 **🎯 Objectif** : Des logs informatifs, des diagnostics rapides, des applications optimisées !

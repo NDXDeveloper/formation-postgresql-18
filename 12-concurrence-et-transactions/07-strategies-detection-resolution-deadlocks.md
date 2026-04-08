@@ -9,9 +9,9 @@ Nous avons vu précédemment ce qu'est un **deadlock** (interblocage) : une situ
 **Analogie** : Imaginez deux voitures qui arrivent face à face dans une rue étroite à sens unique. La voiture A ne peut avancer que si B recule. La voiture B ne peut avancer que si A recule. Résultat : **blocage total**.
 
 Dans ce chapitre, nous allons explorer en profondeur :
-- 🔍 Comment **détecter** les deadlocks avant qu'ils ne causent des problèmes
-- 🛡️ Comment les **prévenir** par une conception intelligente
-- 🚑 Comment les **résoudre** quand ils se produisent malgré tout
+- 🔍 Comment **détecter** les deadlocks avant qu'ils ne causent des problèmes  
+- 🛡️ Comment les **prévenir** par une conception intelligente  
+- 🚑 Comment les **résoudre** quand ils se produisent malgré tout  
 - 📊 Les **outils** et requêtes pour diagnostiquer les situations de blocage
 
 ---
@@ -23,11 +23,11 @@ Dans ce chapitre, nous allons explorer en profondeur :
 Un deadlock se produit lorsqu'il existe un **cycle dans le graphe d'attente des verrous** :
 
 ```
-Transaction T1 : détient verrou sur A, attend verrou sur B
-Transaction T2 : détient verrou sur B, attend verrou sur A
+Transaction T1 : détient verrou sur A, attend verrou sur B  
+Transaction T2 : détient verrou sur B, attend verrou sur A  
 
-Graphe :
-T1 → B (attend)
+Graphe :  
+T1 → B (attend)  
  ↑    ↓
  A    T2 (détient)
  ↑    ↓
@@ -40,9 +40,9 @@ Cycle : T1 → B → T2 → A → T1 (DEADLOCK !)
 
 Un deadlock nécessite **quatre conditions simultanées** (théorème de Coffman) :
 
-1. **Exclusion mutuelle** : Les ressources ne peuvent être détenues que par une transaction à la fois
-2. **Hold and wait** : Une transaction détient des ressources et en attend d'autres
-3. **No preemption** : Les ressources ne peuvent être arrachées de force
+1. **Exclusion mutuelle** : Les ressources ne peuvent être détenues que par une transaction à la fois  
+2. **Hold and wait** : Une transaction détient des ressources et en attend d'autres  
+3. **No preemption** : Les ressources ne peuvent être arrachées de force  
 4. **Circular wait** : Il existe un cycle dans le graphe d'attente
 
 **Stratégie de prévention** : Casser au moins l'une de ces conditions.
@@ -119,11 +119,11 @@ deadlock_timeout = 1s
 Quand PostgreSQL détecte un deadlock, il envoie cette erreur à l'une des transactions :
 
 ```
-ERROR:  deadlock detected
-DETAIL:  Process 12345 waits for ShareLock on transaction 67890; blocked by process 12346.
-Process 12346 waits for ShareLock on transaction 67889; blocked by process 12345.
-HINT:  See server log for query details.
-CONTEXT:  while updating tuple (0,42) in relation "comptes"
+ERROR:  deadlock detected  
+DETAIL:  Process 12345 waits for ShareLock on transaction 67890; blocked by process 12346.  
+Process 12346 waits for ShareLock on transaction 67889; blocked by process 12345.  
+HINT:  See server log for query details.  
+CONTEXT:  while updating tuple (0,42) in relation "comptes"  
 ```
 
 **Informations contenues** :
@@ -177,35 +177,35 @@ Si toutes les transactions accèdent aux ressources dans le même ordre, aucun c
 
 ```sql
 -- Transaction A
-BEGIN;
-UPDATE comptes SET solde = solde - 100 WHERE id = 'A';  -- Verrou sur A
+BEGIN;  
+UPDATE comptes SET solde = solde - 100 WHERE id = 'A';  -- Verrou sur A  
 -- [pause]
-UPDATE comptes SET solde = solde + 100 WHERE id = 'B';  -- Attend verrou sur B
-COMMIT;
+UPDATE comptes SET solde = solde + 100 WHERE id = 'B';  -- Attend verrou sur B  
+COMMIT;  
 
 -- Transaction B (en parallèle)
-BEGIN;
-UPDATE comptes SET solde = solde - 50 WHERE id = 'B';   -- Verrou sur B
+BEGIN;  
+UPDATE comptes SET solde = solde - 50 WHERE id = 'B';   -- Verrou sur B  
 -- [pause]
-UPDATE comptes SET solde = solde + 50 WHERE id = 'A';   -- Attend verrou sur A (DEADLOCK !)
-COMMIT;
+UPDATE comptes SET solde = solde + 50 WHERE id = 'A';   -- Attend verrou sur A (DEADLOCK !)  
+COMMIT;  
 ```
 
 **Solution : Ordre alphabétique** :
 
 ```sql
 -- Transaction A
-BEGIN;
-UPDATE comptes SET solde = solde - 100 WHERE id = 'A';  -- Verrou sur A (ordre : A puis B)
-UPDATE comptes SET solde = solde + 100 WHERE id = 'B';  -- Verrou sur B
-COMMIT;
+BEGIN;  
+UPDATE comptes SET solde = solde - 100 WHERE id = 'A';  -- Verrou sur A (ordre : A puis B)  
+UPDATE comptes SET solde = solde + 100 WHERE id = 'B';  -- Verrou sur B  
+COMMIT;  
 
 -- Transaction B
-BEGIN;
-UPDATE comptes SET solde = solde + 50 WHERE id = 'A';   -- Verrou sur A (même ordre : A puis B)
+BEGIN;  
+UPDATE comptes SET solde = solde + 50 WHERE id = 'A';   -- Verrou sur A (même ordre : A puis B)  
 -- Doit attendre que Transaction A libère A
-UPDATE comptes SET solde = solde - 50 WHERE id = 'B';
-COMMIT;
+UPDATE comptes SET solde = solde - 50 WHERE id = 'B';  
+COMMIT;  
 
 -- Pas de deadlock ! Transaction B attend simplement son tour
 ```
@@ -214,17 +214,17 @@ COMMIT;
 
 ```sql
 -- ❌ MAUVAIS : Ordre imprévisible
-BEGIN;
-UPDATE produits SET stock = stock - 1 WHERE id IN (42, 10, 35);
-COMMIT;
+BEGIN;  
+UPDATE produits SET stock = stock - 1 WHERE id IN (42, 10, 35);  
+COMMIT;  
 
 -- ✅ BON : Trier les IDs avant de verrouiller
 BEGIN;
 -- Trier par ID pour garantir un ordre cohérent
-UPDATE produits SET stock = stock - 1
-WHERE id IN (42, 10, 35)
-ORDER BY id;  -- Ordre : 10, 35, 42
-COMMIT;
+UPDATE produits SET stock = stock - 1  
+WHERE id IN (42, 10, 35)  
+ORDER BY id;  -- Ordre : 10, 35, 42  
+COMMIT;  
 ```
 
 #### Avec SELECT FOR UPDATE
@@ -233,10 +233,10 @@ COMMIT;
 -- Verrouiller plusieurs lignes dans un ordre cohérent
 BEGIN;
 
-SELECT * FROM commandes
-WHERE id IN (100, 200, 50, 150)
-ORDER BY id  -- Tri : 50, 100, 150, 200
-FOR UPDATE;
+SELECT * FROM commandes  
+WHERE id IN (100, 200, 50, 150)  
+ORDER BY id  -- Tri : 50, 100, 150, 200  
+FOR UPDATE;  
 
 -- Modifier en toute sécurité
 UPDATE commandes SET statut = 'Traité' WHERE id IN (100, 200, 50, 150);
@@ -281,14 +281,14 @@ COMMIT;  -- Libère enfin les verrous après plusieurs minutes !
 ```sql
 -- ✅ BON
 -- 1. Faire tous les traitements AVANT la transaction
-local_data = faire_appel_api()
-resultat_calcul = traitement_complexe(local_data)
+local_data = faire_appel_api()  
+resultat_calcul = traitement_complexe(local_data)  
 
 -- 2. Transaction très courte
 BEGIN;
 
-UPDATE comptes SET solde = solde - 100 WHERE id = 'A';
-UPDATE autre_table SET valeur = resultat_calcul WHERE id = 1;
+UPDATE comptes SET solde = solde - 100 WHERE id = 'A';  
+UPDATE autre_table SET valeur = resultat_calcul WHERE id = 1;  
 
 COMMIT;  -- Libère les verrous en quelques millisecondes !
 ```
@@ -328,14 +328,14 @@ COMMIT;  -- Libère les verrous en quelques millisecondes !
 BEGIN;
 
 -- Verrouiller toutes les tables nécessaires IMMÉDIATEMENT
-LOCK TABLE comptes IN SHARE ROW EXCLUSIVE MODE;
-LOCK TABLE transactions IN SHARE ROW EXCLUSIVE MODE;
-LOCK TABLE historique IN SHARE ROW EXCLUSIVE MODE;
+LOCK TABLE comptes IN SHARE ROW EXCLUSIVE MODE;  
+LOCK TABLE transactions IN SHARE ROW EXCLUSIVE MODE;  
+LOCK TABLE historique IN SHARE ROW EXCLUSIVE MODE;  
 
 -- Maintenant, faire toutes les opérations
-UPDATE comptes ...;
-INSERT INTO transactions ...;
-INSERT INTO historique ...;
+UPDATE comptes ...;  
+INSERT INTO transactions ...;  
+INSERT INTO historique ...;  
 
 COMMIT;
 ```
@@ -348,12 +348,12 @@ COMMIT;
 BEGIN;
 
 -- Verrouiller toutes les lignes nécessaires D'ABORD
-SELECT * FROM commandes WHERE id IN (1, 2, 3) ORDER BY id FOR UPDATE;
-SELECT * FROM produits WHERE id IN (10, 20) ORDER BY id FOR UPDATE;
+SELECT * FROM commandes WHERE id IN (1, 2, 3) ORDER BY id FOR UPDATE;  
+SELECT * FROM produits WHERE id IN (10, 20) ORDER BY id FOR UPDATE;  
 
 -- Maintenant, les modifications sont sans risque de deadlock
-UPDATE commandes SET statut = 'Validé' WHERE id = 1;
-UPDATE produits SET stock = stock - 1 WHERE id = 10;
+UPDATE commandes SET statut = 'Validé' WHERE id = 1;  
+UPDATE produits SET stock = stock - 1 WHERE id = 10;  
 -- etc.
 
 COMMIT;
@@ -373,8 +373,8 @@ SET lock_timeout = '5s';  -- 5 secondes max
 
 BEGIN;
 -- Si un verrou n'est pas obtenu en 5s → ERROR
-UPDATE comptes SET solde = solde - 100 WHERE id = 'A';
-COMMIT;
+UPDATE comptes SET solde = solde - 100 WHERE id = 'A';  
+COMMIT;  
 ```
 
 **Erreur retournée** :
@@ -392,20 +392,20 @@ SET statement_timeout = '30s';  -- 30 secondes max
 
 BEGIN;
 -- Si la requête prend plus de 30s → ERROR
-UPDATE huge_table SET ...;
-COMMIT;
+UPDATE huge_table SET ...;  
+COMMIT;  
 ```
 
 #### Configuration recommandée
 
 ```sql
 -- Pour les transactions OLTP
-SET lock_timeout = '10s';
-SET statement_timeout = '60s';
+SET lock_timeout = '10s';  
+SET statement_timeout = '60s';  
 
 -- Pour les transactions batch/reporting
-SET lock_timeout = '5m';
-SET statement_timeout = '30m';
+SET lock_timeout = '5m';  
+SET statement_timeout = '30m';  
 ```
 
 ### 5. Éviter les transactions interactives ⭐⭐⭐
@@ -447,9 +447,9 @@ SELECT id, montant, version FROM commandes WHERE id = 123;
 -- 2. Au moment de sauvegarder, vérifier la version
 BEGIN;
 
-UPDATE commandes
-SET montant = 150, version = version + 1
-WHERE id = 123 AND version = 5;  -- Vérifier que version n'a pas changé
+UPDATE commandes  
+SET montant = 150, version = version + 1  
+WHERE id = 123 AND version = 5;  -- Vérifier que version n'a pas changé  
 
 -- Si affected_rows = 0 → quelqu'un d'autre a modifié
 IF NOT FOUND THEN
@@ -468,10 +468,10 @@ COMMIT;
 
 ```sql
 -- ❌ MAUVAIS
-BEGIN;
-LOCK TABLE produits IN EXCLUSIVE MODE;  -- Bloque TOUT
-UPDATE produits SET prix = prix * 1.1 WHERE categorie = 'Électronique';
-COMMIT;
+BEGIN;  
+LOCK TABLE produits IN EXCLUSIVE MODE;  -- Bloque TOUT  
+UPDATE produits SET prix = prix * 1.1 WHERE categorie = 'Électronique';  
+COMMIT;  
 ```
 
 #### Bon : Verrouiller seulement les lignes nécessaires
@@ -480,9 +480,9 @@ COMMIT;
 -- ✅ BON
 BEGIN;
 -- Verrouiller seulement les lignes concernées
-SELECT * FROM produits WHERE categorie = 'Électronique' FOR UPDATE;
-UPDATE produits SET prix = prix * 1.1 WHERE categorie = 'Électronique';
-COMMIT;
+SELECT * FROM produits WHERE categorie = 'Électronique' FOR UPDATE;  
+UPDATE produits SET prix = prix * 1.1 WHERE categorie = 'Électronique';  
+COMMIT;  
 ```
 
 ### 7. Utiliser NOWAIT ou SKIP LOCKED ⭐⭐
@@ -517,11 +517,11 @@ COMMIT;
 BEGIN;
 
 -- Prendre la prochaine tâche disponible en sautant les verrouillées
-SELECT * FROM jobs
-WHERE status = 'pending'
-ORDER BY priority DESC, created_at ASC
-LIMIT 1
-FOR UPDATE SKIP LOCKED;
+SELECT * FROM jobs  
+WHERE status = 'pending'  
+ORDER BY priority DESC, created_at ASC  
+LIMIT 1  
+FOR UPDATE SKIP LOCKED;  
 
 -- Si aucune tâche disponible (toutes verrouillées) → résultat vide
 
@@ -548,8 +548,8 @@ COMMIT;
 SELECT
     datname,
     deadlocks
-FROM pg_stat_database
-WHERE datname = current_database();
+FROM pg_stat_database  
+WHERE datname = current_database();  
 ```
 
 **Exemple de résultat** :
@@ -574,8 +574,8 @@ SELECT
     deadlocks,
     xact_commit + xact_rollback AS total_transactions,
     ROUND(100.0 * deadlocks / NULLIF(xact_commit + xact_rollback, 0), 4) AS deadlock_ratio
-FROM pg_stat_database
-WHERE datname NOT IN ('template0', 'template1');
+FROM pg_stat_database  
+WHERE datname NOT IN ('template0', 'template1');  
 ```
 
 **Seuils recommandés** :
@@ -599,10 +599,10 @@ SELECT
     psa.query,
     psa.state,
     age(now(), psa.query_start) AS waiting_time
-FROM pg_locks pl
-LEFT JOIN pg_stat_activity psa ON pl.pid = psa.pid
-WHERE NOT pl.granted
-ORDER BY psa.query_start;
+FROM pg_locks pl  
+LEFT JOIN pg_stat_activity psa ON pl.pid = psa.pid  
+WHERE NOT pl.granted  
+ORDER BY psa.query_start;  
 ```
 
 #### Identifier qui bloque qui
@@ -618,8 +618,8 @@ SELECT
     blocking_activity.query AS blocking_statement,
     blocked_activity.application_name AS blocked_app,
     age(now(), blocked_activity.query_start) AS blocked_duration
-FROM pg_catalog.pg_locks blocked_locks
-JOIN pg_catalog.pg_stat_activity blocked_activity
+FROM pg_catalog.pg_locks blocked_locks  
+JOIN pg_catalog.pg_stat_activity blocked_activity  
     ON blocked_activity.pid = blocked_locks.pid
 JOIN pg_catalog.pg_locks blocking_locks
     ON blocking_locks.locktype = blocked_locks.locktype
@@ -652,9 +652,9 @@ SELECT pg_blocking_pids(12345);
 
 ```sql
 -- Créer une fonction d'alerte
-CREATE OR REPLACE FUNCTION check_deadlock_alert()
-RETURNS TABLE(severity TEXT, message TEXT) AS $$
-BEGIN
+CREATE OR REPLACE FUNCTION check_deadlock_alert()  
+RETURNS TABLE(severity TEXT, message TEXT) AS $$  
+BEGIN  
     -- Alerte si trop de deadlocks récents
     IF (SELECT deadlocks FROM pg_stat_database WHERE datname = current_database()) > 100 THEN
         RETURN QUERY SELECT 'CRITICAL'::TEXT, 'Plus de 100 deadlocks détectés'::TEXT;
@@ -703,9 +703,9 @@ SELECT COUNT(*) AS waiting_locks FROM pg_locks WHERE NOT granted;
 
 **Rappel** : PostgreSQL **détecte et résout automatiquement** les deadlocks :
 
-1. Détection du cycle
-2. Choix d'une **victime** (transaction à annuler)
-3. Envoi de l'erreur à la victime
+1. Détection du cycle  
+2. Choix d'une **victime** (transaction à annuler)  
+3. Envoi de l'erreur à la victime  
 4. Les autres transactions continuent
 
 **Vous devez** : Implémenter une logique de **retry** dans votre application.
@@ -715,9 +715,9 @@ SELECT COUNT(*) AS waiting_locks FROM pg_locks WHERE NOT granted;
 #### Python (psycopg2)
 
 ```python
-import time
-import psycopg2
-from psycopg2.extensions import TransactionRollbackError
+import time  
+import psycopg2  
+from psycopg2.extensions import TransactionRollbackError  
 
 def execute_with_deadlock_retry(conn, operation, max_retries=5):
     """
@@ -850,11 +850,11 @@ await executeWithDeadlockRetry(client, async (client) => {
 #### Backoff exponentiel simple
 
 ```
-Tentative 1 : Attendre 100ms
-Tentative 2 : Attendre 200ms
-Tentative 3 : Attendre 400ms
-Tentative 4 : Attendre 800ms
-Tentative 5 : Attendre 1600ms
+Tentative 1 : Attendre 100ms  
+Tentative 2 : Attendre 200ms  
+Tentative 3 : Attendre 400ms  
+Tentative 4 : Attendre 800ms  
+Tentative 5 : Attendre 1600ms  
 ```
 
 #### Backoff exponentiel avec jitter (recommandé)
@@ -903,16 +903,16 @@ SELECT
     calls,
     total_exec_time,
     mean_exec_time
-FROM pg_stat_statements
-ORDER BY calls DESC
-LIMIT 20;
+FROM pg_stat_statements  
+ORDER BY calls DESC  
+LIMIT 20;  
 ```
 
 ### 2. Fonction personnalisée de diagnostic
 
 ```sql
-CREATE OR REPLACE FUNCTION diagnose_blocking()
-RETURNS TABLE(
+CREATE OR REPLACE FUNCTION diagnose_blocking()  
+RETURNS TABLE(  
     blocked_pid INT,
     blocked_user TEXT,
     blocked_query TEXT,
@@ -997,8 +997,8 @@ CREATE OR REPLACE FUNCTION transfer_money(
     to_account INT,
     amount NUMERIC
 )
-RETURNS void AS $$
-DECLARE
+RETURNS void AS $$  
+DECLARE  
     account1 INT;
     account2 INT;
 BEGIN
@@ -1032,17 +1032,17 @@ FOR each_row IN SELECT id FROM produits WHERE categorie = 'X' LOOP
 END LOOP;
 
 -- ✅ BON : Une seule opération
-UPDATE produits
-SET prix = prix * 1.1
-WHERE categorie = 'X';
+UPDATE produits  
+SET prix = prix * 1.1  
+WHERE categorie = 'X';  
 ```
 
 #### 3. Try-Lock Pattern
 
 ```sql
 -- Essayer d'obtenir le verrou, abandonner si occupé
-DO $$
-BEGIN
+DO $$  
+BEGIN  
     IF pg_try_advisory_xact_lock(123) THEN
         -- Traiter
         UPDATE jobs SET status = 'processing' WHERE id = 123;
@@ -1076,21 +1076,21 @@ END LOOP;
 
 ```sql
 -- ❌ TRÈS MAUVAIS : Verrouiller toutes les tables "au cas où"
-BEGIN;
-LOCK TABLE table1 IN ACCESS EXCLUSIVE MODE;
-LOCK TABLE table2 IN ACCESS EXCLUSIVE MODE;
-LOCK TABLE table3 IN ACCESS EXCLUSIVE MODE;
+BEGIN;  
+LOCK TABLE table1 IN ACCESS EXCLUSIVE MODE;  
+LOCK TABLE table2 IN ACCESS EXCLUSIVE MODE;  
+LOCK TABLE table3 IN ACCESS EXCLUSIVE MODE;  
 -- Bloque TOUTE l'application !
-UPDATE table1 SET ... WHERE id = 1;  -- Une seule ligne !
-COMMIT;
+UPDATE table1 SET ... WHERE id = 1;  -- Une seule ligne !  
+COMMIT;  
 ```
 
 #### 3. The Random Order Anti-Pattern
 
 ```sql
 -- ❌ MAUVAIS : Ordre aléatoire basé sur le hash ou l'insertion
-UPDATE produits SET ...
-WHERE id IN (
+UPDATE produits SET ...  
+WHERE id IN (  
     SELECT id FROM produits_temp ORDER BY random()
 );
 ```
@@ -1101,36 +1101,36 @@ WHERE id IN (
 
 ### Avant le développement
 
-- [ ] Former l'équipe sur les deadlocks et leur prévention
-- [ ] Établir des conventions de codage (ordre d'accès, timeouts)
+- [ ] Former l'équipe sur les deadlocks et leur prévention  
+- [ ] Établir des conventions de codage (ordre d'accès, timeouts)  
 - [ ] Documenter les patterns recommandés
 
 ### Pendant le développement
 
-- [ ] Toujours accéder aux tables/lignes dans un ordre cohérent
-- [ ] Trier les IDs avant SELECT FOR UPDATE ou UPDATE multiple
-- [ ] Garder les transactions aussi courtes que possible
-- [ ] Ne jamais ouvrir de transaction pendant une interaction utilisateur
-- [ ] Configurer des timeouts appropriés (lock_timeout, statement_timeout)
-- [ ] Implémenter une logique de retry avec backoff exponentiel
-- [ ] Utiliser NOWAIT ou SKIP LOCKED quand approprié
+- [ ] Toujours accéder aux tables/lignes dans un ordre cohérent  
+- [ ] Trier les IDs avant SELECT FOR UPDATE ou UPDATE multiple  
+- [ ] Garder les transactions aussi courtes que possible  
+- [ ] Ne jamais ouvrir de transaction pendant une interaction utilisateur  
+- [ ] Configurer des timeouts appropriés (lock_timeout, statement_timeout)  
+- [ ] Implémenter une logique de retry avec backoff exponentiel  
+- [ ] Utiliser NOWAIT ou SKIP LOCKED quand approprié  
 - [ ] Éviter les SELECT FOR UPDATE inutiles
 
 ### Avant la mise en production
 
-- [ ] Tester les scénarios de concurrence (charge)
-- [ ] Vérifier que les retries fonctionnent correctement
-- [ ] Configurer le monitoring (pg_stat_database, logs)
-- [ ] Définir des alertes (deadlock_threshold)
-- [ ] Créer un runbook pour gérer les incidents de deadlock
+- [ ] Tester les scénarios de concurrence (charge)  
+- [ ] Vérifier que les retries fonctionnent correctement  
+- [ ] Configurer le monitoring (pg_stat_database, logs)  
+- [ ] Définir des alertes (deadlock_threshold)  
+- [ ] Créer un runbook pour gérer les incidents de deadlock  
 - [ ] Activer log_lock_waits dans postgresql.conf
 
 ### En production
 
-- [ ] Surveiller le nombre de deadlocks quotidiennement
-- [ ] Analyser les logs avec pgBadger hebdomadairement
-- [ ] Identifier et corriger les hotspots (tables/lignes très contendues)
-- [ ] Revoir les transactions longues (> 1 seconde)
+- [ ] Surveiller le nombre de deadlocks quotidiennement  
+- [ ] Analyser les logs avec pgBadger hebdomadairement  
+- [ ] Identifier et corriger les hotspots (tables/lignes très contendues)  
+- [ ] Revoir les transactions longues (> 1 seconde)  
 - [ ] Optimiser les patterns qui causent des deadlocks répétés
 
 ---
@@ -1144,12 +1144,12 @@ WHERE id IN (
 **Cause** :
 ```sql
 -- Transaction A
-UPDATE produits SET stock = stock - 1 WHERE id = 100;
-UPDATE produits SET stock = stock - 1 WHERE id = 50;
+UPDATE produits SET stock = stock - 1 WHERE id = 100;  
+UPDATE produits SET stock = stock - 1 WHERE id = 50;  
 
 -- Transaction B (ordre inversé)
-UPDATE produits SET stock = stock - 1 WHERE id = 50;
-UPDATE produits SET stock = stock - 1 WHERE id = 100;
+UPDATE produits SET stock = stock - 1 WHERE id = 50;  
+UPDATE produits SET stock = stock - 1 WHERE id = 100;  
 ```
 
 **Solution** :
@@ -1159,8 +1159,8 @@ WITH sorted_items AS (
     SELECT unnest(ARRAY[100, 50]) AS product_id
     ORDER BY product_id
 )
-UPDATE produits SET stock = stock - 1
-WHERE id IN (SELECT product_id FROM sorted_items);
+UPDATE produits SET stock = stock - 1  
+WHERE id IN (SELECT product_id FROM sorted_items);  
 ```
 
 **Résultat** : Deadlocks réduits de 95%.
@@ -1174,21 +1174,21 @@ WHERE id IN (SELECT product_id FROM sorted_items);
 **Solution** :
 ```sql
 -- Avant : Transaction longue
-BEGIN;
-UPDATE places SET disponible = false WHERE id = 42;
+BEGIN;  
+UPDATE places SET disponible = false WHERE id = 42;  
 -- [Validation carte bancaire : 5 secondes]
-INSERT INTO reservations ...;
-COMMIT;
+INSERT INTO reservations ...;  
+COMMIT;  
 
 -- Après : Pré-validation, transaction courte
 -- 1. Valider la carte HORS transaction
 resultat_paiement = valider_carte(carte_bancaire)
 
 -- 2. Transaction ultra-courte
-BEGIN;
-UPDATE places SET disponible = false WHERE id = 42;
-INSERT INTO reservations (paiement_valide = true) ...;
-COMMIT;
+BEGIN;  
+UPDATE places SET disponible = false WHERE id = 42;  
+INSERT INTO reservations (paiement_valide = true) ...;  
+COMMIT;  
 ```
 
 **Résultat** : Deadlocks éliminés, throughput multiplié par 3.
@@ -1204,8 +1204,8 @@ CREATE OR REPLACE FUNCTION safe_transfer(
     p_to_id INT,
     p_amount NUMERIC
 )
-RETURNS void AS $$
-DECLARE
+RETURNS void AS $$  
+DECLARE  
     v_first_id INT;
     v_second_id INT;
 BEGIN
@@ -1266,12 +1266,12 @@ La gestion des deadlocks dans PostgreSQL nécessite une approche **proactive** c
 
 ### Règles d'or
 
-- ✅ **TOUJOURS** accéder aux ressources dans le même ordre
-- ✅ **TOUJOURS** garder les transactions courtes (< 100ms idéal)
-- ✅ **TOUJOURS** implémenter une logique de retry
-- ✅ **TOUJOURS** configurer des timeouts
-- ✅ **JAMAIS** garder une transaction ouverte pendant une interaction utilisateur
-- ✅ **JAMAIS** faire d'appels externes dans une transaction
+- ✅ **TOUJOURS** accéder aux ressources dans le même ordre  
+- ✅ **TOUJOURS** garder les transactions courtes (< 100ms idéal)  
+- ✅ **TOUJOURS** implémenter une logique de retry  
+- ✅ **TOUJOURS** configurer des timeouts  
+- ✅ **JAMAIS** garder une transaction ouverte pendant une interaction utilisateur  
+- ✅ **JAMAIS** faire d'appels externes dans une transaction  
 - ✅ **MONITORER** continuellement les deadlocks en production
 
 ### Impact de la prévention
@@ -1291,15 +1291,15 @@ Les deadlocks sont **inévitables** dans un système concurrent, mais avec les b
 
 **Points clés à retenir :**
 
-- 🔑 PostgreSQL détecte et résout automatiquement les deadlocks
-- 🔑 deadlock_timeout = 1s (défaut) déclenche la détection
-- 🔑 Ordre cohérent d'accès = prévention #1
-- 🔑 Transactions courtes = moins de risque
-- 🔑 Implémenter TOUJOURS un retry avec backoff exponentiel
-- 🔑 Code erreur 40P01 = deadlock dans votre application
-- 🔑 Monitorer pg_stat_database.deadlocks
-- 🔑 Utiliser lock_timeout et statement_timeout
-- 🔑 NOWAIT / SKIP LOCKED pour éviter les attentes
+- 🔑 PostgreSQL détecte et résout automatiquement les deadlocks  
+- 🔑 deadlock_timeout = 1s (défaut) déclenche la détection  
+- 🔑 Ordre cohérent d'accès = prévention #1  
+- 🔑 Transactions courtes = moins de risque  
+- 🔑 Implémenter TOUJOURS un retry avec backoff exponentiel  
+- 🔑 Code erreur 40P01 = deadlock dans votre application  
+- 🔑 Monitorer pg_stat_database.deadlocks  
+- 🔑 Utiliser lock_timeout et statement_timeout  
+- 🔑 NOWAIT / SKIP LOCKED pour éviter les attentes  
 - 🔑 Tester sous charge avant la mise en production
 
 ⏭️ [Indexation et Optimisation](/13-indexation-et-optimisation/README.md)
