@@ -35,8 +35,8 @@ Imaginez un restaurant avec un seul serveur :
 CLIENT 1 commande → SERVEUR va en cuisine → ATTEND → Revient avec plat
                          (5 minutes)           ⏰
 
-CLIENT 2 veut commander → DOIT ATTENDRE que le serveur revienne ❌
-CLIENT 3 veut commander → DOIT ATTENDRE aussi ❌
+CLIENT 2 veut commander → DOIT ATTENDRE que le serveur revienne ❌  
+CLIENT 3 veut commander → DOIT ATTENDRE aussi ❌  
 ```
 
 **Problème** : Le serveur est **bloqué** pendant qu'il attend en cuisine. Les autres clients patientent inutilement.
@@ -69,11 +69,11 @@ BACKEND PROCESS (PostgreSQL 17)
 Pour un scan séquentiel (lecture de toute la table), l'I/O synchrone fonctionne **correctement** :
 
 ```
-Pages : [1][2][3][4][5][6][7][8]...
-Lecture séquentielle : 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
+Pages : [1][2][3][4][5][6][7][8]...  
+Lecture séquentielle : 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8  
 
-Le disque peut précharger (prefetch) les pages suivantes ✅
-Pas de problème majeur
+Le disque peut précharger (prefetch) les pages suivantes ✅  
+Pas de problème majeur  
 ```
 
 #### Scénario 2 : Index Scan (Scan d'Index)
@@ -85,11 +85,11 @@ Pages nécessaires : [1] [127] [543] [999] [1234] [5678]
                       ↓    ↓     ↓     ↓      ↓      ↓
                     5 ms 5 ms  5 ms  5 ms   5 ms   5 ms
 
-Le disque doit CHERCHER chaque page individuellement 🐌
-Total : 6 × 5 ms = 30 ms (lectures séquentielles)
+Le disque doit CHERCHER chaque page individuellement 🐌  
+Total : 6 × 5 ms = 30 ms (lectures séquentielles)  
 
-Si le disque pouvait traiter en parallèle :
-Toutes les 6 pages en ~5-8 ms ⚡ (3-4× plus rapide)
+Si le disque pouvait traiter en parallèle :  
+Toutes les 6 pages en ~5-8 ms ⚡ (3-4× plus rapide)  
 ```
 
 **Problème** : PostgreSQL ne peut pas tirer parti du **parallélisme I/O** du disque.
@@ -107,9 +107,9 @@ Toutes les 6 pages en ~5-8 ms ⚡ (3-4× plus rapide)
 Maintenant, le restaurant a un **système de commande asynchrone** :
 
 ```
-CLIENT 1 commande → SERVEUR note la commande → Retourne immédiatement
-CLIENT 2 commande → SERVEUR note la commande → Retourne immédiatement
-CLIENT 3 commande → SERVEUR note la commande → Retourne immédiatement
+CLIENT 1 commande → SERVEUR note la commande → Retourne immédiatement  
+CLIENT 2 commande → SERVEUR note la commande → Retourne immédiatement  
+CLIENT 3 commande → SERVEUR note la commande → Retourne immédiatement  
                               |
                               v
                     CUISINE traite en parallèle
@@ -186,8 +186,8 @@ POSTGRESQL 18 AIO ARCHITECTURE
 ┌─────────────────────────────────────────────────────────┐
 │               SYSTÈME D'EXPLOITATION                    │
 │  ┌───────────────────────────────────────────────────┐  │
-│  │     io_uring (Linux) / kqueue (BSD) / IOCP (Win)  │  │
-│  │  - API d'I/O asynchrone du kernel                 │  │
+│  │     io_uring (Linux) / I/O Workers (autres OS)    │  │
+│  │  - API d'I/O asynchrone ou workers dédiés         │  │
 │  └───────────────────────────────────────────────────┘  │
 └─────────────────────────────────────────────────────────┘
                           │
@@ -214,17 +214,22 @@ CARACTÉRISTIQUES :
 ```
 
 **Pourquoi io_uring ?**
-- **Performance** : 10-20% plus rapide que les anciennes API (AIO POSIX)
-- **Moderne** : Activement développé et optimisé
+- **Performance** : 10-20% plus rapide que les anciennes API (AIO POSIX)  
+- **Moderne** : Activement développé et optimisé  
 - **Flexible** : Supporte tous types d'I/O (fichiers, réseau, etc.)
 
-#### 2. **kqueue (FreeBSD/macOS)**
+#### 2. **Workers dédiés (toutes plateformes)**
 
-Sur les systèmes BSD, PostgreSQL utilise **kqueue** pour l'I/O asynchrone.
+Sur les systèmes non-Linux (ou Linux sans io_uring), PostgreSQL utilise des **processus workers dédiés** pour effectuer les I/O de manière asynchrone. Le backend soumet les requêtes I/O à un pool de workers qui les exécutent en parallèle.
 
-#### 3. **IOCP (Windows)**
+```
+Backend → soumet requête I/O → Worker Pool (io_workers = 3 par défaut)
+                                  ├── Worker 1 : lit page A
+                                  ├── Worker 2 : lit page B
+                                  └── Worker 3 : lit page C
+```
 
-Sur Windows, PostgreSQL utilise **I/O Completion Ports (IOCP)**.
+Cette approche est moins performante que io_uring mais fonctionne partout.
 
 ---
 
@@ -242,8 +247,8 @@ Sur Windows, PostgreSQL utilise **I/O Completion Ports (IOCP)**.
 **Résultats** :
 
 ```
-PostgreSQL 17 (I/O Sync)    :  2500 ms
-PostgreSQL 18 (AIO)         :   850 ms
+PostgreSQL 17 (I/O Sync)    :  2500 ms  
+PostgreSQL 18 (AIO)         :   850 ms  
 
 GAIN : 2.9× plus rapide ⚡
 ```
@@ -258,8 +263,8 @@ GAIN : 2.9× plus rapide ⚡
 **Résultats** :
 
 ```
-PostgreSQL 17 (I/O Sync)    :  180 secondes
-PostgreSQL 18 (AIO)         :   65 secondes
+PostgreSQL 17 (I/O Sync)    :  180 secondes  
+PostgreSQL 18 (AIO)         :   65 secondes  
 
 GAIN : 2.8× plus rapide ⚡
 ```
@@ -273,8 +278,8 @@ GAIN : 2.8× plus rapide ⚡
 **Résultats** :
 
 ```
-PostgreSQL 17 (I/O Sync)    :  Latence moyenne 450 ms
-PostgreSQL 18 (AIO)         :  Latence moyenne 180 ms
+PostgreSQL 17 (I/O Sync)    :  Latence moyenne 450 ms  
+PostgreSQL 18 (AIO)         :  Latence moyenne 180 ms  
 
 GAIN : 2.5× plus rapide ⚡
 ```
@@ -346,11 +351,12 @@ SHOW io_method;
 **Valeurs possibles** :
 
 ```
-'sync'      : I/O synchrone (comme PG 17) - Compatible partout
-'async'     : I/O asynchrone générique
-'io_uring'  : io_uring (Linux, automatique si disponible)
-'worker'    : Workers dédiés pour I/O (fallback)
+'sync'      : I/O synchrone classique (comme PG 17) - Pas d'AIO
+'worker'    : I/O asynchrone via processus workers dédiés (DÉFAUT PG 18)
+'io_uring'  : I/O asynchrone via io_uring (Linux uniquement, performances maximales)
 ```
+
+> 💡 Il n'y a que ces 3 valeurs. `'worker'` est le défaut car il fonctionne sur toutes les plateformes. `'io_uring'` offre les meilleures performances mais nécessite Linux avec kernel 5.1+.
 
 #### Configuration Recommandée
 
@@ -358,25 +364,25 @@ SHOW io_method;
 # postgresql.conf
 
 # === I/O Method (PostgreSQL 18) ===
-# Auto-détection : PostgreSQL choisit la meilleure méthode
-io_method = 'auto'  # Défaut, recommandé
+# Défaut : 'worker' (AIO via processus dédiés, multi-plateforme)
+io_method = 'worker'
 
-# Ou forcer io_uring (Linux uniquement)
-io_method = 'io_uring'
+# Pour Linux avec kernel 5.1+ et liburing installée :
+# io_method = 'io_uring'  # Performances maximales
 
-# Fallback sur sync si problème avec AIO
+# Pour désactiver l'AIO et revenir au comportement PG 17 :
 # io_method = 'sync'
 ```
 
-**Note** : `io_method = 'auto'` détecte automatiquement la meilleure méthode selon le système d'exploitation.
+**Note** : Le nombre de workers I/O est contrôlé par le paramètre `io_workers` (défaut : 3).
 
 ### Vérification de l'AIO Actif
 
 ```sql
 -- Vérifier si AIO est actif
-SELECT name, setting, context
-FROM pg_settings
-WHERE name = 'io_method';
+SELECT name, setting, context  
+FROM pg_settings  
+WHERE name = 'io_method';  
 
 -- Résultat
    name    | setting  |  context
@@ -417,22 +423,22 @@ SELECT
     writes,
     read_time,
     write_time
-FROM pg_stat_io
-WHERE backend_type = 'client backend'
-ORDER BY reads DESC;
+FROM pg_stat_io  
+WHERE backend_type = 'client backend'  
+ORDER BY reads DESC;  
 ```
 
 **Résultat** :
 ```
  backend_type   | context  |  reads   | writes | read_time | write_time
 ----------------+----------+----------+--------+-----------+------------
-client backend  | normal   | 1234567  | 456789 |   12500   |    3400
-client backend  | bulkread |   98765  |      0 |    2100   |       0
+client backend  | normal   | 1234567  | 456789 |   12500   |    3400  
+client backend  | bulkread |   98765  |      0 |    2100   |       0  
 ```
 
 **Interprétation** :
-- `reads` : Nombre de lectures
-- `read_time` : Temps total de lecture (ms)
+- `reads` : Nombre de lectures  
+- `read_time` : Temps total de lecture (ms)  
 - **Latence moyenne** = `read_time / reads`
 
 #### 2. `pg_stat_wal` (Améliorée)
@@ -447,36 +453,16 @@ SELECT
 FROM pg_stat_wal;
 ```
 
-#### 3. Nouvelle Vue : `pg_stat_io_queue`
-
-```sql
--- Statistiques sur les queues AIO
-SELECT
-    queue_name,
-    pending_requests,
-    completed_requests,
-    avg_wait_time_ms
-FROM pg_stat_io_queue;
-```
-
-**Résultat** :
-```
- queue_name | pending_requests | completed_requests | avg_wait_time_ms
-------------+------------------+--------------------+------------------
- aio_read   |               12 |           1234567  |              4.2
- aio_write  |                3 |            456789  |              2.8
-```
-
 ### Logs d'Événements I/O
 
-```sql
--- Activer le logging détaillé des I/O (développement uniquement)
-SET log_min_messages = DEBUG1;
-SET trace_io = on;  -- Nouveau paramètre PG 18
+Pour obtenir des informations détaillées sur les I/O en développement :
 
--- Dans les logs, vous verrez :
--- DEBUG: AIO: submitted 4 read requests for relation users
--- DEBUG: AIO: completed 4 reads in 5.2ms (avg 1.3ms)
+```sql
+-- Activer le logging détaillé (développement uniquement)
+SET log_min_messages = DEBUG1;  
+SET client_min_messages = DEBUG1;  
+
+-- Les messages DEBUG incluront des informations sur les opérations I/O
 ```
 
 ---
@@ -497,8 +483,8 @@ effective_io_concurrency = 200  -- Défaut : 1 (PG 17), 200 (PG 18)
 **Interprétation** :
 - **HDD (disque mécanique)** : `effective_io_concurrency = 2`
   - Les HDD ne peuvent pas traiter en parallèle
-- **SSD SATA** : `effective_io_concurrency = 50-100`
-- **SSD NVMe** : `effective_io_concurrency = 200-500`
+- **SSD SATA** : `effective_io_concurrency = 50-100`  
+- **SSD NVMe** : `effective_io_concurrency = 200-500`  
 - **Cloud (AWS gp3, Azure Premium)** : `effective_io_concurrency = 200-300`
 
 **Impact** : Plus c'est élevé, plus PostgreSQL soumet de requêtes AIO en parallèle.
@@ -518,8 +504,8 @@ Les SSD NVMe modernes peuvent traiter **des centaines de milliers d'IOPS** :
 
 ```ini
 # Configuration optimale pour SSD NVMe
-effective_io_concurrency = 500
-maintenance_io_concurrency = 500
+effective_io_concurrency = 500  
+maintenance_io_concurrency = 500  
 
 # Augmenter les buffers (plus de cache = moins d'I/O)
 shared_buffers = 8GB  # 25-40% RAM
@@ -534,8 +520,8 @@ Sur AWS, Azure, GCP :
 
 ```ini
 # Configuration cloud (instance avec SSD rapide)
-effective_io_concurrency = 300
-maintenance_io_concurrency = 300
+effective_io_concurrency = 300  
+maintenance_io_concurrency = 300  
 
 # Network-attached storage peut avoir plus de latence
 random_page_cost = 1.5  # Au lieu de 4.0 (défaut HDD)
@@ -559,8 +545,8 @@ CREATE TABLE test_table (
 );
 
 -- Insérer des données
-INSERT INTO test_table (data, value)
-SELECT
+INSERT INTO test_table (data, value)  
+SELECT  
     'data_' || i,
     random() * 1000
 FROM generate_series(1, 10000000) AS i;
@@ -576,18 +562,18 @@ ANALYZE test_table;
 
 ```sql
 -- Configurer I/O sync
-ALTER SYSTEM SET io_method = 'sync';
-SELECT pg_reload_conf();
+ALTER SYSTEM SET io_method = 'sync';  
+SELECT pg_reload_conf();  
 
 -- Vider les caches
 SELECT pg_prewarm_reset();  -- Si extension pg_prewarm installée
 
 -- Requête test (Index Scan)
-EXPLAIN (ANALYZE, BUFFERS)
-SELECT * FROM test_table
-WHERE value BETWEEN 100 AND 200
-ORDER BY created_at
-LIMIT 1000;
+EXPLAIN (ANALYZE, BUFFERS)  
+SELECT * FROM test_table  
+WHERE value BETWEEN 100 AND 200  
+ORDER BY created_at  
+LIMIT 1000;  
 
 -- Noter le temps d'exécution : ex. 1250 ms
 ```
@@ -596,8 +582,8 @@ LIMIT 1000;
 
 ```sql
 -- Configurer AIO
-ALTER SYSTEM SET io_method = 'io_uring';
-SELECT pg_reload_conf();
+ALTER SYSTEM SET io_method = 'io_uring';  
+SELECT pg_reload_conf();  
 
 -- Redémarrer PostgreSQL
 -- (nécessaire car io_method = postmaster context)
@@ -606,11 +592,11 @@ SELECT pg_reload_conf();
 SELECT pg_prewarm_reset();
 
 -- Même requête
-EXPLAIN (ANALYZE, BUFFERS)
-SELECT * FROM test_table
-WHERE value BETWEEN 100 AND 200
-ORDER BY created_at
-LIMIT 1000;
+EXPLAIN (ANALYZE, BUFFERS)  
+SELECT * FROM test_table  
+WHERE value BETWEEN 100 AND 200  
+ORDER BY created_at  
+LIMIT 1000;  
 
 -- Noter le temps d'exécution : ex. 480 ms
 
@@ -625,14 +611,15 @@ GAIN = 1250 / 480 = 2.6× plus rapide ! ⚡
 
 L'AIO nécessite un support du système d'exploitation :
 
-| OS              | Méthode AIO | Kernel/Version Minimum    |
-|-----------------|-------------|---------------------------|
-| **Linux**       | io_uring    | Kernel 5.1+ (recommandé 5.10+) |
-| **FreeBSD**     | kqueue      | FreeBSD 12+               |
-| **macOS**       | kqueue      | macOS 10.15+              |
-| **Windows**     | IOCP        | Windows Server 2019+      |
+| OS              | Méthode AIO recommandée | Prérequis                         |
+|-----------------|-------------------------|-----------------------------------|
+| **Linux**       | `io_uring`              | Kernel 5.1+ et liburing installée |
+| **Linux (sans io_uring)** | `worker`      | Aucun prérequis spécifique        |
+| **FreeBSD**     | `worker`                | Aucun prérequis spécifique        |
+| **macOS**       | `worker`                | Aucun prérequis spécifique        |
+| **Windows**     | `worker`                | Aucun prérequis spécifique        |
 
-**Fallback** : Si AIO non disponible, PostgreSQL utilise automatiquement `io_method = 'sync'` (compatible partout).
+**Fallback** : Si `io_uring` n'est pas disponible, PostgreSQL utilise `worker` par défaut. Le mode `sync` (pas d'AIO) est toujours disponible en repli.
 
 ### Cas où AIO Peut Ne Pas Aider
 
@@ -674,13 +661,13 @@ Overhead : 5% (négligeable)
 # postgresql.conf
 
 # === AIO Configuration ===
-# Laisser auto-détection (recommandé)
-io_method = 'auto'
+# 'worker' par défaut (multi-plateforme), ou 'io_uring' sur Linux
+io_method = 'worker'  # Ou 'io_uring' sur Linux avec kernel 5.1+
 
 # Concurrence I/O (ajuster selon votre stockage)
 # SSD NVMe :
-effective_io_concurrency = 500
-maintenance_io_concurrency = 500
+effective_io_concurrency = 500  
+maintenance_io_concurrency = 500  
 
 # SSD SATA :
 # effective_io_concurrency = 100
@@ -691,21 +678,21 @@ maintenance_io_concurrency = 500
 # maintenance_io_concurrency = 2
 
 # === Autres paramètres importants ===
-shared_buffers = 8GB
-random_page_cost = 1.1  # Pour SSD
+shared_buffers = 8GB  
+random_page_cost = 1.1  # Pour SSD  
 ```
 
 ### Checklist de Migration vers PG 18
 
-✅ **Avant la migration** :
-1. Vérifier la version du kernel Linux (5.1+ pour io_uring)
-2. Tester sur environnement de pré-production
+✅ **Avant la migration** :  
+1. Vérifier la version du kernel Linux (5.1+ pour io_uring)  
+2. Tester sur environnement de pré-production  
 3. Benchmarker les requêtes critiques
 
-✅ **Après la migration** :
-1. Vérifier `SHOW io_method;` → Devrait être `io_uring` (Linux)
-2. Monitorer `pg_stat_io` pour voir les gains
-3. Ajuster `effective_io_concurrency` si nécessaire
+✅ **Après la migration** :  
+1. Vérifier `SHOW io_method;` → Devrait être `io_uring` (Linux)  
+2. Monitorer `pg_stat_io` pour voir les gains  
+3. Ajuster `effective_io_concurrency` si nécessaire  
 4. Comparer les performances avec des benchmarks
 
 ### Monitoring Continu
@@ -726,8 +713,8 @@ SELECT
          THEN round(read_time::numeric / reads, 2)
          ELSE 0
     END as avg_read_latency_ms
-FROM pg_stat_io
-WHERE backend_type = 'client backend'
+FROM pg_stat_io  
+WHERE backend_type = 'client backend'  
   AND context = 'normal';
 ```
 
@@ -745,10 +732,10 @@ WHERE backend_type = 'client backend'
 **Avant PG 18** :
 ```sql
 -- Requête typique
-SELECT date_trunc('month', order_date), SUM(amount)
-FROM orders
-WHERE order_date >= '2020-01-01'
-GROUP BY 1;
+SELECT date_trunc('month', order_date), SUM(amount)  
+FROM orders  
+WHERE order_date >= '2020-01-01'  
+GROUP BY 1;  
 
 Temps : 8 minutes
 ```
@@ -772,14 +759,14 @@ GAIN : 2.7× plus rapide ⚡
 
 **Avant PG 18** :
 ```
-Latence p95 des requêtes : 450 ms
-Requêtes lentes (> 1s) : 15%
+Latence p95 des requêtes : 450 ms  
+Requêtes lentes (> 1s) : 15%  
 ```
 
 **Avec PG 18 + AIO** :
 ```
-Latence p95 des requêtes : 180 ms
-Requêtes lentes (> 1s) : 3%
+Latence p95 des requêtes : 180 ms  
+Requêtes lentes (> 1s) : 3%  
 
 GAIN : 2.5× plus rapide ⚡
 ```
@@ -897,8 +884,8 @@ Disque traite en parallèle (IOPS élevé sur SSD)
     ↓
 Toutes les pages arrivent en ~5-10ms
 
-Sans AIO : 33 × 5ms = 165ms
-Avec AIO : ~10ms
+Sans AIO : 33 × 5ms = 165ms  
+Avec AIO : ~10ms  
 
 GAIN : 16× plus rapide ! ⚡⚡⚡
 ```
@@ -920,25 +907,26 @@ GAIN : 16× plus rapide ! ⚡⚡⚡
 
 ### Le Sous-Système AIO
 
-- ✅ **io_uring** (Linux 5.1+) : API moderne ultra-performante
-- ✅ **Submission Queue** : Backend soumet les requêtes
-- ✅ **Completion Queue** : Kernel retourne les résultats
-- ✅ **Zero-copy** : Pas de copie mémoire inutile
+- ✅ **io_uring** (Linux 5.1+) : API moderne ultra-performante  
+- ✅ **Submission Queue** : Backend soumet les requêtes  
+- ✅ **Completion Queue** : Kernel retourne les résultats  
+- ✅ **Zero-copy** : Pas de copie mémoire inutile  
 - ✅ **Batching** : Regroupe intelligemment les I/O
 
 ### Configuration
 
 ```ini
-io_method = 'auto'  # Recommandé
-effective_io_concurrency = 500  # Pour SSD NVMe
-maintenance_io_concurrency = 500
+io_method = 'worker'     # Défaut (multi-plateforme)
+# io_method = 'io_uring' # Linux avec kernel 5.1+ (performances maximales)
+effective_io_concurrency = 500  # Pour SSD NVMe  
+maintenance_io_concurrency = 500  
 ```
 
 ### Monitoring
 
 ```sql
-SHOW io_method;  -- Vérifier AIO actif
-SELECT * FROM pg_stat_io;  -- Statistiques I/O
+SHOW io_method;  -- Vérifier AIO actif  
+SELECT * FROM pg_stat_io;  -- Statistiques I/O  
 ```
 
 ---

@@ -28,17 +28,17 @@ Pour les logiciels open source, la licence est cruciale car elle détermine le d
 
 PostgreSQL est distribué sous la **Licence PostgreSQL**, également connue sous le nom de **Licence BSD-like**.
 
-**Nom officiel :** PostgreSQL License
-**Type :** Licence libre et permissive
-**Compatibilité :** MIT, BSD, Apache 2.0
+**Nom officiel :** PostgreSQL License  
+**Type :** Licence libre et permissive  
+**Compatibilité :** MIT, BSD, Apache 2.0  
 
 #### Texte de la Licence (version simplifiée)
 
 ```
-Permission to use, copy, modify, and distribute this software
-and its documentation for any purpose, without fee, and without
-a written agreement is hereby granted, provided that the above
-copyright notice and this paragraph appear in all copies.
+Permission to use, copy, modify, and distribute this software  
+and its documentation for any purpose, without fee, and without  
+a written agreement is hereby granted, provided that the above  
+copyright notice and this paragraph appear in all copies.  
 ```
 
 **En français simplifié :**
@@ -115,30 +115,30 @@ Pour mieux comprendre la permissivité de la licence PostgreSQL, comparons-la av
 | **Intégration produit propriétaire** | ✅ Sans restriction | ❌ Tout devient GPL |
 
 **En résumé :**
-- **GPL** : "Si vous utilisez mon code, vous devez partager vos modifications"
+- **GPL** : "Si vous utilisez mon code, vous devez partager vos modifications"  
 - **PostgreSQL** : "Faites ce que vous voulez, juste créditez-nous"
 
 **Exemple concret :**
 
 Vous créez une application SaaS qui utilise PostgreSQL :
-- ✅ Avec licence PostgreSQL : Vous pouvez vendre votre application sans partager le code
+- ✅ Avec licence PostgreSQL : Vous pouvez vendre votre application sans partager le code  
 - ❌ Avec GPL : Vous devriez théoriquement publier le code de votre application
 
 #### Licence PostgreSQL vs MySQL (Double Licence)
 
 **MySQL utilise une double licence :**
 
-1. **GPL** : Gratuite mais contraignante
+1. **GPL** : Gratuite mais contraignante  
 2. **Commerciale** : Payante mais permissive
 
 **Conséquences :**
 
 Si vous utilisez MySQL avec GPL :
-- ❌ Impossible de créer un produit propriétaire sans acheter la licence commerciale
+- ❌ Impossible de créer un produit propriétaire sans acheter la licence commerciale  
 - ❌ Oracle peut vous demander des redevances
 
 Avec PostgreSQL :
-- ✅ Aucune restriction
+- ✅ Aucune restriction  
 - ✅ Aucune redevance jamais
 
 **Cela explique pourquoi de nombreuses entreprises migrent de MySQL vers PostgreSQL.**
@@ -208,15 +208,19 @@ PostgreSQL n'appartient à aucune entreprise. Il est géré par le **PostgreSQL 
 - Méritocratie technique (les meilleurs arguments gagnent)
 
 **Core Team :**
-- 5-6 personnes avec droits de commit
-- Choisis pour leur expertise et leurs contributions
-- Pas d'autorité dictatoriale
+- 5-7 personnes gérant les aspects organisationnels et stratégiques
+- Choisis pour leur expertise et leurs contributions de longue date
+- Pas d'autorité dictatoriale sur le développement technique
+
+**Committers :**
+- ~30 développeurs avec droits de commit sur le code source
+- Responsables de l'intégration des patches après revue communautaire
 
 **Comment ça fonctionne :**
-1. Proposition soumise à la liste de diffusion
-2. Discussion publique ouverte
-3. Revue de code par des experts
-4. Tests et benchmarks
+1. Proposition soumise à la liste de diffusion  
+2. Discussion publique ouverte  
+3. Revue de code par des experts  
+4. Tests et benchmarks  
 5. Consensus → intégration
 
 ### Qui Compose la Communauté ?
@@ -225,10 +229,10 @@ La communauté PostgreSQL est diverse et mondiale.
 
 #### Contributeurs Individuels
 
-- **Développeurs** : Code, patches, nouvelles fonctionnalités
-- **Testeurs** : Tests de versions beta, rapports de bugs
-- **Documenteurs** : Documentation, traductions
-- **Experts** : Support sur forums, Stack Overflow
+- **Développeurs** : Code, patches, nouvelles fonctionnalités  
+- **Testeurs** : Tests de versions beta, rapports de bugs  
+- **Documenteurs** : Documentation, traductions  
+- **Experts** : Support sur forums, Stack Overflow  
 - **Évangélistes** : Conférences, articles, tutoriels
 
 #### Entreprises Sponsors
@@ -236,20 +240,19 @@ La communauté PostgreSQL est diverse et mondiale.
 De nombreuses entreprises paient leurs employés pour contribuer à PostgreSQL :
 
 **Majeures :**
-- **Crunchy Data** : Support, formations, contributions majeures
-- **EnterpriseDB (EDB)** : Support commercial, développement
-- **2ndQuadrant** : Réplication, performance
-- **Microsoft** : Intégration Azure, optimisations
-- **Amazon Web Services** : Aurora, RDS optimisations
-- **Google Cloud** : AlloyDB, contributions
-- **Fujitsu** : Support, développement asiatique
+- **Crunchy Data** : Support, formations, contributions majeures  
+- **EnterpriseDB (EDB)** : Support commercial, développement (a absorbé 2ndQuadrant en 2020)  
+- **Microsoft** : Intégration Azure, Citus, optimisations  
+- **Amazon Web Services** : Aurora, RDS optimisations  
+- **Google Cloud** : AlloyDB, contributions  
+- **Fujitsu** : Support, développement asiatique  
 - **Red Hat** : Packaging, intégration Linux
 
 **Pourquoi ces entreprises contribuent-elles ?**
 
-1. **Intérêt commercial** : Améliorer le produit qu'elles vendent/utilisent
-2. **Recrutement** : Attirer des talents
-3. **Réputation** : Être reconnu comme expert
+1. **Intérêt commercial** : Améliorer le produit qu'elles vendent/utilisent  
+2. **Recrutement** : Attirer des talents  
+3. **Réputation** : Être reconnu comme expert  
 4. **Influence** : Orienter les développements futurs
 
 #### Utilisateurs
@@ -325,16 +328,16 @@ La communauté se rencontre régulièrement à travers le monde.
 #### Conférences Majeures
 
 **PGConf (PostgreSQL Conference)**
-- **PGConf.US** (États-Unis) : Annuel, 500-1000 participants
-- **PGConf.EU** (Europe) : Annuel, 400-800 participants
-- **PGConf.Asia** (Asie) : Annuel, 300-600 participants
-- **PGConf.Russia** (Russie) : Annuel
+- **PGConf.US** (États-Unis) : Annuel, 500-1000 participants  
+- **PGConf.EU** (Europe) : Annuel, 400-800 participants  
+- **PGConf.Asia** (Asie) : Annuel, 300-600 participants  
+- **PGConf.Russia** (Russie) : Annuel  
 - **PGConf.Brazil** (Brésil) : Annuel
 
 **Autres événements :**
-- **FOSDEM** (Bruxelles) : Track PostgreSQL
-- **PostgreSQL Sessions** (Paris, France)
-- **pgDay** : Événements locaux dans de nombreuses villes
+- **FOSDEM** (Bruxelles) : Track PostgreSQL  
+- **PostgreSQL Sessions** (Paris, France)  
+- **pgDay** : Événements locaux dans de nombreuses villes  
 - **Meetups** : Groupes locaux mensuels
 
 **Contenu typique :**
@@ -364,8 +367,8 @@ Période dédiée (environ 1 mois) où :
 **Fréquence :** 4-5 Commit Fests par an
 
 **Rôles :**
-- **Auteur** : Propose le patch
-- **Reviewer** : Examine le code, teste, critique
+- **Auteur** : Propose le patch  
+- **Reviewer** : Examine le code, teste, critique  
 - **Committer** : Décide de l'intégration finale
 
 #### Standards de Qualité
@@ -374,11 +377,11 @@ PostgreSQL est reconnu pour sa qualité exceptionnelle.
 
 **Critères d'acceptation stricts :**
 
-- ✅ **Correction** : Le code doit être sans bugs
-- ✅ **Tests** : Suite de tests complète fournie
-- ✅ **Documentation** : Docs complètes incluses
-- ✅ **Performance** : Pas de régression
-- ✅ **Compatibilité** : Rétrocompatibilité préservée
+- ✅ **Correction** : Le code doit être sans bugs  
+- ✅ **Tests** : Suite de tests complète fournie  
+- ✅ **Documentation** : Docs complètes incluses  
+- ✅ **Performance** : Pas de régression  
+- ✅ **Compatibilité** : Rétrocompatibilité préservée  
 - ✅ **Standards** : Respect SQL et conventions
 
 **Processus de review :**
@@ -505,9 +508,9 @@ Un réseau centralisé d'extensions PostgreSQL, similaire à :
 **Nombre d'extensions :** 300+ extensions publiées
 
 **Exemples populaires :**
-- **pg_stat_statements** : Monitoring de requêtes
-- **pg_trgm** : Recherche floue
-- **hstore** : Stockage clé-valeur
+- **pg_stat_statements** : Monitoring de requêtes  
+- **pg_trgm** : Recherche floue  
+- **hstore** : Stockage clé-valeur  
 - **ltree** : Structures hiérarchiques
 
 #### Extensions Majeures (Non-PGXN)
@@ -578,7 +581,7 @@ Certaines extensions sont tellement importantes qu'elles ont leur propre écosys
 
 **Repmgr**
 - Gestion de réplication
-- 2ndQuadrant
+- Maintenu par EDB (ex-2ndQuadrant)
 - Open source
 
 **pgBouncer**
@@ -618,20 +621,15 @@ Bien que PostgreSQL soit gratuit, des entreprises offrent du support payant.
 - Open source focus
 - Outils de monitoring
 
-**2ndQuadrant (EDB)**
-- Experts réplication
-- Formations avancées
-- Consulting
-
 **Aiven**
 - DBaaS multi-cloud
 - Support inclus
 - Gestion complète
 
 **Avantages :**
-- ✅ Réponse garantie en X heures
-- ✅ Patches critiques prioritaires
-- ✅ Conseils d'experts
+- ✅ Réponse garantie en X heures  
+- ✅ Patches critiques prioritaires  
+- ✅ Conseils d'experts  
 - ✅ Tranquillité d'esprit
 
 **Coûts typiques :**
@@ -646,9 +644,9 @@ Bien que PostgreSQL soit gratuit, des entreprises offrent du support payant.
 
 #### 1. **Transparence Totale**
 
-- ✅ Code source entièrement consultable
-- ✅ Comprendre exactement comment ça fonctionne
-- ✅ Debugger jusqu'au cœur du système
+- ✅ Code source entièrement consultable  
+- ✅ Comprendre exactement comment ça fonctionne  
+- ✅ Debugger jusqu'au cœur du système  
 - ✅ Pas de boîte noire
 
 **Exemple :**
@@ -659,16 +657,16 @@ Vous avez une requête lente ? Vous pouvez :
 
 #### 2. **Apprentissage**
 
-- ✅ Étudier du code de très haute qualité
-- ✅ Apprendre des meilleurs experts mondiaux
-- ✅ Contribuer et recevoir du feedback de pros
+- ✅ Étudier du code de très haute qualité  
+- ✅ Apprendre des meilleurs experts mondiaux  
+- ✅ Contribuer et recevoir du feedback de pros  
 - ✅ Faire évoluer ses compétences
 
 #### 3. **Pas de Vendor Lock-In**
 
-- ✅ Liberté de migration
-- ✅ Pas de dépendance à une entreprise
-- ✅ Pérennité garantie (communauté)
+- ✅ Liberté de migration  
+- ✅ Pas de dépendance à une entreprise  
+- ✅ Pérennité garantie (communauté)  
 - ✅ Négociation facilitée avec fournisseurs
 
 ### Pour les Entreprises
@@ -694,27 +692,27 @@ Ces économies peuvent être réinvesties dans :
 #### 2. **Pas d'Audit de Licence**
 
 **Avec Oracle :**
-- 😰 Audits surprises possibles
-- 😰 Risque de facturation rétroactive (millions €)
+- 😰 Audits surprises possibles  
+- 😰 Risque de facturation rétroactive (millions €)  
 - 😰 Stress permanent sur conformité
 
 **Avec PostgreSQL :**
-- ✅ Aucun audit jamais
-- ✅ Aucun risque financier
+- ✅ Aucun audit jamais  
+- ✅ Aucun risque financier  
 - ✅ Utilisation illimitée
 
 #### 3. **Agilité et Rapidité**
 
-- ✅ Pas de négociation de contrat (semaines/mois)
-- ✅ Téléchargement et installation immédiats
-- ✅ Tests en production rapides
+- ✅ Pas de négociation de contrat (semaines/mois)  
+- ✅ Téléchargement et installation immédiats  
+- ✅ Tests en production rapides  
 - ✅ Scaling sans paperasse
 
 #### 4. **Indépendance Stratégique**
 
-- ✅ Décisions non dictées par un fournisseur
-- ✅ Roadmap technologique libre
-- ✅ Multi-cloud facilité
+- ✅ Décisions non dictées par un fournisseur  
+- ✅ Roadmap technologique libre  
+- ✅ Multi-cloud facilité  
 - ✅ Pas de risque d'acquisition hostile
 
 **Exemple réel :**
@@ -740,9 +738,9 @@ PostgreSQL permet à :
 #### 3. **Souveraineté Numérique**
 
 Pour les gouvernements et institutions :
-- ✅ Pas de dépendance à entreprises étrangères
-- ✅ Code auditable (sécurité nationale)
-- ✅ Maîtrise complète de la stack
+- ✅ Pas de dépendance à entreprises étrangères  
+- ✅ Code auditable (sécurité nationale)  
+- ✅ Maîtrise complète de la stack  
 - ✅ Données sensibles en sécurité
 
 **Exemples :**
@@ -760,32 +758,32 @@ Le modèle open source communautaire a aussi ses défis.
 
 #### 1. **Pas de Responsabilité Légale**
 
-- ⚠️ "Fourni tel quel, sans garantie"
-- ⚠️ Personne à poursuivre en cas de problème
+- ⚠️ "Fourni tel quel, sans garantie"  
+- ⚠️ Personne à poursuivre en cas de problème  
 - ⚠️ Risque assumé par l'utilisateur
 
 **Solution :** Support commercial si nécessaire
 
 #### 2. **Coordination Complexe**
 
-- ⚠️ Décisions par consensus = parfois lentes
-- ⚠️ Débats longs sur fonctionnalités controversées
+- ⚠️ Décisions par consensus = parfois lentes  
+- ⚠️ Débats longs sur fonctionnalités controversées  
 - ⚠️ Pas de roadmap fixe publiée à l'avance
 
 **Avantage :** Qualité supérieure grâce à débats approfondis
 
 #### 3. **Support Variable**
 
-- ⚠️ Forums : réponse non garantie
-- ⚠️ Qualité variable selon contributeur
+- ⚠️ Forums : réponse non garantie  
+- ⚠️ Qualité variable selon contributeur  
 - ⚠️ Pas de SLA sur correctifs
 
 **Solution :** Support commercial ou contributeurs internes
 
 #### 4. **Fragmentation Possible**
 
-- ⚠️ Multiples forks possibles (rare en pratique)
-- ⚠️ Extensions tierces de qualité variable
+- ⚠️ Multiples forks possibles (rare en pratique)  
+- ⚠️ Extensions tierces de qualité variable  
 - ⚠️ Outils non standardisés
 
 **Réalité :** PostgreSQL a évité la fragmentation grâce à sa gouvernance forte
@@ -858,8 +856,8 @@ Le modèle open source communautaire a aussi ses défis.
 
 #### 1. **Croissance Continue**
 
-📈 **Contributeurs** : +10-15% par an
-📈 **Commits** : ~2000-3000 par release
+📈 **Contributeurs** : +10-15% par an  
+📈 **Commits** : ~2000-3000 par release  
 📈 **Entreprises sponsors** : En augmentation
 
 #### 2. **Rajeunissement**
@@ -924,14 +922,14 @@ Le modèle open source communautaire de PostgreSQL est l'une de ses plus grandes
 
 ### Points Clés à Retenir
 
-- ✅ **Licence permissive** : Liberté totale d'utilisation, modification, commercialisation
-- ✅ **Gouvernance communautaire** : Indépendance de toute entreprise unique
-- ✅ **Qualité exceptionnelle** : Standards élevés, reviews rigoureuses
-- ✅ **Communauté mondiale** : Contributeurs sur tous les continents
-- ✅ **Transparence totale** : Processus ouvert, décisions publiques
-- ✅ **Écosystème riche** : Extensions, outils, support commercial disponible
-- ✅ **Économies massives** : Millions d'euros économisés vs solutions propriétaires
-- ✅ **Pérennité** : Pas de risque d'abandon ou d'acquisition hostile
+- ✅ **Licence permissive** : Liberté totale d'utilisation, modification, commercialisation  
+- ✅ **Gouvernance communautaire** : Indépendance de toute entreprise unique  
+- ✅ **Qualité exceptionnelle** : Standards élevés, reviews rigoureuses  
+- ✅ **Communauté mondiale** : Contributeurs sur tous les continents  
+- ✅ **Transparence totale** : Processus ouvert, décisions publiques  
+- ✅ **Écosystème riche** : Extensions, outils, support commercial disponible  
+- ✅ **Économies massives** : Millions d'euros économisés vs solutions propriétaires  
+- ✅ **Pérennité** : Pas de risque d'abandon ou d'acquisition hostile  
 - ✅ **Innovation continue** : Nouvelle version majeure chaque année
 
 ### Ce Que Cela Signifie Pour Vous
@@ -957,23 +955,23 @@ Le modèle open source communautaire de PostgreSQL est l'une de ses plus grandes
 Vous n'avez pas besoin d'être un expert C pour contribuer :
 
 **Aujourd'hui :**
-- ⭐ Star le projet sur GitHub
-- 📧 Abonnez-vous aux mailing lists
+- ⭐ Star le projet sur GitHub  
+- 📧 Abonnez-vous aux mailing lists  
 - 🌐 Rejoignez le subreddit r/PostgreSQL
 
 **Cette semaine :**
-- 📚 Lisez la documentation
-- ❓ Posez vos questions sur Stack Overflow
+- 📚 Lisez la documentation  
+- ❓ Posez vos questions sur Stack Overflow  
 - 🐛 Testez la prochaine beta
 
 **Ce mois :**
-- ✍️ Écrivez un article de blog
-- 🎤 Présentez PostgreSQL dans votre entreprise
+- ✍️ Écrivez un article de blog  
+- 🎤 Présentez PostgreSQL dans votre entreprise  
 - 👥 Rejoignez un meetup local
 
 **Cette année :**
-- 🎓 Formez-vous en profondeur
-- 🔧 Soumettez votre premier patch
+- 🎓 Formez-vous en profondeur  
+- 🔧 Soumettez votre premier patch  
 - 🏆 Devenez un expert reconnu
 
 PostgreSQL est plus qu'un logiciel. C'est une communauté de passionnés qui partagent la conviction que les meilleures technologies doivent être accessibles à tous, sans barrières financières ou légales.

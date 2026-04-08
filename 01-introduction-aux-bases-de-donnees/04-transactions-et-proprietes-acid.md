@@ -6,7 +6,7 @@
 
 Imaginez que vous êtes en train de faire un virement bancaire de 100 € de votre compte vers celui de votre ami. Cette opération simple implique en réalité **deux étapes** :
 
-1. Retirer 100 € de votre compte
+1. Retirer 100 € de votre compte  
 2. Ajouter 100 € au compte de votre ami
 
 Que se passerait-il si, entre ces deux étapes, le système informatique de la banque tombe en panne ? Vous perdriez 100 € qui disparaîtraient dans la nature ! Votre ami ne les recevrait pas, et vous ne les auriez plus. **Catastrophique.**
@@ -78,8 +78,8 @@ Reprenons notre exemple de virement :
 
 **Situation initiale** :
 ```
-Compte Alice (id=1) : 500 €
-Compte Bob (id=2)   : 200 €
+Compte Alice (id=1) : 500 €  
+Compte Bob (id=2)   : 200 €  
 ```
 
 **Transaction : Virement de 100 € d'Alice vers Bob**
@@ -100,9 +100,9 @@ COMMIT;  -- Tout s'est bien passé, on valide !
 
 **Résultat final** :
 ```
-Compte Alice (id=1) : 400 €  ✅
-Compte Bob (id=2)   : 300 €  ✅
-Total : 700 € (conservé)
+Compte Alice (id=1) : 400 €  ✅  
+Compte Bob (id=2)   : 300 €  ✅  
+Total : 700 € (conservé)  
 ```
 
 **Scénario avec problème** :
@@ -144,9 +144,9 @@ Après redémarrage : Alice = 500 €, Bob = 200 €
 
 Les transactions dans les SGBDR respectent quatre propriétés fondamentales, résumées par l'acronyme **ACID** :
 
-- **A**tomicité
-- **C**ohérence
-- **I**solation
+- **A**tomicité  
+- **C**ohérence  
+- **I**solation  
 - **D**urabilité
 
 Ces propriétés garantissent que vos données restent **fiables et cohérentes**, même dans les situations les plus difficiles (pannes, accès simultanés, erreurs).
@@ -232,12 +232,12 @@ ROLLBACK;  -- Automatique en cas d'erreur
 
 Sans atomicité, vous pourriez vous retrouver dans des situations incohérentes :
 
-- ❌ Argent débité mais produit non livré
-- ❌ Siège réservé mais paiement non effectué
+- ❌ Argent débité mais produit non livré  
+- ❌ Siège réservé mais paiement non effectué  
 - ❌ Commande enregistrée mais stock non décrémenté
 
 Avec atomicité :
-- ✅ Soit tout fonctionne, soit rien ne change
+- ✅ Soit tout fonctionne, soit rien ne change  
 - ✅ Pas d'état intermédiaire corrompu
 
 ---
@@ -279,8 +279,8 @@ CREATE TABLE comptes (
     solde NUMERIC(10,2) CHECK (solde >= 0)  -- Contrainte !
 );
 
-INSERT INTO comptes (nom, solde) VALUES ('Alice', 500);
-INSERT INTO comptes (nom, solde) VALUES ('Bob', 200);
+INSERT INTO comptes (nom, solde) VALUES ('Alice', 500);  
+INSERT INTO comptes (nom, solde) VALUES ('Bob', 200);  
 ```
 
 **Tentative de transaction violant la contrainte** :
@@ -381,9 +381,9 @@ Chaque transaction ne voit pas les modifications **non validées** (non COMMITé
 
 **Sans isolation** (catastrophique) :
 ```
-Les deux transactions lisent "500€" en même temps,
-retirent leur montant séparément,
-et écrivent chacune leur résultat.
+Les deux transactions lisent "500€" en même temps,  
+retirent leur montant séparément,  
+et écrivent chacune leur résultat.  
 
 Résultat final : 450€ ❌ (un retrait est perdu !)
 ```
@@ -441,12 +441,14 @@ PostgreSQL propose plusieurs **niveaux d'isolation**, du plus permissif au plus 
 
 PostgreSQL utilise **Read Committed** par défaut, ce qui est un bon compromis pour la plupart des applications.
 
+> 💡 **Note PostgreSQL** : Même si vous demandez le niveau *Read Uncommitted*, PostgreSQL l'exécutera comme *Read Committed*. Les *dirty reads* sont **impossibles** dans PostgreSQL, quel que soit le niveau d'isolation choisi. Les niveaux d'isolation seront détaillés au chapitre 12.
+
 ### Analogie : Les cabines d'essayage
 
 Imaginez un magasin de vêtements :
 
-- **Sans isolation** : Tout le monde essaie les vêtements en public, tout le monde voit tout
-- **Avec isolation** : Chacun a sa cabine privée, personne ne voit ce que vous essayez
+- **Sans isolation** : Tout le monde essaie les vêtements en public, tout le monde voit tout  
+- **Avec isolation** : Chacun a sa cabine privée, personne ne voit ce que vous essayez  
 - **Niveau Serializable** : Cabines insonorisées + interdiction de sortir tant que quelqu'un d'autre essaie les mêmes vêtements
 
 L'isolation vous donne votre **espace privé** pour travailler sans être perturbé par les autres.
@@ -488,8 +490,8 @@ Les modifications sont TOUJOURS présentes ✅
 
 PostgreSQL utilise le **WAL** (*Write-Ahead Log*) ou **journal des transactions** :
 
-1. **Avant** d'écrire les modifications sur le disque, PostgreSQL les écrit dans le WAL
-2. Lors du COMMIT, le WAL est **synchronisé** sur le disque (fsync)
+1. **Avant** d'écrire les modifications sur le disque, PostgreSQL les écrit dans le WAL  
+2. Lors du COMMIT, le WAL est **synchronisé** sur le disque (fsync)  
 3. En cas de crash, PostgreSQL **rejoue** le WAL au redémarrage
 
 ```
@@ -547,15 +549,15 @@ Le client a vu "Paiement confirmé", et c'est garanti. Il ne perdra pas sa comma
 
 Un notaire enregistre les actes importants (ventes, mariages, etc.) :
 
-1. Vous signez l'acte
-2. Le notaire l'enregistre **officiellement** dans un registre
-3. Ce registre est **archivé de manière sécurisée**
+1. Vous signez l'acte  
+2. Le notaire l'enregistre **officiellement** dans un registre  
+3. Ce registre est **archivé de manière sécurisée**  
 4. Même si le bureau du notaire brûle, les archives officielles existent ailleurs
 
 De même, PostgreSQL :
-1. Vous faites un COMMIT
-2. PostgreSQL écrit dans le WAL
-3. Le WAL est **synchronisé sur disque**
+1. Vous faites un COMMIT  
+2. PostgreSQL écrit dans le WAL  
+3. Le WAL est **synchronisé sur disque**  
 4. Même si le serveur crash, les données validées sont récupérables
 
 ---
@@ -645,7 +647,7 @@ Les bases NoSQL utilisent souvent un modèle différent appelé **BASE** :
 ```
 
 **Principe** :
-- **ACID** : Cohérence > Performance
+- **ACID** : Cohérence > Performance  
 - **BASE** : Disponibilité > Cohérence stricte
 
 Pour des données transactionnelles critiques (argent, santé, inventaire), **ACID est essentiel**.
@@ -780,10 +782,10 @@ COMMIT;
 
 ✅ **Une transaction** est un ensemble d'opérations indivisible : tout ou rien
 
-✅ **ACID** garantit la fiabilité des données :
-   - **A**tomicité : Tout ou rien
-   - **C**ohérence : Règles respectées
-   - **I**solation : Transactions indépendantes
+✅ **ACID** garantit la fiabilité des données :  
+   - **A**tomicité : Tout ou rien  
+   - **C**ohérence : Règles respectées  
+   - **I**solation : Transactions indépendantes  
    - **D**urabilité : Modifications permanentes après COMMIT
 
 ✅ **PostgreSQL respecte strictement ACID**, ce qui le rend idéal pour les applications critiques
@@ -818,7 +820,7 @@ Les propriétés ACID sont **la fondation** de la fiabilité de PostgreSQL. C'es
 
 ### Et maintenant ?
 
-Maintenant que vous comprenez les concepts fondamentaux (données, bases de données, SGBD, modèle relationnel, transactions ACID), nous allons dans la **Partie 2** commencer à découvrir **PostgreSQL en détail** :
+Maintenant que vous comprenez les concepts fondamentaux (données, bases de données, SGBD, modèle relationnel, transactions ACID), nous allons dans le **Chapitre 2** commencer à découvrir **PostgreSQL en détail** :
 
 - Son histoire et sa philosophie
 - Ses versions et son écosystème

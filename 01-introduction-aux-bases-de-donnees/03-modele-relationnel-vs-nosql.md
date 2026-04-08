@@ -7,7 +7,7 @@
 Nous avons vu qu'un SGBD permet de gérer des bases de données de manière efficace. Mais saviez-vous qu'il existe **différentes façons d'organiser** les données ?
 
 Les deux grandes familles sont :
-1. **Le modèle relationnel** (SGBDR) : données organisées en tables reliées entre elles
+1. **Le modèle relationnel** (SGBDR) : données organisées en tables reliées entre elles  
 2. **Le modèle NoSQL** : données organisées de manière plus flexible
 
 PostgreSQL appartient à la famille des SGBDR (Systèmes de Gestion de Bases de Données Relationnelles), mais possède aussi des capacités NoSQL. Dans cette section, nous allons comprendre les différences fondamentales entre ces deux approches, leurs forces et leurs cas d'usage.
@@ -135,8 +135,8 @@ Problème : Si Jean change son email, il faut modifier TOUTES ses commandes !
 
 **Bonne approche (normalisée)** :
 ```
-L'email de Jean est stocké UNE SEULE FOIS dans la table Clients.
-Les commandes référencent juste son id (client_id = 1).
+L'email de Jean est stocké UNE SEULE FOIS dans la table Clients.  
+Les commandes référencent juste son id (client_id = 1).  
 → Pour changer son email, on modifie une seule ligne !
 ```
 
@@ -144,10 +144,10 @@ Les commandes référencent juste son id (client_id = 1).
 
 Les **contraintes** garantissent que les données restent cohérentes :
 
-- **PRIMARY KEY** : Chaque ligne est unique
-- **FOREIGN KEY** : Une commande ne peut pas référencer un client inexistant
-- **UNIQUE** : Deux clients ne peuvent pas avoir le même email
-- **CHECK** : L'âge ne peut pas être négatif
+- **PRIMARY KEY** : Chaque ligne est unique  
+- **FOREIGN KEY** : Une commande ne peut pas référencer un client inexistant  
+- **UNIQUE** : Deux clients ne peuvent pas avoir le même email  
+- **CHECK** : L'âge ne peut pas être négatif  
 - **NOT NULL** : Un client doit obligatoirement avoir un nom
 
 ```sql
@@ -167,10 +167,10 @@ SQL permet des requêtes très expressives :
 SELECT
     c.nom,
     SUM(co.montant) as total_depense
-FROM clients c
-JOIN commandes co ON c.id = co.client_id
-GROUP BY c.nom
-ORDER BY total_depense DESC;
+FROM clients c  
+JOIN commandes co ON c.id = co.client_id  
+GROUP BY c.nom  
+ORDER BY total_depense DESC;  
 
 Résultat :
 ┌─────────────┬───────────────┐
@@ -189,9 +189,9 @@ Le modèle relationnel garantit les propriétés ACID (vu dans la section préc�
 
 Malgré ses nombreux avantages, le modèle relationnel a certaines limites :
 
-1. **Rigidité du schéma** : Ajouter une colonne à une grande table peut être complexe
-2. **Performance pour certains cas** : Les jointures multiples peuvent être coûteuses
-3. **Scalabilité horizontale** : Plus difficile à distribuer sur plusieurs serveurs
+1. **Rigidité du schéma** : Ajouter une colonne à une grande table peut être complexe  
+2. **Performance pour certains cas** : Les jointures multiples peuvent être coûteuses  
+3. **Scalabilité horizontale** : Plus difficile à distribuer sur plusieurs serveurs  
 4. **Données hiérarchiques** : Les structures en arbre/graphe sont moins naturelles
 
 ---
@@ -202,9 +202,9 @@ Malgré ses nombreux avantages, le modèle relationnel a certaines limites :
 
 **NoSQL** signifie **"Not Only SQL"** (pas seulement SQL). Ce mouvement est né dans les années 2000 pour répondre aux besoins du web moderne :
 
-- **Volume massif** de données (Big Data)
-- **Flexibilité** du schéma (données changeantes)
-- **Performance** en lecture/écriture à très grande échelle
+- **Volume massif** de données (Big Data)  
+- **Flexibilité** du schéma (données changeantes)  
+- **Performance** en lecture/écriture à très grande échelle  
 - **Distribution** sur de nombreux serveurs
 
 NoSQL ne remplace pas le relationnel, il offre des **alternatives** pour des cas d'usage spécifiques.
@@ -293,36 +293,36 @@ NoSQL ne remplace pas le relationnel, il offre des **alternatives** pour des cas
 - Pas de jointures efficaces
 - Requêtes complexes limitées
 
-#### 3. **Bases de données Colonnes** (*Column-Family Store*)
+#### 3. **Bases de données à familles de colonnes** (*Wide-Column Store*)
 
-**Concept** : Stockage par colonnes plutôt que par lignes
+**Concept** : Les données sont organisées en **familles de colonnes**, où chaque ligne peut avoir un ensemble de colonnes différent. Contrairement au modèle relationnel où chaque ligne a les mêmes colonnes, ici la structure est flexible par ligne.
 
 ```
-Modèle traditionnel (ligne) :
-Ligne 1 : id=1, nom="Jean", age=35, ville="Paris"
-Ligne 2 : id=2, nom="Marie", age=28, ville="Lyon"
+Famille de colonnes "profil" :
+  Ligne "user:1" → { nom: "Jean", age: 35, ville: "Paris" }
+  Ligne "user:2" → { nom: "Marie", ville: "Lyon", telephone: "06..." }
+                    (pas de colonne "age" pour Marie)
 
-Modèle colonnes :
-Colonne "id"    : [1, 2]
-Colonne "nom"   : ["Jean", "Marie"]
-Colonne "age"   : [35, 28]
-Colonne "ville" : ["Paris", "Lyon"]
+Famille de colonnes "activite" :
+  Ligne "user:1" → { dernier_achat: "2025-11-01", nb_visites: 42 }
 ```
+
+> 💡 À ne pas confondre avec les bases **columnar** analytiques (ClickHouse, BigQuery, DuckDB) qui stockent physiquement les données colonne par colonne pour optimiser les agrégations. Ce sont deux concepts différents.
 
 **Exemples** : Cassandra, HBase, ScyllaDB
 
 **Cas d'usage** :
-- Data warehousing (analyse de données)
-- Séries temporelles massives
-- Logs et événements
+- Données massives distribuées (Big Data)
+- Logs et événements à très haut débit d'écriture
+- Séries temporelles distribuées
 
 **Avantages** :
-- Très performant pour agrégations
-- Compression efficace
 - Excellente scalabilité horizontale
+- Haut débit en écriture
+- Tolérance aux pannes (distribution multi-datacenter)
 
 **Limites** :
-- Complexe à modéliser
+- Complexe à modéliser (penser les requêtes avant le schéma)
 - Pas adapté aux transactions ACID
 - Courbe d'apprentissage élevée
 
@@ -468,9 +468,9 @@ INSERT INTO produits (nom, details) VALUES
 );
 
 -- Requêter le JSON avec des opérateurs spéciaux
-SELECT nom, details->>'marque' as marque
-FROM produits
-WHERE (details->'ram')::int >= 16;
+SELECT nom, details->>'marque' as marque  
+FROM produits  
+WHERE (details->'ram')::int >= 16;  
 ```
 
 **Avantages** :
@@ -492,15 +492,15 @@ INSERT INTO articles (titre, tags) VALUES
 ('PostgreSQL 18 est sorti', ARRAY['database', 'postgresql', 'release']);
 
 -- Rechercher dans les tableaux
-SELECT * FROM articles
-WHERE 'postgresql' = ANY(tags);
+SELECT * FROM articles  
+WHERE 'postgresql' = ANY(tags);  
 ```
 
 #### 3. **Extensions pour d'autres modèles**
 
-- **PostGIS** : Données géospatiales (graphe géométrique)
-- **pg_vector** : Recherche vectorielle (IA, embeddings)
-- **ltree** : Hiérarchies et arbres
+- **PostGIS** : Données géospatiales (géographie, géométrie)  
+- **pgvector** : Recherche vectorielle (IA, embeddings)  
+- **ltree** : Hiérarchies et arbres  
 - **hstore** : Paires clé-valeur
 
 ### Stratégie hybride recommandée
@@ -526,8 +526,8 @@ Pour la plupart des applications, une approche **hybride** est idéale :
 ```
 
 **Principe** :
-- **PostgreSQL** pour les données structurées et transactionnelles
-- **Redis** pour le cache et les données éphémères
+- **PostgreSQL** pour les données structurées et transactionnelles  
+- **Redis** pour le cache et les données éphémères  
 - **JSONB dans PostgreSQL** pour la flexibilité ponctuelle
 
 ---
@@ -557,10 +557,10 @@ Pour la plupart des applications, une approche **hybride** est idéale :
 
 ### ✅ Réalité : Choisissez l'outil adapté au besoin
 
-- **E-commerce classique** → PostgreSQL (ou MySQL)
-- **Cache applicatif** → Redis
-- **Logs et métriques** → ClickHouse ou Elasticsearch
-- **Réseau social** → Combinaison SQL + Graphe (Neo4j)
+- **E-commerce classique** → PostgreSQL (ou MySQL)  
+- **Cache applicatif** → Redis  
+- **Logs et métriques** → ClickHouse ou Elasticsearch  
+- **Réseau social** → Combinaison SQL + Graphe (Neo4j)  
 - **Application temps réel** → Firestore ou MongoDB + Redis
 
 ---
@@ -603,10 +603,10 @@ SELECT
     u.nom as auteur,
     c.texte as commentaire,
     c.date_creation
-FROM articles a
-JOIN utilisateurs u ON a.auteur_id = u.id
-JOIN commentaires c ON c.article_id = a.id
-WHERE a.id = 1;
+FROM articles a  
+JOIN utilisateurs u ON a.auteur_id = u.id  
+JOIN commentaires c ON c.article_id = a.id  
+WHERE a.id = 1;  
 ```
 
 ### Approche NoSQL documentaire (MongoDB)

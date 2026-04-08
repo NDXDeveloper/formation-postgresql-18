@@ -14,7 +14,7 @@ Avant de plonger dans les détails techniques de PostgreSQL, il est essentiel de
 
 Le **modèle client-serveur** est une architecture informatique qui sépare deux rôles distincts :
 
-- **Le Client** : C'est l'application ou l'outil qui fait une demande (par exemple, votre application web, psql, pgAdmin, etc.)
+- **Le Client** : C'est l'application ou l'outil qui fait une demande (par exemple, votre application web, psql, pgAdmin, etc.)  
 - **Le Serveur** : C'est le système qui reçoit la demande, la traite, et renvoie une réponse (dans notre cas, PostgreSQL)
 
 ### Analogie du Restaurant 🍽️
@@ -31,9 +31,9 @@ Pour mieux comprendre, imaginez un restaurant :
 └─────────────┘                           └─────────────┘
 ```
 
-- **Vous** (le client) passez une commande
-- **Le chef** (le serveur) prépare votre plat
-- **Le serveur** vous ramène le plat préparé
+- **Vous** (le client) passez une commande  
+- **Le chef** (le serveur) prépare votre plat  
+- **Le serveur** vous ramène le plat préparé  
 - **Vous ne voyez pas** ce qui se passe en cuisine (abstraction)
 
 ### Application à PostgreSQL
@@ -97,10 +97,10 @@ Un **protocole** est un ensemble de règles qui définit comment deux systèmes 
 
 Quand vous téléphonez, vous suivez un protocole implicite :
 
-1. **Vous composez** le numéro (établissement de connexion)
-2. **Vous dites "Allô"** (salutation initiale)
-3. **Vous posez votre question** (requête)
-4. **Votre interlocuteur répond** (réponse)
+1. **Vous composez** le numéro (établissement de connexion)  
+2. **Vous dites "Allô"** (salutation initiale)  
+3. **Vous posez votre question** (requête)  
+4. **Votre interlocuteur répond** (réponse)  
 5. **Vous dites "Au revoir"** (fermeture de connexion)
 
 PostgreSQL fonctionne de manière similaire, mais de façon beaucoup plus structurée.
@@ -115,9 +115,9 @@ Le **Wire Protocol** (littéralement "protocole du câble") est le langage de co
 
 ### Caractéristiques du Wire Protocol 3.2
 
-1. **Protocole Binaire** : Les données sont transmises en format binaire (plus efficace que du texte)
-2. **Orienté Message** : La communication se fait par échange de messages typés
-3. **Stateful** : Le serveur maintient l'état de la connexion (transaction en cours, etc.)
+1. **Protocole Binaire** : Les données sont transmises en format binaire (plus efficace que du texte)  
+2. **Orienté Message** : La communication se fait par échange de messages typés  
+3. **Stateful** : Le serveur maintient l'état de la connexion (transaction en cours, etc.)  
 4. **Basé sur TCP/IP** : Utilise le protocole réseau TCP pour garantir la fiabilité
 
 ---
@@ -186,9 +186,9 @@ CLIENT                                          SERVEUR
 ```
 
 **Ce qui se passe :**
-1. **RowDescription** : Le serveur décrit les colonnes (nom, type, taille)
-2. **DataRow** : Le serveur envoie chaque ligne de résultat
-3. **CommandComplete** : Le serveur signale la fin (ex: "SELECT 2" pour 2 lignes)
+1. **RowDescription** : Le serveur décrit les colonnes (nom, type, taille)  
+2. **DataRow** : Le serveur envoie chaque ligne de résultat  
+3. **CommandComplete** : Le serveur signale la fin (ex: "SELECT 2" pour 2 lignes)  
 4. **ReadyForQuery** : Le serveur indique qu'il est prêt pour une nouvelle requête
 
 ### Étape 4 : Fermeture de la Connexion
@@ -220,9 +220,9 @@ Chaque message échangé suit une structure précise :
 ### Exemple Concret : Message "Query"
 
 ```
-Type:     'Q' (Query)
-Longueur: 30 octets
-Contenu:  "SELECT * FROM users;\0"  ← \0 = caractère null de fin
+Type:     'Q' (Query)  
+Longueur: 30 octets  
+Contenu:  "SELECT * FROM users;\0"  ← \0 = caractère null de fin  
 ```
 
 ### Principaux Types de Messages
@@ -256,11 +256,11 @@ Contenu:  "SELECT * FROM users;\0"  ← \0 = caractère null de fin
 
 Lors de l'établissement de la connexion, plusieurs méthodes d'authentification sont possibles :
 
-1. **trust** : Pas d'authentification (dangereux, seulement pour dev local)
-2. **password** : Mot de passe en clair (déprécié)
-3. **md5** : Hash MD5 du mot de passe (déprécié)
-4. **scram-sha-256** : Standard moderne sécurisé (recommandé)
-5. **cert** : Certificat SSL/TLS client
+1. **trust** : Pas d'authentification (dangereux, seulement pour dev local)  
+2. **password** : Mot de passe en clair (déprécié)  
+3. **md5** : Hash MD5 du mot de passe (déprécié)  
+4. **scram-sha-256** : Standard moderne sécurisé (recommandé)  
+5. **cert** : Certificat SSL/TLS client  
 6. **OAuth 2.0** : Nouveau dans PostgreSQL 18
 
 ### Flux d'Authentification SCRAM-SHA-256
@@ -283,24 +283,29 @@ CLIENT                                          SERVEUR
 
 ---
 
-## 🚀 Optimisations du Wire Protocol 3.2
+## 🚀 Nouveautés du Wire Protocol 3.2 (PostgreSQL 18)
 
-PostgreSQL 18 a introduit plusieurs améliorations dans le Wire Protocol 3.2 :
+PostgreSQL 18 a introduit la version 3.2 du protocole, la première mise à jour depuis la version 3.0 de PostgreSQL 7.4 (2003).
 
-### 1. **Compression des Données** (optionnelle)
+### Clés d'Annulation 256 bits (Sécurité Renforcée)
 
-Les résultats volumineux peuvent être compressés avant transmission :
+La nouveauté principale du Protocol 3.2 est le passage des clés d'annulation de requêtes (*cancel keys*) de 32 bits à **256 bits**.
+
+**Contexte** : Quand un client veut annuler une requête en cours (`Ctrl+C` dans psql), il envoie une *cancel request* contenant une clé secrète. Avec 32 bits, cette clé était vulnérable aux attaques par force brute — un attaquant sur le même réseau pouvait deviner la clé et annuler les requêtes d'autres utilisateurs.
 
 ```
-Sans compression:    Client <────── [1 MB de données] ────── Serveur
-Avec compression:    Client <────── [200 KB compressé] ───── Serveur
+Protocole 3.0 (ancien) :
+  Cancel Key : 32 bits → ~4 milliards de combinaisons (force brute possible)
+
+Protocole 3.2 (nouveau) :
+  Cancel Key : 256 bits → résistant à la force brute
 ```
 
-**Avantage** : Réduction de la bande passante réseau (utile pour les connexions lentes)
+**Compatibilité** : Le protocole est rétrocompatible — les anciens clients continuent de fonctionner avec les nouveaux serveurs, et vice versa.
 
-### 2. **Pipelining Amélioré**
+### Rappel : Le Pipelining (disponible depuis PostgreSQL 14)
 
-Le client peut envoyer plusieurs requêtes sans attendre la réponse de la première :
+Bien que ce ne soit pas une nouveauté du Protocol 3.2, le **pipelining** mérite d'être mentionné car il optimise fortement les performances réseau :
 
 ```
 TRADITIONNEL (séquentiel):
@@ -312,24 +317,20 @@ PIPELINÉ:
   Requête 3 ─┘
 ```
 
-**Avantage** : Réduction de la latence totale
+**Avantage** : Réduction de la latence totale, particulièrement bénéfique sur les connexions à haute latence.
 
-### 3. **Messages d'Erreur Enrichis**
+### Messages d'Erreur Structurés
 
-Les erreurs renvoient désormais plus d'informations structurées :
+PostgreSQL fournit des messages d'erreur très détaillés avec des champs structurés :
 
 ```
-Ancien format:
-  ERROR: column "username" does not exist
-
-Nouveau format (Wire Protocol 3.2):
-  ERROR: column "username" does not exist
-  DETAIL: Perhaps you meant to reference column "user_name"
-  HINT: Try using double quotes if the name contains special characters
-  POSITION: 8 (dans la requête)
-  FILE: parse_relation.c
-  LINE: 3425
+ERROR: column "username" does not exist  
+DETAIL: Perhaps you meant to reference column "user_name"  
+HINT: Try using double quotes if the name contains special characters  
+POSITION: 8 (position dans la requête)  
 ```
+
+> 💡 Ces champs structurés (DETAIL, HINT, POSITION) sont disponibles depuis longtemps dans PostgreSQL, mais sont souvent méconnus. Les drivers modernes permettent d'accéder à chacun de ces champs individuellement pour un meilleur diagnostic.
 
 ---
 
@@ -384,9 +385,9 @@ $ psql -h localhost -p 5432 -U mon_user -d ma_base
 → Utilise le Wire Protocol pour toutes les opérations
 
 ### 3. **Drivers de Programmation**
-- **Python** : `psycopg3`
-- **Node.js** : `pg` (node-postgres)
-- **Java** : `JDBC`
+- **Python** : `psycopg3`  
+- **Node.js** : `pg` (node-postgres)  
+- **Java** : `JDBC`  
 - **Go** : `pgx`
 
 Tous implémentent le Wire Protocol pour communiquer avec PostgreSQL.
@@ -423,11 +424,11 @@ Clients ───> PgBouncer ───> PostgreSQL
 
 ### Bonnes Pratiques pour Minimiser la Latence
 
-- ✅ **Utiliser des requêtes préparées** (pour les requêtes répétées)
-- ✅ **Regrouper les opérations** dans une transaction
-- ✅ **Limiter les résultats** avec `LIMIT` / pagination
-- ✅ **Utiliser le pipelining** si supporté par le driver
-- ✅ **Connecter via socket Unix** pour les applications locales
+- ✅ **Utiliser des requêtes préparées** (pour les requêtes répétées)  
+- ✅ **Regrouper les opérations** dans une transaction  
+- ✅ **Limiter les résultats** avec `LIMIT` / pagination  
+- ✅ **Utiliser le pipelining** si supporté par le driver  
+- ✅ **Connecter via socket Unix** pour les applications locales  
 - ✅ **Activer la compression** pour les gros volumes de données
 
 ---
@@ -472,26 +473,25 @@ Message: CommandComplete
 ## 📝 Résumé des Concepts Clés
 
 ### Le Modèle Client-Serveur
-- ✅ Sépare l'application (client) de la base de données (serveur)
-- ✅ Centralise les données et la sécurité
+- ✅ Sépare l'application (client) de la base de données (serveur)  
+- ✅ Centralise les données et la sécurité  
 - ✅ Permet à plusieurs clients d'accéder à la même base
 
 ### Le Wire Protocol 3.2
-- ✅ Langage de communication standardisé entre client et serveur
-- ✅ Basé sur l'échange de messages typés
-- ✅ Utilise TCP/IP (réseau) ou Unix Socket (local)
+- ✅ Langage de communication standardisé entre client et serveur  
+- ✅ Basé sur l'échange de messages typés  
+- ✅ Utilise TCP/IP (réseau) ou Unix Socket (local)  
 - ✅ Supporte l'authentification sécurisée (SCRAM-SHA-256)
 
 ### Cycle de Communication
-1. **Connexion** : Établissement et authentification
-2. **Requête** : Envoi de commandes SQL
-3. **Réponse** : Réception des résultats
+1. **Connexion** : Établissement et authentification  
+2. **Requête** : Envoi de commandes SQL  
+3. **Réponse** : Réception des résultats  
 4. **Fermeture** : Terminaison de la connexion
 
-### Optimisations PostgreSQL 18
-- ✅ Compression des données
-- ✅ Pipelining amélioré
-- ✅ Messages d'erreur enrichis
+### Nouveauté PostgreSQL 18 (Protocol 3.2)
+- ✅ Clés d'annulation 256 bits (sécurité renforcée)  
+- ✅ Rétrocompatibilité complète avec les anciens clients
 
 ---
 

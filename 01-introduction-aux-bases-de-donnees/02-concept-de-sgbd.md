@@ -19,11 +19,11 @@ Dans cette section, nous allons comprendre ce qu'est un SGBD, son rôle, et pour
 **SGBD** signifie **Système de Gestion de Bases de Données** (en anglais : *DBMS* pour *Database Management System*).
 
 Un SGBD est un **logiciel** qui permet de :
-- **Créer** des bases de données
-- **Stocker** les données de manière organisée
-- **Manipuler** les données (ajouter, modifier, supprimer)
-- **Interroger** les données (rechercher, filtrer, calculer)
-- **Gérer** l'accès et la sécurité
+- **Créer** des bases de données  
+- **Stocker** les données de manière organisée  
+- **Manipuler** les données (ajouter, modifier, supprimer)  
+- **Interroger** les données (rechercher, filtrer, calculer)  
+- **Gérer** l'accès et la sécurité  
 - **Garantir** l'intégrité et la cohérence des données
 
 En résumé : **le SGBD est l'interface entre vous (l'utilisateur ou l'application) et les données physiquement stockées sur le disque dur**.
@@ -32,7 +32,7 @@ En résumé : **le SGBD est l'interface entre vous (l'utilisateur ou l'applicati
 
 Reprenons notre analogie de la bibliothèque :
 
-- **La base de données** = La collection de livres (les données)
+- **La base de données** = La collection de livres (les données)  
 - **Le SGBD** = Le bibliothécaire expert qui gère tout
 
 Imaginez que vous voulez :
@@ -149,7 +149,7 @@ Le SGBD garantit les propriétés **ACID** :
 
 Le SGBD contrôle **qui peut faire quoi** sur les données :
 
-- **Authentification** : Vérifier l'identité de l'utilisateur (nom d'utilisateur + mot de passe)
+- **Authentification** : Vérifier l'identité de l'utilisateur (nom d'utilisateur + mot de passe)  
 - **Autorisation** : Définir les permissions (lecture, écriture, suppression)
 
 **Exemple** :
@@ -187,8 +187,8 @@ Si vous tentez de violer une contrainte, le SGBD **refuse l'opération** et vous
 
 Le SGBD optimise automatiquement les requêtes pour qu'elles s'exécutent le plus rapidement possible :
 
-- **Index** : Comme l'index d'un livre, permet de trouver rapidement une information
-- **Cache** : Garde en mémoire les données fréquemment utilisées
+- **Index** : Comme l'index d'un livre, permet de trouver rapidement une information  
+- **Cache** : Garde en mémoire les données fréquemment utilisées  
 - **Plan d'exécution** : Calcule la meilleure façon d'exécuter une requête complexe
 
 **Exemple** :
@@ -207,8 +207,8 @@ Tout cela en millisecondes, même avec des millions de lignes !
 
 Le SGBD offre des mécanismes pour **sauvegarder** et **restaurer** les données :
 
-- **Sauvegardes automatiques** : Copie régulière des données
-- **Journalisation** (*Write-Ahead Log*) : Enregistrement de toutes les modifications
+- **Sauvegardes automatiques** : Copie régulière des données  
+- **Journalisation** (*Write-Ahead Log*) : Enregistrement de toutes les modifications  
 - **Récupération après crash** : Restauration de l'état cohérent après une panne
 
 **Scénario** :
@@ -267,25 +267,25 @@ Vous vous demandez peut-être : "Pourquoi apprendre PostgreSQL plutôt qu'un aut
 
 ### Les points forts de PostgreSQL
 
-1. **Open source et gratuit** : Pas de licence coûteuse, communauté active
-2. **Conforme aux standards SQL** : Respecte les normes officielles
-3. **Très riche en fonctionnalités** : Types de données avancés (JSON, tableaux, géométrie)
-4. **Extensible** : Ajout de fonctionnalités via des extensions (PostGIS, pg_vector)
-5. **Fiable et robuste** : Respecte strictement les propriétés ACID
-6. **Performant** : Optimisé pour les lectures et écritures complexes
-7. **Portable** : Fonctionne sur Linux, Windows, macOS
+1. **Open source et gratuit** : Pas de licence coûteuse, communauté active  
+2. **Conforme aux standards SQL** : Respecte les normes officielles  
+3. **Très riche en fonctionnalités** : Types de données avancés (JSON, tableaux, géométrie)  
+4. **Extensible** : Ajout de fonctionnalités via des extensions (PostGIS, pg_vector)  
+5. **Fiable et robuste** : Respecte strictement les propriétés ACID  
+6. **Performant** : Optimisé pour les lectures et écritures complexes  
+7. **Portable** : Fonctionne sur Linux, Windows, macOS  
 8. **Bien documenté** : Documentation officielle excellente
 
 ### Qui utilise PostgreSQL ?
 
 De nombreuses entreprises de renom utilisent PostgreSQL :
 
-- **Apple** : iCloud, App Store
-- **Instagram** : Stockage des photos et métadonnées
-- **Spotify** : Gestion des playlists et recommandations
-- **Reddit** : Discussions et votes
-- **Twitch** : Chat et streaming
-- **Uber** : Géolocalisation et trajets
+- **Apple** : iCloud, App Store  
+- **Instagram** : Stockage des photos et métadonnées  
+- **Spotify** : Gestion des playlists et recommandations  
+- **Reddit** : Discussions et votes  
+- **Twitch** : Chat et streaming  
+- **Uber** : Géolocalisation et trajets  
 - **Netflix** : Recommandations et analytics
 
 ---
@@ -338,17 +338,17 @@ Visualisons l'architecture simplifiée d'un SGBD :
 ┌──────────────────────────────────────────────────────────────┐
 │                     SYSTÈME DE FICHIERS                      │
 │         (Fichiers de données sur le disque dur)              │
-│  - Tables (fichiers .dat)                                    │
-│  - Index (fichiers .idx)                                     │
-│  - Journal (WAL files)                                       │
+│  - Tables (fichiers de données)                              │
+│  - Index (fichiers d'index)                                  │
+│  - Journal de transactions (fichiers WAL)                    │
 └──────────────────────────────────────────────────────────────┘
 ```
 
 **Flux simplifié** :
-1. Vous envoyez une requête SQL
-2. Le SGBD l'analyse et l'optimise
-3. Le SGBD vérifie vos permissions
-4. Le SGBD exécute la requête (lit/écrit sur disque)
+1. Vous envoyez une requête SQL  
+2. Le SGBD l'analyse et l'optimise  
+3. Le SGBD vérifie vos permissions  
+4. Le SGBD exécute la requête (lit/écrit sur disque)  
 5. Le SGBD vous renvoie le résultat
 
 Tout cela en quelques millisecondes !
@@ -379,8 +379,8 @@ Récapitulons pourquoi utiliser un SGBD plutôt que de simples fichiers :
 
 Imaginons un orchestre symphonique :
 
-- **Les musiciens** = Vos données (violons, pianos, trompettes...)
-- **Le chef d'orchestre** = Le SGBD
+- **Les musiciens** = Vos données (violons, pianos, trompettes...)  
+- **Le chef d'orchestre** = Le SGBD  
 - **La partition** = Vos requêtes SQL
 
 Sans chef d'orchestre, les musiciens joueraient n'importe comment, créant un chaos sonore. Le chef d'orchestre coordonne tout, assure l'harmonie, gère le timing, et produit une belle symphonie.
@@ -419,12 +419,12 @@ Dans cette section, vous avez découvert :
 ### Ce que vous devez comprendre
 
 **Distinction fondamentale** :
-- **Base de données** = Les données (collection de clients, produits, commandes)
+- **Base de données** = Les données (collection de clients, produits, commandes)  
 - **SGBD** = Le logiciel qui gère ces données (PostgreSQL)
 
 C'est comme :
-- **Votre musique** (base de données) vs **Spotify** (SGBD)
-- **Vos photos** (base de données) vs **Google Photos** (SGBD)
+- **Votre musique** (base de données) vs **Spotify** (SGBD)  
+- **Vos photos** (base de données) vs **Google Photos** (SGBD)  
 - **Les livres** (base de données) vs **Le bibliothécaire** (SGBD)
 
 ### Et maintenant ?

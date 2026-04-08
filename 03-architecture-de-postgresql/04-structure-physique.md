@@ -7,8 +7,8 @@
 Jusqu'à présent, nous avons exploré l'architecture logique de PostgreSQL : les processus, la mémoire. Mais comment PostgreSQL **stocke-t-il réellement les données sur le disque** ? Comment une simple requête `INSERT` se transforme-t-elle en octets sur le disque dur ?
 
 Dans cette section, nous allons plonger dans la **structure physique** de PostgreSQL en explorant trois concepts fondamentaux :
-- **Heap Files** : Comment les tables sont stockées
-- **TOAST** : Comment les grandes valeurs sont gérées
+- **Heap Files** : Comment les tables sont stockées  
+- **TOAST** : Comment les grandes valeurs sont gérées  
 - **WAL** : Comment PostgreSQL garantit la durabilité des données
 
 Comprendre ces mécanismes vous aidera à optimiser vos bases de données, diagnostiquer les problèmes de performance, et mieux appréhender le fonctionnement interne de PostgreSQL.
@@ -106,9 +106,9 @@ Sur le système de fichiers :
 
 ```sql
 -- Obtenir l'OID de la table
-SELECT oid, relname, relfilenode
-FROM pg_class
-WHERE relname = 'users';
+SELECT oid, relname, relfilenode  
+FROM pg_class  
+WHERE relname = 'users';  
 
 -- Résultat
   oid  | relname | relfilenode
@@ -336,9 +336,9 @@ PostgreSQL "TOAST" une valeur si elle dépasse **~2 KB** (le seuil exact dépend
 
 PostgreSQL peut appliquer 4 stratégies :
 
-1. **PLAIN** : Pas de compression ni TOAST (types simples : INTEGER)
-2. **EXTENDED** : Compression + TOAST si nécessaire (par défaut pour TEXT, BYTEA)
-3. **EXTERNAL** : TOAST sans compression (pour données déjà compressées : JSON, images)
+1. **PLAIN** : Pas de compression ni TOAST (types simples : INTEGER)  
+2. **EXTENDED** : Compression + TOAST si nécessaire (par défaut pour TEXT, BYTEA)  
+3. **EXTERNAL** : TOAST sans compression (pour données déjà compressées : JSON, images)  
 4. **MAIN** : Compression, mais évite TOAST si possible
 
 ### Exemple Concret
@@ -357,15 +357,15 @@ INSERT INTO documents (filename, content) VALUES
 #### Étape 1 : PostgreSQL Analyse la Taille
 
 ```
-content = 5 MB → Trop grand pour une page !
-Strategy = EXTENDED → Compression tentée
+content = 5 MB → Trop grand pour une page !  
+Strategy = EXTENDED → Compression tentée  
 ```
 
 #### Étape 2 : Compression (si possible)
 
 ```
-Taille originale : 5 MB
-Après compression : 4.8 MB (peu compressible, c'est un PDF)
+Taille originale : 5 MB  
+Après compression : 4.8 MB (peu compressible, c'est un PDF)  
 ```
 
 Toujours trop grand !
@@ -392,7 +392,7 @@ TABLE PRINCIPALE (documents)
         │
         │ (référence)
         v
-TOAST TABLE (pg_toast_16384_24576)
+TOAST TABLE (pg_toast_24576)
 ┌──────────────────────────────────────────┐
 │ chunk_id=54321, chunk_seq=0, data=[...]  │
 │ chunk_id=54321, chunk_seq=1, data=[...]  │
@@ -411,11 +411,11 @@ SELECT * FROM documents WHERE id = 1;
 ```
 
 **Étapes** :
-1. Lecture de la ligne principale (rapide)
-2. Détection de la référence TOAST
-3. Lecture de **tous les chunks** dans la TOAST table (lent !)
-4. Réassemblage des chunks
-5. Décompression (si compressé)
+1. Lecture de la ligne principale (rapide)  
+2. Détection de la référence TOAST  
+3. Lecture de **tous les chunks** dans la TOAST table (lent !)  
+4. Réassemblage des chunks  
+5. Décompression (si compressé)  
 6. Retour au client
 
 **Coût** : Peut être **10-100× plus lent** qu'une lecture normale.
@@ -441,24 +441,24 @@ SELECT id, filename FROM documents WHERE id = 1;
 SELECT
     c.relname as table_name,
     t.relname as toast_table
-FROM pg_class c
-JOIN pg_class t ON c.reltoastrelid = t.oid
-WHERE c.relkind = 'r'  -- Tables régulières
+FROM pg_class c  
+JOIN pg_class t ON c.reltoastrelid = t.oid  
+WHERE c.relkind = 'r'  -- Tables régulières  
   AND c.relname = 'documents';
 
 -- Résultat
  table_name |      toast_table
 ------------+------------------------
- documents  | pg_toast_16384_24576
+ documents  | pg_toast_24576
 ```
 
 ### Configurer la Stratégie TOAST
 
 ```sql
 -- Voir la stratégie actuelle
-SELECT attname, attstorage
-FROM pg_attribute
-WHERE attrelid = 'documents'::regclass
+SELECT attname, attstorage  
+FROM pg_attribute  
+WHERE attrelid = 'documents'::regclass  
   AND attname = 'content';
 
 -- Résultat
@@ -467,8 +467,8 @@ WHERE attrelid = 'documents'::regclass
  content | x          -- x = EXTENDED
 
 -- Changer la stratégie (EXTERNAL = pas de compression)
-ALTER TABLE documents
-ALTER COLUMN content SET STORAGE EXTERNAL;
+ALTER TABLE documents  
+ALTER COLUMN content SET STORAGE EXTERNAL;  
 ```
 
 **Cas d'usage EXTERNAL** :
@@ -488,8 +488,8 @@ SELECT
     pg_size_pretty(pg_relation_size(schemaname||'.'||tablename)) as table_size,
     pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename) -
                    pg_relation_size(schemaname||'.'||tablename)) as toast_size
-FROM pg_tables
-WHERE tablename = 'documents';
+FROM pg_tables  
+WHERE tablename = 'documents';  
 
 -- Résultat
  schemaname | tablename | total_size | table_size | toast_size
@@ -573,7 +573,7 @@ AVEC WAL
 
 #### 3. **Réplication**
 
-Les serveurs **replicas** rejoue le WAL du serveur **primary** pour rester synchronisés.
+Les serveurs **replicas** rejouent le WAL du serveur **primary** pour rester synchronisés.
 
 ```
 PRIMARY                          REPLICA
@@ -646,18 +646,18 @@ Un enregistrement WAL contient :
 
 ```
 WAL RECORD
-┌────────────────────────────────────────────┐
-│  Header                                    │
-│  - LSN                                     │
-│  - Type d'opération (INSERT, UPDATE, etc.) │
-│  - Transaction ID                          │
-├────────────────────────────────────────────┤
-│  Données                                   │
-│  - Page modifiée (block number)            │
-│  - Offset dans la page                     │
-│  - Anciennes valeurs (pour UNDO)           │
-│  - Nouvelles valeurs (pour REDO)           │
-└────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────┐
+│  Header                                              │
+│  - LSN                                               │
+│  - Type d'opération (INSERT, UPDATE, etc.)           │
+│  - Transaction ID                                    │
+├──────────────────────────────────────────────────────┤
+│  Données                                             │
+│  - Page modifiée (block number)                      │
+│  - Offset dans la page                               │
+│  - Image complète de la page (FPI, après checkpoint) │
+│  - Données modifiées (pour REDO au recovery)         │
+└──────────────────────────────────────────────────────┘
 ```
 
 ### Cycle de Vie du WAL
@@ -695,8 +695,8 @@ max_wal_size = 1GB
 min_wal_size = 80MB
 
 -- Méthode de synchronisation (durabilité vs performance)
-fsync = on                      -- TOUJOURS ON en production !
-synchronous_commit = on         -- on | off | remote_apply
+fsync = on                      -- TOUJOURS ON en production !  
+synchronous_commit = on         -- on | off | remote_apply  
 
 -- Compression du WAL (PG 15+)
 wal_compression = on
@@ -709,7 +709,7 @@ wal_compression = on
 ```
 Transaction → WAL écrit sur disque → fsync → Confirmation client
 ```
-- **Avantage** : Durabilité garantie
+- **Avantage** : Durabilité garantie  
 - **Inconvénient** : Plus lent (~1-5 ms de latence par transaction)
 
 ##### synchronous_commit = off
@@ -719,7 +719,7 @@ Transaction → WAL écrit en mémoire → Confirmation client immédiate
              ↓
           (flush asynchrone, max 200 ms plus tard)
 ```
-- **Avantage** : Transactions beaucoup plus rapides
+- **Avantage** : Transactions beaucoup plus rapides  
 - **Inconvénient** : Risque de perte de quelques transactions récentes en cas de crash
 
 **Cas d'usage** : Logs, données analytiques non critiques.
@@ -784,9 +784,9 @@ SELECT * FROM pg_stat_wal;
 ```
 
 **Interprétation** :
-- `wal_records` : Nombre d'enregistrements WAL
-- `wal_fpi` : Full Page Images (après checkpoint)
-- `wal_bytes` : Octets de WAL générés
+- `wal_records` : Nombre d'enregistrements WAL  
+- `wal_fpi` : Full Page Images (après checkpoint)  
+- `wal_bytes` : Octets de WAL générés  
 - `wal_buffers_full` : Combien de fois les buffers WAL étaient pleins (à minimiser)
 
 #### 3. Taille du Répertoire WAL
@@ -808,8 +808,8 @@ FROM pg_ls_waldir();
 
 ```sql
 -- Statistiques I/O détaillées par backend
-SELECT * FROM pg_stat_io
-WHERE context = 'wal';
+SELECT * FROM pg_stat_io  
+WHERE context = 'wal';  
 ```
 
 ---
@@ -869,8 +869,8 @@ recovery_target_time = '2024-11-19 10:59:00'
 ### Exemple avec TOAST et WAL
 
 ```sql
-INSERT INTO documents (filename, content)
-VALUES ('big_file.pdf', <5 MB de données>);
+INSERT INTO documents (filename, content)  
+VALUES ('big_file.pdf', <5 MB de données>);  
 ```
 
 **Étapes** :
@@ -907,9 +907,9 @@ SELECT
     round(100 * (pg_total_relation_size(schemaname||'.'||tablename)::numeric -
                  pg_relation_size(schemaname||'.'||tablename)::numeric) /
           NULLIF(pg_total_relation_size(schemaname||'.'||tablename)::numeric, 0), 2) as bloat_ratio
-FROM pg_tables
-WHERE schemaname = 'public'
-ORDER BY pg_total_relation_size(schemaname||'.'||tablename) DESC;
+FROM pg_tables  
+WHERE schemaname = 'public'  
+ORDER BY pg_total_relation_size(schemaname||'.'||tablename) DESC;  
 ```
 
 **Solution** :
@@ -992,9 +992,9 @@ CREATE EXTENSION pageinspect;
 SELECT * FROM heap_page_items(get_raw_page('users', 0));
 
 -- Voir les tuples dans une page
-SELECT lp, t_xmin, t_xmax, t_ctid, t_data
-FROM heap_page_items(get_raw_page('users', 0))
-LIMIT 5;
+SELECT lp, t_xmin, t_xmax, t_ctid, t_data  
+FROM heap_page_items(get_raw_page('users', 0))  
+LIMIT 5;  
 ```
 
 ### 3. pg_waldump
@@ -1006,8 +1006,8 @@ Outil en ligne de commande pour inspecter le WAL :
 pg_waldump /var/lib/postgresql/18/main/pg_wal/000000010000000000000001
 
 # Résultat
-rmgr: Heap        len (rec/tot):     59/    59, tx:        742, lsn: 0/015D5E50, prev 0/015D5E18, desc: INSERT off 3, blkref #0: rel 1663/16384/24576 blk 0
-rmgr: Heap        len (rec/tot):     60/    60, tx:        743, lsn: 0/015D5E8B, prev 0/015D5E50, desc: UPDATE off 3 xmax 743, blkref #0: rel 1663/16384/24576 blk 0
+rmgr: Heap        len (rec/tot):     59/    59, tx:        742, lsn: 0/015D5E50, prev 0/015D5E18, desc: INSERT off 3, blkref #0: rel 1663/16384/24576 blk 0  
+rmgr: Heap        len (rec/tot):     60/    60, tx:        743, lsn: 0/015D5E8B, prev 0/015D5E50, desc: UPDATE off 3 xmax 743, blkref #0: rel 1663/16384/24576 blk 0  
 ```
 
 ---
@@ -1018,19 +1018,19 @@ rmgr: Heap        len (rec/tot):     60/    60, tx:        743, lsn: 0/015D5E8B,
 
 ```ini
 # === WAL Configuration ===
-wal_level = replica
-max_wal_size = 2GB
-min_wal_size = 80MB
-wal_compression = on
-checkpoint_completion_target = 0.9
+wal_level = replica  
+max_wal_size = 2GB  
+min_wal_size = 80MB  
+wal_compression = on  
+checkpoint_completion_target = 0.9  
 
 # === Durabilité ===
-fsync = on
-synchronous_commit = on  # off seulement pour données non critiques
+fsync = on  
+synchronous_commit = on  # off seulement pour données non critiques  
 
 # === Archivage (si PITR nécessaire) ===
-archive_mode = on
-archive_command = 'cp %p /backup/wal_archive/%f'
+archive_mode = on  
+archive_command = 'cp %p /backup/wal_archive/%f'  
 ```
 
 ### Maintenance Régulière
@@ -1051,11 +1051,11 @@ SELECT pg_size_pretty(sum(size)) FROM pg_ls_waldir();
 
 ### Optimisations
 
-- ✅ **Sélectionner uniquement les colonnes nécessaires** (éviter TOAST)
-- ✅ **Utiliser STORAGE EXTERNAL** pour données incompressibles
-- ✅ **Batch les modifications** (BEGIN...COMMIT)
-- ✅ **Monitorer le cache hit ratio** (Shared Buffers)
-- ✅ **Configurer max_wal_size** selon le workload
+- ✅ **Sélectionner uniquement les colonnes nécessaires** (éviter TOAST)  
+- ✅ **Utiliser STORAGE EXTERNAL** pour données incompressibles  
+- ✅ **Batch les modifications** (BEGIN...COMMIT)  
+- ✅ **Monitorer le cache hit ratio** (Shared Buffers)  
+- ✅ **Configurer max_wal_size** selon le workload  
 - ✅ **Archiver le WAL** pour PITR
 
 ---
@@ -1064,26 +1064,26 @@ SELECT pg_size_pretty(sum(size)) FROM pg_ls_waldir();
 
 ### Heap Files
 
-- ✅ **Structure de base** pour stocker les tables
-- ✅ **Pages de 8 KB** contenant des tuples (lignes)
-- ✅ **MVCC** : Les updates créent de nouvelles versions
-- ✅ **Bloat** : Fragmentation nécessitant VACUUM
+- ✅ **Structure de base** pour stocker les tables  
+- ✅ **Pages de 8 KB** contenant des tuples (lignes)  
+- ✅ **MVCC** : Les updates créent de nouvelles versions  
+- ✅ **Bloat** : Fragmentation nécessitant VACUUM  
 - ✅ **FSM/VM** : Métadonnées pour optimiser l'accès
 
 ### TOAST
 
-- ✅ **Gère les grandes valeurs** (> 2 KB)
-- ✅ **Compression + Découpage** en chunks
-- ✅ **Stockage externe** dans une table TOAST dédiée
+- ✅ **Gère les grandes valeurs** (> 2 KB)  
+- ✅ **Compression + Découpage** en chunks  
+- ✅ **Stockage externe** dans une table TOAST dédiée  
 - ✅ **Impact performance** : Sélectionner uniquement les colonnes nécessaires
 
 ### WAL
 
-- ✅ **Journal de transactions** pour durabilité
-- ✅ **Write-Ahead** : Écriture WAL avant modification données
-- ✅ **Performance** : Écriture séquentielle vs aléatoire
-- ✅ **Réplication** : Streaming WAL vers replicas
-- ✅ **PITR** : Point-In-Time Recovery
+- ✅ **Journal de transactions** pour durabilité  
+- ✅ **Write-Ahead** : Écriture WAL avant modification données  
+- ✅ **Performance** : Écriture séquentielle vs aléatoire  
+- ✅ **Réplication** : Streaming WAL vers replicas  
+- ✅ **PITR** : Point-In-Time Recovery  
 - ✅ **Fichiers de 16 MB** dans pg_wal/
 
 ---

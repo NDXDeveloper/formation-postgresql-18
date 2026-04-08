@@ -6,9 +6,9 @@
 
 Maintenant que vous savez créer des tables dans PostgreSQL, il est temps de comprendre en profondeur les **types de données** que vous pouvez utiliser pour définir vos colonnes. Le choix du bon type de données est crucial car il affecte :
 
-- ✅ **La validité des données** : Certains types empêchent l'insertion de données invalides
-- ✅ **Les performances** : Certains types sont plus efficaces en termes de stockage et de vitesse
-- ✅ **L'intégrité** : Le bon type garantit que vos données restent cohérentes
+- ✅ **La validité des données** : Certains types empêchent l'insertion de données invalides  
+- ✅ **Les performances** : Certains types sont plus efficaces en termes de stockage et de vitesse  
+- ✅ **L'intégrité** : Le bon type garantit que vos données restent cohérentes  
 - ✅ **La maintenabilité** : Un schéma bien typé est plus facile à comprendre et à maintenir
 
 ---
@@ -16,8 +16,8 @@ Maintenant que vous savez créer des tables dans PostgreSQL, il est temps de com
 ## Qu'est-ce qu'un Type de Données ?
 
 Un **type de données** définit :
-1. **Le genre de valeurs** qu'une colonne peut contenir (nombres, texte, dates, etc.)
-2. **L'espace de stockage** nécessaire
+1. **Le genre de valeurs** qu'une colonne peut contenir (nombres, texte, dates, etc.)  
+2. **L'espace de stockage** nécessaire  
 3. **Les opérations** possibles sur ces valeurs
 
 ### Analogie
@@ -50,20 +50,20 @@ CREATE TABLE personnes (
 );
 
 -- ✅ Insertion valide
-INSERT INTO personnes (nom, age, date_naissance, salaire)
-VALUES ('Alice Martin', 30, '1995-06-15', 45000.50);
+INSERT INTO personnes (nom, age, date_naissance, salaire)  
+VALUES ('Alice Martin', 30, '1995-06-15', 45000.50);  
 
 -- ❌ Insertion invalide : âge doit être un entier
-INSERT INTO personnes (nom, age)
-VALUES ('Bob', 'trente');  -- ERREUR : invalid input syntax for type integer
+INSERT INTO personnes (nom, age)  
+VALUES ('Bob', 'trente');  -- ERREUR : invalid input syntax for type integer  
 
 -- ❌ Insertion invalide : date mal formatée
-INSERT INTO personnes (nom, date_naissance)
-VALUES ('Charlie', '15/06/1995');  -- ERREUR selon configuration datestyle
+INSERT INTO personnes (nom, date_naissance)  
+VALUES ('Charlie', '15/06/1995');  -- ERREUR selon configuration datestyle  
 
 -- ❌ Insertion invalide : salaire trop précis
-INSERT INTO personnes (nom, salaire)
-VALUES ('Dave', 45000.123);  -- Arrondi automatiquement à 45000.12
+INSERT INTO personnes (nom, salaire)  
+VALUES ('Dave', 45000.123);  -- Arrondi automatiquement à 45000.12  
 ```
 
 **Avantage :** PostgreSQL vous empêche d'insérer des données incorrectes !
@@ -101,18 +101,18 @@ Chaque type supporte des opérations spécifiques :
 
 ```sql
 -- Opérations sur nombres
-SELECT 100 + 50;           -- 150
-SELECT 100 / 3;            -- 33 (division entière)
-SELECT 100.0 / 3;          -- 33.333...
+SELECT 100 + 50;           -- 150  
+SELECT 100 / 3;            -- 33 (division entière)  
+SELECT 100.0 / 3;          -- 33.333...  
 
 -- Opérations sur texte
-SELECT 'Hello' || ' ' || 'World';  -- 'Hello World'
-SELECT UPPER('bonjour');           -- 'BONJOUR'
-SELECT LENGTH('PostgreSQL');       -- 10
+SELECT 'Hello' || ' ' || 'World';  -- 'Hello World'  
+SELECT UPPER('bonjour');           -- 'BONJOUR'  
+SELECT LENGTH('PostgreSQL');       -- 10  
 
 -- Opérations sur dates
-SELECT CURRENT_DATE + 7;              -- Date dans 7 jours
-SELECT AGE(DATE '2025-11-19', DATE '1995-06-15');  -- 30 years 5 mons 4 days
+SELECT CURRENT_DATE + 7;              -- Date dans 7 jours  
+SELECT AGE(DATE '2025-11-19', DATE '1995-06-15');  -- 30 years 5 mons 4 days  
 
 -- Opérations sur JSON
 SELECT '{"nom": "Alice"}'::JSONB ->> 'nom';  -- 'Alice'
@@ -403,8 +403,8 @@ CREATE TABLE mauvais_prix (
     prix FLOAT
 );
 
-INSERT INTO mauvais_prix VALUES (0.1 + 0.2);
-SELECT * FROM mauvais_prix;
+INSERT INTO mauvais_prix VALUES (0.1 + 0.2);  
+SELECT * FROM mauvais_prix;  
 -- Résultat : 0.30000000000000004 (erreur d'arrondi !)
 
 -- ✅ CORRECT : NUMERIC pour l'argent
@@ -412,8 +412,8 @@ CREATE TABLE bon_prix (
     prix NUMERIC(10, 2)
 );
 
-INSERT INTO bon_prix VALUES (0.1 + 0.2);
-SELECT * FROM bon_prix;
+INSERT INTO bon_prix VALUES (0.1 + 0.2);  
+SELECT * FROM bon_prix;  
 -- Résultat : 0.30 (exact !)
 ```
 
@@ -453,11 +453,11 @@ CREATE TABLE events_correct (
 
 Ce chapitre 4.4 est organisé en sous-sections détaillées, chacune explorant une catégorie de types :
 
-1. **4.4.1. Types Numériques** → Nombres entiers, décimaux, flottants
-2. **4.4.2. Types Texte** → VARCHAR, TEXT, CHAR
-3. **4.4.3. Types Temporels** → DATE, TIMESTAMP, INTERVAL
-4. **4.4.4. Types Spécifiques PostgreSQL** → JSONB, ARRAY, UUID, ENUM
-5. **4.4.5. Types Géométriques, hstore et ltree** → Cas spécialisés
+1. **4.4.1. Types Numériques** → Nombres entiers, décimaux, flottants  
+2. **4.4.2. Types Texte** → VARCHAR, TEXT, CHAR  
+3. **4.4.3. Types Temporels** → DATE, TIMESTAMP, INTERVAL  
+4. **4.4.4. Types Spécifiques PostgreSQL** → JSONB, ARRAY, UUID, ENUM  
+5. **4.4.5. Types Géométriques, hstore et ltree** → Cas spécialisés  
 6. **4.4.6. Types Binaires et XML** → BYTEA, XML
 
 **Conseil de lecture :**
@@ -525,27 +525,27 @@ CREATE TABLE utilisateurs (
 
 ### Points Clés à Retenir
 
-1. **Le type de données définit** ce qu'une colonne peut contenir
-2. **Choisir le bon type** améliore validité, performance et maintenabilité
-3. **Types principaux** : Numériques, Texte, Temporels, Booléens, Spécialisés
-4. **Règle d'or** : Type le plus restrictif approprié
-5. **Pour l'argent** : TOUJOURS NUMERIC (jamais FLOAT)
+1. **Le type de données définit** ce qu'une colonne peut contenir  
+2. **Choisir le bon type** améliore validité, performance et maintenabilité  
+3. **Types principaux** : Numériques, Texte, Temporels, Booléens, Spécialisés  
+4. **Règle d'or** : Type le plus restrictif approprié  
+5. **Pour l'argent** : TOUJOURS NUMERIC (jamais FLOAT)  
 6. **Pour les horodatages** : TIMESTAMPTZ (avec timezone)
 
 ### Commandes pour Explorer les Types
 
 ```sql
 -- Voir tous les types disponibles
-SELECT typname, typlen, typcategory
-FROM pg_type
-WHERE typtype = 'b'  -- Types de base
-ORDER BY typname;
+SELECT typname, typlen, typcategory  
+FROM pg_type  
+WHERE typtype = 'b'  -- Types de base  
+ORDER BY typname;  
 
 -- Type d'une valeur
-SELECT pg_typeof(123);           -- integer
-SELECT pg_typeof('texte');       -- unknown (devient text)
-SELECT pg_typeof(123.45);        -- numeric
-SELECT pg_typeof(NOW());         -- timestamp with time zone
+SELECT pg_typeof(123);           -- integer  
+SELECT pg_typeof('texte');       -- unknown (devient text)  
+SELECT pg_typeof(123.45);        -- numeric  
+SELECT pg_typeof(NOW());         -- timestamp with time zone  
 
 -- Voir la structure d'une table
 \d nom_table

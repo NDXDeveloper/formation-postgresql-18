@@ -7,8 +7,8 @@
 L'une des fonctionnalités les plus courantes dans les bases de données est la génération automatique d'identifiants uniques pour les lignes d'une table. PostgreSQL offre plusieurs mécanismes pour cela, principalement basés sur les **séquences**.
 
 Dans cette section, nous allons explorer :
-- **SEQUENCE** : Le mécanisme sous-jacent de génération de nombres
-- **SERIAL** : Le raccourci PostgreSQL pour les identifiants auto-incrémentés
+- **SEQUENCE** : Le mécanisme sous-jacent de génération de nombres  
+- **SERIAL** : Le raccourci PostgreSQL pour les identifiants auto-incrémentés  
 - **IDENTITY** : Le standard SQL pour la génération automatique (PostgreSQL 10+)
 - Les fonctions de manipulation des séquences
 - Les bonnes pratiques et pièges à éviter
@@ -48,8 +48,8 @@ Imaginez une machine à tickets dans une boulangerie :
 ### Qu'est-ce que SERIAL ?
 
 `SERIAL` n'est **pas un vrai type** de données. C'est un **raccourci** (syntactic sugar) qui crée automatiquement :
-1. Une séquence
-2. Une colonne INTEGER avec valeur par défaut provenant de la séquence
+1. Une séquence  
+2. Une colonne INTEGER avec valeur par défaut provenant de la séquence  
 3. Une dépendance entre la colonne et la séquence
 
 ### Exemple de Base
@@ -126,9 +126,9 @@ CREATE TABLE produits (
 );
 
 -- Insertion sans spécifier l'ID
-INSERT INTO produits (nom, prix) VALUES ('Ordinateur', 999.99);
-INSERT INTO produits (nom, prix) VALUES ('Souris', 29.99);
-INSERT INTO produits (nom, prix) VALUES ('Clavier', 79.99);
+INSERT INTO produits (nom, prix) VALUES ('Ordinateur', 999.99);  
+INSERT INTO produits (nom, prix) VALUES ('Souris', 29.99);  
+INSERT INTO produits (nom, prix) VALUES ('Clavier', 79.99);  
 
 SELECT * FROM produits;
 ```
@@ -151,9 +151,9 @@ PostgreSQL a automatiquement généré les IDs : 1, 2, 3.
 \ds
 
 -- Ou avec SQL
-SELECT sequencename, last_value
-FROM pg_sequences
-WHERE schemaname = 'public';
+SELECT sequencename, last_value  
+FROM pg_sequences  
+WHERE schemaname = 'public';  
 
 -- Voir les détails d'une séquence
 \d produits_id_seq
@@ -225,8 +225,8 @@ CREATE TABLE factures (
 );
 
 -- Insertion
-INSERT INTO factures (client_id, montant) VALUES (1, 150.00);
-INSERT INTO factures (client_id, montant) VALUES (2, 250.00);
+INSERT INTO factures (client_id, montant) VALUES (1, 150.00);  
+INSERT INTO factures (client_id, montant) VALUES (2, 250.00);  
 
 SELECT id, numero_facture, montant FROM factures;
 ```
@@ -247,9 +247,9 @@ Résultat :
 
 ```sql
 -- nextval() incrémente et retourne la nouvelle valeur
-SELECT nextval('seq_numero_facture');  -- 2025003
-SELECT nextval('seq_numero_facture');  -- 2025004
-SELECT nextval('seq_numero_facture');  -- 2025005
+SELECT nextval('seq_numero_facture');  -- 2025003  
+SELECT nextval('seq_numero_facture');  -- 2025004  
+SELECT nextval('seq_numero_facture');  -- 2025005  
 
 -- Chaque appel incrémente la séquence
 ```
@@ -279,8 +279,8 @@ SELECT setval('seq_numero_facture', 2030000);
 SELECT nextval('seq_numero_facture');  -- 2030001
 
 -- setval() avec is_called
-SELECT setval('seq_numero_facture', 5000, true);   -- Prochaine valeur : 5001
-SELECT setval('seq_numero_facture', 5000, false);  -- Prochaine valeur : 5000
+SELECT setval('seq_numero_facture', 5000, true);   -- Prochaine valeur : 5001  
+SELECT setval('seq_numero_facture', 5000, false);  -- Prochaine valeur : 5000  
 ```
 
 **Cas d'usage :** Réinitialiser ou synchroniser une séquence.
@@ -289,9 +289,9 @@ SELECT setval('seq_numero_facture', 5000, false);  -- Prochaine valeur : 5000
 
 ```sql
 -- lastval() retourne la dernière valeur obtenue (toutes séquences confondues)
-SELECT nextval('produits_id_seq');  -- 4
-SELECT nextval('seq_numero_facture');  -- 2030002
-SELECT lastval();  -- 2030002 (dernière valeur appelée)
+SELECT nextval('produits_id_seq');  -- 4  
+SELECT nextval('seq_numero_facture');  -- 2030002  
+SELECT lastval();  -- 2030002 (dernière valeur appelée)  
 ```
 
 **Note :** `lastval()` est rarement utilisé.
@@ -306,9 +306,9 @@ CREATE SEQUENCE demo_seq START WITH 100;
 SELECT last_value FROM demo_seq;  -- 100 (valeur courante, pas encore utilisée)
 
 -- Obtenir des valeurs
-SELECT nextval('demo_seq');  -- 100 (première utilisation)
-SELECT nextval('demo_seq');  -- 101
-SELECT nextval('demo_seq');  -- 102
+SELECT nextval('demo_seq');  -- 100 (première utilisation)  
+SELECT nextval('demo_seq');  -- 101  
+SELECT nextval('demo_seq');  -- 102  
 
 -- Valeur courante dans cette session
 SELECT currval('demo_seq');  -- 102
@@ -376,9 +376,9 @@ ALTER SEQUENCE produits_id_seq RESTART WITH (SELECT MAX(id) + 1 FROM produits);
 
 ```sql
 -- Fonction utilitaire pour réinitialiser toutes les séquences
-CREATE OR REPLACE FUNCTION reset_sequence(table_name TEXT)
-RETURNS VOID AS $$
-DECLARE
+CREATE OR REPLACE FUNCTION reset_sequence(table_name TEXT)  
+RETURNS VOID AS $$  
+DECLARE  
     seq_name TEXT;
     max_id BIGINT;
 BEGIN
@@ -428,9 +428,9 @@ INSERT INTO employes (id, nom, email) VALUES (100, 'Bob', 'bob@example.com');
 -- ERROR: cannot insert into column "id"
 
 -- Pour forcer quand même (déconseillé)
-INSERT INTO employes (id, nom, email)
-OVERRIDING SYSTEM VALUE
-VALUES (100, 'Bob', 'bob@example.com');
+INSERT INTO employes (id, nom, email)  
+OVERRIDING SYSTEM VALUE  
+VALUES (100, 'Bob', 'bob@example.com');  
 ```
 
 ### IDENTITY BY DEFAULT : Génération Flexible
@@ -492,16 +492,16 @@ SELECT * FROM pg_sequences WHERE sequencename LIKE 'commandes_identity%';
 ALTER TABLE employes ALTER COLUMN id RESTART WITH 100;
 
 -- Changer les options
-ALTER TABLE employes ALTER COLUMN id
-SET INCREMENT BY 10;
+ALTER TABLE employes ALTER COLUMN id  
+SET INCREMENT BY 10;  
 
 -- Changer de ALWAYS à BY DEFAULT
-ALTER TABLE employes ALTER COLUMN id
-SET GENERATED BY DEFAULT;
+ALTER TABLE employes ALTER COLUMN id  
+SET GENERATED BY DEFAULT;  
 
 -- Supprimer IDENTITY
-ALTER TABLE employes ALTER COLUMN id
-DROP IDENTITY;
+ALTER TABLE employes ALTER COLUMN id  
+DROP IDENTITY;  
 ```
 
 ---
@@ -541,10 +541,10 @@ CREATE TABLE test_trous (
     valeur VARCHAR(50)
 );
 
-INSERT INTO test_trous (valeur) VALUES ('A');  -- id = 1
-INSERT INTO test_trous (valeur) VALUES ('B');  -- id = 2
-DELETE FROM test_trous WHERE id = 2;
-INSERT INTO test_trous (valeur) VALUES ('C');  -- id = 3 (pas 2 !)
+INSERT INTO test_trous (valeur) VALUES ('A');  -- id = 1  
+INSERT INTO test_trous (valeur) VALUES ('B');  -- id = 2  
+DELETE FROM test_trous WHERE id = 2;  
+INSERT INTO test_trous (valeur) VALUES ('C');  -- id = 3 (pas 2 !)  
 
 SELECT * FROM test_trous;
 -- Résultat : 1, 3 (trou à 2)
@@ -560,8 +560,8 @@ CREATE TABLE test_manuel (
     nom VARCHAR(100)
 );
 
-INSERT INTO test_manuel (nom) VALUES ('Auto 1');  -- id = 1
-INSERT INTO test_manuel (nom) VALUES ('Auto 2');  -- id = 2
+INSERT INTO test_manuel (nom) VALUES ('Auto 1');  -- id = 1  
+INSERT INTO test_manuel (nom) VALUES ('Auto 2');  -- id = 2  
 
 -- Insertion manuelle
 INSERT INTO test_manuel (id, nom) VALUES (100, 'Manuel 100');
@@ -616,8 +616,8 @@ CREATE TABLE commandes_format (
 );
 
 -- Insertion
-INSERT INTO commandes_format (client_id, montant) VALUES (1, 100.00);
-INSERT INTO commandes_format (client_id, montant) VALUES (2, 200.00);
+INSERT INTO commandes_format (client_id, montant) VALUES (1, 100.00);  
+INSERT INTO commandes_format (client_id, montant) VALUES (2, 200.00);  
 
 SELECT id, numero_commande, montant FROM commandes_format;
 -- Résultats :
@@ -642,9 +642,9 @@ CREATE TABLE remboursements (
 );
 
 -- Les IDs sont uniques à travers les deux tables
-INSERT INTO ventes (montant) VALUES (100);        -- id = 1
-INSERT INTO remboursements (montant) VALUES (50); -- id = 2
-INSERT INTO ventes (montant) VALUES (200);        -- id = 3
+INSERT INTO ventes (montant) VALUES (100);        -- id = 1  
+INSERT INTO remboursements (montant) VALUES (50); -- id = 2  
+INSERT INTO ventes (montant) VALUES (200);        -- id = 3  
 ```
 
 **Cas d'usage :** Numérotation unique pour transactions multi-types.
@@ -664,9 +664,9 @@ CREATE TABLE factures_annuelles (
 );
 
 -- Fonction pour obtenir le prochain numéro
-CREATE OR REPLACE FUNCTION prochain_numero_facture()
-RETURNS INTEGER AS $$
-DECLARE
+CREATE OR REPLACE FUNCTION prochain_numero_facture()  
+RETURNS INTEGER AS $$  
+DECLARE  
     annee_courante INTEGER := EXTRACT(YEAR FROM CURRENT_DATE);
     prochain_num INTEGER;
 BEGIN
@@ -680,8 +680,8 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Utilisation
-INSERT INTO factures_annuelles (numero, annee, montant)
-VALUES (prochain_numero_facture(), EXTRACT(YEAR FROM CURRENT_DATE), 150.00);
+INSERT INTO factures_annuelles (numero, annee, montant)  
+VALUES (prochain_numero_facture(), EXTRACT(YEAR FROM CURRENT_DATE), 150.00);  
 ```
 
 ### 4. Identifiants Composites
@@ -696,8 +696,8 @@ CREATE TABLE documents (
     titre VARCHAR(300)
 );
 
-INSERT INTO documents (titre) VALUES ('Document 1');
-INSERT INTO documents (titre) VALUES ('Document 2');
+INSERT INTO documents (titre) VALUES ('Document 1');  
+INSERT INTO documents (titre) VALUES ('Document 2');  
 
 SELECT id, code, titre FROM documents;
 -- 1 | DOC-00000001 | Document 1
@@ -712,8 +712,8 @@ SELECT id, code, titre FROM documents;
 
 ```sql
 -- Symptôme : Erreur de contrainte unique après import
-INSERT INTO produits (id, nom, prix) VALUES (50, 'Import', 10.00);
-INSERT INTO produits (nom, prix) VALUES ('Nouveau', 20.00);
+INSERT INTO produits (id, nom, prix) VALUES (50, 'Import', 10.00);  
+INSERT INTO produits (nom, prix) VALUES ('Nouveau', 20.00);  
 -- ERROR: duplicate key value violates unique constraint
 -- La séquence génère un ID déjà utilisé
 
@@ -744,9 +744,9 @@ ALTER SEQUENCE logs_id_seq CYCLE;
 ALTER SEQUENCE produits_id_seq CACHE 1000;
 
 -- Ou : Pré-allouer des IDs
-CREATE TEMP TABLE temp_ids AS
-SELECT nextval('produits_id_seq') AS id
-FROM generate_series(1, 100000);
+CREATE TEMP TABLE temp_ids AS  
+SELECT nextval('produits_id_seq') AS id  
+FROM generate_series(1, 100000);  
 
 -- Utiliser ces IDs pour l'insertion
 ```
@@ -818,16 +818,16 @@ CREATE TABLE clients (
 
 ```sql
 -- ✅ Toujours synchroniser après import de données
-COPY produits FROM 'data.csv';
-SELECT setval('produits_id_seq', (SELECT MAX(id) FROM produits));
+COPY produits FROM 'data.csv';  
+SELECT setval('produits_id_seq', (SELECT MAX(id) FROM produits));  
 ```
 
 ### 6. Documenter les Séquences Personnalisées
 
 ```sql
 -- ✅ Commenter les séquences spéciales
-CREATE SEQUENCE seq_factures START WITH 2025001;
-COMMENT ON SEQUENCE seq_factures IS 'Numérotation des factures - Format: FAC-YYYYNNNNN';
+CREATE SEQUENCE seq_factures START WITH 2025001;  
+COMMENT ON SEQUENCE seq_factures IS 'Numérotation des factures - Format: FAC-YYYYNNNNN';  
 ```
 
 ### 7. Utiliser Cache pour Performance
@@ -858,9 +858,9 @@ SELECT
     max_value,
     increment_by,
     cache_size
-FROM pg_sequences
-WHERE schemaname = 'public'
-ORDER BY sequencename;
+FROM pg_sequences  
+WHERE schemaname = 'public'  
+ORDER BY sequencename;  
 ```
 
 ### Voir la Valeur Actuelle
@@ -894,8 +894,8 @@ SELECT
     max_value,
     max_value - last_value AS ids_restants,
     ROUND(100.0 * last_value / max_value, 2) AS pourcentage_utilise
-FROM pg_sequences
-WHERE sequencename LIKE '%_id_seq';
+FROM pg_sequences  
+WHERE sequencename LIKE '%_id_seq';  
 ```
 
 ---
@@ -946,11 +946,11 @@ CREATE TABLE items_distribues (
 
 ### Points Clés
 
-1. **SEQUENCE** : Générateur de nombres automatique
-2. **SERIAL** : Raccourci PostgreSQL (crée séquence + colonne)
-3. **IDENTITY** : Standard SQL (préféré pour nouveau code)
-4. **Trous normaux** : Les séquences ne reculent jamais
-5. **Non transactionnel** : ROLLBACK ne restitue pas les IDs
+1. **SEQUENCE** : Générateur de nombres automatique  
+2. **SERIAL** : Raccourci PostgreSQL (crée séquence + colonne)  
+3. **IDENTITY** : Standard SQL (préféré pour nouveau code)  
+4. **Trous normaux** : Les séquences ne reculent jamais  
+5. **Non transactionnel** : ROLLBACK ne restitue pas les IDs  
 6. **Thread-safe** : Utilisable en concurrence
 
 ### Commandes Essentielles
@@ -966,9 +966,9 @@ CREATE TABLE t (id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY);
 CREATE SEQUENCE seq START WITH 1000;
 
 -- Utiliser séquence
-SELECT nextval('seq');
-SELECT currval('seq');
-SELECT setval('seq', 5000);
+SELECT nextval('seq');  
+SELECT currval('seq');  
+SELECT setval('seq', 5000);  
 
 -- Synchroniser
 SELECT setval('seq', (SELECT MAX(id) FROM table));
@@ -993,9 +993,9 @@ ALTER SEQUENCE seq RESTART WITH 1;
 
 Les séquences sont un mécanisme fondamental de PostgreSQL pour générer des identifiants uniques automatiquement. Comprendre leur fonctionnement vous permet de :
 
-- ✅ Créer des clés primaires efficaces
-- ✅ Éviter les erreurs courantes
-- ✅ Optimiser les performances
+- ✅ Créer des clés primaires efficaces  
+- ✅ Éviter les erreurs courantes  
+- ✅ Optimiser les performances  
 - ✅ Gérer correctement les cas complexes
 
 **Recommandation moderne :** Pour les nouveaux projets, utilisez `IDENTITY` pour la conformité au standard SQL, ou `UUID v7` (PostgreSQL 18+) pour les systèmes distribués.

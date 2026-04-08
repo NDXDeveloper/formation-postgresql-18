@@ -20,9 +20,9 @@ Dans ce chapitre, nous allons explorer les principaux domaines où PostgreSQL ex
 
 Ce sont des applications qui gèrent un grand nombre de transactions courtes et concurrentes :
 
-- **Volume :** Milliers à millions de requêtes par seconde
-- **Type de requêtes :** Lectures et écritures ponctuelles (SELECT, INSERT, UPDATE, DELETE)
-- **Latence :** Faible latence requise (< 10ms)
+- **Volume :** Milliers à millions de requêtes par seconde  
+- **Type de requêtes :** Lectures et écritures ponctuelles (SELECT, INSERT, UPDATE, DELETE)  
+- **Latence :** Faible latence requise (< 10ms)  
 - **Concurrence :** Nombreux utilisateurs simultanés
 
 #### Exemples Concrets
@@ -47,16 +47,16 @@ Ce sont des applications qui gèrent un grand nombre de transactions courtes et 
 
 #### Pourquoi PostgreSQL Excelle Ici ?
 
-- ✅ **MVCC** : Gestion exceptionnelle de la concurrence
-- ✅ **ACID** : Garanties transactionnelles fortes
-- ✅ **Indexes performants** : B-Tree, GIN, GiST pour tous types de requêtes
-- ✅ **Réplication** : Haute disponibilité native
+- ✅ **MVCC** : Gestion exceptionnelle de la concurrence  
+- ✅ **ACID** : Garanties transactionnelles fortes  
+- ✅ **Indexes performants** : B-Tree, GIN, GiST pour tous types de requêtes  
+- ✅ **Réplication** : Haute disponibilité native  
 - ✅ **Écosystème mature** : Drivers excellents pour tous langages (Python, Java, Node.js, Go, .NET)
 
 **Entreprises utilisant PostgreSQL pour OLTP :**
-- **Instagram** : Des milliards de photos et utilisateurs
-- **Reddit** : Millions d'utilisateurs actifs simultanés
-- **Spotify** : Métadonnées musicales et profils utilisateurs
+- **Instagram** : Des milliards de photos et utilisateurs  
+- **Reddit** : Millions d'utilisateurs actifs simultanés  
+- **Spotify** : Métadonnées musicales et profils utilisateurs  
 - **Twitch** : Chat, streams, métadonnées vidéo
 
 ---
@@ -69,9 +69,9 @@ Ce sont des applications qui gèrent un grand nombre de transactions courtes et 
 
 Applications orientées vers l'analyse et la prise de décision :
 
-- **Volume :** Larges ensembles de données (téraoctets)
-- **Type de requêtes :** Agrégations complexes, jointures massives
-- **Latence :** Acceptable (secondes à minutes)
+- **Volume :** Larges ensembles de données (téraoctets)  
+- **Type de requêtes :** Agrégations complexes, jointures massives  
+- **Latence :** Acceptable (secondes à minutes)  
 - **Fréquence :** Requêtes moins fréquentes mais lourdes
 
 #### Exemples Concrets
@@ -96,11 +96,11 @@ Applications orientées vers l'analyse et la prise de décision :
 
 #### Pourquoi PostgreSQL Excelle Ici ?
 
-- ✅ **Window Functions** : Fonctions de fenêtrage puissantes pour analyses avancées
-- ✅ **CTE Récursives** : Requêtes hiérarchiques complexes
-- ✅ **Partitionnement** : Gestion efficace de grandes tables
-- ✅ **Agrégations avancées** : ROLLUP, CUBE, GROUPING SETS
-- ✅ **Extensions spécialisées** : TimescaleDB (séries temporelles), Citus (parallélisation)
+- ✅ **Window Functions** : Fonctions de fenêtrage puissantes pour analyses avancées  
+- ✅ **CTE Récursives** : Requêtes hiérarchiques complexes  
+- ✅ **Partitionnement** : Gestion efficace de grandes tables  
+- ✅ **Agrégations avancées** : ROLLUP, CUBE, GROUPING SETS  
+- ✅ **Extensions spécialisées** : TimescaleDB (séries temporelles), Citus (parallélisation)  
 - ✅ **Foreign Data Wrappers** : Fédération de données multi-sources
 
 **Cas d'usage spécifique :**
@@ -108,8 +108,8 @@ Applications orientées vers l'analyse et la prise de décision :
 Les **colonnes virtuelles** de PostgreSQL 18 sont parfaites pour le data warehousing : elles permettent de calculer des métriques à la volée sans dupliquer les données.
 
 **Entreprises utilisant PostgreSQL pour Analytics :**
-- **Apple** : Analytics interne massif
-- **The Guardian** : Analytics de lecture d'articles
+- **Apple** : Analytics interne massif  
+- **The Guardian** : Analytics de lecture d'articles  
 - **Robinhood** : Analytics financières
 
 ---
@@ -122,8 +122,8 @@ Les **colonnes virtuelles** de PostgreSQL 18 sont parfaites pour le data warehou
 
 Applications manipulant des données géographiques et spatiales :
 
-- **Type de données :** Points, lignes, polygones, coordonnées
-- **Opérations :** Calculs de distance, intersections, zones tampons
+- **Type de données :** Points, lignes, polygones, coordonnées  
+- **Opérations :** Calculs de distance, intersections, zones tampons  
 - **Visualisation :** Cartes, itinéraires, zones de couverture
 
 #### Exemples Concrets
@@ -150,18 +150,18 @@ Applications manipulant des données géographiques et spatiales :
 
 #### Pourquoi PostgreSQL Excelle Ici ?
 
-- ✅ **PostGIS** : L'extension SIG de référence mondiale (utilisée par 99% des projets SIG open source)
-- ✅ **Conformité OGC** : Respect des standards géospatiaux
-- ✅ **Index spatiaux** : GiST et SP-GiST pour requêtes géométriques ultra-rapides
-- ✅ **Fonctions riches** : Plus de 400 fonctions spatiales (distance, intersection, buffer, etc.)
-- ✅ **Support 3D** : Gestion de l'altitude et volumes
+- ✅ **PostGIS** : L'extension SIG de référence mondiale (utilisée par 99% des projets SIG open source)  
+- ✅ **Conformité OGC** : Respect des standards géospatiaux  
+- ✅ **Index spatiaux** : GiST et SP-GiST pour requêtes géométriques ultra-rapides  
+- ✅ **Fonctions riches** : Plus de 400 fonctions spatiales (distance, intersection, buffer, etc.)  
+- ✅ **Support 3D** : Gestion de l'altitude et volumes  
 - ✅ **Intégrations** : QGIS, ArcGIS, GeoServer, MapServer
 
 **PostGIS transforme PostgreSQL en base de données géospatiale de niveau professionnel.**
 
 **Exemples réels :**
-- **Uber** : Calcul d'itinéraires et zones de tarification
-- **OpenStreetMap** : Stockage de la plus grande carte collaborative du monde
+- **Uber** : Calcul d'itinéraires et zones de tarification  
+- **OpenStreetMap** : Stockage de la plus grande carte collaborative du monde  
 - **Gouvernements** : Cadastres nationaux (France, Canada, etc.)
 
 ---
@@ -172,9 +172,9 @@ Applications manipulant des données géographiques et spatiales :
 
 Applications collectant des données horodatées en continu :
 
-- **Volume :** Très élevé (millions de points par jour)
-- **Croissance :** Constante et prévisible
-- **Pattern :** Données ordonnées chronologiquement
+- **Volume :** Très élevé (millions de points par jour)  
+- **Croissance :** Constante et prévisible  
+- **Pattern :** Données ordonnées chronologiquement  
 - **Rétention :** Souvent avec politiques d'archivage
 
 #### Exemples Concrets
@@ -203,11 +203,11 @@ Applications collectant des données horodatées en continu :
 
 #### Pourquoi PostgreSQL Excelle Ici ?
 
-- ✅ **TimescaleDB** : Extension transformant PostgreSQL en base optimisée pour séries temporelles
-- ✅ **Partitionnement temporel** : Gestion efficace de données croissantes
-- ✅ **Compression automatique** : Économie d'espace sans perte de performance
-- ✅ **Continuous Aggregates** : Pré-calculs automatiques de métriques
-- ✅ **Rétention policies** : Suppression automatique de vieilles données
+- ✅ **TimescaleDB** : Extension transformant PostgreSQL en base optimisée pour séries temporelles  
+- ✅ **Partitionnement temporel** : Gestion efficace de données croissantes  
+- ✅ **Compression automatique** : Économie d'espace sans perte de performance  
+- ✅ **Continuous Aggregates** : Pré-calculs automatiques de métriques  
+- ✅ **Rétention policies** : Suppression automatique de vieilles données  
 - ✅ **BRIN indexes** : Index ultra-compacts pour données séquentielles
 
 **Comparaison :**
@@ -215,8 +215,8 @@ Applications collectant des données horodatées en continu :
 PostgreSQL + TimescaleDB rivalise avec des bases dédiées comme InfluxDB ou TimeSeries DB, tout en conservant la puissance SQL complète.
 
 **Entreprises utilisant PostgreSQL pour IoT/TimeSeries :**
-- **Comcast** : Monitoring réseau câble
-- **General Electric** : Données de turbines industrielles
+- **Comcast** : Monitoring réseau câble  
+- **General Electric** : Données de turbines industrielles  
 - **Tesla** : Télémétrie de véhicules
 
 ---
@@ -227,9 +227,9 @@ PostgreSQL + TimescaleDB rivalise avec des bases dédiées comme InfluxDB ou Tim
 
 Applications nécessitant une recherche textuelle avancée :
 
-- **Fonctionnalités :** Recherche floue, pertinence, ranking
-- **Langues :** Support multilingue avec stemming
-- **Volume :** Millions de documents indexés
+- **Fonctionnalités :** Recherche floue, pertinence, ranking  
+- **Langues :** Support multilingue avec stemming  
+- **Volume :** Millions de documents indexés  
 - **Latence :** Temps de réponse sub-seconde
 
 #### Exemples Concrets
@@ -253,12 +253,12 @@ Applications nécessitant une recherche textuelle avancée :
 
 #### Pourquoi PostgreSQL Excelle Ici ?
 
-- ✅ **Full-Text Search natif** : Types tsvector et tsquery
-- ✅ **Support multilingue** : Dictionnaires pour 20+ langues
-- ✅ **Ranking** : Calcul de pertinence (ts_rank)
-- ✅ **Pondération** : Importance variable des champs (A, B, C, D)
-- ✅ **Index GIN** : Performances excellentes
-- ✅ **Highlighting** : Mise en évidence des termes trouvés
+- ✅ **Full-Text Search natif** : Types tsvector et tsquery  
+- ✅ **Support multilingue** : Dictionnaires pour 20+ langues  
+- ✅ **Ranking** : Calcul de pertinence (ts_rank)  
+- ✅ **Pondération** : Importance variable des champs (A, B, C, D)  
+- ✅ **Index GIN** : Performances excellentes  
+- ✅ **Highlighting** : Mise en évidence des termes trouvés  
 - ✅ **pg_trgm** : Recherche floue et similarité
 
 **Alternative à Elasticsearch ?**
@@ -266,8 +266,8 @@ Applications nécessitant une recherche textuelle avancée :
 Pour des besoins simples à moyens, PostgreSQL FTS peut remplacer Elasticsearch et éviter la complexité d'un système séparé. Pour des besoins très avancés (faceting complexe, ML ranking), Elasticsearch reste supérieur.
 
 **Entreprises :**
-- **Medium** : Recherche d'articles
-- **Discourse** : Moteur de forums
+- **Medium** : Recherche d'articles  
+- **Discourse** : Moteur de forums  
 - **GitLab** : Recherche de code et issues
 
 ---
@@ -278,8 +278,8 @@ Pour des besoins simples à moyens, PostgreSQL FTS peut remplacer Elasticsearch 
 
 Applications nécessitant à la fois structure et flexibilité :
 
-- **Schéma évolutif** : Ajout de champs sans migration
-- **Données semi-structurées** : Documents JSON complexes
+- **Schéma évolutif** : Ajout de champs sans migration  
+- **Données semi-structurées** : Documents JSON complexes  
 - **Requêtes mixtes** : SQL relationnel + requêtes document
 
 #### Exemples Concrets
@@ -302,11 +302,11 @@ Applications nécessitant à la fois structure et flexibilité :
 
 #### Pourquoi PostgreSQL Excelle Ici ?
 
-- ✅ **JSONB** : Type JSON binaire ultra-performant
-- ✅ **Indexation JSON** : GIN avec jsonb_path_ops
-- ✅ **Opérateurs riches** : @>, ?, ?|, ?&, #>, #>>
-- ✅ **Requêtes JSON Path** : Standard SQL/JSON
-- ✅ **Mélange relationnel/document** : Le meilleur des deux mondes
+- ✅ **JSONB** : Type JSON binaire ultra-performant  
+- ✅ **Indexation JSON** : GIN avec jsonb_path_ops  
+- ✅ **Opérateurs riches** : @>, ?, ?|, ?&, #>, #>>  
+- ✅ **Requêtes JSON Path** : Standard SQL/JSON  
+- ✅ **Mélange relationnel/document** : Le meilleur des deux mondes  
 - ✅ **Contraintes sur JSON** : Validation de schéma avec CHECK
 
 **Exemple de puissance :**
@@ -324,22 +324,22 @@ CREATE TABLE produits (
 CREATE INDEX idx_couleur ON produits ((attributs->>'couleur'));
 
 -- Requête mixte
-SELECT nom, prix, attributs->>'couleur' as couleur
-FROM produits
-WHERE prix < 100
+SELECT nom, prix, attributs->>'couleur' as couleur  
+FROM produits  
+WHERE prix < 100  
   AND attributs @> '{"marque": "Samsung"}';
 ```
 
 **Comparaison avec MongoDB :**
 
 PostgreSQL avec JSONB offre :
-- ✅ Mêmes performances que MongoDB pour requêtes JSON
-- ✅ En PLUS : SQL complet, transactions ACID, jointures
+- ✅ Mêmes performances que MongoDB pour requêtes JSON  
+- ✅ En PLUS : SQL complet, transactions ACID, jointures  
 - ✅ Pas besoin de système séparé
 
 **Entreprises :**
-- **Heap Analytics** : Événements utilisateurs en JSONB
-- **Segment** : Tracking événements
+- **Heap Analytics** : Événements utilisateurs en JSONB  
+- **Segment** : Tracking événements  
 - **LaunchDarkly** : Feature flags en JSON
 
 ---
@@ -350,9 +350,9 @@ PostgreSQL avec JSONB offre :
 
 Applications utilisant l'IA et nécessitant des recherches vectorielles :
 
-- **Embeddings** : Vecteurs de haute dimension (768, 1536 dimensions)
-- **Similarité** : Recherche par proximité vectorielle
-- **Volume :** Millions de vecteurs
+- **Embeddings** : Vecteurs de haute dimension (768, 1536 dimensions)  
+- **Similarité** : Recherche par proximité vectorielle  
+- **Volume :** Millions de vecteurs  
 - **Latence :** Sub-seconde pour requêtes de similarité
 
 #### Exemples Concrets
@@ -379,11 +379,11 @@ Applications utilisant l'IA et nécessitant des recherches vectorielles :
 
 #### Pourquoi PostgreSQL Excelle Ici ?
 
-- ✅ **pgvector** : Extension pour vecteurs et similarité
-- ✅ **Index HNSW** : Approximation rapide des plus proches voisins
-- ✅ **Index IVFFlat** : Alternative pour grandes collections
-- ✅ **Distances multiples** : Cosine, L2 (Euclidean), Inner Product
-- ✅ **Intégration avec LLMs** : OpenAI, Anthropic, Cohere, Llama
+- ✅ **pgvector** : Extension pour vecteurs et similarité  
+- ✅ **Index HNSW** : Approximation rapide des plus proches voisins  
+- ✅ **Index IVFFlat** : Alternative pour grandes collections  
+- ✅ **Distances multiples** : Cosine, L2 (Euclidean), Inner Product  
+- ✅ **Intégration avec LLMs** : OpenAI, Anthropic, Cohere, Llama  
 - ✅ **Données mixtes** : Vecteurs + métadonnées relationnelles
 
 **Exemple conceptuel :**
@@ -404,18 +404,18 @@ CREATE TABLE documents (
 CREATE INDEX ON documents USING hnsw (embedding vector_cosine_ops);
 
 -- Recherche sémantique (trouver documents similaires)
-SELECT titre, contenu
-FROM documents
-ORDER BY embedding <=> '[0.1, 0.2, ...]'::vector  -- Vecteur de la requête
-LIMIT 5;
+SELECT titre, contenu  
+FROM documents  
+ORDER BY embedding <=> '[0.1, 0.2, ...]'::vector  -- Vecteur de la requête  
+LIMIT 5;  
 ```
 
 **Architecture RAG typique :**
 
-1. Utilisateur pose une question
-2. Question transformée en embedding (via API OpenAI)
-3. PostgreSQL trouve les documents les plus pertinents
-4. Documents + question envoyés au LLM
+1. Utilisateur pose une question  
+2. Question transformée en embedding (via API OpenAI)  
+3. PostgreSQL trouve les documents les plus pertinents  
+4. Documents + question envoyés au LLM  
 5. LLM génère une réponse contextuelle
 
 **Avantages PostgreSQL pour IA :**
@@ -426,7 +426,7 @@ LIMIT 5;
 - Coût réduit (pas de service externe)
 
 **Entreprises :**
-- **Notion AI** : Recherche sémantique dans documents
+- **Notion AI** : Recherche sémantique dans documents  
 - **Supabase** : Plateforme avec pgvector intégré
 - Nombreuses startups IA utilisent PostgreSQL + pgvector
 
@@ -438,9 +438,9 @@ LIMIT 5;
 
 Recherche académique et industrielle nécessitant rigueur :
 
-- **Exactitude** : Précision mathématique critique
-- **Reproductibilité** : Résultats identiques à chaque exécution
-- **Traçabilité** : Audit complet des données
+- **Exactitude** : Précision mathématique critique  
+- **Reproductibilité** : Résultats identiques à chaque exécution  
+- **Traçabilité** : Audit complet des données  
 - **Intégrité** : Aucune perte de données acceptable
 
 #### Exemples Concrets
@@ -469,16 +469,16 @@ Recherche académique et industrielle nécessitant rigueur :
 
 #### Pourquoi PostgreSQL Excelle Ici ?
 
-- ✅ **Intégrité ACID** : Garanties transactionnelles absolues
-- ✅ **Précision numérique** : Type NUMERIC arbitrairement précis
-- ✅ **Reproductibilité** : Comportement déterministe
-- ✅ **Audit** : Row-Level Security et triggers
-- ✅ **Extensions scientifiques** : PostGIS (spatial), pgrouting (graphes), plpython3u (intégration Python)
-- ✅ **Support de types complexes** : Arrays, custom types
+- ✅ **Intégrité ACID** : Garanties transactionnelles absolues  
+- ✅ **Précision numérique** : Type NUMERIC arbitrairement précis  
+- ✅ **Reproductibilité** : Comportement déterministe  
+- ✅ **Audit** : Row-Level Security et triggers  
+- ✅ **Extensions scientifiques** : PostGIS (spatial), pgrouting (graphes), plpython3u (intégration Python)  
+- ✅ **Support de types complexes** : Arrays, custom types  
 - ✅ **Open source** : Transparence complète du code
 
 **Cas d'usage :**
-- **CERN** : Données du Large Hadron Collider
+- **CERN** : Données du Large Hadron Collider  
 - **NASA** : Données spatiales et astronomiques
 - Universités du monde entier
 
@@ -492,10 +492,10 @@ Recherche académique et industrielle nécessitant rigueur :
 
 **DB-Engines Ranking (Novembre 2025) :**
 
-1. Oracle (Commercial)
-2. MySQL (Open Source, Oracle)
-3. Microsoft SQL Server (Commercial)
-4. **PostgreSQL** (Open Source, Communautaire)
+1. Oracle (Commercial)  
+2. MySQL (Open Source, Oracle)  
+3. Microsoft SQL Server (Commercial)  
+4. **PostgreSQL** (Open Source, Communautaire)  
 5. MongoDB (Open Source/Commercial, NoSQL)
 
 **Tendances :**
@@ -599,9 +599,9 @@ Recherche académique et industrielle nécessitant rigueur :
 - iCloud services
 
 **Instagram (Meta)**
-- Base principale (400+ millions de lignes)
+- Base principale gérant des milliards de lignes
 - Photos, utilisateurs, messages
-- Sharding pour scale
+- Sharding massif pour scalabilité horizontale
 
 **Spotify**
 - Métadonnées musicales
@@ -642,10 +642,10 @@ Recherche académique et industrielle nécessitant rigueur :
 - Transactions
 - Recherche
 
-**Shopify**
-- Plateforme e-commerce
-- Millions de boutiques
-- Données transactionnelles
+**Zalando**
+- Plateforme e-commerce leader en Europe
+- Millions de produits et commandes
+- Contributeur majeur de Patroni (HA pour PostgreSQL)
 
 #### Gouvernements et Services Publics
 
@@ -745,7 +745,7 @@ Recherche académique et industrielle nécessitant rigueur :
 
 ⚠️ **Recherche full-text ultra-avancée**
 - Faceting complexe, ML ranking
-- → Elasticsearch reste supérieur
+- → Elasticsearch reste supérieur  
 - (Mais PostgreSQL FTS suffit pour 80% des cas)
 
 ---
@@ -762,7 +762,7 @@ Recherche académique et industrielle nécessitant rigueur :
 
 2. **Azure**
    - Azure Database for PostgreSQL
-   - Flexible Server / Single Server
+   - Flexible Server (Single Server est déprécié)
 
 3. **Google Cloud**
    - Cloud SQL for PostgreSQL
@@ -778,13 +778,13 @@ Recherche académique et industrielle nécessitant rigueur :
 
 **Par Domaine :**
 
-- **Spatial :** PostGIS, pgrouting
-- **Time-series :** TimescaleDB
-- **Analytics :** Citus (sharding), pg_partman
-- **AI/ML :** pgvector, MADlib
-- **Full-Text :** pg_trgm, rum
-- **Monitoring :** pg_stat_statements, pg_stat_kcache
-- **Administration :** pg_repack, pgBackRest
+- **Spatial :** PostGIS, pgrouting  
+- **Time-series :** TimescaleDB  
+- **Analytics :** Citus (sharding), pg_partman  
+- **AI/ML :** pgvector, MADlib  
+- **Full-Text :** pg_trgm, rum  
+- **Monitoring :** pg_stat_statements, pg_stat_kcache  
+- **Administration :** pg_repack, pgBackRest  
 - **Auditing :** pgAudit
 
 ### Outils de l'Écosystème
@@ -863,13 +863,13 @@ PostgreSQL s'est imposé comme l'un des SGBD les plus polyvalents et fiables de 
 
 ### Points Clés à Retenir
 
-- ✅ **Polyvalence** : PostgreSQL s'adapte à presque tous les cas d'usage
-- ✅ **Fiabilité** : Utilisé par les plus grandes entreprises tech
-- ✅ **Économie** : Gratuit, sans licence, réduit le TCO
-- ✅ **Standards** : SQL conforme, portabilité garantie
-- ✅ **Communauté** : Écosystème riche, indépendant, actif
-- ✅ **Extensibilité** : Extensions pour besoins spécifiques
-- ✅ **Performance** : Rivalise avec les solutions commerciales
+- ✅ **Polyvalence** : PostgreSQL s'adapte à presque tous les cas d'usage  
+- ✅ **Fiabilité** : Utilisé par les plus grandes entreprises tech  
+- ✅ **Économie** : Gratuit, sans licence, réduit le TCO  
+- ✅ **Standards** : SQL conforme, portabilité garantie  
+- ✅ **Communauté** : Écosystème riche, indépendant, actif  
+- ✅ **Extensibilité** : Extensions pour besoins spécifiques  
+- ✅ **Performance** : Rivalise avec les solutions commerciales  
 - ✅ **Open Source** : Transparence, liberté, pérennité
 
 ### En Résumé

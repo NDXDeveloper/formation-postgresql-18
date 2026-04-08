@@ -6,15 +6,15 @@
 
 PostgreSQL offre une fonctionnalité puissante : la possibilité de créer vos **propres types de données**. Cette fonctionnalité permet de :
 
-- ✅ **Réutiliser** des définitions de types avec contraintes
-- ✅ **Standardiser** les types de données à travers votre application
-- ✅ **Simplifier** la maintenance du schéma
+- ✅ **Réutiliser** des définitions de types avec contraintes  
+- ✅ **Standardiser** les types de données à travers votre application  
+- ✅ **Simplifier** la maintenance du schéma  
 - ✅ **Documenter** les intentions métier dans le schéma
 
 Dans cette section, nous allons explorer :
-- **DOMAIN** : Types basés sur des types existants avec contraintes personnalisées
-- **COMPOSITE TYPE** : Types structurés avec plusieurs champs
-- **ENUM** : Types énumérés (rappel et approfondissement)
+- **DOMAIN** : Types basés sur des types existants avec contraintes personnalisées  
+- **COMPOSITE TYPE** : Types structurés avec plusieurs champs  
+- **ENUM** : Types énumérés (rappel et approfondissement)  
 - **RANGE TYPE** : Types pour représenter des plages de valeurs
 
 ---
@@ -98,12 +98,12 @@ CREATE TABLE adresses (
 );
 
 -- OK
-INSERT INTO adresses (rue, ville, code_postal)
-VALUES ('10 rue de la Paix', 'Paris', '75001');
+INSERT INTO adresses (rue, ville, code_postal)  
+VALUES ('10 rue de la Paix', 'Paris', '75001');  
 
 -- Erreur
-INSERT INTO adresses (rue, ville, code_postal)
-VALUES ('20 avenue Victor Hugo', 'Lyon', '6900');  -- Manque un chiffre
+INSERT INTO adresses (rue, ville, code_postal)  
+VALUES ('20 avenue Victor Hugo', 'Lyon', '6900');  -- Manque un chiffre  
 ```
 
 #### Numéro de Téléphone
@@ -139,8 +139,8 @@ CREATE TABLE produits (
 );
 
 -- OK
-INSERT INTO produits (nom, prix, cout_production)
-VALUES ('Laptop', 999.99, 650.00);
+INSERT INTO produits (nom, prix, cout_production)  
+VALUES ('Laptop', 999.99, 650.00);  
 
 -- Erreur
 INSERT INTO produits (nom, prix) VALUES ('Souris', -10.00);
@@ -187,8 +187,8 @@ CREATE TABLE abonnements (
     statut statut_actif  -- Valeur par défaut : 'actif'
 );
 
-INSERT INTO abonnements (user_id) VALUES (1);
-SELECT * FROM abonnements;
+INSERT INTO abonnements (user_id) VALUES (1);  
+SELECT * FROM abonnements;  
 -- Résultat : statut = 'actif'
 ```
 
@@ -224,44 +224,44 @@ CREATE TABLE utilisateurs_username (
 );
 
 -- OK
-INSERT INTO utilisateurs_username (username, email)
-VALUES ('alice_2025', 'alice@example.com');
+INSERT INTO utilisateurs_username (username, email)  
+VALUES ('alice_2025', 'alice@example.com');  
 
 -- Erreur : majuscule
-INSERT INTO utilisateurs_username (username, email)
-VALUES ('Alice', 'alice@example.com');
+INSERT INTO utilisateurs_username (username, email)  
+VALUES ('Alice', 'alice@example.com');  
 
 -- Erreur : trop court
-INSERT INTO utilisateurs_username (username, email)
-VALUES ('ab', 'bob@example.com');
+INSERT INTO utilisateurs_username (username, email)  
+VALUES ('ab', 'bob@example.com');  
 ```
 
 ### Modifier un Domaine
 
 ```sql
 -- Ajouter une contrainte
-ALTER DOMAIN email_address
-ADD CONSTRAINT email_length CHECK (LENGTH(VALUE) <= 255);
+ALTER DOMAIN email_address  
+ADD CONSTRAINT email_length CHECK (LENGTH(VALUE) <= 255);  
 
 -- Supprimer une contrainte
-ALTER DOMAIN email_address
-DROP CONSTRAINT email_length;
+ALTER DOMAIN email_address  
+DROP CONSTRAINT email_length;  
 
 -- Changer la valeur par défaut
-ALTER DOMAIN statut_actif
-SET DEFAULT 'inactif';
+ALTER DOMAIN statut_actif  
+SET DEFAULT 'inactif';  
 
 -- Supprimer la valeur par défaut
-ALTER DOMAIN statut_actif
-DROP DEFAULT;
+ALTER DOMAIN statut_actif  
+DROP DEFAULT;  
 
 -- Ajouter NOT NULL
-ALTER DOMAIN email_address
-SET NOT NULL;
+ALTER DOMAIN email_address  
+SET NOT NULL;  
 
 -- Supprimer NOT NULL
-ALTER DOMAIN email_address
-DROP NOT NULL;
+ALTER DOMAIN email_address  
+DROP NOT NULL;  
 
 -- Renommer
 ALTER DOMAIN email_address RENAME TO adresse_email;
@@ -291,9 +291,9 @@ SELECT
     n.nspname AS schema,
     t.typname AS domain_name,
     pg_catalog.format_type(t.typbasetype, t.typtypmod) AS base_type
-FROM pg_catalog.pg_type t
-JOIN pg_catalog.pg_namespace n ON n.oid = t.typnamespace
-WHERE t.typtype = 'd'
+FROM pg_catalog.pg_type t  
+JOIN pg_catalog.pg_namespace n ON n.oid = t.typnamespace  
+WHERE t.typtype = 'd'  
   AND n.nspname = 'public'
 ORDER BY domain_name;
 ```
@@ -365,8 +365,8 @@ FROM personnes;
 SELECT nom, adresse_principale FROM personnes;
 
 -- Filtrer sur un champ du composite
-SELECT * FROM personnes
-WHERE (adresse_principale).ville = 'Paris';
+SELECT * FROM personnes  
+WHERE (adresse_principale).ville = 'Paris';  
 ```
 
 **Note :** Les parenthèses autour du nom de colonne sont nécessaires pour éviter l'ambiguïté.
@@ -422,9 +422,9 @@ INSERT INTO projets (nom, phase_conception, phase_developpement) VALUES (
 );
 
 -- Vérifier si une date est dans une période
-SELECT nom
-FROM projets
-WHERE CURRENT_DATE BETWEEN
+SELECT nom  
+FROM projets  
+WHERE CURRENT_DATE BETWEEN  
     (phase_developpement).date_debut AND
     (phase_developpement).date_fin;
 ```
@@ -577,8 +577,8 @@ CREATE TABLE commandes (
 -- ✓ Ordre préservé
 
 -- Modifier
-ALTER TYPE statut_commande ADD VALUE 'retournee';
-ALTER TYPE statut_commande ADD VALUE 'en_preparation' BEFORE 'expediee';
+ALTER TYPE statut_commande ADD VALUE 'retournee';  
+ALTER TYPE statut_commande ADD VALUE 'en_preparation' BEFORE 'expediee';  
 ```
 
 ---
@@ -619,8 +619,8 @@ SELECT '(1, 10)'::INT4RANGE;  -- 2, 3, ..., 9
 SELECT 'empty'::INT4RANGE;
 
 -- Plage infinie
-SELECT '[1, )'::INT4RANGE;    -- De 1 à l'infini
-SELECT '(, 10]'::INT4RANGE;   -- De l'infini négatif à 10
+SELECT '[1, )'::INT4RANGE;    -- De 1 à l'infini  
+SELECT '(, 10]'::INT4RANGE;   -- De l'infini négatif à 10  
 ```
 
 ### Exemple : Réservations de Salles
@@ -670,19 +670,19 @@ INSERT INTO reservations_salles (salle_id, periode, reserve_par) VALUES (
 
 ```sql
 -- Contient
-SELECT '[1, 10]'::INT4RANGE @> 5;  -- true (5 est dans [1,10])
-SELECT '[1, 10]'::INT4RANGE @> 15; -- false
+SELECT '[1, 10]'::INT4RANGE @> 5;  -- true (5 est dans [1,10])  
+SELECT '[1, 10]'::INT4RANGE @> 15; -- false  
 
 -- Est contenu dans
 SELECT 5 <@ '[1, 10]'::INT4RANGE;  -- true
 
 -- Chevauche (intersecte)
-SELECT '[1, 5]'::INT4RANGE && '[3, 8]'::INT4RANGE;  -- true
-SELECT '[1, 5]'::INT4RANGE && '[6, 10]'::INT4RANGE; -- false
+SELECT '[1, 5]'::INT4RANGE && '[3, 8]'::INT4RANGE;  -- true  
+SELECT '[1, 5]'::INT4RANGE && '[6, 10]'::INT4RANGE; -- false  
 
 -- Adjacent
-SELECT '[1, 5]'::INT4RANGE -|- '[5, 10]'::INT4RANGE; -- true
-SELECT '[1, 5]'::INT4RANGE -|- '[6, 10]'::INT4RANGE; -- false
+SELECT '[1, 5]'::INT4RANGE -|- '[5, 10]'::INT4RANGE; -- true  
+SELECT '[1, 5]'::INT4RANGE -|- '[6, 10]'::INT4RANGE; -- false  
 
 -- Union
 SELECT '[1, 5]'::INT4RANGE + '[3, 8]'::INT4RANGE;  -- [1, 8]
@@ -698,20 +698,20 @@ SELECT '[1, 10]'::INT4RANGE - '[5, 15]'::INT4RANGE;  -- [1, 5)
 
 ```sql
 -- Limites
-SELECT lower('[1, 10]'::INT4RANGE);  -- 1
-SELECT upper('[1, 10]'::INT4RANGE);  -- 10
+SELECT lower('[1, 10]'::INT4RANGE);  -- 1  
+SELECT upper('[1, 10]'::INT4RANGE);  -- 10  
 
 -- Est vide ?
-SELECT isempty('[1, 1]'::INT4RANGE);  -- true
-SELECT isempty('[1, 10]'::INT4RANGE); -- false
+SELECT isempty('[1, 1]'::INT4RANGE);  -- true  
+SELECT isempty('[1, 10]'::INT4RANGE); -- false  
 
 -- Borne inférieure/supérieure est inclusive ?
-SELECT lower_inc('[1, 10]'::INT4RANGE);  -- true
-SELECT upper_inc('[1, 10)'::INT4RANGE);  -- false
+SELECT lower_inc('[1, 10]'::INT4RANGE);  -- true  
+SELECT upper_inc('[1, 10)'::INT4RANGE);  -- false  
 
 -- Borne inférieure/supérieure est infinie ?
-SELECT lower_inf('[1, )'::INT4RANGE);   -- false
-SELECT upper_inf('[1, )'::INT4RANGE);   -- true
+SELECT lower_inf('[1, )'::INT4RANGE);   -- false  
+SELECT upper_inf('[1, )'::INT4RANGE);   -- true  
 ```
 
 ### Cas d'Usage des Range Types
@@ -735,9 +735,9 @@ INSERT INTO tarifs (produit_id, quantite_range, prix_unitaire) VALUES
     (1, '[50, )'::INT4RANGE, 8.00);     -- 50+ unités : 8€
 
 -- Trouver le prix pour 25 unités
-SELECT prix_unitaire
-FROM tarifs
-WHERE produit_id = 1
+SELECT prix_unitaire  
+FROM tarifs  
+WHERE produit_id = 1  
   AND quantite_range @> 25;
 -- Résultat : 9.00
 ```
@@ -759,8 +759,8 @@ INSERT INTO abonnements (user_id, type, periode) VALUES
     (1, 'Premium', '[2025-01-01, 2025-06-30]'::DATERANGE);
 
 -- Vérifier si l'abonnement est actif aujourd'hui
-SELECT * FROM abonnements
-WHERE user_id = 1
+SELECT * FROM abonnements  
+WHERE user_id = 1  
   AND periode @> CURRENT_DATE;
 ```
 
@@ -780,8 +780,8 @@ INSERT INTO categories_age (nom, plage_age) VALUES
     ('Senior', '[65, )'::INT4RANGE);
 
 -- Trouver la catégorie pour un âge donné
-SELECT nom FROM categories_age
-WHERE plage_age @> 30;
+SELECT nom FROM categories_age  
+WHERE plage_age @> 30;  
 -- Résultat : Adulte
 ```
 
@@ -819,12 +819,12 @@ CREATE DOMAIN email AS VARCHAR(255)
     CHECK (VALUE ~* '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$');
 
 -- Utiliser partout
-CREATE TABLE t1 (email email);
-CREATE TABLE t2 (contact_email email);
+CREATE TABLE t1 (email email);  
+CREATE TABLE t2 (contact_email email);  
 
 -- ❌ MAUVAIS : Répéter les contraintes
-CREATE TABLE t1 (email VARCHAR(255) CHECK (...));
-CREATE TABLE t2 (email VARCHAR(255) CHECK (...));
+CREATE TABLE t1 (email VARCHAR(255) CHECK (...));  
+CREATE TABLE t2 (email VARCHAR(255) CHECK (...));  
 ```
 
 ### 2. Types Composites : Pour Données Cohésives
@@ -880,11 +880,11 @@ CREATE TABLE reservations (
 
 ```sql
 -- ✅ BON : Commenter les types
-CREATE DOMAIN email AS VARCHAR(255) CHECK (...);
-COMMENT ON DOMAIN email IS 'Adresse email validée selon RFC 5322';
+CREATE DOMAIN email AS VARCHAR(255) CHECK (...);  
+COMMENT ON DOMAIN email IS 'Adresse email validée selon RFC 5322';  
 
-CREATE TYPE adresse AS (...);
-COMMENT ON TYPE adresse IS 'Adresse postale complète';
+CREATE TYPE adresse AS (...);  
+COMMENT ON TYPE adresse IS 'Adresse postale complète';  
 ```
 
 ---
@@ -902,10 +902,10 @@ SELECT
     n.nspname AS schema,
     t.typname AS domain_name,
     pg_catalog.format_type(t.typbasetype, t.typtypmod) AS base_type
-FROM pg_catalog.pg_type t
-JOIN pg_catalog.pg_namespace n ON n.oid = t.typnamespace
-WHERE t.typtype = 'd'
-ORDER BY domain_name;
+FROM pg_catalog.pg_type t  
+JOIN pg_catalog.pg_namespace n ON n.oid = t.typnamespace  
+WHERE t.typtype = 'd'  
+ORDER BY domain_name;  
 ```
 
 ### Lister les Types Composites
@@ -918,9 +918,9 @@ ORDER BY domain_name;
 SELECT
     n.nspname AS schema,
     t.typname AS type_name
-FROM pg_catalog.pg_type t
-JOIN pg_catalog.pg_namespace n ON n.oid = t.typnamespace
-WHERE t.typtype = 'c'
+FROM pg_catalog.pg_type t  
+JOIN pg_catalog.pg_namespace n ON n.oid = t.typnamespace  
+WHERE t.typtype = 'c'  
   AND n.nspname NOT IN ('pg_catalog', 'information_schema')
 ORDER BY type_name;
 ```
@@ -935,9 +935,9 @@ ORDER BY type_name;
 SELECT
     a.attname AS field_name,
     pg_catalog.format_type(a.atttypid, a.atttypmod) AS field_type
-FROM pg_catalog.pg_type t
-JOIN pg_catalog.pg_attribute a ON a.attrelid = t.typrelid
-WHERE t.typname = 'nom_type'
+FROM pg_catalog.pg_type t  
+JOIN pg_catalog.pg_attribute a ON a.attrelid = t.typrelid  
+WHERE t.typname = 'nom_type'  
   AND a.attnum > 0
   AND NOT a.attisdropped
 ORDER BY a.attnum;
@@ -949,10 +949,10 @@ ORDER BY a.attnum;
 -- Valeurs d'un ENUM
 SELECT
     e.enumlabel
-FROM pg_enum e
-JOIN pg_type t ON e.enumtypid = t.oid
-WHERE t.typname = 'nom_enum'
-ORDER BY e.enumsortorder;
+FROM pg_enum e  
+JOIN pg_type t ON e.enumtypid = t.oid  
+WHERE t.typname = 'nom_enum'  
+ORDER BY e.enumsortorder;  
 ```
 
 ---
@@ -1054,14 +1054,14 @@ CREATE TYPE adresse AS (rue TEXT, ville TEXT);
 CREATE TYPE statut AS ENUM ('actif', 'inactif');
 
 -- Modifier
-ALTER DOMAIN email ADD CONSTRAINT ...;
-ALTER TYPE adresse ADD ATTRIBUTE complement TEXT;
-ALTER TYPE statut ADD VALUE 'suspendu';
+ALTER DOMAIN email ADD CONSTRAINT ...;  
+ALTER TYPE adresse ADD ATTRIBUTE complement TEXT;  
+ALTER TYPE statut ADD VALUE 'suspendu';  
 
 -- Supprimer
-DROP DOMAIN email;
-DROP TYPE adresse;
-DROP TYPE statut;
+DROP DOMAIN email;  
+DROP TYPE adresse;  
+DROP TYPE statut;  
 ```
 
 ### Quand Utiliser Quoi ?
@@ -1080,9 +1080,9 @@ DROP TYPE statut;
 
 Les types personnalisés de PostgreSQL sont des outils puissants pour :
 
-- ✅ **Réutiliser** des définitions et contraintes
-- ✅ **Standardiser** votre schéma
-- ✅ **Documenter** les intentions métier
+- ✅ **Réutiliser** des définitions et contraintes  
+- ✅ **Standardiser** votre schéma  
+- ✅ **Documenter** les intentions métier  
 - ✅ **Simplifier** la maintenance
 
 **Recommandations :**

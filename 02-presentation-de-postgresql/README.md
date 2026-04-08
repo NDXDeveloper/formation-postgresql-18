@@ -16,10 +16,10 @@ Ce chapitre est conçu pour vous donner une compréhension complète de **qui es
 
 Si vous découvrez le monde des bases de données, vous vous posez probablement ces questions :
 
-- 🤔 Qu'est-ce que PostgreSQL exactement ?
-- 🤔 Pourquoi devrais-je apprendre PostgreSQL plutôt qu'un autre SGBD ?
-- 🤔 Est-ce que PostgreSQL est adapté à mes besoins ?
-- 🤔 Qui utilise PostgreSQL et dans quels contextes ?
+- 🤔 Qu'est-ce que PostgreSQL exactement ?  
+- 🤔 Pourquoi devrais-je apprendre PostgreSQL plutôt qu'un autre SGBD ?  
+- 🤔 Est-ce que PostgreSQL est adapté à mes besoins ?  
+- 🤔 Qui utilise PostgreSQL et dans quels contextes ?  
 - 🤔 Est-ce que PostgreSQL a un avenir pérenne ?
 
 Ce chapitre répond à toutes ces questions et vous donne les bases nécessaires pour comprendre non seulement **comment** utiliser PostgreSQL (chapitres suivants), mais aussi **pourquoi** et **dans quel contexte** l'utiliser.
@@ -28,19 +28,19 @@ Ce chapitre répond à toutes ces questions et vous donne les bases nécessaires
 
 Si vous avez déjà de l'expérience avec d'autres SGBD (MySQL, Oracle, SQL Server), ce chapitre vous permettra de :
 
-- 🎯 Comprendre les différences philosophiques et techniques avec vos systèmes actuels
-- 🎯 Identifier les forces spécifiques de PostgreSQL
-- 🎯 Évaluer si PostgreSQL est une meilleure option pour vos projets
-- 🎯 Comprendre le modèle de gouvernance et de support
+- 🎯 Comprendre les différences philosophiques et techniques avec vos systèmes actuels  
+- 🎯 Identifier les forces spécifiques de PostgreSQL  
+- 🎯 Évaluer si PostgreSQL est une meilleure option pour vos projets  
+- 🎯 Comprendre le modèle de gouvernance et de support  
 - 🎯 Préparer d'éventuelles migrations
 
 ### Pour les Décideurs Techniques
 
 Si vous devez choisir un SGBD pour votre organisation, ce chapitre vous fournira :
 
-- 📊 Une vision claire du positionnement de PostgreSQL dans l'industrie
-- 📊 Des comparaisons objectives avec les alternatives
-- 📊 Une compréhension du modèle économique (coûts, support, pérennité)
+- 📊 Une vision claire du positionnement de PostgreSQL dans l'industrie  
+- 📊 Des comparaisons objectives avec les alternatives  
+- 📊 Une compréhension du modèle économique (coûts, support, pérennité)  
 - 📊 Des éléments pour justifier vos choix techniques
 
 ---
@@ -121,37 +121,37 @@ La dernière section offre des comparaisons détaillées :
 
 ### **L'Identité de PostgreSQL**
 
-- ✅ Les origines académiques et l'héritage de Berkeley
-- ✅ La philosophie objet-relationnelle et ce qu'elle apporte
-- ✅ Les valeurs fondamentales : conformité, extensibilité, fiabilité
+- ✅ Les origines académiques et l'héritage de Berkeley  
+- ✅ La philosophie objet-relationnelle et ce qu'elle apporte  
+- ✅ Les valeurs fondamentales : conformité, extensibilité, fiabilité  
 - ✅ Ce qui rend PostgreSQL unique parmi les SGBD
 
 ### **L'Écosystème PostgreSQL**
 
-- ✅ Le modèle de gouvernance communautaire
-- ✅ La licence permissive et ses implications
-- ✅ Les acteurs majeurs (contributeurs, entreprises, utilisateurs)
+- ✅ Le modèle de gouvernance communautaire  
+- ✅ La licence permissive et ses implications  
+- ✅ Les acteurs majeurs (contributeurs, entreprises, utilisateurs)  
 - ✅ Les ressources disponibles (documentation, support, extensions)
 
 ### **Le Positionnement Stratégique**
 
-- ✅ Les domaines où PostgreSQL excelle
-- ✅ Les cas d'usage privilégiés et les exemples réels
-- ✅ La place de PostgreSQL dans le marché des SGBD
+- ✅ Les domaines où PostgreSQL excelle  
+- ✅ Les cas d'usage privilégiés et les exemples réels  
+- ✅ La place de PostgreSQL dans le marché des SGBD  
 - ✅ Les tendances et l'évolution du marché
 
 ### **Les Comparaisons Factuelles**
 
-- ✅ Forces et faiblesses vs MySQL, Oracle, SQL Server
-- ✅ Différences techniques concrètes
-- ✅ Comparaisons de coûts (économies potentielles)
+- ✅ Forces et faiblesses vs MySQL, Oracle, SQL Server  
+- ✅ Différences techniques concrètes  
+- ✅ Comparaisons de coûts (économies potentielles)  
 - ✅ Critères de choix selon les contextes
 
 ### **La Gestion Pratique**
 
-- ✅ Comment les versions fonctionnent
-- ✅ Le cycle de support (5 ans)
-- ✅ Comment planifier les mises à jour
+- ✅ Comment les versions fonctionnent  
+- ✅ Le cycle de support (5 ans)  
+- ✅ Comment planifier les mises à jour  
 - ✅ Les stratégies de migration
 
 ---
@@ -176,18 +176,18 @@ Les sections 2.3, 2.4 et 2.5 contiennent les informations stratégiques essentie
 
 Nous vous encourageons à prendre des notes sur :
 
-📝 Les concepts qui vous semblent particulièrement pertinents pour votre contexte
-📝 Les questions que vous vous posez (certaines seront répondues dans les chapitres suivants)
-📝 Les comparaisons avec vos systèmes actuels
+📝 Les concepts qui vous semblent particulièrement pertinents pour votre contexte  
+📝 Les questions que vous vous posez (certaines seront répondues dans les chapitres suivants)  
+📝 Les comparaisons avec vos systèmes actuels  
 📝 Les opportunités identifiées pour vos projets
 
 ### Approche Progressive
 
 Ce chapitre est **théorique** et **contextuel**. Il pose les fondations conceptuelles.
 
-- ✅ Vous n'avez pas besoin d'installer PostgreSQL pour le moment
-- ✅ Vous n'avez pas besoin de connaissances SQL avancées
-- ✅ Prenez le temps de comprendre les concepts
+- ✅ Vous n'avez pas besoin d'installer PostgreSQL pour le moment  
+- ✅ Vous n'avez pas besoin de connaissances SQL avancées  
+- ✅ Prenez le temps de comprendre les concepts  
 - ✅ Les aspects pratiques viendront dans les chapitres suivants
 
 ---
@@ -262,10 +262,10 @@ Les concepts que vous découvrirez ici seront appliqués dans les chapitres suiv
 Tout au long de ce chapitre, nous ferons référence à **PostgreSQL 18**, la dernière version majeure sortie en septembre 2025.
 
 Cette version apporte des innovations majeures :
-- 🚀 I/O asynchrone (jusqu'à 3× plus rapide)
-- 🆕 Colonnes générées virtuelles
-- 🔐 Authentification OAuth 2.0
-- 🛡️ Data checksums activés par défaut
+- 🚀 I/O asynchrone (jusqu'à 3× plus rapide)  
+- 🆕 Colonnes générées virtuelles  
+- 🔐 Authentification OAuth 2.0  
+- 🛡️ Data checksums activés par défaut  
 - 🧠 Optimisations du planificateur de requêtes
 
 Ces nouveautés seront détaillées dans la section 2.2, mais gardez à l'esprit que PostgreSQL évolue constamment. La version 19 sera développée pendant l'année 2026, et ainsi de suite. Cette dynamique d'innovation continue est l'une des forces de PostgreSQL.
@@ -276,19 +276,19 @@ Ces nouveautés seront détaillées dans la section 2.2, mais gardez à l'esprit
 
 Ce fichier est l'introduction générale. Les cinq sections suivantes sont disponibles dans des fichiers séparés :
 
-📄 **2.1-histoire-philosophie-postgresql.md**
+📄 **01-histoire-et-philosophie.md**  
 → Les origines et la philosophie objet-relationnelle
 
-📄 **2.2-gestion-versions-cycle-de-vie.md**
+📄 **02-gestion-des-versions-et-cycle-de-vie.md**  
 → Versions, support, PostgreSQL 18
 
-📄 **2.3-cas-utilisation-positionnement-industrie.md**
+📄 **03-cas-utilisation-et-positionnement.md**  
 → Où et comment PostgreSQL est utilisé
 
-📄 **2.4-licence-communaute-ecosysteme.md**
+📄 **04-licence-et-communaute.md**  
 → Le modèle open source et la communauté
 
-📄 **2.5-postgresql-vs-concurrents.md**
+📄 **05-postgresql-vs-autres-sgbd.md**  
 → Comparaisons avec MySQL, Oracle, SQL Server
 
 Nous vous recommandons de les lire dans l'ordre pour une compréhension optimale.
@@ -299,10 +299,10 @@ Nous vous recommandons de les lire dans l'ordre pour une compréhension optimale
 
 Vous avez maintenant une vue d'ensemble de ce qui vous attend dans ce chapitre. Nous allons explorer ensemble :
 
-- 🏛️ Les 40+ ans d'histoire qui ont façonné PostgreSQL
-- 🧬 Les gènes qui le rendent unique
-- 🌍 Son impact dans l'industrie mondiale
-- 👥 La communauté qui le fait vivre
+- 🏛️ Les 40+ ans d'histoire qui ont façonné PostgreSQL  
+- 🧬 Les gènes qui le rendent unique  
+- 🌍 Son impact dans l'industrie mondiale  
+- 👥 La communauté qui le fait vivre  
 - ⚖️ Sa position face à la concurrence
 
 Ces connaissances feront de vous non seulement un meilleur utilisateur de PostgreSQL, mais aussi un professionnel capable de prendre des décisions techniques éclairées.

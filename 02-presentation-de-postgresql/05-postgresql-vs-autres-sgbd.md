@@ -17,31 +17,31 @@ Ce chapitre vous aidera à comprendre les différences fondamentales entre ces s
 Avant d'entrer dans les détails, voici un aperçu rapide de chaque système :
 
 **PostgreSQL**
-- 🏷️ Type : Open source communautaire
-- 💰 Coût : Gratuit
-- 🎯 Positionnement : SGBD objet-relationnel polyvalent
-- 🏢 Propriétaire : Communauté (PGDG)
+- 🏷️ Type : Open source communautaire  
+- 💰 Coût : Gratuit  
+- 🎯 Positionnement : SGBD objet-relationnel polyvalent  
+- 🏢 Propriétaire : Communauté (PGDG)  
 - 📅 Première version : 1996 (origines 1986)
 
 **MySQL**
-- 🏷️ Type : Open source (propriété Oracle)
-- 💰 Coût : Gratuit (GPL) ou payant (commercial)
-- 🎯 Positionnement : SGBD web, simplicité
-- 🏢 Propriétaire : Oracle Corporation
+- 🏷️ Type : Open source (propriété Oracle)  
+- 💰 Coût : Gratuit (GPL) ou payant (commercial)  
+- 🎯 Positionnement : SGBD web, simplicité  
+- 🏢 Propriétaire : Oracle Corporation  
 - 📅 Première version : 1995
 
 **Oracle Database**
-- 🏷️ Type : Propriétaire commercial
-- 💰 Coût : Très élevé (dizaines de milliers d'euros/serveur)
-- 🎯 Positionnement : Enterprise, mission critique
-- 🏢 Propriétaire : Oracle Corporation
+- 🏷️ Type : Propriétaire commercial  
+- 💰 Coût : Très élevé (dizaines de milliers d'euros/serveur)  
+- 🎯 Positionnement : Enterprise, mission critique  
+- 🏢 Propriétaire : Oracle Corporation  
 - 📅 Première version : 1979
 
 **Microsoft SQL Server**
-- 🏷️ Type : Propriétaire commercial
-- 💰 Coût : Élevé (plusieurs milliers d'euros/serveur)
-- 🎯 Positionnement : Écosystème Microsoft
-- 🏢 Propriétaire : Microsoft Corporation
+- 🏷️ Type : Propriétaire commercial  
+- 💰 Coût : Élevé (plusieurs milliers d'euros/serveur)  
+- 🎯 Positionnement : Écosystème Microsoft  
+- 🏢 Propriétaire : Microsoft Corporation  
 - 📅 Première version : 1989
 
 ### Tableau Récapitulatif Rapide
@@ -81,9 +81,9 @@ MySQL est historiquement le concurrent le plus direct de PostgreSQL dans le mond
 
 **PostgreSQL**
 
-- ✅ Respect strict du standard SQL (ANSI/ISO)
-- ✅ Gestion correcte des NULL
-- ✅ Niveaux d'isolation transactionnelle complets
+- ✅ Respect strict du standard SQL (ANSI/ISO)  
+- ✅ Gestion correcte des NULL  
+- ✅ Niveaux d'isolation transactionnelle complets  
 - ✅ Types de données conformes
 
 **Exemple :**
@@ -94,8 +94,8 @@ SELECT NULL = NULL;  -- Retourne NULL (correct selon SQL standard)
 
 **MySQL**
 
-- ⚠️ Historiquement, écarts avec le standard
-- ⚠️ Mode SQL par défaut moins strict (corrigeable)
+- ⚠️ Historiquement, écarts avec le standard  
+- ⚠️ Mode SQL par défaut moins strict (corrigeable)  
 - ⚠️ Comportements surprenants possibles
 
 **Exemple :**
@@ -112,23 +112,23 @@ PostgreSQL rejetterait cette insertion avec une erreur (comportement correct).
 
 **PostgreSQL**
 
-- ✅ Window functions complètes (depuis v8.4 - 2009)
-- ✅ CTE récursives (depuis v8.4)
-- ✅ JSONB natif et performant (depuis v9.4)
-- ✅ Full-text search intégré
-- ✅ Contraintes complexes (CHECK, EXCLUDE)
-- ✅ Types de données riches (ARRAY, HSTORE, ENUM, etc.)
-- ✅ Indexes spécialisés (GIN, GiST, BRIN, SP-GiST)
+- ✅ Window functions complètes (depuis v8.4 - 2009)  
+- ✅ CTE récursives (depuis v8.4)  
+- ✅ JSONB natif et performant (depuis v9.4)  
+- ✅ Full-text search intégré  
+- ✅ Contraintes complexes (CHECK, EXCLUDE)  
+- ✅ Types de données riches (ARRAY, HSTORE, ENUM, etc.)  
+- ✅ Indexes spécialisés (GIN, GiST, BRIN, SP-GiST)  
 - ✅ Extensions (PostGIS, TimescaleDB, pgvector)
 
 **MySQL**
 
-- ✅ Window functions (depuis v8.0 - 2018)
-- ✅ CTE récursives (depuis v8.0)
-- ⚠️ JSON natif mais moins performant que JSONB
-- ⚠️ Full-text search basique
-- ⚠️ Types de données plus limités
-- ⚠️ Principalement index B-tree et Full-text
+- ✅ Window functions (depuis v8.0 - 2018)  
+- ✅ CTE récursives (depuis v8.0)  
+- ⚠️ JSON natif mais moins performant que JSONB  
+- ⚠️ Full-text search basique  
+- ⚠️ Types de données plus limités  
+- ⚠️ Principalement index B-tree et Full-text  
 - ⚠️ Extension limitée
 
 **Exemple - Types de données :**
@@ -159,9 +159,9 @@ CREATE TABLE produit (
 
 **PostgreSQL : MVCC (Multiversion Concurrency Control)**
 
-- ✅ Lectures ne bloquent jamais les écritures
-- ✅ Écritures ne bloquent jamais les lectures
-- ✅ Excellente gestion de la concurrence
+- ✅ Lectures ne bloquent jamais les écritures  
+- ✅ Écritures ne bloquent jamais les lectures  
+- ✅ Excellente gestion de la concurrence  
 - ⚠️ Nécessite VACUUM pour nettoyer les anciennes versions
 
 **Principe MVCC :**
@@ -172,13 +172,13 @@ CREATE TABLE produit (
 **MySQL : Différent selon le moteur**
 
 **InnoDB (moteur par défaut)** :
-- ✅ MVCC similaire à PostgreSQL
-- ✅ Bonne gestion de la concurrence
+- ✅ MVCC similaire à PostgreSQL  
+- ✅ Bonne gestion de la concurrence  
 - ✅ Transactions ACID
 
 **MyISAM (ancien moteur)** :
-- ❌ Verrous au niveau table
-- ❌ Pas de transactions
+- ❌ Verrous au niveau table  
+- ❌ Pas de transactions  
 - ❌ Rarement utilisé aujourd'hui
 
 **Verdict :** Égalité avec InnoDB, PostgreSQL supérieur aux anciens moteurs MySQL.
@@ -187,30 +187,30 @@ CREATE TABLE produit (
 
 **PostgreSQL**
 
-- ✅ Contraintes strictes par défaut
-- ✅ Pas de conversion silencieuse de types
-- ✅ Validation rigoureuse des données
+- ✅ Contraintes strictes par défaut  
+- ✅ Pas de conversion silencieuse de types  
+- ✅ Validation rigoureuse des données  
 - ✅ Checksums de données (activés par défaut depuis PG 18)
 
 **Exemple :**
 ```sql
 -- PostgreSQL refuse les données invalides
-CREATE TABLE test (age INTEGER);
-INSERT INTO test VALUES ('abc');
+CREATE TABLE test (age INTEGER);  
+INSERT INTO test VALUES ('abc');  
 -- ERROR: invalid input syntax for type integer: "abc"
 ```
 
 **MySQL**
 
-- ⚠️ Modes SQL variés (strict ou permissif)
-- ⚠️ Conversions implicites possibles
+- ⚠️ Modes SQL variés (strict ou permissif)  
+- ⚠️ Conversions implicites possibles  
 - ⚠️ Configuration par défaut historiquement permissive
 
 **Exemple (mode non-strict) :**
 ```sql
 -- MySQL peut accepter des données invalides
-CREATE TABLE test (age INTEGER);
-INSERT INTO test VALUES ('abc');
+CREATE TABLE test (age INTEGER);  
+INSERT INTO test VALUES ('abc');  
 -- OK, convertit silencieusement en 0 (mode permissif)
 ```
 
@@ -222,18 +222,18 @@ INSERT INTO test VALUES ('abc');
 
 **PostgreSQL**
 
-- ✅ Réplication physique (streaming) native et robuste
-- ✅ Réplication logique (depuis v10)
-- ✅ Réplication synchrone et asynchrone
-- ✅ Réplication en cascade
+- ✅ Réplication physique (streaming) native et robuste  
+- ✅ Réplication logique (depuis v10)  
+- ✅ Réplication synchrone et asynchrone  
+- ✅ Réplication en cascade  
 - ✅ Slots de réplication pour garantir la cohérence
 
 **MySQL**
 
-- ✅ Réplication master-slave traditionnelle
-- ✅ Réplication master-master possible
-- ✅ Group Replication (depuis v5.7)
-- ⚠️ Configuration parfois complexe
+- ✅ Réplication source-replica traditionnelle (anciennement master-slave)  
+- ✅ Réplication multi-source possible  
+- ✅ Group Replication (depuis v5.7)  
+- ⚠️ Configuration parfois complexe  
 - ⚠️ Divergences possibles en master-master
 
 **Verdict :** Les deux systèmes offrent de bonnes solutions, approches différentes.
@@ -243,14 +243,14 @@ INSERT INTO test VALUES ('abc');
 **C'est compliqué !** Les performances dépendent énormément du cas d'usage.
 
 **PostgreSQL excelle dans :**
-- ✅ Requêtes complexes (jointures multiples, sous-requêtes)
-- ✅ Agrégations avancées
-- ✅ Requêtes analytiques (OLAP)
+- ✅ Requêtes complexes (jointures multiples, sous-requêtes)  
+- ✅ Agrégations avancées  
+- ✅ Requêtes analytiques (OLAP)  
 - ✅ Charges de travail mixtes (OLTP + analytics)
 
 **MySQL excelle dans :**
-- ✅ Requêtes simples très rapides (SELECT simple, primary key lookup)
-- ✅ INSERT massifs (bulk inserts)
+- ✅ Requêtes simples très rapides (SELECT simple, primary key lookup)  
+- ✅ INSERT massifs (bulk inserts)  
 - ✅ Charges de travail lecture-intensive simples
 
 **Benchmarks réels (ordre de grandeur) :**
@@ -270,16 +270,16 @@ INSERT INTO test VALUES ('abc');
 
 **PostgreSQL**
 
-- ✅ pgAdmin (GUI officiel)
-- ✅ Très nombreuses extensions (PostGIS, TimescaleDB, pgvector, etc.)
-- ✅ Excellent support dans tous les ORMs
+- ✅ pgAdmin (GUI officiel)  
+- ✅ Très nombreuses extensions (PostGIS, TimescaleDB, pgvector, etc.)  
+- ✅ Excellent support dans tous les ORMs  
 - ✅ Cloud : AWS RDS, Aurora, Azure, GCP, etc.
 
 **MySQL**
 
-- ✅ MySQL Workbench (GUI officiel)
-- ✅ Extensions limitées
-- ✅ Excellent support dans ORMs (historiquement le plus utilisé)
+- ✅ MySQL Workbench (GUI officiel)  
+- ✅ Extensions limitées  
+- ✅ Excellent support dans ORMs (historiquement le plus utilisé)  
 - ✅ Cloud : AWS RDS, Aurora MySQL, Azure, GCP, etc.
 
 **Verdict :** PostgreSQL a un écosystème d'extensions beaucoup plus riche.
@@ -288,20 +288,20 @@ INSERT INTO test VALUES ('abc');
 
 **Choisissez PostgreSQL si :**
 
-- ✅ Vous avez besoin de fonctionnalités SQL avancées
-- ✅ L'intégrité des données est critique
-- ✅ Vous travaillez avec des données géospatiales (PostGIS)
-- ✅ Vous avez besoin de données JSON performantes
-- ✅ Vous voulez un système unique pour OLTP + OLAP
-- ✅ Vous valorisez la conformité aux standards
+- ✅ Vous avez besoin de fonctionnalités SQL avancées  
+- ✅ L'intégrité des données est critique  
+- ✅ Vous travaillez avec des données géospatiales (PostGIS)  
+- ✅ Vous avez besoin de données JSON performantes  
+- ✅ Vous voulez un système unique pour OLTP + OLAP  
+- ✅ Vous valorisez la conformité aux standards  
 - ✅ Vous voulez l'indépendance d'un projet communautaire
 
 **Choisissez MySQL si :**
 
-- ✅ Vous avez une application web simple (CRUD basique)
-- ✅ Vous privilégiez la simplicité absolue
-- ✅ Votre équipe connaît déjà MySQL
-- ✅ Vous avez du code legacy MySQL à maintenir
+- ✅ Vous avez une application web simple (CRUD basique)  
+- ✅ Vous privilégiez la simplicité absolue  
+- ✅ Votre équipe connaît déjà MySQL  
+- ✅ Vous avez du code legacy MySQL à maintenir  
 - ✅ Vous utilisez l'écosystème LAMP traditionnel
 
 #### 9. Migration MySQL → PostgreSQL
@@ -348,30 +348,30 @@ Oracle est le SGBD commercial le plus puissant et le plus cher du marché. La co
 
 **Similarités (PostgreSQL = Oracle) :**
 
-- ✅ Transactions ACID complètes
-- ✅ MVCC (appelé "Read Consistency" chez Oracle)
-- ✅ Réplication (physique et logique)
-- ✅ Partitionnement de tables
-- ✅ Procédures stockées et triggers
-- ✅ Full-text search
-- ✅ Séquences et identités
-- ✅ Indexes sophistiqués
-- ✅ Window functions
+- ✅ Transactions ACID complètes  
+- ✅ MVCC (appelé "Read Consistency" chez Oracle)  
+- ✅ Réplication (physique et logique)  
+- ✅ Partitionnement de tables  
+- ✅ Procédures stockées et triggers  
+- ✅ Full-text search  
+- ✅ Séquences et identités  
+- ✅ Indexes sophistiqués  
+- ✅ Window functions  
 - ✅ CTE récursives
 
 **Oracle a en plus :**
 
-- ⚠️ Real Application Clusters (RAC) - Clustering actif/actif natif
-- ⚠️ Flashback Database - Voyage dans le temps complet de la base
-- ⚠️ Advanced Security - Chiffrement transparent de données (TDE)
-- ⚠️ Data Guard - HA et DR intégrés
+- ⚠️ Real Application Clusters (RAC) - Clustering actif/actif natif  
+- ⚠️ Flashback Database - Voyage dans le temps complet de la base  
+- ⚠️ Advanced Security - Chiffrement transparent de données (TDE)  
+- ⚠️ Data Guard - HA et DR intégrés  
 - ⚠️ Éditions : Standard vs Enterprise (fonctionnalités verrouillées)
 
 **PostgreSQL a en plus :**
 
-- ✅ Extensions riches (PostGIS meilleur que Oracle Spatial)
-- ✅ JSONB plus performant que Oracle JSON
-- ✅ Licence libre (aucune restriction)
+- ✅ Extensions riches (PostGIS meilleur que Oracle Spatial)  
+- ✅ JSONB plus performant que Oracle JSON  
+- ✅ Licence libre (aucune restriction)  
 - ✅ Communauté innovante et rapide
 
 **Verdict :** Oracle a quelques fonctionnalités enterprise exclusives, mais PostgreSQL couvre 90-95% des besoins.
@@ -413,34 +413,34 @@ C'est le point le plus spectaculaire.
 
 **PostgreSQL :**
 ```
-Licences :                    0 €
-Support communautaire :       0 €
-Support commercial (opt.) :   250 000 € (50k×5 ans, optionnel)
-Infrastructure :              500 000 €
-Personnel :                   1 000 000 €
+Licences :                    0 €  
+Support communautaire :       0 €  
+Support commercial (opt.) :   250 000 € (50k×5 ans, optionnel)  
+Infrastructure :              500 000 €  
+Personnel :                   1 000 000 €  
 ─────────────────────────────────────
 TOTAL :                       1 750 000 €
 ```
 
 **Oracle Standard Edition :**
 ```
-Licences initiales :          2 000 000 €
-Maintenance annuelle (22%) :  2 200 000 € (440k×5 ans)
-Infrastructure :              500 000 €
-Personnel (DBA Oracle) :      1 200 000 € (salaires plus élevés)
-Audits et conformité :        300 000 € (risque d'audit)
+Licences initiales :          2 000 000 €  
+Maintenance annuelle (22%) :  2 200 000 € (440k×5 ans)  
+Infrastructure :              500 000 €  
+Personnel (DBA Oracle) :      1 200 000 € (salaires plus élevés)  
+Audits et conformité :        300 000 € (risque d'audit)  
 ─────────────────────────────────────
 TOTAL :                       6 200 000 €
 ```
 
 **Oracle Enterprise Edition :**
 ```
-Licences initiales :          6 000 000 €
-Maintenance annuelle (22%) :  6 600 000 € (1,32M×5 ans)
-Options supplémentaires :     2 000 000 € (Partitioning, RAC, etc.)
-Infrastructure :              500 000 €
-Personnel :                   1 200 000 €
-Audits et conformité :        500 000 €
+Licences initiales :          6 000 000 €  
+Maintenance annuelle (22%) :  6 600 000 € (1,32M×5 ans)  
+Options supplémentaires :     2 000 000 € (Partitioning, RAC, etc.)  
+Infrastructure :              500 000 €  
+Personnel :                   1 200 000 €  
+Audits et conformité :        500 000 €  
 ─────────────────────────────────────
 TOTAL :                       16 800 000 €
 ```
@@ -460,21 +460,21 @@ TOTAL :                       16 800 000 €
 **Migration Oracle → PostgreSQL**
 
 **Motivations :**
-- 💰 Réduction drastique des coûts
-- 🔓 Sortir du vendor lock-in Oracle
-- 🚀 Agilité et modernisation
+- 💰 Réduction drastique des coûts  
+- 🔓 Sortir du vendor lock-in Oracle  
+- 🚀 Agilité et modernisation  
 - ☁️ Stratégie cloud (PostgreSQL mieux supporté)
 
 **Défis :**
-- 🔧 PL/SQL → PL/pgSQL (réécriture procédures)
-- 🔄 Packages Oracle non disponibles
-- 📊 Différences subtiles de syntaxe
+- 🔧 PL/SQL → PL/pgSQL (réécriture procédures)  
+- 🔄 Packages Oracle non disponibles  
+- 📊 Différences subtiles de syntaxe  
 - 🧪 Tests exhaustifs nécessaires
 
 **Outils de migration :**
-- **ora2pg** : Outil de migration Oracle → PostgreSQL
-- **AWS SCT** : Schema Conversion Tool d'AWS
-- **EDB Migration Portal** : Service d'EnterpriseDB
+- **ora2pg** : Outil de migration Oracle → PostgreSQL  
+- **AWS SCT** : Schema Conversion Tool d'AWS  
+- **EDB Migration Portal** : Service d'EnterpriseDB  
 - **Services pro** : Consultants spécialisés
 
 **Taux de succès :** ~80-90% de compatibilité automatique, 10-20% nécessite adaptation manuelle.
@@ -487,20 +487,20 @@ TOTAL :                       16 800 000 €
 
 **Oracle**
 
-- ✅ Support 24/7/365 premium inclus dans maintenance
-- ✅ SLA garantis (temps de réponse contractuel)
-- ✅ Équipes dédiées pour gros clients
-- ✅ Patches prioritaires
-- ✅ Documentation exhaustive
+- ✅ Support 24/7/365 premium inclus dans maintenance  
+- ✅ SLA garantis (temps de réponse contractuel)  
+- ✅ Équipes dédiées pour gros clients  
+- ✅ Patches prioritaires  
+- ✅ Documentation exhaustive  
 - ⚠️ Coût de maintenance très élevé (22% des licences/an)
 
 **PostgreSQL**
 
-- ✅ Support communautaire gratuit (forums, mailing lists)
-- ✅ Documentation officielle excellente
-- ✅ Support commercial disponible (EDB, Crunchy Data, 2ndQuadrant)
-- ✅ Patches de sécurité rapides (communauté réactive)
-- ⚠️ Pas de SLA avec support gratuit
+- ✅ Support communautaire gratuit (forums, mailing lists)  
+- ✅ Documentation officielle excellente  
+- ✅ Support commercial disponible (EDB, Crunchy Data, Percona)  
+- ✅ Patches de sécurité rapides (communauté réactive)  
+- ⚠️ Pas de SLA avec support gratuit  
 - ✅ Coût du support commercial : 10-20% du prix Oracle
 
 **Verdict :** Oracle offre le support le plus premium, mais à un coût élevé. PostgreSQL propose plusieurs niveaux adaptés à tous budgets.
@@ -509,20 +509,20 @@ TOTAL :                       16 800 000 €
 
 **Choisissez Oracle si :**
 
-- ✅ Vous avez déjà un investissement Oracle massif
-- ✅ Vous avez besoin du RAC (clustering actif/actif natif)
-- ✅ Votre application est écrite en PL/SQL massif
-- ✅ Vous avez besoin de support 24/7/365 garanti par contrat
-- ✅ Conformité réglementaire nécessite Oracle spécifiquement
+- ✅ Vous avez déjà un investissement Oracle massif  
+- ✅ Vous avez besoin du RAC (clustering actif/actif natif)  
+- ✅ Votre application est écrite en PL/SQL massif  
+- ✅ Vous avez besoin de support 24/7/365 garanti par contrat  
+- ✅ Conformité réglementaire nécessite Oracle spécifiquement  
 - ✅ Budget illimité
 
 **Choisissez PostgreSQL si :**
 
-- ✅ Vous voulez réduire drastiquement les coûts
-- ✅ Vous valorisez l'indépendance et les standards ouverts
-- ✅ Vous démarrez un nouveau projet
-- ✅ Vous voulez la flexibilité cloud
-- ✅ Vous n'avez pas de dépendances propriétaires Oracle
+- ✅ Vous voulez réduire drastiquement les coûts  
+- ✅ Vous valorisez l'indépendance et les standards ouverts  
+- ✅ Vous démarrez un nouveau projet  
+- ✅ Vous voulez la flexibilité cloud  
+- ✅ Vous n'avez pas de dépendances propriétaires Oracle  
 - ✅ Vous voulez éviter les audits de licence Oracle (redoutés)
 
 #### 7. Tendances du Marché
@@ -571,9 +571,9 @@ SQL Server est le SGBD dominant dans l'écosystème Microsoft Windows.
 
 **SQL Server**
 
-- ✅ Windows (natif, optimal)
-- ✅ Linux (depuis SQL Server 2017)
-- ⚠️ Historiquement lié à l'écosystème Microsoft
+- ✅ Windows (natif, optimal)  
+- ✅ Linux (depuis SQL Server 2017)  
+- ⚠️ Historiquement lié à l'écosystème Microsoft  
 - ✅ Excellente intégration avec :
   - Active Directory
   - Visual Studio
@@ -582,11 +582,11 @@ SQL Server est le SGBD dominant dans l'écosystème Microsoft Windows.
 
 **PostgreSQL**
 
-- ✅ Linux (natif, optimal)
-- ✅ Windows (excellent support)
-- ✅ macOS (excellent support)
-- ✅ BSD, Solaris, etc.
-- ✅ Complètement agnostique de plateforme
+- ✅ Linux (natif, optimal)  
+- ✅ Windows (excellent support)  
+- ✅ macOS (excellent support)  
+- ✅ BSD, Solaris, etc.  
+- ✅ Complètement agnostique de plateforme  
 - ✅ Excellente intégration avec tous langages/frameworks
 
 **Verdict :** SQL Server plus adapté si vous êtes 100% Microsoft, PostgreSQL si vous voulez la flexibilité totale.
@@ -595,30 +595,30 @@ SQL Server est le SGBD dominant dans l'écosystème Microsoft Windows.
 
 **Similarités :**
 
-- ✅ Transactions ACID
-- ✅ Procédures stockées (T-SQL vs PL/pgSQL)
-- ✅ Triggers
-- ✅ Window functions
-- ✅ CTE récursives
-- ✅ Partitionnement
-- ✅ Full-text search
-- ✅ JSON support
+- ✅ Transactions ACID  
+- ✅ Procédures stockées (T-SQL vs PL/pgSQL)  
+- ✅ Triggers  
+- ✅ Window functions  
+- ✅ CTE récursives  
+- ✅ Partitionnement  
+- ✅ Full-text search  
+- ✅ JSON support  
 - ✅ Réplication
 
 **SQL Server spécifique :**
 
-- ✅ Integration Services (SSIS) - ETL intégré
-- ✅ Analysis Services (SSAS) - OLAP cube
-- ✅ Reporting Services (SSRS) - Reporting intégré
-- ✅ SQL Server Management Studio (SSMS) - GUI très puissant
+- ✅ Integration Services (SSIS) - ETL intégré  
+- ✅ Analysis Services (SSAS) - OLAP cube  
+- ✅ Reporting Services (SSRS) - Reporting intégré  
+- ✅ SQL Server Management Studio (SSMS) - GUI très puissant  
 - ✅ Always On Availability Groups - HA intégré
 
 **PostgreSQL spécifique :**
 
-- ✅ Extensions riches (PostGIS, TimescaleDB, pgvector)
-- ✅ JSONB très performant
-- ✅ Types de données plus riches (ARRAY, custom types)
-- ✅ Foreign Data Wrappers (fédération de données)
+- ✅ Extensions riches (PostGIS, TimescaleDB, pgvector)  
+- ✅ JSONB très performant  
+- ✅ Types de données plus riches (ARRAY, custom types)  
+- ✅ Foreign Data Wrappers (fédération de données)  
 - ✅ Meilleure conformité SQL standard
 
 **Verdict :** SQL Server excellent si vous utilisez sa suite complète (BI, ETL, Reporting), PostgreSQL plus flexible et extensible.
@@ -633,8 +633,8 @@ Langage procédural propriétaire de Microsoft :
 -- Exemple T-SQL
 CREATE PROCEDURE GetEmployeesBonus
     @DepartmentId INT
-AS
-BEGIN
+AS  
+BEGIN  
     DECLARE @BonusRate DECIMAL(5,2) = 0.10;
 
     SELECT
@@ -644,8 +644,8 @@ BEGIN
         Salary * @BonusRate AS Bonus
     FROM Employees
     WHERE DepartmentId = @DepartmentId;
-END
-GO
+END  
+GO  
 ```
 
 **PostgreSQL : PL/pgSQL (+ autres langages)**
@@ -654,10 +654,10 @@ Langage inspiré d'Oracle PL/SQL, mais open :
 
 ```sql
 -- Exemple PL/pgSQL
-CREATE FUNCTION get_employees_bonus(department_id INTEGER)
-RETURNS TABLE(employee_id INTEGER, name TEXT, salary NUMERIC, bonus NUMERIC)
-AS $$
-DECLARE
+CREATE FUNCTION get_employees_bonus(department_id INTEGER)  
+RETURNS TABLE(employee_id INTEGER, name TEXT, salary NUMERIC, bonus NUMERIC)  
+AS $$  
+DECLARE  
     bonus_rate NUMERIC := 0.10;
 BEGIN
     RETURN QUERY
@@ -687,9 +687,9 @@ $$ LANGUAGE plpgsql;
 Plusieurs éditions avec coûts variables :
 
 **Express Edition :**
-- 💰 Gratuit
-- ⚠️ Limité à 10 GB par base
-- ⚠️ 1 socket, 4 cœurs max
+- 💰 Gratuit  
+- ⚠️ Limité à 10 GB par base  
+- ⚠️ 1 socket, 4 cœurs max  
 - ⚠️ 1 GB RAM max
 - Usage : Développement, petites applications
 
@@ -711,7 +711,7 @@ Plusieurs éditions avec coûts variables :
 
 **PostgreSQL**
 
-- 💰 Gratuit, toujours, toutes fonctionnalités
+- 💰 Gratuit, toujours, toutes fonctionnalités  
 - 💰 Support commercial optionnel : 10 000 - 50 000 € / an
 
 **Économie réelle (50 serveurs, 5 ans) :**
@@ -728,15 +728,15 @@ Plusieurs éditions avec coûts variables :
 #### 5. Performance
 
 **SQL Server**
-- ✅ Excellentes performances sur Windows
-- ✅ Optimisations spécifiques Microsoft
-- ✅ Bon parallélisme
+- ✅ Excellentes performances sur Windows  
+- ✅ Optimisations spécifiques Microsoft  
+- ✅ Bon parallélisme  
 - ⚠️ Performances variables sur Linux (plus récent)
 
 **PostgreSQL**
-- ✅ Excellentes performances multi-plateforme
-- ✅ Optimisations continues (PG 18 : I/O asynchrone)
-- ✅ Très bon parallélisme
+- ✅ Excellentes performances multi-plateforme  
+- ✅ Optimisations continues (PG 18 : I/O asynchrone)  
+- ✅ Très bon parallélisme  
 - ✅ Performances prévisibles
 
 **Benchmarks (ordre de grandeur) :**
@@ -756,15 +756,15 @@ Plusieurs éditions avec coûts variables :
 **Avec .NET (C#, F#, VB.NET)**
 
 **SQL Server :**
-- ✅ Intégration native via SqlConnection
-- ✅ Entity Framework optimisé pour SQL Server
-- ✅ LINQ to SQL (legacy)
+- ✅ Intégration native via SqlConnection  
+- ✅ Entity Framework optimisé pour SQL Server  
+- ✅ LINQ to SQL (legacy)  
 - ✅ Excellente expérience développeur
 
 **PostgreSQL :**
-- ✅ Npgsql (driver .NET excellent)
-- ✅ Entity Framework Core (support complet)
-- ✅ Dapper, NHibernate (support excellent)
+- ✅ Npgsql (driver .NET excellent)  
+- ✅ Entity Framework Core (support complet)  
+- ✅ Dapper, NHibernate (support excellent)  
 - ✅ Expérience développeur équivalente
 
 **Autres langages (Python, Java, Node.js, Go, etc.) :**
@@ -776,16 +776,16 @@ Plusieurs éditions avec coûts variables :
 
 **SQL Server**
 
-- ✅ **SQL Server Management Studio (SSMS)** - GUI très complet
-- ✅ Azure Data Studio - Multi-plateforme, moderne
-- ✅ SQL Server Profiler - Monitoring détaillé
+- ✅ **SQL Server Management Studio (SSMS)** - GUI très complet  
+- ✅ Azure Data Studio - Multi-plateforme, moderne  
+- ✅ SQL Server Profiler - Monitoring détaillé  
 - ✅ Outils de tuning automatique (IA intégrée)
 
 **PostgreSQL**
 
-- ✅ pgAdmin - GUI officiel (fonctionnel mais moins raffiné que SSMS)
-- ✅ DBeaver - Multi-DB (excellent)
-- ✅ DataGrip (JetBrains) - Payant mais excellent
+- ✅ pgAdmin - GUI officiel (fonctionnel mais moins raffiné que SSMS)  
+- ✅ DBeaver - Multi-DB (excellent)  
+- ✅ DataGrip (JetBrains) - Payant mais excellent  
 - ✅ CLI psql - Très puissant
 
 **Verdict :** SQL Server a l'avantage sur les GUI (SSMS est excellent), PostgreSQL compense avec flexibilité.
@@ -794,18 +794,18 @@ Plusieurs éditions avec coûts variables :
 
 **SQL Server**
 
-- ✅ Azure SQL Database (managed)
-- ✅ AWS RDS for SQL Server
-- ✅ Google Cloud SQL for SQL Server
+- ✅ Azure SQL Database (managed)  
+- ✅ AWS RDS for SQL Server  
+- ✅ Google Cloud SQL for SQL Server  
 - ✅ Support Docker/Kubernetes correct
 
 **PostgreSQL**
 
-- ✅ AWS RDS, Aurora PostgreSQL
-- ✅ Azure Database for PostgreSQL
-- ✅ Google Cloud SQL, AlloyDB
-- ✅ Neon, Supabase (serverless)
-- ✅ Excellent support Docker/Kubernetes
+- ✅ AWS RDS, Aurora PostgreSQL  
+- ✅ Azure Database for PostgreSQL  
+- ✅ Google Cloud SQL, AlloyDB  
+- ✅ Neon, Supabase (serverless)  
+- ✅ Excellent support Docker/Kubernetes  
 - ✅ Operators Kubernetes matures (Zalando, CloudNativePG)
 
 **Verdict :** PostgreSQL plus populaire dans le cloud, meilleur support multi-cloud.
@@ -814,39 +814,39 @@ Plusieurs éditions avec coûts variables :
 
 **Choisissez SQL Server si :**
 
-- ✅ Vous êtes 100% dans l'écosystème Microsoft
-- ✅ Vous utilisez .NET Framework (legacy)
-- ✅ Vous avez besoin de SSIS/SSAS/SSRS intégrés
-- ✅ Votre infrastructure est Active Directory
-- ✅ Vous êtes déjà sur Azure
+- ✅ Vous êtes 100% dans l'écosystème Microsoft  
+- ✅ Vous utilisez .NET Framework (legacy)  
+- ✅ Vous avez besoin de SSIS/SSAS/SSRS intégrés  
+- ✅ Votre infrastructure est Active Directory  
+- ✅ Vous êtes déjà sur Azure  
 - ✅ Votre équipe ne connaît que T-SQL
 
 **Choisissez PostgreSQL si :**
 
-- ✅ Vous voulez l'indépendance multi-plateforme
-- ✅ Vous utilisez Linux ou conteneurs
-- ✅ Vous voulez éviter les coûts de licence
-- ✅ Vous avez besoin d'extensions (PostGIS, TimescaleDB, pgvector)
-- ✅ Vous valorisez les standards ouverts
+- ✅ Vous voulez l'indépendance multi-plateforme  
+- ✅ Vous utilisez Linux ou conteneurs  
+- ✅ Vous voulez éviter les coûts de licence  
+- ✅ Vous avez besoin d'extensions (PostGIS, TimescaleDB, pgvector)  
+- ✅ Vous valorisez les standards ouverts  
 - ✅ Vous êtes dans une stack moderne (.NET Core, microservices)
 
 #### 10. Migration SQL Server → PostgreSQL
 
 **Motivations :**
-- 💰 Réduction des coûts de licence
-- ☁️ Stratégie cloud multi-provider
-- 🔓 Sortir de l'écosystème Microsoft propriétaire
+- 💰 Réduction des coûts de licence  
+- ☁️ Stratégie cloud multi-provider  
+- 🔓 Sortir de l'écosystème Microsoft propriétaire  
 - 🐧 Migration vers Linux/conteneurs
 
 **Défis :**
-- 🔧 Réécriture T-SQL → PL/pgSQL
-- 🔄 Différences de syntaxe
-- 📊 Adaptation des outils BI/ETL
+- 🔧 Réécriture T-SQL → PL/pgSQL  
+- 🔄 Différences de syntaxe  
+- 📊 Adaptation des outils BI/ETL  
 - 🧪 Tests exhaustifs
 
 **Outils :**
-- **AWS SCT** : Schema Conversion Tool
-- **pgloader** : Migration de données
+- **AWS SCT** : Schema Conversion Tool  
+- **pgloader** : Migration de données  
 - **Services spécialisés** : Consultants
 
 **Difficulté :** Moyenne à élevée selon dépendances
@@ -1011,12 +1011,12 @@ Le marché des bases de données relationnelles évolue rapidement :
 
 **Pour 80-90% des projets, PostgreSQL est le meilleur choix :**
 
-- ✅ Gratuit mais professionnel
-- ✅ Performant et fiable
-- ✅ Riche en fonctionnalités
-- ✅ Standards et portable
-- ✅ Cloud-ready et moderne
-- ✅ Communauté active
+- ✅ Gratuit mais professionnel  
+- ✅ Performant et fiable  
+- ✅ Riche en fonctionnalités  
+- ✅ Standards et portable  
+- ✅ Cloud-ready et moderne  
+- ✅ Communauté active  
 - ✅ Pérenne
 
 **Les 10-20% restants :**
@@ -1028,8 +1028,8 @@ Le marché des bases de données relationnelles évolue rapidement :
 
 Maintenant que vous comprenez le positionnement de PostgreSQL face à ses concurrents, vous êtes prêt à :
 
-1. **Approfondir PostgreSQL** dans les chapitres suivants
-2. **Tester par vous-même** (installation au chapitre 3)
+1. **Approfondir PostgreSQL** dans les chapitres suivants  
+2. **Tester par vous-même** (installation au chapitre 3)  
 3. **Comparer dans votre contexte** avec cas réels
 
 PostgreSQL n'est pas parfait, mais c'est le SGBD relationnel qui offre le meilleur équilibre entre puissance, flexibilité, coût et pérennité pour la grande majorité des projets en 2025.

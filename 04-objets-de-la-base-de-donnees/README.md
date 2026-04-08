@@ -16,8 +16,8 @@ Ce chapitre est consacré au **DDL (Data Definition Language)**, le langage de d
 
 Le **DDL (Data Definition Language)** est l'ensemble des commandes SQL qui permettent de :
 
-- **Créer** des objets de base de données (tables, schémas, index, types, etc.)
-- **Modifier** la structure de ces objets
+- **Créer** des objets de base de données (tables, schémas, index, types, etc.)  
+- **Modifier** la structure de ces objets  
 - **Supprimer** des objets devenus inutiles
 
 Le DDL s'occupe donc de la **structure** et de l'**architecture** de vos données, pas de leur contenu. C'est un peu comme dessiner les plans d'une maison avant de la construire et de la meubler.
@@ -40,8 +40,8 @@ CREATE TABLE utilisateurs (
 Modifie un objet existant.
 
 ```sql
-ALTER TABLE utilisateurs
-ADD COLUMN email VARCHAR(255);
+ALTER TABLE utilisateurs  
+ADD COLUMN email VARCHAR(255);  
 ```
 
 #### 3. **DROP**
@@ -71,10 +71,10 @@ Il est important de comprendre la distinction entre les différents types de com
 | **TCL** | Transaction Control Language | Gérer les **transactions** | BEGIN, COMMIT, ROLLBACK |
 
 **Analogie simple :**
-- **DDL** = Construire les étagères et les tiroirs d'une bibliothèque
-- **DML** = Ranger, déplacer ou retirer des livres
-- **DQL** = Chercher et consulter des livres
-- **DCL** = Décider qui peut accéder à quelles étagères
+- **DDL** = Construire les étagères et les tiroirs d'une bibliothèque  
+- **DML** = Ranger, déplacer ou retirer des livres  
+- **DQL** = Chercher et consulter des livres  
+- **DCL** = Décider qui peut accéder à quelles étagères  
 - **TCL** = Garantir que tous les livres sont bien rangés avant de partir
 
 Dans ce chapitre, nous nous concentrons exclusivement sur le **DDL**.
@@ -197,13 +197,13 @@ Gérer les modifications de schéma avec ALTER et DROP, et comprendre l'impact d
 
 À la fin de ce chapitre, vous serez capable de :
 
-- ✅ Comprendre l'organisation hiérarchique de PostgreSQL
-- ✅ Créer des bases de données et des schémas
-- ✅ Concevoir des tables avec les types de données appropriés
-- ✅ Définir des contraintes pour garantir l'intégrité des données
-- ✅ Utiliser des séquences pour générer des identifiants automatiquement
-- ✅ Créer des types personnalisés adaptés à vos besoins métier
-- ✅ Modifier la structure de vos tables en toute sécurité
+- ✅ Comprendre l'organisation hiérarchique de PostgreSQL  
+- ✅ Créer des bases de données et des schémas  
+- ✅ Concevoir des tables avec les types de données appropriés  
+- ✅ Définir des contraintes pour garantir l'intégrité des données  
+- ✅ Utiliser des séquences pour générer des identifiants automatiquement  
+- ✅ Créer des types personnalisés adaptés à vos besoins métier  
+- ✅ Modifier la structure de vos tables en toute sécurité  
 - ✅ Choisir les bons types de données pour optimiser l'espace et les performances
 
 ---
@@ -227,8 +227,8 @@ Les choix de conception initiaux sont difficiles à changer une fois que vous av
 PostgreSQL permet d'ajouter des commentaires sur les tables et colonnes :
 
 ```sql
-COMMENT ON TABLE utilisateurs IS 'Table stockant les comptes utilisateurs de l''application';
-COMMENT ON COLUMN utilisateurs.email IS 'Email unique de l''utilisateur, utilisé pour la connexion';
+COMMENT ON TABLE utilisateurs IS 'Table stockant les comptes utilisateurs de l''application';  
+COMMENT ON COLUMN utilisateurs.email IS 'Email unique de l''utilisateur, utilisé pour la connexion';  
 ```
 
 Utilisez cette fonctionnalité pour documenter vos décisions de conception.
@@ -247,23 +247,23 @@ Avant de commencer à créer des objets, établissons quelques conventions de no
 - **Pluriel ou Singulier ?** Les deux approches existent. Choisissez une convention et restez cohérent.
   - Pluriel : `utilisateurs`, `commandes`, `produits`
   - Singulier : `utilisateur`, `commande`, `produit`
-- **Casse :** Préférez les minuscules avec underscores (snake_case)
-  - ✅ `utilisateurs`, `details_commande`
+- **Casse :** Préférez les minuscules avec underscores (snake_case)  
+  - ✅ `utilisateurs`, `details_commande`  
   - ❌ `Utilisateurs`, `detailsCommande`, `UtilisateursDetails`
 
 ### Colonnes
-- **Descriptives et claires :** `prenom`, `date_naissance`, `montant_total`
-- **Évitez les abréviations obscures :** Préférez `numero_telephone` à `num_tel`
+- **Descriptives et claires :** `prenom`, `date_naissance`, `montant_total`  
+- **Évitez les abréviations obscures :** Préférez `numero_telephone` à `num_tel`  
 - **ID de clé primaire :** Généralement `id` ou `nom_table_id`
 
 ### Contraintes
-- **Clés primaires :** `pk_nom_table` (ex: `pk_utilisateurs`)
-- **Clés étrangères :** `fk_table_colonne` (ex: `fk_commandes_utilisateur`)
-- **Contraintes UNIQUE :** `uk_table_colonne` (ex: `uk_utilisateurs_email`)
+- **Clés primaires :** `pk_nom_table` (ex: `pk_utilisateurs`)  
+- **Clés étrangères :** `fk_table_colonne` (ex: `fk_commandes_utilisateur`)  
+- **Contraintes UNIQUE :** `uk_table_colonne` (ex: `uk_utilisateurs_email`)  
 - **Contraintes CHECK :** `ck_table_condition` (ex: `ck_produits_prix_positif`)
 
 ### Index
-- **Index standards :** `idx_table_colonne` (ex: `idx_utilisateurs_email`)
+- **Index standards :** `idx_table_colonne` (ex: `idx_utilisateurs_email`)  
 - **Index composites :** `idx_table_col1_col2` (ex: `idx_commandes_date_statut`)
 
 ---
@@ -279,9 +279,9 @@ psql -U utilisateur -d ma_base
 ```
 
 Commandes utiles dans psql :
-- `\dt` : Lister les tables
-- `\d nom_table` : Décrire une table
-- `\dn` : Lister les schémas
+- `\dt` : Lister les tables  
+- `\d nom_table` : Décrire une table  
+- `\dn` : Lister les schémas  
 - `\l` : Lister les bases de données
 
 ### 2. **pgAdmin** - Interface Graphique
@@ -295,10 +295,10 @@ Un client multi-bases de données très populaire, avec un excellent support Pos
 ### 4. **Scripts SQL et Migrations**
 
 Dans un projet professionnel, les modifications de schéma sont généralement gérées par des outils de migration comme :
-- **Flyway** (Java)
-- **Liquibase** (Multi-langages)
-- **Alembic** (Python)
-- **migrate** (Go)
+- **Flyway** (Java)  
+- **Liquibase** (Multi-langages)  
+- **Alembic** (Python)  
+- **migrate** (Go)  
 - **Prisma** (Node.js)
 
 ---
@@ -342,9 +342,9 @@ Cela signifie que vous pouvez faire :
 ```sql
 BEGIN;
 
-CREATE TABLE test1 (id INTEGER);
-CREATE TABLE test2 (id INTEGER);
-ALTER TABLE test1 ADD COLUMN nom VARCHAR(100);
+CREATE TABLE test1 (id INTEGER);  
+CREATE TABLE test2 (id INTEGER);  
+ALTER TABLE test1 ADD COLUMN nom VARCHAR(100);  
 
 ROLLBACK; -- Annule toutes les créations
 ```
@@ -373,12 +373,12 @@ Nous aborderons ces aspects en détail dans la section 4.7 (Verrouillage) et dan
 
 Voici un aperçu des sections que nous allons couvrir :
 
-1. **4.1. Hiérarchie logique** : Instance → Database → Schema → Table
-2. **4.2. Le concept de Schéma** : Namespaces et search_path
-3. **4.3. CREATE TABLE** : Créer votre première table
-4. **4.4. Les types de données** : Du simple INTEGER au complexe JSONB
-5. **4.5. Séquences** : Génération automatique d'identifiants
-6. **4.6. Domaines et types personnalisés** : Créer vos propres types
+1. **4.1. Hiérarchie logique** : Instance → Database → Schema → Table  
+2. **4.2. Le concept de Schéma** : Namespaces et search_path  
+3. **4.3. CREATE TABLE** : Créer votre première table  
+4. **4.4. Les types de données** : Du simple INTEGER au complexe JSONB  
+5. **4.5. Séquences** : Génération automatique d'identifiants  
+6. **4.6. Domaines et types personnalisés** : Créer vos propres types  
 7. **4.7. Gestion des modifications** : ALTER, DROP, et verrouillage
 
 ---
@@ -388,8 +388,8 @@ Voici un aperçu des sections que nous allons couvrir :
 Avant de plonger dans les détails techniques, prenez un moment pour réfléchir à un projet simple que vous aimeriez créer. Par exemple : un blog, une application de gestion de tâches, ou un catalogue de produits.
 
 Essayez de répondre à ces questions :
-1. Quelles sont les 3-5 entités principales ?
-2. Quelles informations devez-vous stocker pour chaque entité ?
+1. Quelles sont les 3-5 entités principales ?  
+2. Quelles informations devez-vous stocker pour chaque entité ?  
 3. Comment ces entités sont-elles reliées ?
 
 Gardez ce projet en tête tout au long du chapitre. Vous pourrez ainsi appliquer mentalement les concepts au fur et à mesure que nous les découvrons.

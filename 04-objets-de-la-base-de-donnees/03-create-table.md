@@ -22,7 +22,7 @@ Dans cette section, nous allons apprendre :
 
 Une **table** est une collection structurée de données organisées en lignes et colonnes :
 
-- **Colonnes** (ou champs) : Définissent la **structure** de la table. Chaque colonne a un nom, un type de données et des règles optionnelles.
+- **Colonnes** (ou champs) : Définissent la **structure** de la table. Chaque colonne a un nom, un type de données et des règles optionnelles.  
 - **Lignes** (ou enregistrements/tuples) : Contiennent les **données réelles**. Chaque ligne représente une entité ou un événement.
 
 ### Analogie
@@ -74,9 +74,9 @@ CREATE TABLE livres (
 ```
 
 Cette commande crée une table nommée `livres` avec 4 colonnes :
-- `titre` : Peut contenir jusqu'à 200 caractères
-- `auteur` : Peut contenir jusqu'à 100 caractères
-- `annee_publication` : Nombre entier
+- `titre` : Peut contenir jusqu'à 200 caractères  
+- `auteur` : Peut contenir jusqu'à 100 caractères  
+- `annee_publication` : Nombre entier  
 - `prix` : Nombre décimal avec 2 décimales (ex: 19.99)
 
 ### Vérifier que la table existe
@@ -241,8 +241,8 @@ CREATE TABLE commandes (
 );
 
 -- Sans spécifier statut et date_commande
-INSERT INTO commandes (numero_commande, montant)
-VALUES ('CMD-001', 150.50);
+INSERT INTO commandes (numero_commande, montant)  
+VALUES ('CMD-001', 150.50);  
 
 SELECT * FROM commandes;
 ```
@@ -259,7 +259,7 @@ id | numero_commande | statut     | date_commande         | montant
 - Booléens : `TRUE` ou `FALSE`
 - Nombres : `0`
 - Texte : `'valeur_defaut'`
-- UUID : `gen_random_uuid()` (nécessite l'extension pgcrypto)
+- UUID : `gen_random_uuid()` (fonction intégrée depuis PostgreSQL 13)
 
 ### 3. PRIMARY KEY (Clé Primaire)
 
@@ -278,8 +278,8 @@ CREATE TABLE clients (
 );
 
 -- Insertion réussie
-INSERT INTO clients (nom, email) VALUES ('Alice', 'alice@example.com');
-INSERT INTO clients (nom, email) VALUES ('Bob', 'bob@example.com');
+INSERT INTO clients (nom, email) VALUES ('Alice', 'alice@example.com');  
+INSERT INTO clients (nom, email) VALUES ('Bob', 'bob@example.com');  
 
 -- Cette insertion échoue (id dupliqué)
 INSERT INTO clients (id, nom, email) VALUES (1, 'Charlie', 'charlie@example.com');
@@ -329,16 +329,16 @@ CREATE TABLE utilisateurs (
 );
 
 -- Insertions réussies
-INSERT INTO utilisateurs (nom, email) VALUES ('Alice', 'alice@example.com');
-INSERT INTO utilisateurs (nom, email) VALUES ('Bob', 'bob@example.com');
+INSERT INTO utilisateurs (nom, email) VALUES ('Alice', 'alice@example.com');  
+INSERT INTO utilisateurs (nom, email) VALUES ('Bob', 'bob@example.com');  
 
 -- Cette insertion échoue (email déjà existant)
 INSERT INTO utilisateurs (nom, email) VALUES ('Charlie', 'alice@example.com');
 -- ERROR: duplicate key value violates unique constraint "utilisateurs_email_key"
 
 -- Ces insertions réussissent (telephone NULL autorisé plusieurs fois)
-INSERT INTO utilisateurs (nom, email, telephone) VALUES ('Dave', 'dave@example.com', NULL);
-INSERT INTO utilisateurs (nom, email, telephone) VALUES ('Eve', 'eve@example.com', NULL);
+INSERT INTO utilisateurs (nom, email, telephone) VALUES ('Dave', 'dave@example.com', NULL);  
+INSERT INTO utilisateurs (nom, email, telephone) VALUES ('Eve', 'eve@example.com', NULL);  
 ```
 
 **Différence entre UNIQUE et PRIMARY KEY :**
@@ -364,17 +364,17 @@ CREATE TABLE produits (
 );
 
 -- Insertion réussie
-INSERT INTO produits (nom, prix, quantite, note)
-VALUES ('Laptop', 999.99, 10, 4.5);
+INSERT INTO produits (nom, prix, quantite, note)  
+VALUES ('Laptop', 999.99, 10, 4.5);  
 
 -- Cette insertion échoue (prix négatif)
-INSERT INTO produits (nom, prix, quantite)
-VALUES ('Souris', -10.00, 5);
+INSERT INTO produits (nom, prix, quantite)  
+VALUES ('Souris', -10.00, 5);  
 -- ERROR: new row violates check constraint "produits_prix_check"
 
 -- Cette insertion échoue (note hors limites)
-INSERT INTO produits (nom, prix, quantite, note)
-VALUES ('Clavier', 59.99, 20, 5.5);
+INSERT INTO produits (nom, prix, quantite, note)  
+VALUES ('Clavier', 59.99, 20, 5.5);  
 -- ERROR: new row violates check constraint "produits_note_check"
 ```
 
@@ -412,11 +412,11 @@ CREATE TABLE taches (
 );
 
 -- Insérer des données
-INSERT INTO taches (titre, description)
-VALUES ('Apprendre PostgreSQL', 'Lire le tutoriel complet');
+INSERT INTO taches (titre, description)  
+VALUES ('Apprendre PostgreSQL', 'Lire le tutoriel complet');  
 
-INSERT INTO taches (titre, est_terminee)
-VALUES ('Faire les courses', TRUE);
+INSERT INTO taches (titre, est_terminee)  
+VALUES ('Faire les courses', TRUE);  
 
 -- Consulter
 SELECT * FROM taches;
@@ -441,12 +441,12 @@ CREATE TABLE employes (
 );
 
 -- Insertion valide
-INSERT INTO employes (numero_employe, prenom, nom, email, salaire, departement)
-VALUES ('EMP001', 'Alice', 'Martin', 'alice.martin@company.com', 45000.00, 'IT');
+INSERT INTO employes (numero_employe, prenom, nom, email, salaire, departement)  
+VALUES ('EMP001', 'Alice', 'Martin', 'alice.martin@company.com', 45000.00, 'IT');  
 
 -- Insertion avec valeurs par défaut
-INSERT INTO employes (numero_employe, prenom, nom, email, salaire)
-VALUES ('EMP002', 'Bob', 'Dupont', 'bob.dupont@company.com', 50000.00);
+INSERT INTO employes (numero_employe, prenom, nom, email, salaire)  
+VALUES ('EMP002', 'Bob', 'Dupont', 'bob.dupont@company.com', 50000.00);  
 ```
 
 ### Exemple 3 : Table avec Contrainte Multi-Colonnes
@@ -473,16 +473,16 @@ CREATE TABLE articles (
 );
 
 -- Insertion d'un brouillon (OK)
-INSERT INTO articles (titre, slug, contenu)
-VALUES ('Mon premier article', 'mon-premier-article', 'Contenu du premier article');
+INSERT INTO articles (titre, slug, contenu)  
+VALUES ('Mon premier article', 'mon-premier-article', 'Contenu du premier article');  
 
 -- Insertion d'un article publié avec date (OK)
-INSERT INTO articles (titre, slug, contenu, statut, date_publication)
-VALUES ('Article publié', 'article-publie', 'Contenu publié', 'publie', CURRENT_TIMESTAMP);
+INSERT INTO articles (titre, slug, contenu, statut, date_publication)  
+VALUES ('Article publié', 'article-publie', 'Contenu publié', 'publie', CURRENT_TIMESTAMP);  
 
 -- Tentative de publier sans date (ERREUR)
-INSERT INTO articles (titre, slug, contenu, statut)
-VALUES ('Article sans date', 'article-sans-date', 'Contenu', 'publie');
+INSERT INTO articles (titre, slug, contenu, statut)  
+VALUES ('Article sans date', 'article-sans-date', 'Contenu', 'publie');  
 -- ERROR: check constraint violated
 ```
 
@@ -500,8 +500,8 @@ CREATE TABLE blog.articles (
 );
 
 -- Créer le schéma s'il n'existe pas, puis la table
-CREATE SCHEMA IF NOT EXISTS blog;
-CREATE TABLE blog.articles (
+CREATE SCHEMA IF NOT EXISTS blog;  
+CREATE TABLE blog.articles (  
     id SERIAL PRIMARY KEY,
     titre VARCHAR(300) NOT NULL
 );
@@ -589,10 +589,10 @@ CREATE TABLE utilisateurs (
 - Meilleure documentation
 
 **Convention de nommage :**
-- `pk_` : Primary Key
-- `fk_` : Foreign Key
-- `uk_` : Unique Key
-- `ck_` : Check constraint
+- `pk_` : Primary Key  
+- `fk_` : Foreign Key  
+- `uk_` : Unique Key  
+- `ck_` : Check constraint  
 - `df_` : Default
 
 ---
@@ -623,10 +623,10 @@ CREATE TABLE utilisateurs (
 
 ```sql
 -- Lister toutes les tables de la database actuelle
-SELECT table_schema, table_name
-FROM information_schema.tables
-WHERE table_schema NOT IN ('pg_catalog', 'information_schema')
-ORDER BY table_schema, table_name;
+SELECT table_schema, table_name  
+FROM information_schema.tables  
+WHERE table_schema NOT IN ('pg_catalog', 'information_schema')  
+ORDER BY table_schema, table_name;  
 
 -- Voir les colonnes d'une table
 SELECT
@@ -635,15 +635,15 @@ SELECT
     character_maximum_length,
     is_nullable,
     column_default
-FROM information_schema.columns
-WHERE table_name = 'nom_table';
+FROM information_schema.columns  
+WHERE table_name = 'nom_table';  
 
 -- Voir les contraintes d'une table
 SELECT
     constraint_name,
     constraint_type
-FROM information_schema.table_constraints
-WHERE table_name = 'nom_table';
+FROM information_schema.table_constraints  
+WHERE table_name = 'nom_table';  
 ```
 
 ---
@@ -785,9 +785,9 @@ CREATE TABLE employes (
 );
 
 -- Ajouter des commentaires
-COMMENT ON TABLE employes IS 'Table contenant tous les employés de l''entreprise';
-COMMENT ON COLUMN employes.id IS 'Identifiant unique de l''employé';
-COMMENT ON COLUMN employes.nom IS 'Nom complet de l''employé';
+COMMENT ON TABLE employes IS 'Table contenant tous les employés de l''entreprise';  
+COMMENT ON COLUMN employes.id IS 'Identifiant unique de l''employé';  
+COMMENT ON COLUMN employes.nom IS 'Nom complet de l''employé';  
 
 -- Voir les commentaires
 \d+ employes
@@ -797,13 +797,13 @@ COMMENT ON COLUMN employes.nom IS 'Nom complet de l''employé';
 
 ✅ **Recommandé :**
 ```sql
-CREATE SCHEMA ressources_humaines;
-CREATE SCHEMA ventes;
-CREATE SCHEMA comptabilite;
+CREATE SCHEMA ressources_humaines;  
+CREATE SCHEMA ventes;  
+CREATE SCHEMA comptabilite;  
 
-CREATE TABLE ressources_humaines.employes (...);
-CREATE TABLE ventes.commandes (...);
-CREATE TABLE comptabilite.factures (...);
+CREATE TABLE ressources_humaines.employes (...);  
+CREATE TABLE ventes.commandes (...);  
+CREATE TABLE comptabilite.factures (...);  
 ```
 
 ---
@@ -837,7 +837,7 @@ CREATE TABLE produits (
     reference VARCHAR(50) UNIQUE NOT NULL,
     nom VARCHAR(300) NOT NULL,
     description TEXT,
-    prix_unitaire DECIMAL(10, 2) NOT NULL CHECK (prix_unitaire >= 0),
+    prix_unitaire DECIMAL(10, 2) NOT NULL,
     quantite_stock INT NOT NULL DEFAULT 0 CHECK (quantite_stock >= 0),
     categorie VARCHAR(100),
     est_actif BOOLEAN DEFAULT TRUE,
@@ -979,15 +979,15 @@ COMMENT ON TABLE nom_table IS 'Description';
 
 Créer une table dans PostgreSQL est une opération fondamentale qui nécessite de :
 
-1. **Définir la structure** : Quelles colonnes avec quels types
-2. **Choisir les contraintes appropriées** : NOT NULL, UNIQUE, CHECK, etc.
-3. **Définir une clé primaire** : Toujours !
-4. **Utiliser des valeurs par défaut** : Pour simplifier les insertions
+1. **Définir la structure** : Quelles colonnes avec quels types  
+2. **Choisir les contraintes appropriées** : NOT NULL, UNIQUE, CHECK, etc.  
+3. **Définir une clé primaire** : Toujours !  
+4. **Utiliser des valeurs par défaut** : Pour simplifier les insertions  
 5. **Suivre les conventions de nommage** : Pour la lisibilité et la maintenance
 
 Une bonne conception de tables est cruciale pour :
-- **L'intégrité des données** : Les contraintes empêchent les données invalides
-- **Les performances** : Les bons types de données optimisent le stockage et les requêtes
+- **L'intégrité des données** : Les contraintes empêchent les données invalides  
+- **Les performances** : Les bons types de données optimisent le stockage et les requêtes  
 - **La maintenabilité** : Une structure claire facilite les évolutions
 
 Dans les prochaines sections, nous explorerons en détail les différents types de données disponibles dans PostgreSQL, ce qui vous permettra de créer des tables encore plus adaptées à vos besoins.

@@ -22,8 +22,8 @@ PostgreSQL a changé son système de numérotation au fil du temps. Comprendre c
 
 Exemple : `PostgreSQL 9.6.24`
 
-- **9** = Version majeure
-- **6** = Version mineure (avec nouvelles fonctionnalités)
+- **9** = Version majeure  
+- **6** = Version mineure (avec nouvelles fonctionnalités)  
 - **24** = Patch de correction de bugs
 
 **Particularité importante :** Dans ce système, le changement de version mineure (par exemple 9.5 → 9.6) était considéré comme une **version majeure** nécessitant une procédure de migration complète.
@@ -34,7 +34,7 @@ Exemple : `PostgreSQL 9.6.24`
 
 Exemple : `PostgreSQL 18.3`
 
-- **18** = Version majeure
+- **18** = Version majeure  
 - **3** = Patch de correction de bugs
 
 **Changement majeur :** La numérotation est devenue plus simple et plus claire. Chaque changement du premier chiffre représente une version majeure.
@@ -54,9 +54,9 @@ Exemple : `PostgreSQL 18.3`
 
 **Caractéristiques :**
 
-- ✅ Nouvelles fonctionnalités majeures
-- ✅ Améliorations de performance significatives
-- ✅ Changements dans l'architecture interne
+- ✅ Nouvelles fonctionnalités majeures  
+- ✅ Améliorations de performance significatives  
+- ✅ Changements dans l'architecture interne  
 - ✅ Nouvelles APIs et extensions
 
 ⚠️ **Important :** Le passage à une version majeure nécessite une procédure de migration spécifique (pg_upgrade ou pg_dump/restore).
@@ -73,12 +73,12 @@ Exemple : `PostgreSQL 18.3`
 
 **Caractéristiques :**
 
-- ✅ Corrections de bugs
-- ✅ Corrections de sécurité
-- ✅ Corrections de corruption de données
+- ✅ Corrections de bugs  
+- ✅ Corrections de sécurité  
+- ✅ Corrections de corruption de données  
 - ✅ Corrections de problèmes de crash
 
-- ❌ Aucune nouvelle fonctionnalité
+- ❌ Aucune nouvelle fonctionnalité  
 - ❌ Aucun changement de comportement (sauf corrections de bugs)
 
 ⚠️ **Important :** Les mises à jour mineures sont **toujours** rétrocompatibles. Vous pouvez (et devez) les appliquer sans procédure complexe.
@@ -97,9 +97,9 @@ PostgreSQL 18.3 on x86_64-pc-linux-gnu, compiled by gcc (GCC) 13.2.0, 64-bit
 ```
 
 Décomposition de l'information :
-- **18.3** : Version majeure 18, patch 3
-- **x86_64-pc-linux-gnu** : Architecture et système d'exploitation
-- **gcc (GCC) 13.2.0** : Compilateur utilisé
+- **18.3** : Version majeure 18, patch 3  
+- **x86_64-pc-linux-gnu** : Architecture et système d'exploitation  
+- **gcc (GCC) 13.2.0** : Compilateur utilisé  
 - **64-bit** : Architecture 64 bits
 
 **Version courte :**
@@ -187,9 +187,9 @@ Chaque version majeure de PostgreSQL passe par plusieurs phases :
 **Exemple :** PostgreSQL 13, sorti en septembre 2020, atteindra sa fin de vie en novembre 2025
 
 **Conséquences :**
-- ❌ Plus de patches de sécurité
-- ❌ Plus de corrections de bugs
-- ❌ Plus de support officiel
+- ❌ Plus de patches de sécurité  
+- ❌ Plus de corrections de bugs  
+- ❌ Plus de support officiel  
 - ⚠️ Risque de sécurité si vous continuez à l'utiliser
 
 ### Politique de Support : 5 Ans
@@ -218,10 +218,10 @@ PostgreSQL maintient officiellement les **5 dernières versions majeures**.
 
 PostgreSQL 18 représente une avancée majeure, avec un accent particulier sur :
 
-1. **Performance I/O** : Jusqu'à 3× plus rapide dans certains scénarios
-2. **Modernisation de la sécurité** : OAuth 2.0, améliorations TLS
-3. **Nouvelles capacités de données** : Colonnes virtuelles, UUIDv7
-4. **Améliorations de l'upgrade** : Migration simplifiée
+1. **Performance I/O** : Jusqu'à 3× plus rapide dans certains scénarios  
+2. **Modernisation de la sécurité** : OAuth 2.0, améliorations TLS  
+3. **Nouvelles capacités de données** : Colonnes virtuelles, UUIDv7  
+4. **Améliorations de l'upgrade** : Migration simplifiée  
 5. **Optimisations du planificateur** : Requêtes plus intelligentes
 
 ### Les Nouveautés Majeures de PostgreSQL 18
@@ -239,11 +239,15 @@ PostgreSQL 18 représente une avancée majeure, avec un accent particulier sur :
 
 **Configuration :**
 ```sql
--- Nouveau paramètre
-ALTER SYSTEM SET io_method = 'async';  -- Options: 'sync' (défaut), 'async'
+-- Nouveau paramètre io_method
+ALTER SYSTEM SET io_method = 'worker';  -- Défaut
+-- Options possibles :
+--   'sync'    : I/O synchrone classique (compatibilité)
+--   'worker'  : I/O asynchrone via processus dédiés (défaut PG 18)
+--   'io_uring': I/O asynchrone via io_uring (Linux uniquement, performances maximales)
 ```
 
-**Cas d'usage :** Particulièrement bénéfique pour les applications avec beaucoup de lectures/écritures concurrentes.
+**Cas d'usage :** Particulièrement bénéfique pour les applications avec beaucoup de lectures/écritures concurrentes sur du stockage moderne (NVMe, SSD).
 
 #### 2. Colonnes Générées Virtuelles
 
@@ -286,7 +290,8 @@ CREATE TABLE produits (
 
 **Fonction :**
 ```sql
-SELECT gen_uuid_v7();  -- Nouveau ! Génère un UUIDv7
+SELECT uuidv7();  -- Nouveau ! Génère un UUIDv7 avec timestamp intégré
+-- PostgreSQL 18 ajoute aussi uuidv4() comme alias de gen_random_uuid()
 ```
 
 #### 4. Authentification OAuth 2.0
@@ -338,9 +343,9 @@ Le planificateur détecte automatiquement les self-joins redondants et les élim
 **Exemple :**
 ```sql
 -- Cette requête avec un self-join inutile...
-SELECT a.nom
-FROM employes a
-JOIN employes b ON a.id = b.id;
+SELECT a.nom  
+FROM employes a  
+JOIN employes b ON a.id = b.id;  
 
 -- ...est automatiquement optimisée en :
 SELECT nom FROM employes;
@@ -368,9 +373,9 @@ Meilleure utilisation des index composites même quand la première colonne n'es
 
 **Exemple conceptuel :**
 ```sql
-UPDATE produits
-SET prix = prix * 1.1
-RETURNING OLD.prix as ancien_prix, NEW.prix as nouveau_prix;
+UPDATE produits  
+SET prix = prix * 1.1  
+RETURNING OLD.prix as ancien_prix, NEW.prix as nouveau_prix;  
 ```
 
 #### 9. pg_upgrade Amélioré
@@ -473,12 +478,12 @@ RETURNING OLD.prix as ancien_prix, NEW.prix as nouveau_prix;
 **Principe :** Conversion en place des fichiers de données.
 
 **Avantages :**
-- ✅ Très rapide (quelques minutes à quelques heures)
-- ✅ Peu de downtime
+- ✅ Très rapide (quelques minutes à quelques heures)  
+- ✅ Peu de downtime  
 - ✅ Recommandé pour la plupart des cas
 
 **Inconvénients :**
-- ⚠️ Nécessite un espace disque temporaire
+- ⚠️ Nécessite un espace disque temporaire  
 - ⚠️ Nécessite un arrêt du service
 
 **Nouveauté PostgreSQL 18 :**
@@ -491,12 +496,12 @@ RETURNING OLD.prix as ancien_prix, NEW.prix as nouveau_prix;
 **Principe :** Export logique puis import dans la nouvelle version.
 
 **Avantages :**
-- ✅ Fonctionne toujours
-- ✅ Permet de restructurer / nettoyer
+- ✅ Fonctionne toujours  
+- ✅ Permet de restructurer / nettoyer  
 - ✅ Réorganise les données (défragmentation)
 
 **Inconvénients :**
-- ❌ Très lent pour les grosses bases (heures/jours)
+- ❌ Très lent pour les grosses bases (heures/jours)  
 - ❌ Downtime important
 
 **Cas d'usage :**
@@ -509,12 +514,12 @@ RETURNING OLD.prix as ancien_prix, NEW.prix as nouveau_prix;
 **Principe :** Réplication vers une nouvelle instance PostgreSQL 18, puis bascule.
 
 **Avantages :**
-- ✅ Downtime quasi nul (quelques secondes)
-- ✅ Possibilité de rollback facile
+- ✅ Downtime quasi nul (quelques secondes)  
+- ✅ Possibilité de rollback facile  
 - ✅ Idéal pour la production critique
 
 **Inconvénients :**
-- ❌ Plus complexe à mettre en œuvre
+- ❌ Plus complexe à mettre en œuvre  
 - ❌ Nécessite plus de ressources (2 clusters en parallèle)
 
 **Cas d'usage :** Production critique, haute disponibilité requise
@@ -525,8 +530,8 @@ RETURNING OLD.prix as ancien_prix, NEW.prix as nouveau_prix;
 
 PostgreSQL fait de **grands efforts** pour maintenir la compatibilité :
 
-- ✅ Le SQL reste compatible d'une version majeure à l'autre (dans la plupart des cas)
-- ✅ Les applications continuent généralement à fonctionner sans modification
+- ✅ Le SQL reste compatible d'une version majeure à l'autre (dans la plupart des cas)  
+- ✅ Les applications continuent généralement à fonctionner sans modification  
 - ✅ Les drivers et clients sont rétrocompatibles
 
 #### Attention aux Changements Subtils
@@ -552,8 +557,8 @@ Chaque version majeure peut contenir des changements de comportement :
 **Release Notes :** https://www.postgresql.org/docs/18/release.html
 
 **Sections importantes :**
-- **What's New** : Nouveautés principales
-- **Migration** : Changements incompatibles et procédures
+- **What's New** : Nouveautés principales  
+- **Migration** : Changements incompatibles et procédures  
 - **Appendix E** : Historique complet des versions
 
 ### Annonces de Sécurité
@@ -579,42 +584,42 @@ Vous y trouverez :
 
 ### 1. Restez Informé
 
-- ✅ Suivez les annonces officielles
-- ✅ Lisez les release notes
-- ✅ Participez à la communauté (forums, conférences)
-- ✅ Suivez les blogs techniques (Percona, 2ndQuadrant, Crunchy Data)
+- ✅ Suivez les annonces officielles  
+- ✅ Lisez les release notes  
+- ✅ Participez à la communauté (forums, conférences)  
+- ✅ Suivez les blogs techniques (Percona, EDB, Crunchy Data)
 
 ### 2. Planifiez les Mises à Jour
 
-- ✅ Appliquez les patches de sécurité rapidement
-- ✅ Planifiez les migrations majeures avec 6-12 mois d'avance
-- ✅ Testez toujours avant la production
+- ✅ Appliquez les patches de sécurité rapidement  
+- ✅ Planifiez les migrations majeures avec 6-12 mois d'avance  
+- ✅ Testez toujours avant la production  
 - ✅ Documentez votre processus de migration
 
 ### 3. Surveillez les Fins de Vie
 
-- ✅ Créez des alertes pour les EOL (3-6 mois avant)
-- ✅ Ne laissez jamais une base en production après son EOL
+- ✅ Créez des alertes pour les EOL (3-6 mois avant)  
+- ✅ Ne laissez jamais une base en production après son EOL  
 - ✅ Budgétisez le temps de migration dans vos projets
 
 ### 4. Maintenez un Environnement de Test
 
-- ✅ Reproduisez votre production en staging
-- ✅ Testez les nouvelles versions avant de les déployer
+- ✅ Reproduisez votre production en staging  
+- ✅ Testez les nouvelles versions avant de les déployer  
 - ✅ Exécutez vos tests automatisés contre la nouvelle version
 
 ### 5. Documentez Votre Configuration
 
-- ✅ Documentez votre version actuelle
-- ✅ Documentez vos extensions et leurs versions
-- ✅ Documentez vos paramètres personnalisés
+- ✅ Documentez votre version actuelle  
+- ✅ Documentez vos extensions et leurs versions  
+- ✅ Documentez vos paramètres personnalisés  
 - ✅ Conservez un historique de vos migrations
 
 ### 6. Utilisez des Outils de Gestion
 
-- ✅ **Ansible/Terraform** : Automatisation du déploiement
-- ✅ **Flyway/Liquibase** : Gestion des migrations de schéma
-- ✅ **Monitoring** : Prometheus, Grafana pour surveiller les versions
+- ✅ **Ansible/Terraform** : Automatisation du déploiement  
+- ✅ **Flyway/Liquibase** : Gestion des migrations de schéma  
+- ✅ **Monitoring** : Prometheus, Grafana pour surveiller les versions  
 - ✅ **CI/CD** : Tests automatisés contre différentes versions
 
 ---
@@ -644,9 +649,9 @@ Vous y trouverez :
 **Réponse :** ⚠️ **Pas immédiatement, mais planifiez-le**
 
 **Actions recommandées :**
-1. PostgreSQL 15 est supporté jusqu'en 2027 → Pas d'urgence
-2. Appliquez les patches de PostgreSQL 15 régulièrement
-3. Testez PostgreSQL 18 en staging
+1. PostgreSQL 15 est supporté jusqu'en 2027 → Pas d'urgence  
+2. Appliquez les patches de PostgreSQL 15 régulièrement  
+3. Testez PostgreSQL 18 en staging  
 4. Planifiez une migration pour 2026 (avant que 15 n'approche de sa fin)
 
 ### Scénario 3 : Version en Fin de Vie
@@ -663,8 +668,8 @@ Vous y trouverez :
 - Exposition à des vulnérabilités non patchées
 
 **Actions :**
-1. Planifiez une migration vers PostgreSQL 17 ou 18 dans les 3 prochains mois
-2. Priorisez cette migration sur les autres développements
+1. Planifiez une migration vers PostgreSQL 17 ou 18 dans les 3 prochains mois  
+2. Priorisez cette migration sur les autres développements  
 3. Testez exhaustivement avant la migration
 
 ### Scénario 4 : Patch de Sécurité
@@ -676,9 +681,9 @@ Vous y trouverez :
 **Réponse :** ✅ **Dans les 7 jours (idéalement 48h)**
 
 **Actions :**
-1. Lisez les notes de version
-2. Testez rapidement en staging
-3. Appliquez en production avec une fenêtre de maintenance
+1. Lisez les notes de version  
+2. Testez rapidement en staging  
+3. Appliquez en production avec une fenêtre de maintenance  
 4. Ne procrastinez pas sur les patches de sécurité
 
 ---
@@ -701,8 +706,8 @@ Vous bénéficierez :
 
 **Timeline suggérée :**
 
-- **Q4 2025 - Q1 2026 :** Évaluation et tests en développement
-- **Q2 2026 :** Tests en staging, benchmarks
+- **Q4 2025 - Q1 2026 :** Évaluation et tests en développement  
+- **Q2 2026 :** Tests en staging, benchmarks  
 - **Q3-Q4 2026 :** Migration en production
 
 **Ne migrez pas immédiatement si :**
@@ -723,22 +728,22 @@ La gestion des versions est un aspect crucial de l'administration PostgreSQL. Co
 
 ### Points Clés à Retenir
 
-- ✅ **Numérotation :** Format MAJEUR.PATCH depuis PostgreSQL 10
-- ✅ **Support :** 5 ans pour chaque version majeure
-- ✅ **Patches :** À appliquer systématiquement et rapidement
-- ✅ **Versions majeures :** Une par an, nécessitent planification et tests
-- ✅ **PostgreSQL 18 :** Version actuelle avec des améliorations majeures (I/O, sécurité, upgrade)
+- ✅ **Numérotation :** Format MAJEUR.PATCH depuis PostgreSQL 10  
+- ✅ **Support :** 5 ans pour chaque version majeure  
+- ✅ **Patches :** À appliquer systématiquement et rapidement  
+- ✅ **Versions majeures :** Une par an, nécessitent planification et tests  
+- ✅ **PostgreSQL 18 :** Version actuelle avec des améliorations majeures (I/O, sécurité, upgrade)  
 - ✅ **EOL :** Ne jamais utiliser une version en fin de vie en production
 
 ### Votre Checklist de Gestion des Versions
 
-- [ ] Je connais ma version actuelle de PostgreSQL
-- [ ] Je sais quand ma version atteindra sa fin de vie
-- [ ] Je suis abonné aux annonces de sécurité
-- [ ] J'applique les patches dans les 7 jours
-- [ ] J'ai un environnement de test pour les nouvelles versions
-- [ ] Je planifie mes migrations majeures 6-12 mois à l'avance
-- [ ] Je documente mes processus de migration
+- [ ] Je connais ma version actuelle de PostgreSQL  
+- [ ] Je sais quand ma version atteindra sa fin de vie  
+- [ ] Je suis abonné aux annonces de sécurité  
+- [ ] J'applique les patches dans les 7 jours  
+- [ ] J'ai un environnement de test pour les nouvelles versions  
+- [ ] Je planifie mes migrations majeures 6-12 mois à l'avance  
+- [ ] Je documente mes processus de migration  
 - [ ] Je surveille les release notes des nouvelles versions
 
 ---

@@ -33,16 +33,16 @@ C'est la commande ALTER la plus courante. Elle permet de multiples opérations s
 **Syntaxe de base :**
 
 ```sql
-ALTER TABLE nom_table
-ADD COLUMN nom_colonne type_donnees [contraintes];
+ALTER TABLE nom_table  
+ADD COLUMN nom_colonne type_donnees [contraintes];  
 ```
 
 **Exemple :**
 
 ```sql
 -- Ajouter une colonne email à la table utilisateurs
-ALTER TABLE utilisateurs
-ADD COLUMN email VARCHAR(255);
+ALTER TABLE utilisateurs  
+ADD COLUMN email VARCHAR(255);  
 ```
 
 **Points importants :**
@@ -52,8 +52,8 @@ ADD COLUMN email VARCHAR(255);
 **Avec une valeur par défaut :**
 
 ```sql
-ALTER TABLE utilisateurs
-ADD COLUMN actif BOOLEAN DEFAULT TRUE;
+ALTER TABLE utilisateurs  
+ADD COLUMN actif BOOLEAN DEFAULT TRUE;  
 ```
 
 Dans PostgreSQL (à partir de la version 11), ajouter une colonne avec une valeur par défaut est une opération **très rapide** car la base ne réécrit pas physiquement la table.
@@ -63,27 +63,27 @@ Dans PostgreSQL (à partir de la version 11), ajouter une colonne avec une valeu
 **Syntaxe :**
 
 ```sql
-ALTER TABLE nom_table
-DROP COLUMN nom_colonne [CASCADE | RESTRICT];
+ALTER TABLE nom_table  
+DROP COLUMN nom_colonne [CASCADE | RESTRICT];  
 ```
 
 **Exemple :**
 
 ```sql
 -- Supprimer la colonne temporaire
-ALTER TABLE utilisateurs
-DROP COLUMN colonne_temporaire;
+ALTER TABLE utilisateurs  
+DROP COLUMN colonne_temporaire;  
 ```
 
 **Options importantes :**
-- **RESTRICT** (par défaut) : La suppression échoue si d'autres objets dépendent de cette colonne (vues, index, contraintes)
+- **RESTRICT** (par défaut) : La suppression échoue si d'autres objets dépendent de cette colonne (vues, index, contraintes)  
 - **CASCADE** : Supprime également tous les objets dépendants (attention : c'est destructif !)
 
 **Exemple avec CASCADE :**
 
 ```sql
-ALTER TABLE utilisateurs
-DROP COLUMN email CASCADE;
+ALTER TABLE utilisateurs  
+DROP COLUMN email CASCADE;  
 -- Supprime aussi les index, contraintes et vues utilisant cette colonne
 ```
 
@@ -94,24 +94,24 @@ DROP COLUMN email CASCADE;
 **Syntaxe :**
 
 ```sql
-ALTER TABLE nom_table
-ALTER COLUMN nom_colonne TYPE nouveau_type [USING expression];
+ALTER TABLE nom_table  
+ALTER COLUMN nom_colonne TYPE nouveau_type [USING expression];  
 ```
 
 **Exemple simple :**
 
 ```sql
 -- Changer VARCHAR(50) en VARCHAR(100)
-ALTER TABLE utilisateurs
-ALTER COLUMN nom TYPE VARCHAR(100);
+ALTER TABLE utilisateurs  
+ALTER COLUMN nom TYPE VARCHAR(100);  
 ```
 
 **Exemple avec conversion :**
 
 ```sql
 -- Convertir une colonne texte en entier
-ALTER TABLE commandes
-ALTER COLUMN quantite TYPE INTEGER USING quantite::INTEGER;
+ALTER TABLE commandes  
+ALTER COLUMN quantite TYPE INTEGER USING quantite::INTEGER;  
 ```
 
 **Points critiques :**
@@ -128,15 +128,15 @@ ALTER COLUMN quantite TYPE INTEGER USING quantite::INTEGER;
 **Syntaxe :**
 
 ```sql
-ALTER TABLE nom_table
-RENAME COLUMN ancien_nom TO nouveau_nom;
+ALTER TABLE nom_table  
+RENAME COLUMN ancien_nom TO nouveau_nom;  
 ```
 
 **Exemple :**
 
 ```sql
-ALTER TABLE utilisateurs
-RENAME COLUMN prenom TO first_name;
+ALTER TABLE utilisateurs  
+RENAME COLUMN prenom TO first_name;  
 ```
 
 Cette opération est **rapide** car elle ne modifie que les métadonnées, pas les données elles-mêmes.
@@ -146,35 +146,35 @@ Cette opération est **rapide** car elle ne modifie que les métadonnées, pas l
 **Syntaxe générale :**
 
 ```sql
-ALTER TABLE nom_table
-ADD CONSTRAINT nom_contrainte type_contrainte (colonnes);
+ALTER TABLE nom_table  
+ADD CONSTRAINT nom_contrainte type_contrainte (colonnes);  
 ```
 
 **Exemples :**
 
 ```sql
 -- Ajouter une clé primaire
-ALTER TABLE utilisateurs
-ADD CONSTRAINT pk_utilisateurs PRIMARY KEY (id);
+ALTER TABLE utilisateurs  
+ADD CONSTRAINT pk_utilisateurs PRIMARY KEY (id);  
 
 -- Ajouter une contrainte UNIQUE
-ALTER TABLE utilisateurs
-ADD CONSTRAINT uk_email UNIQUE (email);
+ALTER TABLE utilisateurs  
+ADD CONSTRAINT uk_email UNIQUE (email);  
 
 -- Ajouter une clé étrangère
-ALTER TABLE commandes
-ADD CONSTRAINT fk_utilisateur
-FOREIGN KEY (utilisateur_id)
-REFERENCES utilisateurs(id);
+ALTER TABLE commandes  
+ADD CONSTRAINT fk_utilisateur  
+FOREIGN KEY (utilisateur_id)  
+REFERENCES utilisateurs(id);  
 
 -- Ajouter une contrainte CHECK
-ALTER TABLE produits
-ADD CONSTRAINT check_prix_positif
-CHECK (prix > 0);
+ALTER TABLE produits  
+ADD CONSTRAINT check_prix_positif  
+CHECK (prix > 0);  
 
 -- Ajouter NOT NULL
-ALTER TABLE utilisateurs
-ALTER COLUMN email SET NOT NULL;
+ALTER TABLE utilisateurs  
+ALTER COLUMN email SET NOT NULL;  
 ```
 
 **Attention avec les contraintes :**
@@ -185,18 +185,18 @@ ALTER COLUMN email SET NOT NULL;
 **Option NOT VALID (pour les clés étrangères et CHECK) :**
 
 ```sql
-ALTER TABLE commandes
-ADD CONSTRAINT fk_utilisateur
-FOREIGN KEY (utilisateur_id)
-REFERENCES utilisateurs(id)
-NOT VALID;
+ALTER TABLE commandes  
+ADD CONSTRAINT fk_utilisateur  
+FOREIGN KEY (utilisateur_id)  
+REFERENCES utilisateurs(id)  
+NOT VALID;  
 ```
 
 Avec `NOT VALID`, la contrainte est créée sans vérifier les données existantes (rapide), mais elle s'applique aux nouvelles données. Vous pouvez ensuite la valider en arrière-plan :
 
 ```sql
-ALTER TABLE commandes
-VALIDATE CONSTRAINT fk_utilisateur;
+ALTER TABLE commandes  
+VALIDATE CONSTRAINT fk_utilisateur;  
 ```
 
 #### 1.2.6. Supprimer une Contrainte
@@ -204,22 +204,22 @@ VALIDATE CONSTRAINT fk_utilisateur;
 **Syntaxe :**
 
 ```sql
-ALTER TABLE nom_table
-DROP CONSTRAINT nom_contrainte [CASCADE | RESTRICT];
+ALTER TABLE nom_table  
+DROP CONSTRAINT nom_contrainte [CASCADE | RESTRICT];  
 ```
 
 **Exemple :**
 
 ```sql
-ALTER TABLE utilisateurs
-DROP CONSTRAINT uk_email;
+ALTER TABLE utilisateurs  
+DROP CONSTRAINT uk_email;  
 ```
 
 Pour retirer une contrainte NOT NULL :
 
 ```sql
-ALTER TABLE utilisateurs
-ALTER COLUMN email DROP NOT NULL;
+ALTER TABLE utilisateurs  
+ALTER COLUMN email DROP NOT NULL;  
 ```
 
 #### 1.2.7. Modifier une Valeur par Défaut
@@ -227,15 +227,15 @@ ALTER COLUMN email DROP NOT NULL;
 **Définir une valeur par défaut :**
 
 ```sql
-ALTER TABLE utilisateurs
-ALTER COLUMN pays SET DEFAULT 'France';
+ALTER TABLE utilisateurs  
+ALTER COLUMN pays SET DEFAULT 'France';  
 ```
 
 **Supprimer une valeur par défaut :**
 
 ```sql
-ALTER TABLE utilisateurs
-ALTER COLUMN pays DROP DEFAULT;
+ALTER TABLE utilisateurs  
+ALTER COLUMN pays DROP DEFAULT;  
 ```
 
 **Important :** Modifier la valeur par défaut n'affecte **que les nouvelles lignes**. Les lignes existantes conservent leurs valeurs actuelles.
@@ -443,16 +443,16 @@ Le problème n'est pas le verrou lui-même, mais **sa durée**.
 Vous avez une table `commandes` avec 10 millions de lignes. Vous voulez ajouter une colonne NOT NULL.
 
 ```sql
-ALTER TABLE commandes
-ADD COLUMN statut VARCHAR(20) NOT NULL DEFAULT 'en_attente';
+ALTER TABLE commandes  
+ADD COLUMN statut VARCHAR(20) NOT NULL DEFAULT 'en_attente';  
 ```
 
 **Ce qui se passe :**
 
-1. PostgreSQL pose un verrou ACCESS EXCLUSIVE sur la table
-2. **Tous les SELECT, INSERT, UPDATE, DELETE sont bloqués**
-3. PostgreSQL vérifie toutes les 10 millions de lignes
-4. Cette opération peut prendre **plusieurs minutes**
+1. PostgreSQL pose un verrou ACCESS EXCLUSIVE sur la table  
+2. **Tous les SELECT, INSERT, UPDATE, DELETE sont bloqués**  
+3. PostgreSQL vérifie toutes les 10 millions de lignes  
+4. Cette opération peut prendre **plusieurs minutes**  
 5. Pendant ce temps, votre application est **figée** pour cette table
 
 **Conséquence :** Indisponibilité de service, utilisateurs mécontents, perte de revenus potentielle.
@@ -464,8 +464,8 @@ ADD COLUMN statut VARCHAR(20) NOT NULL DEFAULT 'en_attente';
 **Ancien comportement (PG 10 et avant) :**
 
 ```sql
-ALTER TABLE commandes
-ADD COLUMN statut VARCHAR(20) DEFAULT 'en_attente';
+ALTER TABLE commandes  
+ADD COLUMN statut VARCHAR(20) DEFAULT 'en_attente';  
 ```
 
 → Réécrivait toute la table (lent)
@@ -479,23 +479,23 @@ Cette même commande est **instantanée** ! PostgreSQL enregistre juste le défa
 **Au lieu de :**
 
 ```sql
-ALTER TABLE commandes
-ADD COLUMN statut VARCHAR(20) NOT NULL DEFAULT 'en_attente';
+ALTER TABLE commandes  
+ADD COLUMN statut VARCHAR(20) NOT NULL DEFAULT 'en_attente';  
 ```
 
 **Faire :**
 
 ```sql
 -- Étape 1 : Ajouter la colonne (rapide)
-ALTER TABLE commandes
-ADD COLUMN statut VARCHAR(20) DEFAULT 'en_attente';
+ALTER TABLE commandes  
+ADD COLUMN statut VARCHAR(20) DEFAULT 'en_attente';  
 
 -- Étape 2 : Mettre à jour les valeurs NULL en plusieurs batchs (sans verrouillage long)
 UPDATE commandes SET statut = 'en_attente' WHERE statut IS NULL;
 
 -- Étape 3 : Ajouter la contrainte NOT NULL (rapide si plus de NULL)
-ALTER TABLE commandes
-ALTER COLUMN statut SET NOT NULL;
+ALTER TABLE commandes  
+ALTER COLUMN statut SET NOT NULL;  
 ```
 
 #### 3.6.3. Utiliser NOT VALID pour les Contraintes
@@ -503,22 +503,22 @@ ALTER COLUMN statut SET NOT NULL;
 **Au lieu de :**
 
 ```sql
-ALTER TABLE commandes
-ADD CONSTRAINT check_prix
-CHECK (prix > 0);
+ALTER TABLE commandes  
+ADD CONSTRAINT check_prix  
+CHECK (prix > 0);  
 ```
 
 **Faire :**
 
 ```sql
 -- Étape 1 : Ajouter sans validation (rapide)
-ALTER TABLE commandes
-ADD CONSTRAINT check_prix
-CHECK (prix > 0) NOT VALID;
+ALTER TABLE commandes  
+ADD CONSTRAINT check_prix  
+CHECK (prix > 0) NOT VALID;  
 
 -- Étape 2 : Valider en arrière-plan (verrou moins bloquant)
-ALTER TABLE commandes
-VALIDATE CONSTRAINT check_prix;
+ALTER TABLE commandes  
+VALIDATE CONSTRAINT check_prix;  
 ```
 
 #### 3.6.4. CREATE INDEX CONCURRENTLY
@@ -533,8 +533,8 @@ Cette opération est plus longue, mais n'empêche pas l'application de fonctionn
 
 #### 3.6.5. Planifier les Opérations Lourdes
 
-- **Fenêtre de maintenance** : Planifiez les ALTER lourds pendant les heures creuses
-- **Blue-Green Deployment** : Créez une nouvelle version de la table, basculez, puis supprimez l'ancienne
+- **Fenêtre de maintenance** : Planifiez les ALTER lourds pendant les heures creuses  
+- **Blue-Green Deployment** : Créez une nouvelle version de la table, basculez, puis supprimez l'ancienne  
 - **Réplication Logique** : Effectuez la modification sur une réplique, puis basculez
 
 ### 3.7. Surveiller les Verrous
@@ -548,8 +548,8 @@ SELECT
     mode,
     granted,
     pid
-FROM pg_locks
-WHERE relation IS NOT NULL;
+FROM pg_locks  
+WHERE relation IS NOT NULL;  
 ```
 
 **Voir les requêtes bloquées :**
@@ -562,15 +562,15 @@ SELECT
     blocking_activity.usename AS blocking_user,
     blocked_activity.query AS blocked_statement,
     blocking_activity.query AS blocking_statement
-FROM pg_catalog.pg_locks blocked_locks
-JOIN pg_catalog.pg_stat_activity blocked_activity ON blocked_activity.pid = blocked_locks.pid
-JOIN pg_catalog.pg_locks blocking_locks
+FROM pg_catalog.pg_locks blocked_locks  
+JOIN pg_catalog.pg_stat_activity blocked_activity ON blocked_activity.pid = blocked_locks.pid  
+JOIN pg_catalog.pg_locks blocking_locks  
     ON blocking_locks.locktype = blocked_locks.locktype
     AND blocking_locks.database IS NOT DISTINCT FROM blocked_locks.database
     AND blocking_locks.relation IS NOT DISTINCT FROM blocked_locks.relation
     AND blocking_locks.pid != blocked_locks.pid
-JOIN pg_catalog.pg_stat_activity blocking_activity ON blocking_activity.pid = blocking_locks.pid
-WHERE NOT blocked_locks.granted;
+JOIN pg_catalog.pg_stat_activity blocking_activity ON blocking_activity.pid = blocking_locks.pid  
+WHERE NOT blocked_locks.granted;  
 ```
 
 **Tuer une requête bloquante (avec précaution) :**
@@ -587,17 +587,17 @@ SELECT pg_terminate_backend(pid);
 
 **Checklist de sécurité :**
 
-1. ✅ **Sauvegarde** : Toujours faire un backup avant une modification lourde
-2. ✅ **Tester sur un environnement de staging** identique à la production
-3. ✅ **Estimer la durée** : Testez sur une copie de la table de production
-4. ✅ **Vérifier les dépendances** : Utilisez `\d+ nom_table` dans psql
-5. ✅ **Planifier une fenêtre de maintenance** si nécessaire
-6. ✅ **Prévoir un rollback** : Comment annuler si ça tourne mal ?
+1. ✅ **Sauvegarde** : Toujours faire un backup avant une modification lourde  
+2. ✅ **Tester sur un environnement de staging** identique à la production  
+3. ✅ **Estimer la durée** : Testez sur une copie de la table de production  
+4. ✅ **Vérifier les dépendances** : Utilisez `\d+ nom_table` dans psql  
+5. ✅ **Planifier une fenêtre de maintenance** si nécessaire  
+6. ✅ **Prévoir un rollback** : Comment annuler si ça tourne mal ?  
 7. ✅ **Informer l'équipe** : Coordonner avec les développeurs et les ops
 
 ### 4.2. Règles d'Or pour ALTER/DROP
 
-1. **Évitez ALTER TABLE sur de grandes tables en production sans préparation**
+1. **Évitez ALTER TABLE sur de grandes tables en production sans préparation**  
 2. **Utilisez des transactions** pour regrouper plusieurs ALTER :
    ```sql
    BEGIN;
@@ -605,8 +605,8 @@ SELECT pg_terminate_backend(pid);
    ALTER TABLE users ADD COLUMN city VARCHAR(100);
    COMMIT;
    ```
-3. **Préférez les opérations incrémentales** aux grosses modifications atomiques
-4. **Utilisez les options modernes** (DEFAULT instantané, NOT VALID, CONCURRENTLY)
+3. **Préférez les opérations incrémentales** aux grosses modifications atomiques  
+4. **Utilisez les options modernes** (DEFAULT instantané, NOT VALID, CONCURRENTLY)  
 5. **Testez d'abord avec RESTRICT** pour voir les dépendances
 
 ### 4.3. Cas Particulier : Renommer vs Supprimer
@@ -625,8 +625,8 @@ DROP TABLE utilisateurs_old;
 
 ### 4.4. Outils et Extensions Utiles
 
-- **pg_repack** : Réorganise les tables sans verrouillage exclusif
-- **pg_squeeze** : Alternative à VACUUM FULL sans bloquer
+- **pg_repack** : Réorganise les tables sans verrouillage exclusif  
+- **pg_squeeze** : Alternative à VACUUM FULL sans bloquer  
 - **pgAdmin / DBeaver** : Interfaces graphiques qui montrent les dépendances avant suppression
 
 ---
@@ -642,8 +642,8 @@ DROP TABLE utilisateurs_old;
 BEGIN;
 
 -- 1. Ajouter la colonne (rapide avec DEFAULT)
-ALTER TABLE users
-ADD COLUMN last_login TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+ALTER TABLE users  
+ADD COLUMN last_login TIMESTAMP DEFAULT CURRENT_TIMESTAMP;  
 
 -- 2. Créer un index en différé (si besoin)
 -- On le fera avec CONCURRENTLY en dehors de la transaction
@@ -671,8 +671,8 @@ ALTER TABLE products DROP COLUMN deprecated_old_price;
 
 ```sql
 -- ❌ Mauvaise approche (bloque longtemps)
-ALTER TABLE orders
-ALTER COLUMN total TYPE NUMERIC(10,2);
+ALTER TABLE orders  
+ALTER COLUMN total TYPE NUMERIC(10,2);  
 
 -- ✅ Bonne approche : Créer nouvelle colonne, migrer, renommer
 BEGIN;
@@ -684,8 +684,8 @@ ALTER TABLE orders ADD COLUMN total_new NUMERIC(10,2);
 UPDATE orders SET total_new = total::NUMERIC(10,2);
 
 -- 3. Renommer
-ALTER TABLE orders RENAME COLUMN total TO total_old;
-ALTER TABLE orders RENAME COLUMN total_new TO total;
+ALTER TABLE orders RENAME COLUMN total TO total_old;  
+ALTER TABLE orders RENAME COLUMN total_new TO total;  
 
 -- 4. Supprimer l'ancienne (plus tard)
 -- ALTER TABLE orders DROP COLUMN total_old;
@@ -699,13 +699,13 @@ COMMIT;
 
 ### Ce qu'il faut retenir
 
-1. **ALTER** modifie des objets existants, **DROP** les supprime définitivement
-2. Ces opérations peuvent **poser des verrous** qui bloquent l'accès à la base
-3. Certaines opérations sont **rapides** (renommer), d'autres **très lentes** (changer un type de colonne)
-4. PostgreSQL 11+ a apporté des **optimisations majeures** (ADD COLUMN DEFAULT instantané)
-5. En production, **toujours tester** et **planifier** les modifications de schéma
-6. Utilisez les techniques modernes : **NOT VALID**, **CONCURRENTLY**, opérations **incrémentales**
-7. **Sauvegardez** avant toute opération destructive
+1. **ALTER** modifie des objets existants, **DROP** les supprime définitivement  
+2. Ces opérations peuvent **poser des verrous** qui bloquent l'accès à la base  
+3. Certaines opérations sont **rapides** (renommer), d'autres **très lentes** (changer un type de colonne)  
+4. PostgreSQL 11+ a apporté des **optimisations majeures** (ADD COLUMN DEFAULT instantané)  
+5. En production, **toujours tester** et **planifier** les modifications de schéma  
+6. Utilisez les techniques modernes : **NOT VALID**, **CONCURRENTLY**, opérations **incrémentales**  
+7. **Sauvegardez** avant toute opération destructive  
 8. **Surveillez les verrous** et l'impact sur l'application
 
 ### Tableau Récapitulatif
@@ -732,9 +732,9 @@ COMMIT;
 
 ### Concepts Liés
 
-- **MVCC (Multiversion Concurrency Control)** : Le système de gestion de la concurrence de PostgreSQL (Chapitre 12)
-- **Transactions** : Garantir l'atomicité des opérations (Chapitre 12)
-- **VACUUM** : Maintenance et récupération d'espace (Chapitre 16)
+- **MVCC (Multiversion Concurrency Control)** : Le système de gestion de la concurrence de PostgreSQL (Chapitre 12)  
+- **Transactions** : Garantir l'atomicité des opérations (Chapitre 12)  
+- **VACUUM** : Maintenance et récupération d'espace (Chapitre 16)  
 - **Réplication** : Effectuer des migrations sans downtime (Chapitre 17)
 
 ---

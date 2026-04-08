@@ -22,13 +22,13 @@ Pour le dire autrement : une donnée, c'est simplement **un morceau d'informatio
 
 Voici des exemples de données que vous manipulez tous les jours :
 
-- **Votre nom** : "Marie Dupont"
-- **Votre âge** : 28
-- **Votre adresse e-mail** : marie.dupont@example.com
-- **La température extérieure** : 15°C
-- **Le prix d'un produit** : 49,99 €
-- **Une date** : 19 novembre 2025
-- **Un numéro de téléphone** : 06 12 34 56 78
+- **Votre nom** : "Marie Dupont"  
+- **Votre âge** : 28  
+- **Votre adresse e-mail** : marie.dupont@example.com  
+- **La température extérieure** : 15°C  
+- **Le prix d'un produit** : 49,99 €  
+- **Une date** : 19 novembre 2025  
+- **Un numéro de téléphone** : 06 12 34 56 78  
 - **Une photo** : un fichier JPEG de votre dernier voyage
 
 ### Les caractéristiques d'une donnée
@@ -37,11 +37,11 @@ Une donnée possède plusieurs caractéristiques importantes :
 
 1. **Elle est atomique** : C'est une unité d'information indivisible dans son contexte. Par exemple, "Jean" est une donnée (un prénom), "Dupont" en est une autre (un nom de famille).
 
-2. **Elle a un type** : Les données peuvent être de différentes natures :
-   - **Numériques** : 42, 3.14, -17
-   - **Textuelles** : "Bonjour", "PostgreSQL"
-   - **Temporelles** : 2025-11-19, 14:30:00
-   - **Booléennes** : Vrai ou Faux
+2. **Elle a un type** : Les données peuvent être de différentes natures :  
+   - **Numériques** : 42, 3.14, -17  
+   - **Textuelles** : "Bonjour", "PostgreSQL"  
+   - **Temporelles** : 2025-11-19, 14:30:00  
+   - **Booléennes** : Vrai ou Faux  
    - **Binaires** : Images, vidéos, fichiers
 
 3. **Elle a un sens dans un contexte** : Le nombre "42" seul ne signifie pas grand-chose. Mais "42 ans" (âge), "42 €" (prix), ou "42 km" (distance) ont tous un sens différent.
@@ -50,7 +50,7 @@ Une donnée possède plusieurs caractéristiques importantes :
 
 Il est important de distinguer **donnée** et **information** :
 
-- **Donnée** : Élément brut, sans contexte. Exemple : "25", "Paris", "2025-11-19"
+- **Donnée** : Élément brut, sans contexte. Exemple : "25", "Paris", "2025-11-19"  
 - **Information** : Donnée avec du contexte et du sens. Exemple : "Marie a 25 ans, elle habite à Paris, et son rendez-vous est le 19 novembre 2025"
 
 Les données deviennent de l'information lorsqu'elles sont organisées, structurées et mises en relation.
@@ -82,8 +82,8 @@ Pensez à une base de données comme à une **bibliothèque numérique** où cha
 Imaginez que vous gérez une petite entreprise avec 10 clients. Vous pourriez noter leurs informations dans un cahier ou un fichier Excel :
 
 ```
-Client 1 : Jean Dupont, 35 ans, jean.dupont@email.com, Paris
-Client 2 : Marie Martin, 28 ans, marie.martin@email.com, Lyon
+Client 1 : Jean Dupont, 35 ans, jean.dupont@email.com, Paris  
+Client 2 : Marie Martin, 28 ans, marie.martin@email.com, Lyon  
 ...
 ```
 
@@ -180,7 +180,7 @@ Conçues pour des données non structurées ou semi-structurées, avec une flexi
 
 Optimisées pour l'analyse de grandes quantités de données (data warehousing).
 
-**Exemples** : ClickHouse, Apache Cassandra, Google BigQuery
+**Exemples** : ClickHouse, Amazon Redshift, Google BigQuery, DuckDB
 
 **Cas d'usage** : Analytique, business intelligence, reporting
 

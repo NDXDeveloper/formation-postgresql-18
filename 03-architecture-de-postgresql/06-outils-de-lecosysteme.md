@@ -7,9 +7,9 @@
 PostgreSQL dispose d'un **écosystème riche d'outils** pour interagir avec vos bases de données. Que vous soyez développeur, administrateur système (DBA), ou analyste de données, il existe un outil adapté à vos besoins.
 
 Dans cette section, nous allons explorer :
-- **psql** : L'interface en ligne de commande (CLI) officielle
-- **pgAdmin** : L'interface graphique (GUI) officielle
-- **DBeaver** : Un outil GUI multiplateforme très populaire
+- **psql** : L'interface en ligne de commande (CLI) officielle  
+- **pgAdmin** : L'interface graphique (GUI) officielle  
+- **DBeaver** : Un outil GUI multiplateforme très populaire  
 - **Connection Pooling** : Optimiser la gestion des connexions avec PgBouncer
 
 Comprendre ces outils vous permettra de choisir le bon outil pour chaque tâche et d'optimiser votre workflow quotidien avec PostgreSQL.
@@ -82,11 +82,11 @@ Comprendre ces outils vous permettra de choisir le bon outil pour chaque tâche 
 
 #### ✅ Avantages
 
-- **Léger** : Aucune interface graphique, très rapide
-- **Scriptable** : Parfait pour l'automatisation
-- **Universellement disponible** : Installé avec PostgreSQL
-- **Puissant** : Accès à toutes les fonctionnalités
-- **SSH-friendly** : Fonctionne sur serveur distant
+- **Léger** : Aucune interface graphique, très rapide  
+- **Scriptable** : Parfait pour l'automatisation  
+- **Universellement disponible** : Installé avec PostgreSQL  
+- **Puissant** : Accès à toutes les fonctionnalités  
+- **SSH-friendly** : Fonctionne sur serveur distant  
 - **Meta-commandes** : Raccourcis pratiques (`\d`, `\l`, etc.)
 
 #### ❌ Inconvénients
@@ -124,10 +124,10 @@ Pour éviter de taper les mêmes paramètres :
 
 ```bash
 # Dans ~/.bashrc ou ~/.zshrc
-export PGHOST=localhost
-export PGPORT=5432
-export PGUSER=myuser
-export PGDATABASE=mydatabase
+export PGHOST=localhost  
+export PGPORT=5432  
+export PGUSER=myuser  
+export PGDATABASE=mydatabase  
 
 # Puis simplement :
 psql
@@ -138,15 +138,15 @@ psql
 Quand vous lancez psql, vous voyez :
 
 ```
-psql (18.0)
-Type "help" for help.
+psql (18.0)  
+Type "help" for help.  
 
 mydatabase=#
 ```
 
 **Prompt** :
-- `mydatabase=#` : Connecté en tant que superuser (`#`)
-- `mydatabase=>` : Connecté en tant qu'utilisateur normal (`>`)
+- `mydatabase=#` : Connecté en tant que superuser (`#`)  
+- `mydatabase=>` : Connecté en tant qu'utilisateur normal (`>`)  
 - `mydatabase->` : Commande incomplète (attente de `;`)
 
 ---
@@ -212,16 +212,16 @@ SELECT * FROM users LIMIT 1;
 
 -- Avec \x (vertical) :
 -[ RECORD 1 ]--+------------------
-id             | 1
-username       | alice
-email          | alice@example.com
+id             | 1  
+username       | alice  
+email          | alice@example.com  
 
 -- Activer le timing (temps d'exécution)
 \timing
 
 -- Exemple :
-SELECT COUNT(*) FROM users;
-Time: 45.123 ms
+SELECT COUNT(*) FROM users;  
+Time: 45.123 ms  
 
 -- Changer le format de sortie
 \pset format aligned  -- Défaut, aligné
@@ -330,9 +330,9 @@ psql -U myuser -d mydatabase
 -- Export formaté
 \o /tmp/report.txt
 \pset format aligned
-SELECT category, COUNT(*), SUM(amount)
-FROM orders
-GROUP BY category;
+SELECT category, COUNT(*), SUM(amount)  
+FROM orders  
+GROUP BY category;  
 \o
 ```
 
@@ -342,14 +342,11 @@ GROUP BY category;
 -- Activer timing
 \timing
 
--- Activer EXPLAIN automatique
-\set AUTOEXPLAIN on
-
--- Tester la requête
-EXPLAIN ANALYZE
-SELECT * FROM users u
-JOIN orders o ON u.id = o.user_id
-WHERE u.created_at > '2024-01-01';
+-- Analyser la requête avec EXPLAIN ANALYZE
+EXPLAIN ANALYZE  
+SELECT * FROM users u  
+JOIN orders o ON u.id = o.user_id  
+WHERE u.created_at > '2024-01-01';  
 
 -- Temps affiché : Time: 234.567 ms
 ```
@@ -397,18 +394,18 @@ Vous pouvez personnaliser psql avec un fichier `~/.psqlrc` :
 
 #### ✅ Avantages
 
-- **Officiel** : Maintenu par la communauté PostgreSQL
-- **Complet** : Toutes les fonctionnalités PostgreSQL
-- **Éditeur SQL** : Avec coloration syntaxique et auto-complétion
-- **Visualisation** : Explorer les données facilement
-- **Administration** : Gestion des utilisateurs, backups, monitoring
+- **Officiel** : Maintenu par la communauté PostgreSQL  
+- **Complet** : Toutes les fonctionnalités PostgreSQL  
+- **Éditeur SQL** : Avec coloration syntaxique et auto-complétion  
+- **Visualisation** : Explorer les données facilement  
+- **Administration** : Gestion des utilisateurs, backups, monitoring  
 - **Gratuit et Open Source**
 
 #### ❌ Inconvénients
 
 - Interface parfois lourde
 - Courbe d'apprentissage
-- Consommation mémoire élevée (application Electron)
+- Consommation mémoire élevée (application web Python/Flask)
 
 ### Interface pgAdmin
 
@@ -443,10 +440,10 @@ Vous pouvez personnaliser psql avec un fichier `~/.psqlrc` :
 
 #### 1. Éditeur de Requêtes (Query Tool)
 
-- **Coloration syntaxique** : SQL coloré
-- **Auto-complétion** : Suggère tables, colonnes, fonctions
-- **EXPLAIN Visualisé** : Voir le plan d'exécution graphiquement
-- **Historique** : Retrouver les requêtes précédentes
+- **Coloration syntaxique** : SQL coloré  
+- **Auto-complétion** : Suggère tables, colonnes, fonctions  
+- **EXPLAIN Visualisé** : Voir le plan d'exécution graphiquement  
+- **Historique** : Retrouver les requêtes précédentes  
 - **Export** : CSV, JSON, Excel
 
 #### 2. Explorateur d'Objets
@@ -463,16 +460,16 @@ Arborescence pour explorer :
 
 #### 3. Visualisation de Données
 
-- **Data Grid** : Voir et éditer les données
-- **Filtrage** : Filtrer les lignes affichées
-- **Tri** : Cliquer sur colonnes pour trier
+- **Data Grid** : Voir et éditer les données  
+- **Filtrage** : Filtrer les lignes affichées  
+- **Tri** : Cliquer sur colonnes pour trier  
 - **Export** : Exporter les résultats
 
 #### 4. Administration
 
-- **Gestion des utilisateurs** : Créer/modifier rôles
-- **Backup/Restore** : Interface graphique pour pg_dump/pg_restore
-- **Monitoring** : Voir les processus actifs
+- **Gestion des utilisateurs** : Créer/modifier rôles  
+- **Backup/Restore** : Interface graphique pour pg_dump/pg_restore  
+- **Monitoring** : Voir les processus actifs  
 - **Configuration** : Éditer postgresql.conf
 
 #### 5. Dashboard
@@ -489,16 +486,16 @@ Tableau de bord avec métriques en temps réel :
 
 #### Cas 1 : Exploration Rapide
 
-1. **Naviguer** : Cliquer dans l'arborescence jusqu'à la table
-2. **Visualiser** : Clic droit → "View/Edit Data" → "All Rows"
-3. **Filtrer** : Utiliser les filtres en haut de la grille
+1. **Naviguer** : Cliquer dans l'arborescence jusqu'à la table  
+2. **Visualiser** : Clic droit → "View/Edit Data" → "All Rows"  
+3. **Filtrer** : Utiliser les filtres en haut de la grille  
 4. **Exporter** : Bouton "Download" → CSV
 
 #### Cas 2 : Développement de Requêtes
 
-1. **Ouvrir Query Tool** : Clic droit sur base → "Query Tool"
-2. **Écrire requête** : Avec auto-complétion
-3. **Exécuter** : F5 ou bouton "Execute"
+1. **Ouvrir Query Tool** : Clic droit sur base → "Query Tool"  
+2. **Écrire requête** : Avec auto-complétion  
+3. **Exécuter** : F5 ou bouton "Execute"  
 4. **Analyser** : Bouton "EXPLAIN" pour voir le plan
 
 #### Cas 3 : Administration
@@ -524,13 +521,13 @@ Tableau de bord avec métriques en temps réel :
 
 #### ✅ Avantages
 
-- **Multi-SGBD** : PostgreSQL, MySQL, MariaDB, Oracle, SQL Server, MongoDB, etc.
-- **Interface moderne** : UI élégante et intuitive
-- **Performant** : Plus léger que pgAdmin
-- **Auto-complétion intelligente** : Très bonne
-- **Visualisation ER** : Diagrammes entité-relation automatiques
-- **Git intégré** : Versionner vos scripts SQL
-- **Edition de données** : Très pratique
+- **Multi-SGBD** : PostgreSQL, MySQL, MariaDB, Oracle, SQL Server, MongoDB, etc.  
+- **Interface moderne** : UI élégante et intuitive  
+- **Performant** : Plus léger que pgAdmin  
+- **Auto-complétion intelligente** : Très bonne  
+- **Visualisation ER** : Diagrammes entité-relation automatiques  
+- **Git intégré** : Versionner vos scripts SQL  
+- **Edition de données** : Très pratique  
 - **Gratuit** : Version Community très complète
 
 #### ❌ Inconvénients
@@ -573,36 +570,36 @@ Tableau de bord avec métriques en temps réel :
 #### 1. Database Navigator
 
 Arborescence intelligente :
-- **Filtrage rapide** : Chercher tables/colonnes
-- **Groupement** : Par schéma, par type
-- **Statistiques** : Taille, nombre de lignes
+- **Filtrage rapide** : Chercher tables/colonnes  
+- **Groupement** : Par schéma, par type  
+- **Statistiques** : Taille, nombre de lignes  
 - **Icônes colorées** : Distinguer visuellement
 
 #### 2. Éditeur SQL Avancé
 
-- **Auto-complétion contextuelle** : Très intelligente
-- **Multi-onglets** : Plusieurs requêtes en parallèle
-- **Exécution partielle** : Sélectionner et exécuter
-- **Templates** : Snippets SQL réutilisables
+- **Auto-complétion contextuelle** : Très intelligente  
+- **Multi-onglets** : Plusieurs requêtes en parallèle  
+- **Exécution partielle** : Sélectionner et exécuter  
+- **Templates** : Snippets SQL réutilisables  
 - **Formatting** : Formatage automatique (Ctrl+Shift+F)
 
 #### 3. Data Editor
 
-- **Edition inline** : Modifier directement dans la grille
-- **Filtres avancés** : Filtre par colonne, recherche
-- **Dictionnaires** : Auto-complétion pour foreign keys
+- **Edition inline** : Modifier directement dans la grille  
+- **Filtres avancés** : Filtre par colonne, recherche  
+- **Dictionnaires** : Auto-complétion pour foreign keys  
 - **Import/Export** : CSV, JSON, XML, Excel
 
 #### 4. ER Diagrams
 
-- **Génération automatique** : Diagramme des relations
-- **Visualisation** : Voir les foreign keys
+- **Génération automatique** : Diagramme des relations  
+- **Visualisation** : Voir les foreign keys  
 - **Export** : Image PNG, PDF
 
 #### 5. Git Integration
 
-- **Version SQL** : Commit/Push vos scripts
-- **Comparaison** : Diff entre versions
+- **Version SQL** : Commit/Push vos scripts  
+- **Comparaison** : Diff entre versions  
 - **Historique** : Retrouver anciennes versions
 
 ---
@@ -623,17 +620,17 @@ DBeaver peut gérer simultanément :
 
 #### Cas 2 : Développement SQL
 
-1. **Ouvrir SQL Editor** : Fichier → New → SQL Script
-2. **Écrire** : Auto-complétion intelligente
-3. **Formatter** : Ctrl+Shift+F
-4. **Exécuter** : Ctrl+Enter
+1. **Ouvrir SQL Editor** : Fichier → New → SQL Script  
+2. **Écrire** : Auto-complétion intelligente  
+3. **Formatter** : Ctrl+Shift+F  
+4. **Exécuter** : Ctrl+Enter  
 5. **Exporter** : Résultats → Export → CSV
 
 #### Cas 3 : Exploration de Schema
 
-1. **Clic droit sur base** → "View Diagram"
-2. **DBeaver génère** un diagramme ER automatique
-3. **Voir** toutes les relations (FK)
+1. **Clic droit sur base** → "View Diagram"  
+2. **DBeaver génère** un diagramme ER automatique  
+3. **Voir** toutes les relations (FK)  
 4. **Exporter** en PNG pour documentation
 
 ---
@@ -643,8 +640,8 @@ DBeaver peut gérer simultanément :
 ### Le Problème : Trop de Connexions
 
 Chaque connexion PostgreSQL consomme :
-- **~10 MB de RAM minimum**
-- **1 processus système**
+- **~10 MB de RAM minimum**  
+- **1 processus système**  
 - **Overhead de création** : ~50-100 ms
 
 #### Exemple Problématique
@@ -691,10 +688,10 @@ Un **Connection Pooler** est un proxy entre les applications et PostgreSQL qui *
 
 #### Caractéristiques
 
-- **Léger** : Écrit en C, très performant (~1-2 MB RAM)
-- **Rapide** : Overhead quasi-nul (<1% latence)
-- **Modes de pooling** : Transaction, Session, Statement
-- **Mature** : Utilisé massivement en production
+- **Léger** : Écrit en C, très performant (~1-2 MB RAM)  
+- **Rapide** : Overhead quasi-nul (<1% latence)  
+- **Modes de pooling** : Transaction, Session, Statement  
+- **Mature** : Utilisé massivement en production  
 - **Open Source** : Gratuit
 
 ### Architecture avec PgBouncer
@@ -736,12 +733,12 @@ CLIENT connecte → Obtient 1 connexion PostgreSQL dédiée
              → Garde cette connexion jusqu'à déconnexion
              → Connexion retourne au pool
 
-Utilisation : Applications nécessitant des états de session
-Exemples : SET variables, TEMP tables, PREPARE statements
+Utilisation : Applications nécessitant des états de session  
+Exemples : SET variables, TEMP tables, PREPARE statements  
 ```
 
-**Avantages** : Compatible avec tout
-**Inconvénients** : Moins de gains (ratio 1:1 pendant la session)
+**Avantages** : Compatible avec tout  
+**Inconvénients** : Moins de gains (ratio 1:1 pendant la session)  
 
 #### 2. Transaction Pooling (Mode Transaction) ⭐
 
@@ -750,17 +747,17 @@ CLIENT envoie requête → Obtient connexion pour la transaction
                      → COMMIT/ROLLBACK → Connexion libérée immédiatement
                      → Prochaine requête peut avoir une autre connexion
 
-Utilisation : Applications stateless (web, API)
-C'est le MODE RECOMMANDÉ pour la plupart des cas !
+Utilisation : Applications stateless (web, API)  
+C'est le MODE RECOMMANDÉ pour la plupart des cas !  
 ```
 
-**Avantages** : Maximum d'efficacité (ratios 10:1 ou plus)
-**Inconvénients** : Incompatible avec états de session
+**Avantages** : Maximum d'efficacité (ratios 10:1 ou plus)  
+**Inconvénients** : Incompatible avec états de session  
 
 **Limitations** :
-- ❌ Pas de `SET` persistant
-- ❌ Pas de `PREPARE` réutilisable
-- ❌ Pas de `TEMP tables`
+- ❌ Pas de `SET` persistant  
+- ❌ Pas de `PREPARE` réutilisable  
+- ❌ Pas de `TEMP tables`  
 - ❌ Pas de `LISTEN/NOTIFY`
 
 #### 3. Statement Pooling (Mode Statement)
@@ -772,8 +769,8 @@ CLIENT envoie 1 requête → Connexion pour cette requête uniquement
 Utilisation : Très rare, peu utilisé
 ```
 
-**Avantages** : Maximum théorique
-**Inconvénients** : Trop restrictif (même pas de transactions multi-statements)
+**Avantages** : Maximum théorique  
+**Inconvénients** : Trop restrictif (même pas de transactions multi-statements)  
 
 ---
 
@@ -790,27 +787,27 @@ mydb = host=localhost port=5432 dbname=mydb
 pool_mode = transaction
 
 # Écouter sur ce port
-listen_port = 6432
-listen_addr = *
+listen_port = 6432  
+listen_addr = *  
 
 # Authentification
-auth_type = scram-sha-256
-auth_file = /etc/pgbouncer/userlist.txt
+auth_type = scram-sha-256  
+auth_file = /etc/pgbouncer/userlist.txt  
 
 # Limites de connexions
-max_client_conn = 1000        # Max connexions clients
-default_pool_size = 20        # Connexions par base
-reserve_pool_size = 5         # Connexions de réserve
-reserve_pool_timeout = 3      # Timeout réserve (secondes)
+max_client_conn = 1000        # Max connexions clients  
+default_pool_size = 20        # Connexions par base  
+reserve_pool_size = 5         # Connexions de réserve  
+reserve_pool_timeout = 3      # Timeout réserve (secondes)  
 
 # Timeouts
-server_idle_timeout = 600     # Ferme connexion idle après 10 min
-query_timeout = 0             # Pas de timeout requête (0 = illimité)
+server_idle_timeout = 600     # Ferme connexion idle après 10 min  
+query_timeout = 0             # Pas de timeout requête (0 = illimité)  
 
 # Logs
-log_connections = 1
-log_disconnections = 1
-log_pooler_errors = 1
+log_connections = 1  
+log_disconnections = 1  
+log_pooler_errors = 1  
 ```
 
 #### Fichier userlist.txt
@@ -860,10 +857,10 @@ conn = psycopg2.connect(
 psql -h localhost -p 6432 -U pgbouncer pgbouncer
 
 # Commandes utiles
-SHOW POOLS;
-SHOW CLIENTS;
-SHOW SERVERS;
-SHOW STATS;
+SHOW POOLS;  
+SHOW CLIENTS;  
+SHOW SERVERS;  
+SHOW STATS;  
 ```
 
 #### SHOW POOLS
@@ -968,39 +965,39 @@ pgbouncer=# SHOW STATS;
 #### Développeur Backend
 
 ```
-Quotidien : DBeaver (confort, multi-DB)
-Scripts : psql (automatisation)
-Debugging : psql + EXPLAIN ANALYZE
+Quotidien : DBeaver (confort, multi-DB)  
+Scripts : psql (automatisation)  
+Debugging : psql + EXPLAIN ANALYZE  
 ```
 
 #### Développeur Full-Stack
 
 ```
-Quotidien : DBeaver (intuitif, rapide)
-Exploration : pgAdmin (features PostgreSQL complètes)
+Quotidien : DBeaver (intuitif, rapide)  
+Exploration : pgAdmin (features PostgreSQL complètes)  
 ```
 
 #### DBA (Administrateur)
 
 ```
-Administration : pgAdmin + psql
-Monitoring : psql + scripts
-Backup/Restore : psql (pg_dump, pg_restore)
+Administration : pgAdmin + psql  
+Monitoring : psql + scripts  
+Backup/Restore : psql (pg_dump, pg_restore)  
 ```
 
 #### Data Analyst
 
 ```
-Exploration : DBeaver (ER diagrams, export Excel)
-Requêtes : DBeaver (auto-complétion, visualisation)
+Exploration : DBeaver (ER diagrams, export Excel)  
+Requêtes : DBeaver (auto-complétion, visualisation)  
 ```
 
 #### DevOps/SRE
 
 ```
-Automatisation : psql (scripts, CI/CD)
-Debugging production : psql (SSH)
-Monitoring : Grafana + pg_stat_statements
+Automatisation : psql (scripts, CI/CD)  
+Debugging production : psql (SSH)  
+Monitoring : Grafana + pg_stat_statements  
 ```
 
 ---
@@ -1032,8 +1029,8 @@ Configuration recommandée :
 
 ```bash
 # Utiliser psql pour migrations automatiques
-psql -h $DB_HOST -U $DB_USER -d $DB_NAME -f migrations/001_create_users.sql
-psql -h $DB_HOST -U $DB_USER -d $DB_NAME -f migrations/002_add_indexes.sql
+psql -h $DB_HOST -U $DB_USER -d $DB_NAME -f migrations/001_create_users.sql  
+psql -h $DB_HOST -U $DB_USER -d $DB_NAME -f migrations/002_add_indexes.sql  
 ```
 
 ### Sécurité
@@ -1043,17 +1040,17 @@ psql -h $DB_HOST -U $DB_USER -d $DB_NAME -f migrations/002_add_indexes.sql
 ```bash
 # Ne JAMAIS mettre le mot de passe en ligne de commande
 # ❌ MAUVAIS :
-psql -U myuser -p mypassword  # Visible dans l'historique !
+PGPASSWORD=mypassword psql -U myuser -d mydb  # Visible dans les processus (ps aux) !
 
 # ✅ BON :
 # Utiliser .pgpass
-echo "localhost:5432:mydb:myuser:mypassword" >> ~/.pgpass
-chmod 600 ~/.pgpass
-psql -U myuser -d mydb
+echo "localhost:5432:mydb:myuser:mypassword" >> ~/.pgpass  
+chmod 600 ~/.pgpass  
+psql -U myuser -d mydb  
 
 # Ou variable d'environnement (scripts)
-export PGPASSWORD=mypassword
-psql -U myuser -d mydb
+export PGPASSWORD=mypassword  
+psql -U myuser -d mydb  
 ```
 
 #### PgBouncer
@@ -1083,9 +1080,9 @@ max_client_conn = 1000
 
 ### Connection Pooling
 
-- ✅ **PgBouncer** : Proxy mutualisant les connexions
-- ✅ **Transaction Mode** : Mode recommandé (stateless)
-- ✅ **Gains** : 5-10× moins de ressources PostgreSQL
+- ✅ **PgBouncer** : Proxy mutualisant les connexions  
+- ✅ **Transaction Mode** : Mode recommandé (stateless)  
+- ✅ **Gains** : 5-10× moins de ressources PostgreSQL  
 - ✅ **Transparent** : Applications ne voient pas la différence
 
 ### Modes de Pooling

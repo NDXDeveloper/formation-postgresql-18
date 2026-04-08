@@ -7,7 +7,7 @@
 La **gestion de la mémoire** est l'un des aspects les plus critiques des performances de PostgreSQL. Comprendre comment PostgreSQL utilise la RAM vous permettra d'optimiser vos configurations et d'éviter les pièges courants qui dégradent les performances.
 
 PostgreSQL utilise deux types de mémoire distincts :
-- **Shared Buffers** : Mémoire partagée accessible à tous les processus
+- **Shared Buffers** : Mémoire partagée accessible à tous les processus  
 - **Local Memory** : Mémoire privée propre à chaque processus backend
 
 Dans cette section, nous allons explorer ces deux types de mémoire, leur rôle, et comment les configurer efficacement.
@@ -159,8 +159,8 @@ Résultat :
 ```
 
 **Interprétation** :
-- **> 99%** : Excellent, les shared_buffers sont bien dimensionnés
-- **95-99%** : Bon, peut-être augmenter légèrement
+- **> 99%** : Excellent, les shared_buffers sont bien dimensionnés  
+- **95-99%** : Bon, peut-être augmenter légèrement  
 - **< 95%** : Problème, augmenter shared_buffers ou optimiser les requêtes
 
 ### Politique d'Éviction (Replacement Policy)
@@ -185,10 +185,10 @@ PostgreSQL utilise une variante de l'algorithme **LRU (Least Recently Used)** ap
 ```
 
 **Principe** :
-1. Chaque page a un compteur d'usage (0 à 5)
-2. À chaque accès, le compteur augmente (max 5)
-3. Le "balayeur" (clock sweep) parcourt les pages
-4. Il décrémente les compteurs
+1. Chaque page a un compteur d'usage (0 à 5)  
+2. À chaque accès, le compteur augmente (max 5)  
+3. Le "balayeur" (clock sweep) parcourt les pages  
+4. Il décrémente les compteurs  
 5. Quand compteur = 0, la page peut être évincée
 
 **Avantage** : Les pages fréquemment utilisées restent en cache.
@@ -210,8 +210,8 @@ SHARED BUFFERS
 ```
 
 **Processus d'écriture** :
-1. **Backend** modifie la page en mémoire → Page devient "sale"
-2. **Background Writer** écrit progressivement les pages sales
+1. **Backend** modifie la page en mémoire → Page devient "sale"  
+2. **Background Writer** écrit progressivement les pages sales  
 3. **Checkpointer** force l'écriture de toutes les pages sales périodiquement
 
 ### Configuration des Shared Buffers
@@ -308,10 +308,10 @@ BACKEND PROCESS
 
 #### Opérations Utilisant work_mem
 
-1. **Tri (ORDER BY, DISTINCT)**
-2. **Hachage (Hash Joins, Hash Aggregates)**
-3. **Opérations Set (UNION, INTERSECT)**
-4. **Bitmap Index Scans**
+1. **Tri (ORDER BY, DISTINCT)**  
+2. **Hachage (Hash Joins, Hash Aggregates)**  
+3. **Opérations Set (UNION, INTERSECT)**  
+4. **Bitmap Index Scans**  
 5. **Merge Joins**
 
 #### Exemple Concret : Tri en Mémoire vs Disque
@@ -324,8 +324,8 @@ SELECT * FROM users ORDER BY created_at;
 ##### Cas 1 : Tri en Mémoire (work_mem suffisant)
 
 ```
-work_mem = 64 MB
-Taille des données à trier = 50 MB
+work_mem = 64 MB  
+Taille des données à trier = 50 MB  
 
 ÉTAPES :
 1. Backend charge les données (50 MB)
@@ -338,8 +338,8 @@ Temps : ~100 ms
 ##### Cas 2 : Tri sur Disque (work_mem insuffisant)
 
 ```
-work_mem = 4 MB
-Taille des données à trier = 50 MB
+work_mem = 4 MB  
+Taille des données à trier = 50 MB  
 
 ÉTAPES :
 1. Backend commence à charger les données
@@ -361,16 +361,17 @@ Sort Method: external merge  Disk: 50000kB  ← Avertissement !
 #### Configuration de work_mem
 
 ```sql
--- Valeur par défaut (globale)
+-- Valeur par défaut PostgreSQL : 4 MB (souvent insuffisant en production)
+-- Valeur recommandée selon le workload :
 work_mem = 64MB
 
 -- Modifier pour la session en cours (sans redémarrage)
 SET work_mem = '256MB';
 
 -- Modifier pour une requête spécifique
-SET LOCAL work_mem = '1GB';
-SELECT * FROM huge_table ORDER BY column;
-RESET work_mem;
+SET LOCAL work_mem = '1GB';  
+SELECT * FROM huge_table ORDER BY column;  
+RESET work_mem;  
 ```
 
 #### ⚠️ Piège Critique : Multiplication de work_mem
@@ -380,8 +381,8 @@ RESET work_mem;
 ##### Exemple 1 : Requête avec 2 Sorts
 
 ```sql
-EXPLAIN ANALYZE
-SELECT * FROM
+EXPLAIN ANALYZE  
+SELECT * FROM  
   (SELECT * FROM users ORDER BY created_at) u
   JOIN
   (SELECT * FROM orders ORDER BY order_date) o
@@ -435,16 +436,16 @@ work_mem = RAM Totale / (max_connections × 2)
 #### Rôle
 
 `maintenance_work_mem` est utilisée pour les **opérations de maintenance** :
-- **VACUUM**
-- **CREATE INDEX**
-- **ALTER TABLE**
+- **VACUUM**  
+- **CREATE INDEX**  
+- **ALTER TABLE**  
 - **FOREIGN KEY checks**
 
 #### Différence avec work_mem
 
 ```
-work_mem           →  Requêtes utilisateur (SELECT, JOIN, etc.)
-maintenance_work_mem → Opérations admin (VACUUM, INDEX, etc.)
+work_mem           →  Requêtes utilisateur (SELECT, JOIN, etc.)  
+maintenance_work_mem → Opérations admin (VACUUM, INDEX, etc.)  
 ```
 
 **Avantage** : On peut allouer **beaucoup plus** de mémoire sans risque, car ces opérations sont rares et contrôlées.
@@ -487,8 +488,8 @@ Temps : 30 secondes (tout en mémoire) ✅
 
 ```sql
 -- Créer une table temporaire
-CREATE TEMP TABLE temp_results AS
-SELECT * FROM users WHERE active = true;
+CREATE TEMP TABLE temp_results AS  
+SELECT * FROM users WHERE active = true;  
 
 -- Utiliser la table temporaire
 SELECT * FROM temp_results WHERE created_at > '2024-01-01';
@@ -497,7 +498,7 @@ SELECT * FROM temp_results WHERE created_at > '2024-01-01';
 ```
 
 **Stockage** :
-1. D'abord en RAM (temp_buffers)
+1. D'abord en RAM (temp_buffers)  
 2. Si débordement → Fichiers temporaires sur disque
 
 #### Configuration
@@ -562,11 +563,11 @@ RAM Totale PostgreSQL =
 
 **Configuration** :
 ```ini
-shared_buffers = 4GB
-work_mem = 64MB
-maintenance_work_mem = 1GB
-temp_buffers = 8MB
-max_connections = 100
+shared_buffers = 4GB  
+work_mem = 64MB  
+maintenance_work_mem = 1GB  
+temp_buffers = 8MB  
+max_connections = 100  
 ```
 
 **Calcul** :
@@ -611,8 +612,8 @@ SET log_temp_files = 0;  -- Log tous les fichiers temporaires
 
 Puis dans les logs :
 ```
-LOG: temporary file: path "base/pgsql_tmp/pgsql_tmp12345.0", size 52428800
-STATEMENT: SELECT * FROM users ORDER BY created_at;
+LOG: temporary file: path "base/pgsql_tmp/pgsql_tmp12345.0", size 52428800  
+STATEMENT: SELECT * FROM users ORDER BY created_at;  
 ```
 
 **Indication** : work_mem trop faible pour cette requête.
@@ -628,9 +629,9 @@ SELECT
     state,
     query_start,
     substring(query, 1, 50) as query_preview
-FROM pg_stat_activity
-WHERE state != 'idle'
-ORDER BY query_start;
+FROM pg_stat_activity  
+WHERE state != 'idle'  
+ORDER BY query_start;  
 ```
 
 ### 4. Statistiques par Requête (pg_stat_statements)
@@ -646,10 +647,10 @@ SELECT
     shared_blks_hit,
     shared_blks_read,
     shared_blks_read / (shared_blks_hit + shared_blks_read)::float * 100 as cache_miss_ratio
-FROM pg_stat_statements
-WHERE shared_blks_read > 0
-ORDER BY shared_blks_read DESC
-LIMIT 10;
+FROM pg_stat_statements  
+WHERE shared_blks_read > 0  
+ORDER BY shared_blks_read DESC  
+LIMIT 10;  
 ```
 
 ---
@@ -665,11 +666,11 @@ LIMIT 10;
 
 **Configuration** :
 ```ini
-shared_buffers = 4GB          # 25% RAM
-work_mem = 16MB               # Petite valeur (beaucoup de connexions)
-maintenance_work_mem = 1GB
-effective_cache_size = 12GB   # 75% RAM
-max_connections = 200
+shared_buffers = 4GB          # 25% RAM  
+work_mem = 16MB               # Petite valeur (beaucoup de connexions)  
+maintenance_work_mem = 1GB  
+effective_cache_size = 12GB   # 75% RAM  
+max_connections = 200  
 ```
 
 ### 2. OLAP (Online Analytical Processing)
@@ -681,33 +682,33 @@ max_connections = 200
 
 **Configuration** :
 ```ini
-shared_buffers = 8GB          # 50% RAM
-work_mem = 512MB              # Grande valeur (peu de connexions)
-maintenance_work_mem = 4GB
-effective_cache_size = 14GB
-max_connections = 20
+shared_buffers = 8GB          # 50% RAM  
+work_mem = 512MB              # Grande valeur (peu de connexions)  
+maintenance_work_mem = 4GB  
+effective_cache_size = 14GB  
+max_connections = 20  
 ```
 
 ### 3. Mixed Workload (Mixte)
 
 **Configuration équilibrée** :
 ```ini
-shared_buffers = 6GB
-work_mem = 64MB
-maintenance_work_mem = 2GB
-effective_cache_size = 12GB
-max_connections = 100
+shared_buffers = 6GB  
+work_mem = 64MB  
+maintenance_work_mem = 2GB  
+effective_cache_size = 12GB  
+max_connections = 100  
 ```
 
 ### 4. Développement Local
 
 **Configuration légère** :
 ```ini
-shared_buffers = 512MB
-work_mem = 4MB
-maintenance_work_mem = 256MB
-effective_cache_size = 2GB
-max_connections = 20
+shared_buffers = 512MB  
+work_mem = 4MB  
+maintenance_work_mem = 256MB  
+effective_cache_size = 2GB  
+max_connections = 20  
 ```
 
 ---
@@ -722,7 +723,7 @@ max_connections = 20
 - Serveur instable
 
 **Causes** :
-- `work_mem` trop élevé × beaucoup de connexions
+- `work_mem` trop élevé × beaucoup de connexions  
 - `shared_buffers` trop grand
 - Trop de connexions simultanées
 
@@ -788,7 +789,7 @@ SELECT * FROM users ORDER BY created_at LIMIT 100;
 ### Problème 4 : VACUUM/INDEX Lents
 
 **Symptômes** :
-- `CREATE INDEX` prend des heures
+- `CREATE INDEX` prend des heures  
 - `VACUUM` très lent
 - Table bloat
 
@@ -801,8 +802,8 @@ SELECT * FROM users ORDER BY created_at LIMIT 100;
 maintenance_work_mem = 2GB
 
 -- Ou temporairement pour une session
-SET maintenance_work_mem = '4GB';
-CREATE INDEX idx_huge_table ON huge_table(column);
+SET maintenance_work_mem = '4GB';  
+CREATE INDEX idx_huge_table ON huge_table(column);  
 ```
 
 ---
@@ -818,9 +819,9 @@ CREATE INDEX idx_huge_table ON huge_table(column);
 shared_buffers = 4GB                    # 25% RAM
 
 # === MÉMOIRE LOCALE ===
-work_mem = 64MB                         # Ajuster selon workload
-maintenance_work_mem = 1GB              # Pour VACUUM/INDEX
-temp_buffers = 8MB                      # Rarement modifié
+work_mem = 64MB                         # Ajuster selon workload  
+maintenance_work_mem = 1GB              # Pour VACUUM/INDEX  
+temp_buffers = 8MB                      # Rarement modifié  
 
 # === PLANIFICATEUR ===
 effective_cache_size = 12GB             # 75% RAM
@@ -833,10 +834,10 @@ max_connections = 100                   # Ajuster + utiliser PgBouncer
 
 ```sql
 -- Vérifier les paramètres actuels
-SHOW shared_buffers;
-SHOW work_mem;
-SHOW maintenance_work_mem;
-SHOW effective_cache_size;
+SHOW shared_buffers;  
+SHOW work_mem;  
+SHOW maintenance_work_mem;  
+SHOW effective_cache_size;  
 
 -- Vérifier le cache hit ratio
 SELECT
@@ -850,18 +851,18 @@ FROM pg_stat_database;
 
 ### Shared Buffers (Mémoire Partagée)
 
-- ✅ **Cache principal** de PostgreSQL
-- ✅ Partagé entre **tous les processus**
-- ✅ Stocke les **pages de données** (8 KB)
-- ✅ Dimensionnement : **25% de la RAM** (serveur dédié)
+- ✅ **Cache principal** de PostgreSQL  
+- ✅ Partagé entre **tous les processus**  
+- ✅ Stocke les **pages de données** (8 KB)  
+- ✅ Dimensionnement : **25% de la RAM** (serveur dédié)  
 - ✅ Objectif : **Cache Hit Ratio > 99%**
 
 ### Local Memory (Mémoire Privée)
 
-- ✅ **Privée** à chaque backend process
-- ✅ `work_mem` : Sorts, Hash, Joins → **16-64 MB** (OLTP), **256 MB-1 GB** (OLAP)
-- ✅ `maintenance_work_mem` : VACUUM, INDEX → **1-4 GB**
-- ✅ `temp_buffers` : Tables temporaires → **8-16 MB**
+- ✅ **Privée** à chaque backend process  
+- ✅ `work_mem` : Sorts, Hash, Joins → **16-64 MB** (OLTP), **256 MB-1 GB** (OLAP)  
+- ✅ `maintenance_work_mem` : VACUUM, INDEX → **1-4 GB**  
+- ✅ `temp_buffers` : Tables temporaires → **8-16 MB**  
 - ✅ `effective_cache_size` : Indicateur planificateur → **50-75% RAM**
 
 ### Calcul Mémoire Totale
@@ -872,9 +873,9 @@ RAM Totale = shared_buffers + (max_connections × work_mem) + overhead
 
 ### Pièges à Éviter
 
-- ❌ Ne pas sous-estimer la multiplication de `work_mem`
-- ❌ Ne pas allouer > 40% RAM aux `shared_buffers`
-- ❌ Ne pas ignorer les sorts sur disque (logs `temporary file`)
+- ❌ Ne pas sous-estimer la multiplication de `work_mem`  
+- ❌ Ne pas allouer > 40% RAM aux `shared_buffers`  
+- ❌ Ne pas ignorer les sorts sur disque (logs `temporary file`)  
 - ❌ Ne pas négliger `maintenance_work_mem` pour de grosses bases
 
 ---

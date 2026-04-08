@@ -31,10 +31,10 @@ Imaginez un immeuble de bureaux. L'instance PostgreSQL, c'est tout l'immeuble. C
 
 ### Caractéristiques d'une instance
 
-- **Une seule instance par installation** : Généralement, vous avez une instance PostgreSQL qui tourne sur un serveur (bien qu'il soit techniquement possible d'en avoir plusieurs sur le même serveur, avec des ports différents).
-- **Port d'écoute** : Par défaut, PostgreSQL écoute sur le port **5432**.
-- **Processus principal** : Le processus principal s'appelle `postmaster` ou `postgres` selon le contexte.
-- **Fichiers de configuration** : L'instance possède ses propres fichiers de configuration (`postgresql.conf`, `pg_hba.conf`).
+- **Une seule instance par installation** : Généralement, vous avez une instance PostgreSQL qui tourne sur un serveur (bien qu'il soit techniquement possible d'en avoir plusieurs sur le même serveur, avec des ports différents).  
+- **Port d'écoute** : Par défaut, PostgreSQL écoute sur le port **5432**.  
+- **Processus principal** : Le processus principal s'appelle `postmaster` ou `postgres` selon le contexte.  
+- **Fichiers de configuration** : L'instance possède ses propres fichiers de configuration (`postgresql.conf`, `pg_hba.conf`).  
 - **Mémoire partagée** : Tous les utilisateurs connectés à cette instance partagent certaines zones mémoire (comme le `shared_buffers`).
 
 ### Exemple visuel
@@ -70,17 +70,17 @@ Si l'instance est un immeuble, une database est un **étage entier** de cet imme
 
 ### Caractéristiques d'une database
 
-- **Isolation** : Les databases sont **isolées** les unes des autres. Vous ne pouvez pas effectuer de requête SQL qui joint directement des tables de deux databases différentes (sauf avec des outils avancés comme les Foreign Data Wrappers).
-- **Connexion unique** : Quand vous vous connectez à PostgreSQL, vous vous connectez toujours à **une seule database à la fois**.
-- **Databases système** : Par défaut, PostgreSQL crée trois databases système :
-  - `postgres` : Database par défaut, utilisée pour les connexions administratives
-  - `template0` : Template immuable pour créer de nouvelles databases
+- **Isolation** : Les databases sont **isolées** les unes des autres. Vous ne pouvez pas effectuer de requête SQL qui joint directement des tables de deux databases différentes (sauf avec des outils avancés comme les Foreign Data Wrappers).  
+- **Connexion unique** : Quand vous vous connectez à PostgreSQL, vous vous connectez toujours à **une seule database à la fois**.  
+- **Databases système** : Par défaut, PostgreSQL crée trois databases système :  
+  - `postgres` : Database par défaut, utilisée pour les connexions administratives  
+  - `template0` : Template immuable pour créer de nouvelles databases  
   - `template1` : Template modifiable pour créer de nouvelles databases
 
 ### Cas d'usage typiques
 
-- **Séparation par projet** : Une database pour chaque application (ex: `ecommerce_db`, `blog_db`, `analytics_db`)
-- **Séparation par environnement** : Une database pour le développement, une pour les tests, une pour la production
+- **Séparation par projet** : Une database pour chaque application (ex: `ecommerce_db`, `blog_db`, `analytics_db`)  
+- **Séparation par environnement** : Une database pour le développement, une pour les tests, une pour la production  
 - **Séparation par client** : Dans une application multi-tenant, chaque client peut avoir sa propre database
 
 ### Exemple de création
@@ -131,9 +131,9 @@ Si la database est un étage d'immeuble, un schema est un **bureau** ou une **sa
 
 Les schémas permettent :
 
-1. **Organisation logique** : Regrouper des objets liés (ex: toutes les tables de facturation dans un schéma `billing`)
-2. **Éviter les conflits de noms** : Vous pouvez avoir une table `users` dans le schéma `public` et une autre table `users` dans le schéma `admin`
-3. **Gestion des permissions** : Attribuer des droits d'accès différents par schéma
+1. **Organisation logique** : Regrouper des objets liés (ex: toutes les tables de facturation dans un schéma `billing`)  
+2. **Éviter les conflits de noms** : Vous pouvez avoir une table `users` dans le schéma `public` et une autre table `users` dans le schéma `admin`  
+3. **Gestion des permissions** : Attribuer des droits d'accès différents par schéma  
 4. **Isolation fonctionnelle** : Séparer différentes parties d'une application
 
 ### Le schéma `public`
@@ -142,8 +142,8 @@ Par défaut, PostgreSQL crée un schéma appelé **`public`** dans chaque nouvel
 
 ```sql
 -- Ces deux commandes sont équivalentes
-CREATE TABLE users (id INT);
-CREATE TABLE public.users (id INT);
+CREATE TABLE users (id INT);  
+CREATE TABLE public.users (id INT);  
 ```
 
 ### Le search_path
@@ -244,7 +244,7 @@ Si le schema est un bureau, une table est comme un **classeur** ou un **fichier 
 
 Une table est composée de :
 
-- **Colonnes** (aussi appelées attributs ou champs) : Définissent la structure des données (nom, type, contraintes)
+- **Colonnes** (aussi appelées attributs ou champs) : Définissent la structure des données (nom, type, contraintes)  
 - **Lignes** (aussi appelées tuples ou enregistrements) : Contiennent les données réelles
 
 ### Exemple de table
@@ -259,11 +259,11 @@ CREATE TABLE public.utilisateurs (
 );
 
 -- Insérer des données
-INSERT INTO utilisateurs (nom, email)
-VALUES ('Alice Dupont', 'alice@example.com');
+INSERT INTO utilisateurs (nom, email)  
+VALUES ('Alice Dupont', 'alice@example.com');  
 
-INSERT INTO utilisateurs (nom, email)
-VALUES ('Bob Martin', 'bob@example.com');
+INSERT INTO utilisateurs (nom, email)  
+VALUES ('Bob Martin', 'bob@example.com');  
 
 -- Consulter les données
 SELECT * FROM utilisateurs;
@@ -378,9 +378,9 @@ CREATE DATABASE entreprise;
 \c entreprise
 
 -- 4. Créer plusieurs SCHEMAS
-CREATE SCHEMA ressources_humaines;
-CREATE SCHEMA comptabilite;
-CREATE SCHEMA production;
+CREATE SCHEMA ressources_humaines;  
+CREATE SCHEMA comptabilite;  
+CREATE SCHEMA production;  
 
 -- 5. Créer des TABLES dans différents schémas
 
@@ -410,19 +410,19 @@ CREATE TABLE production.produits (
 );
 
 -- 6. Insérer des données
-INSERT INTO ressources_humaines.employes (nom, prenom, poste, salaire)
-VALUES ('Durand', 'Sophie', 'Développeuse', 45000);
+INSERT INTO ressources_humaines.employes (nom, prenom, poste, salaire)  
+VALUES ('Durand', 'Sophie', 'Développeuse', 45000);  
 
-INSERT INTO comptabilite.factures (numero, montant, date_emission)
-VALUES ('F-2025-001', 1500.00, '2025-11-19');
+INSERT INTO comptabilite.factures (numero, montant, date_emission)  
+VALUES ('F-2025-001', 1500.00, '2025-11-19');  
 
-INSERT INTO production.produits (nom, reference, stock)
-VALUES ('Ordinateur portable', 'PC-2025-15', 50);
+INSERT INTO production.produits (nom, reference, stock)  
+VALUES ('Ordinateur portable', 'PC-2025-15', 50);  
 
 -- 7. Requêtes avec nom qualifié complet
-SELECT * FROM ressources_humaines.employes;
-SELECT * FROM comptabilite.factures;
-SELECT * FROM production.produits;
+SELECT * FROM ressources_humaines.employes;  
+SELECT * FROM comptabilite.factures;  
+SELECT * FROM production.produits;  
 ```
 
 ### Navigation dans la hiérarchie avec psql
@@ -474,9 +474,9 @@ SELECT * FROM production.produits;
 
 ### Bonnes pratiques
 
-- **Évitez d'avoir trop de databases** : Préférez utiliser plusieurs schémas dans une même database plutôt que plusieurs databases.
-- **Nommez vos schémas de manière descriptive** : `ventes`, `rh`, `production` plutôt que `schema1`, `schema2`.
-- **Documentez votre organisation** : Maintenez une documentation claire de l'organisation de vos databases, schémas et tables.
+- **Évitez d'avoir trop de databases** : Préférez utiliser plusieurs schémas dans une même database plutôt que plusieurs databases.  
+- **Nommez vos schémas de manière descriptive** : `ventes`, `rh`, `production` plutôt que `schema1`, `schema2`.  
+- **Documentez votre organisation** : Maintenez une documentation claire de l'organisation de vos databases, schémas et tables.  
 - **Utilisez le schéma `public` avec parcimonie** : Pour les gros projets, créez des schémas dédiés plutôt que de tout mettre dans `public`.
 
 ---
@@ -503,10 +503,10 @@ Lignes et Colonnes    =  Documents dans le classeur
 
 La compréhension de cette hiérarchie est fondamentale pour travailler efficacement avec PostgreSQL. Elle vous permet de :
 
-- **Organiser vos données** de manière logique et maintenable
-- **Gérer les permissions** finement (au niveau database, schéma ou table)
-- **Naviguer** efficacement dans votre système de gestion de base de données
-- **Éviter les conflits** de noms en utilisant les schémas
+- **Organiser vos données** de manière logique et maintenable  
+- **Gérer les permissions** finement (au niveau database, schéma ou table)  
+- **Naviguer** efficacement dans votre système de gestion de base de données  
+- **Éviter les conflits** de noms en utilisant les schémas  
 - **Planifier votre architecture** de données selon vos besoins
 
 Dans les prochaines sections, nous verrons comment créer et manipuler concrètement ces objets, en commençant par les tables et leurs types de données.

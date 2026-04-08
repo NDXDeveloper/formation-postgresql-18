@@ -18,24 +18,24 @@ Un **namespace** (espace de noms) est un conteneur logique qui permet d'éviter 
 
 Imaginez que vous travaillez dans une grande entreprise avec plusieurs départements :
 
-- **Département Marketing** : Il y a un employé nommé "Jean Dupont"
+- **Département Marketing** : Il y a un employé nommé "Jean Dupont"  
 - **Département IT** : Il y a aussi un employé nommé "Jean Dupont"
 
 Comment faire la différence entre les deux ? On utilise le département (namespace) :
-- "Jean Dupont du Marketing"
+- "Jean Dupont du Marketing"  
 - "Jean Dupont de l'IT"
 
 Dans PostgreSQL, c'est exactement pareil :
-- `marketing.clients` (table clients dans le schéma marketing)
+- `marketing.clients` (table clients dans le schéma marketing)  
 - `it.clients` (table clients dans le schéma IT)
 
 ### Pourquoi les namespaces sont importants ?
 
 Les namespaces permettent de :
 
-1. **Éviter les conflits de noms** : Deux tables peuvent avoir le même nom si elles sont dans des schémas différents
-2. **Organiser logiquement** : Regrouper des objets liés par fonctionnalité ou domaine métier
-3. **Gérer les permissions** : Attribuer des droits d'accès par schéma
+1. **Éviter les conflits de noms** : Deux tables peuvent avoir le même nom si elles sont dans des schémas différents  
+2. **Organiser logiquement** : Regrouper des objets liés par fonctionnalité ou domaine métier  
+3. **Gérer les permissions** : Attribuer des droits d'accès par schéma  
 4. **Isoler le code** : Séparer le code de différentes applications ou modules
 
 ---
@@ -48,8 +48,8 @@ Quand vous créez une nouvelle database dans PostgreSQL, un schéma appelé **`p
 
 ```sql
 -- Ces deux commandes sont équivalentes
-CREATE TABLE users (id INT);
-CREATE TABLE public.users (id INT);
+CREATE TABLE users (id INT);  
+CREATE TABLE public.users (id INT);  
 ```
 
 ### Créer un schéma
@@ -61,9 +61,9 @@ La création d'un schéma est très simple :
 CREATE SCHEMA nom_du_schema;
 
 -- Exemple
-CREATE SCHEMA ventes;
-CREATE SCHEMA ressources_humaines;
-CREATE SCHEMA reporting;
+CREATE SCHEMA ventes;  
+CREATE SCHEMA ressources_humaines;  
+CREATE SCHEMA reporting;  
 ```
 
 ### Créer un schéma avec un propriétaire
@@ -89,8 +89,8 @@ DROP SCHEMA nom_du_schema;
 DROP SCHEMA nom_du_schema CASCADE;
 
 -- Exemples
-DROP SCHEMA ventes; -- Échoue si le schéma contient des objets
-DROP SCHEMA ventes CASCADE; -- Supprime le schéma et tout son contenu
+DROP SCHEMA ventes; -- Échoue si le schéma contient des objets  
+DROP SCHEMA ventes CASCADE; -- Supprime le schéma et tout son contenu  
 ```
 
 ⚠️ **Attention** : `CASCADE` supprime TOUS les objets du schéma. Utilisez avec précaution !
@@ -102,15 +102,15 @@ DROP SCHEMA ventes CASCADE; -- Supprime le schéma et tout son contenu
 \dn
 
 -- Avec une requête SQL
-SELECT schema_name
-FROM information_schema.schemata;
+SELECT schema_name  
+FROM information_schema.schemata;  
 
 -- Voir les schémas avec leur propriétaire
 SELECT
     nspname AS schema_name,
     pg_catalog.pg_get_userbyid(nspowner) AS owner
-FROM pg_catalog.pg_namespace
-ORDER BY schema_name;
+FROM pg_catalog.pg_namespace  
+ORDER BY schema_name;  
 ```
 
 ---
@@ -131,8 +131,8 @@ CREATE TABLE ventes.commandes (
 );
 
 -- Insérer des données
-INSERT INTO ventes.commandes (client_id, montant, date_commande)
-VALUES (1, 150.50, '2025-11-19');
+INSERT INTO ventes.commandes (client_id, montant, date_commande)  
+VALUES (1, 150.50, '2025-11-19');  
 
 -- Sélectionner des données
 SELECT * FROM ventes.commandes;
@@ -188,7 +188,7 @@ C'est similaire à la variable `PATH` dans les systèmes Unix/Linux, qui indique
 
 Imaginez que vous cherchez un livre dans une bibliothèque :
 
-- **Sans search_path** : Vous devez dire exactement "Je veux le livre X dans la salle Y, dans l'étagère Z"
+- **Sans search_path** : Vous devez dire exactement "Je veux le livre X dans la salle Y, dans l'étagère Z"  
 - **Avec search_path** : Vous dites "Je veux le livre X" et le bibliothécaire cherche automatiquement dans les salles que vous avez configurées (d'abord la salle A, puis la salle B, etc.)
 
 ### Voir le search_path actuel
@@ -202,7 +202,7 @@ SHOW search_path;
 ```
 
 Ce résultat signifie :
-1. PostgreSQL cherche d'abord dans un schéma qui porte le nom de l'utilisateur connecté (si ce schéma existe)
+1. PostgreSQL cherche d'abord dans un schéma qui porte le nom de l'utilisateur connecté (si ce schéma existe)  
 2. Puis dans le schéma `public`
 
 ### Comportement par défaut
@@ -262,8 +262,8 @@ SET search_path TO "$user", public;
 
 ```sql
 -- Créer deux schémas
-CREATE SCHEMA france;
-CREATE SCHEMA belgique;
+CREATE SCHEMA france;  
+CREATE SCHEMA belgique;  
 
 -- Créer une table "clients" dans chaque schéma
 CREATE TABLE france.clients (
@@ -279,8 +279,8 @@ CREATE TABLE belgique.clients (
 );
 
 -- Insérer des données
-INSERT INTO france.clients (nom) VALUES ('Jean Dupont');
-INSERT INTO belgique.clients (nom) VALUES ('Marc Dubois');
+INSERT INTO france.clients (nom) VALUES ('Jean Dupont');  
+INSERT INTO belgique.clients (nom) VALUES ('Marc Dubois');  
 
 -- Voir le search_path actuel
 SHOW search_path;
@@ -311,16 +311,16 @@ SELECT * FROM clients;
 -- 1  | Marc Dubois | Belgique
 
 -- On peut toujours accéder aux deux avec des noms qualifiés
-SELECT * FROM france.clients;
-SELECT * FROM belgique.clients;
+SELECT * FROM france.clients;  
+SELECT * FROM belgique.clients;  
 ```
 
 ### Exemple 2 : Ordre de priorité dans le search_path
 
 ```sql
 -- Créer des schémas
-CREATE SCHEMA prioritaire;
-CREATE SCHEMA secondaire;
+CREATE SCHEMA prioritaire;  
+CREATE SCHEMA secondaire;  
 
 -- Créer une table "produits" dans les deux
 CREATE TABLE prioritaire.produits (
@@ -336,8 +336,8 @@ CREATE TABLE secondaire.produits (
 );
 
 -- Insérer des données
-INSERT INTO prioritaire.produits (nom) VALUES ('Produit A');
-INSERT INTO secondaire.produits (nom) VALUES ('Produit B');
+INSERT INTO prioritaire.produits (nom) VALUES ('Produit A');  
+INSERT INTO secondaire.produits (nom) VALUES ('Produit B');  
 
 -- Définir le search_path avec "prioritaire" en premier
 SET search_path TO prioritaire, secondaire, public;
@@ -364,9 +364,9 @@ SELECT * FROM produits;
 
 ```sql
 -- Créer des schémas pour différents modules d'une application
-CREATE SCHEMA auth;      -- Module d'authentification
-CREATE SCHEMA blog;      -- Module de blog
-CREATE SCHEMA ecommerce; -- Module e-commerce
+CREATE SCHEMA auth;      -- Module d'authentification  
+CREATE SCHEMA blog;      -- Module de blog  
+CREATE SCHEMA ecommerce; -- Module e-commerce  
 
 -- Tables du module auth
 CREATE TABLE auth.users (
@@ -447,8 +447,8 @@ Ce mécanisme permet de créer des environnements isolés pour chaque utilisateu
 
 ```sql
 -- Créer un schéma pour chaque utilisateur
-CREATE SCHEMA alice;
-CREATE SCHEMA bob;
+CREATE SCHEMA alice;  
+CREATE SCHEMA bob;  
 
 -- Créer une table "privée" pour chaque utilisateur
 CREATE TABLE alice.notes (
@@ -486,13 +486,13 @@ Le schéma **`pg_catalog`** contient toutes les tables système et les fonctions
 -- Ce schéma est TOUJOURS dans le search_path (implicitement en premier)
 -- C'est pourquoi vous pouvez utiliser des fonctions sans préfixe
 
-SELECT current_timestamp; -- Équivalent à pg_catalog.current_timestamp
-SELECT version();         -- Équivalent à pg_catalog.version()
+SELECT current_timestamp; -- Équivalent à pg_catalog.current_timestamp  
+SELECT version();         -- Équivalent à pg_catalog.version()  
 
 -- Exemples de tables système dans pg_catalog
-SELECT * FROM pg_catalog.pg_tables;      -- Liste de toutes les tables
-SELECT * FROM pg_catalog.pg_namespace;   -- Liste de tous les schémas
-SELECT * FROM pg_catalog.pg_class;       -- Liste de tous les objets
+SELECT * FROM pg_catalog.pg_tables;      -- Liste de toutes les tables  
+SELECT * FROM pg_catalog.pg_namespace;   -- Liste de tous les schémas  
+SELECT * FROM pg_catalog.pg_class;       -- Liste de tous les objets  
 ```
 
 ### 2. `information_schema`
@@ -525,45 +525,45 @@ Vous n'avez généralement pas besoin d'interagir directement avec ce schéma.
 ❌ **Mauvaise pratique** :
 ```sql
 -- Tout dans public
-CREATE TABLE public.users (...);
-CREATE TABLE public.products (...);
-CREATE TABLE public.orders (...);
-CREATE TABLE public.invoices (...);
-CREATE TABLE public.blog_posts (...);
+CREATE TABLE public.users (...);  
+CREATE TABLE public.products (...);  
+CREATE TABLE public.orders (...);  
+CREATE TABLE public.invoices (...);  
+CREATE TABLE public.blog_posts (...);  
 -- ... 50 autres tables
 ```
 
 ✅ **Bonne pratique** :
 ```sql
 -- Organisation par domaine
-CREATE SCHEMA auth;
-CREATE SCHEMA ecommerce;
-CREATE SCHEMA blog;
-CREATE SCHEMA billing;
+CREATE SCHEMA auth;  
+CREATE SCHEMA ecommerce;  
+CREATE SCHEMA blog;  
+CREATE SCHEMA billing;  
 
-CREATE TABLE auth.users (...);
-CREATE TABLE ecommerce.products (...);
-CREATE TABLE ecommerce.orders (...);
-CREATE TABLE billing.invoices (...);
-CREATE TABLE blog.posts (...);
+CREATE TABLE auth.users (...);  
+CREATE TABLE ecommerce.products (...);  
+CREATE TABLE ecommerce.orders (...);  
+CREATE TABLE billing.invoices (...);  
+CREATE TABLE blog.posts (...);  
 ```
 
 ### 2. Utiliser des noms de schémas descriptifs
 
 ❌ **Mauvaise pratique** :
 ```sql
-CREATE SCHEMA s1;
-CREATE SCHEMA s2;
-CREATE SCHEMA app;
-CREATE SCHEMA data;
+CREATE SCHEMA s1;  
+CREATE SCHEMA s2;  
+CREATE SCHEMA app;  
+CREATE SCHEMA data;  
 ```
 
 ✅ **Bonne pratique** :
 ```sql
-CREATE SCHEMA user_management;
-CREATE SCHEMA inventory;
-CREATE SCHEMA reporting;
-CREATE SCHEMA audit;
+CREATE SCHEMA user_management;  
+CREATE SCHEMA inventory;  
+CREATE SCHEMA reporting;  
+CREATE SCHEMA audit;  
 ```
 
 ### 3. Toujours spécifier le schéma dans le code de production
@@ -572,15 +572,15 @@ Pour plus de clarté et éviter les ambiguïtés, spécifiez toujours le schéma
 
 ✅ **Recommandé** :
 ```sql
-SELECT * FROM ecommerce.products;
-INSERT INTO auth.users (username, email) VALUES (...);
-UPDATE billing.invoices SET status = 'paid' WHERE id = 123;
+SELECT * FROM ecommerce.products;  
+INSERT INTO auth.users (username, email) VALUES (...);  
+UPDATE billing.invoices SET status = 'paid' WHERE id = 123;  
 ```
 
 ❓ **À éviter en production** :
 ```sql
-SELECT * FROM products;  -- Dans quel schéma ?
-INSERT INTO users (...);  -- Quel schéma ?
+SELECT * FROM products;  -- Dans quel schéma ?  
+INSERT INTO users (...);  -- Quel schéma ?  
 ```
 
 ### 4. Documenter votre organisation de schémas
@@ -589,17 +589,17 @@ Créez un document (ou un commentaire dans votre code) qui décrit l'organisatio
 
 ```sql
 -- Documentation des schémas
-COMMENT ON SCHEMA auth IS 'Module d''authentification et gestion des utilisateurs';
-COMMENT ON SCHEMA ecommerce IS 'Module e-commerce : produits, paniers, commandes';
-COMMENT ON SCHEMA billing IS 'Module de facturation et paiements';
-COMMENT ON SCHEMA reporting IS 'Vues et tables pour le reporting';
+COMMENT ON SCHEMA auth IS 'Module d''authentification et gestion des utilisateurs';  
+COMMENT ON SCHEMA ecommerce IS 'Module e-commerce : produits, paniers, commandes';  
+COMMENT ON SCHEMA billing IS 'Module de facturation et paiements';  
+COMMENT ON SCHEMA reporting IS 'Vues et tables pour le reporting';  
 
 -- Voir les commentaires
 SELECT
     nspname AS schema_name,
     obj_description(oid, 'pg_namespace') AS description
-FROM pg_namespace
-WHERE nspname NOT LIKE 'pg_%'
+FROM pg_namespace  
+WHERE nspname NOT LIKE 'pg_%'  
   AND nspname != 'information_schema';
 ```
 
@@ -616,8 +616,8 @@ conn = psycopg2.connect(
 )
 
 # Définir le search_path pour cette connexion
-cursor = conn.cursor()
-cursor.execute("SET search_path TO ecommerce, auth, public")
+cursor = conn.cursor()  
+cursor.execute("SET search_path TO ecommerce, auth, public")  
 ```
 
 ```javascript
@@ -646,33 +646,33 @@ pool.on('connect', (client) => {
 
 ```sql
 -- Créer des schémas pour différents environnements
-CREATE SCHEMA dev;
-CREATE SCHEMA staging;
-CREATE SCHEMA prod;
+CREATE SCHEMA dev;  
+CREATE SCHEMA staging;  
+CREATE SCHEMA prod;  
 
 -- Structure identique dans chaque schéma
-CREATE TABLE dev.users (...);
-CREATE TABLE staging.users (...);
-CREATE TABLE prod.users (...);
+CREATE TABLE dev.users (...);  
+CREATE TABLE staging.users (...);  
+CREATE TABLE prod.users (...);  
 
 -- Basculer entre environnements via search_path
-SET search_path TO dev, public;   -- Développement
-SET search_path TO staging, public; -- Tests
-SET search_path TO prod, public;  -- Production
+SET search_path TO dev, public;   -- Développement  
+SET search_path TO staging, public; -- Tests  
+SET search_path TO prod, public;  -- Production  
 ```
 
 ### Cas 2 : Versioning de schéma
 
 ```sql
 -- Plusieurs versions de votre schéma cohabitent
-CREATE SCHEMA app_v1;
-CREATE SCHEMA app_v2;
-CREATE SCHEMA app_v3;
+CREATE SCHEMA app_v1;  
+CREATE SCHEMA app_v2;  
+CREATE SCHEMA app_v3;  
 
 -- Chaque version a sa propre structure
-CREATE TABLE app_v1.users (...); -- Structure ancienne
-CREATE TABLE app_v2.users (...); -- Structure avec modifications
-CREATE TABLE app_v3.users (...); -- Dernière structure
+CREATE TABLE app_v1.users (...); -- Structure ancienne  
+CREATE TABLE app_v2.users (...); -- Structure avec modifications  
+CREATE TABLE app_v3.users (...); -- Dernière structure  
 
 -- Les anciennes versions de l'application utilisent app_v1
 -- Les nouvelles versions utilisent app_v3
@@ -682,14 +682,14 @@ CREATE TABLE app_v3.users (...); -- Dernière structure
 
 ```sql
 -- Créer un schéma par client
-CREATE SCHEMA client_acme;
-CREATE SCHEMA client_globex;
-CREATE SCHEMA client_initech;
+CREATE SCHEMA client_acme;  
+CREATE SCHEMA client_globex;  
+CREATE SCHEMA client_initech;  
 
 -- Structure identique pour chaque client
-CREATE TABLE client_acme.data (...);
-CREATE TABLE client_globex.data (...);
-CREATE TABLE client_initech.data (...);
+CREATE TABLE client_acme.data (...);  
+CREATE TABLE client_globex.data (...);  
+CREATE TABLE client_initech.data (...);  
 
 -- L'application sélectionne le bon schéma selon le client connecté
 -- SET search_path TO client_acme, public;
@@ -719,27 +719,27 @@ Les schémas permettent une gestion fine des permissions :
 
 ```sql
 -- Créer des rôles (utilisateurs)
-CREATE ROLE vendeur LOGIN PASSWORD 'secret123';
-CREATE ROLE comptable LOGIN PASSWORD 'secret456';
-CREATE ROLE admin LOGIN PASSWORD 'secret789';
+CREATE ROLE vendeur LOGIN PASSWORD 'secret123';  
+CREATE ROLE comptable LOGIN PASSWORD 'secret456';  
+CREATE ROLE admin LOGIN PASSWORD 'secret789';  
 
 -- Créer des schémas
-CREATE SCHEMA ventes;
-CREATE SCHEMA comptabilite;
+CREATE SCHEMA ventes;  
+CREATE SCHEMA comptabilite;  
 
 -- Permissions pour le vendeur
-GRANT USAGE ON SCHEMA ventes TO vendeur;
-GRANT SELECT, INSERT, UPDATE ON ALL TABLES IN SCHEMA ventes TO vendeur;
+GRANT USAGE ON SCHEMA ventes TO vendeur;  
+GRANT SELECT, INSERT, UPDATE ON ALL TABLES IN SCHEMA ventes TO vendeur;  
 
 -- Permissions pour le comptable
-GRANT USAGE ON SCHEMA comptabilite TO comptable;
-GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA comptabilite TO comptable;
+GRANT USAGE ON SCHEMA comptabilite TO comptable;  
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA comptabilite TO comptable;  
 
 -- Permissions pour l'admin (accès partout)
-GRANT USAGE ON SCHEMA ventes TO admin;
-GRANT USAGE ON SCHEMA comptabilite TO admin;
-GRANT ALL ON ALL TABLES IN SCHEMA ventes TO admin;
-GRANT ALL ON ALL TABLES IN SCHEMA comptabilite TO admin;
+GRANT USAGE ON SCHEMA ventes TO admin;  
+GRANT USAGE ON SCHEMA comptabilite TO admin;  
+GRANT ALL ON ALL TABLES IN SCHEMA ventes TO admin;  
+GRANT ALL ON ALL TABLES IN SCHEMA comptabilite TO admin;  
 
 -- Le vendeur ne peut PAS accéder au schéma comptabilite
 -- Le comptable ne peut PAS accéder au schéma ventes
@@ -817,8 +817,8 @@ SELECT * FROM my_schema.table1;  -- ERROR: permission denied for schema my_schem
 
 ✅ **Solution** : Accorder les privilèges nécessaires :
 ```sql
-GRANT USAGE ON SCHEMA my_schema TO other_user;
-GRANT SELECT ON ALL TABLES IN SCHEMA my_schema TO other_user;
+GRANT USAGE ON SCHEMA my_schema TO other_user;  
+GRANT SELECT ON ALL TABLES IN SCHEMA my_schema TO other_user;  
 ```
 
 ---
@@ -944,10 +944,10 @@ SELECT schema_name FROM information_schema.schemata;
 
 Les schémas et le search_path sont des concepts fondamentaux de PostgreSQL qui vous permettent de :
 
-- **Organiser** vos objets de manière logique et maintenable
-- **Éviter les conflits** de noms entre différents modules
-- **Gérer les permissions** de manière granulaire
-- **Simplifier** l'accès aux objets avec le search_path
+- **Organiser** vos objets de manière logique et maintenable  
+- **Éviter les conflits** de noms entre différents modules  
+- **Gérer les permissions** de manière granulaire  
+- **Simplifier** l'accès aux objets avec le search_path  
 - **Isoler** différentes parties de votre application
 
 Maîtriser ces concepts est essentiel pour concevoir des applications PostgreSQL robustes et évolutives. Dans la prochaine section, nous verrons comment créer des tables et définir leur structure avec les différents types de données disponibles.

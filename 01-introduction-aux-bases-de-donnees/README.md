@@ -16,12 +16,12 @@ Mais avant de plonger dans PostgreSQL lui-même, prenons le temps de comprendre 
 
 Même si vous ne vous en rendez pas compte, vous interagissez avec des bases de données **des dizaines de fois par jour** :
 
-- 📱 Vous envoyez un message sur WhatsApp → Une base de données stocke votre message
-- 🛒 Vous achetez un article sur Amazon → Une base de données gère votre commande
-- 💳 Vous consultez votre compte bancaire → Une base de données suit toutes vos transactions
-- 📧 Vous recevez un email → Une base de données stocke vos messages
-- 🎵 Vous écoutez de la musique sur Spotify → Une base de données enregistre vos préférences
-- 🎮 Vous jouez en ligne → Une base de données sauvegarde votre progression
+- 📱 Vous envoyez un message sur WhatsApp → Une base de données stocke votre message  
+- 🛒 Vous achetez un article sur Amazon → Une base de données gère votre commande  
+- 💳 Vous consultez votre compte bancaire → Une base de données suit toutes vos transactions  
+- 📧 Vous recevez un email → Une base de données stocke vos messages  
+- 🎵 Vous écoutez de la musique sur Spotify → Une base de données enregistre vos préférences  
+- 🎮 Vous jouez en ligne → Une base de données sauvegarde votre progression  
 - 🚗 Vous réservez un Uber → Une base de données matche les chauffeurs et les passagers
 
 **Les bases de données sont le cœur invisible de notre monde numérique.** Sans elles, aucune application moderne ne pourrait fonctionner.
@@ -63,7 +63,7 @@ Nous commencerons par le commencement : qu'est-ce qu'une donnée ? Comment disti
 
 ### 1.2. Le concept de SGBD (Système de Gestion de Bases de Données)
 
-Une fois que vous comprenez ce qu'est une base de données, la question suivante est : comment la gérer ? C'est là qu'intervient le SGBD, le logiciel qui fait tout le travail difficile pour vous.
+Une fois que vous comprendrez ce qu'est une base de données, la question suivante sera : comment la gérer ? C'est là qu'intervient le SGBD, le logiciel qui fait tout le travail difficile pour vous.
 
 **Vous découvrirez :**
 - Ce qu'est un SGBD et son rôle central
@@ -100,9 +100,9 @@ La fiabilité des données est critique, surtout pour les applications important
 **Vous découvrirez :**
 - Ce qu'est une transaction et pourquoi elle est indispensable
 - Les 4 propriétés ACID en détail :
-  - **A**tomicité : Tout ou rien
-  - **C**ohérence : Respect des règles
-  - **I**solation : Transactions indépendantes
+  - **A**tomicité : Tout ou rien  
+  - **C**ohérence : Respect des règles  
+  - **I**solation : Transactions indépendantes  
   - **D**urabilité : Modifications permanentes
 - Comment PostgreSQL garantit chaque propriété (WAL, verrous, contraintes...)
 - Pourquoi ACID est crucial pour les applications critiques
@@ -145,8 +145,8 @@ Ces concepts peuvent sembler théoriques, mais ils sont **fondamentaux**. Ne vou
 ### Lisez de manière active
 
 Ne vous contentez pas de lire passivement. Posez-vous des questions :
-- "Est-ce que je comprends vraiment ce concept ?"
-- "Puis-je expliquer cela à quelqu'un d'autre avec mes propres mots ?"
+- "Est-ce que je comprends vraiment ce concept ?"  
+- "Puis-je expliquer cela à quelqu'un d'autre avec mes propres mots ?"  
 - "Comment cela s'applique-t-il aux applications que j'utilise ou que je développe ?"
 
 ### Utilisez les analogies

@@ -22,9 +22,9 @@ Après le succès d'INGRES, Michael Stonebraker et son équipe à Berkeley ident
 
 **Les objectifs de POSTGRES étaient révolutionnaires pour l'époque :**
 
-- **Extension du modèle relationnel** : Ajouter la possibilité de définir des types de données personnalisés
-- **Support des données complexes** : Gérer des données plus sophistiquées que les simples nombres et textes
-- **Règles et déclencheurs** : Automatiser des actions en réponse à des événements
+- **Extension du modèle relationnel** : Ajouter la possibilité de définir des types de données personnalisés  
+- **Support des données complexes** : Gérer des données plus sophistiquées que les simples nombres et textes  
+- **Règles et déclencheurs** : Automatiser des actions en réponse à des événements  
 - **Requêtes sur des données historiques** : Voyager dans le temps avec les données (time travel)
 
 Le projet POSTGRES a été développé entre 1986 et 1994 à l'Université de Berkeley, financé par des agences gouvernementales américaines et des sponsors privés.
@@ -53,14 +53,14 @@ Depuis 1996, PostgreSQL a connu une évolution constante avec une nouvelle versi
 
 **Quelques jalons importants :**
 
-- **PostgreSQL 7.0 (2000)** : Support complet des transactions ACID
-- **PostgreSQL 8.0 (2005)** : Réplication native, support Windows
-- **PostgreSQL 9.0 (2010)** : Réplication en streaming, Hot Standby
-- **PostgreSQL 9.4 (2014)** : Support JSONB (JSON binaire optimisé)
-- **PostgreSQL 10 (2017)** : Partitionnement déclaratif natif
-- **PostgreSQL 12 (2019)** : Amélioration massive des performances
-- **PostgreSQL 14 (2021)** : Pipeline de requêtes, amélioration JSON
-- **PostgreSQL 16 (2023)** : Parallélisation massive, optimisations logiques
+- **PostgreSQL 7.1 (2001)** : Introduction du WAL (Write-Ahead Logging), garantissant une durabilité robuste  
+- **PostgreSQL 8.0 (2005)** : Support natif Windows, Point-In-Time Recovery (PITR), savepoints  
+- **PostgreSQL 9.0 (2010)** : Réplication en streaming, Hot Standby  
+- **PostgreSQL 9.4 (2014)** : Support JSONB (JSON binaire optimisé)  
+- **PostgreSQL 10 (2017)** : Partitionnement déclaratif natif  
+- **PostgreSQL 12 (2019)** : Amélioration massive des performances  
+- **PostgreSQL 14 (2021)** : Pipeline de requêtes, amélioration JSON  
+- **PostgreSQL 16 (2023)** : Parallélisation massive, optimisations logiques  
 - **PostgreSQL 18 (2025)** : I/O asynchrone, colonnes virtuelles, OAuth
 
 ---
@@ -73,9 +73,9 @@ PostgreSQL n'appartient à aucune entreprise. C'est un projet **communautaire** 
 
 **Cette structure apporte plusieurs avantages :**
 
-1. **Indépendance** : Aucune entreprise ne contrôle le projet ou sa direction
-2. **Stabilité** : Le projet ne peut pas être racheté ou abandonné
-3. **Transparence** : Toutes les discussions et décisions sont publiques
+1. **Indépendance** : Aucune entreprise ne contrôle le projet ou sa direction  
+2. **Stabilité** : Le projet ne peut pas être racheté ou abandonné  
+3. **Transparence** : Toutes les discussions et décisions sont publiques  
 4. **Qualité** : Les contributions sont rigoureusement examinées par des pairs
 
 ### Les Valeurs Fondamentales
@@ -134,9 +134,9 @@ Avant de comprendre le terme "objet-relationnel", rappelons ce qu'est un modèle
 
 **Un SGBD relationnel organise les données en :**
 
-- **Tables** : Structures à deux dimensions (lignes et colonnes)
-- **Lignes** : Représentent des enregistrements individuels
-- **Colonnes** : Représentent des attributs avec des types de données spécifiques
+- **Tables** : Structures à deux dimensions (lignes et colonnes)  
+- **Lignes** : Représentent des enregistrements individuels  
+- **Colonnes** : Représentent des attributs avec des types de données spécifiques  
 - **Relations** : Liens entre les tables via des clés (primaires et étrangères)
 
 **Exemple simple :**
@@ -157,18 +157,18 @@ Les types de données sont limités aux types de base : nombres, textes, dates, 
 
 Le modèle relationnel classique a certaines limitations :
 
-1. **Types de données rigides** : Difficile de représenter des structures complexes
-2. **Absence d'héritage** : Pas de hiérarchie entre les types
-3. **Données plates** : Difficile de représenter des objets imbriqués
+1. **Types de données rigides** : Difficile de représenter des structures complexes  
+2. **Absence d'héritage** : Pas de hiérarchie entre les types  
+3. **Données plates** : Difficile de représenter des objets imbriqués  
 4. **Extensibilité limitée** : Pas facile d'ajouter de nouveaux types
 
 ### Le Modèle Objet : L'Autre Approche
 
 Les bases de données **orientées objet** adoptent une philosophie différente inspirée de la programmation orientée objet :
 
-- **Objets complexes** : Possibilité d'imbriquer des structures
-- **Héritage** : Les objets peuvent hériter de propriétés
-- **Encapsulation** : Regroupement de données et comportements
+- **Objets complexes** : Possibilité d'imbriquer des structures  
+- **Héritage** : Les objets peuvent hériter de propriétés  
+- **Encapsulation** : Regroupement de données et comportements  
 - **Polymorphisme** : Un objet peut avoir plusieurs formes
 
 **Problème :** Les bases de données purement orientées objet n'ont jamais vraiment décollé dans l'industrie. Le modèle relationnel reste dominant.
@@ -257,10 +257,10 @@ Cette approche objet-relationnelle rend PostgreSQL extrêmement extensible :
 
 **Extensions célèbres :**
 
-- **PostGIS** : Transforme PostgreSQL en base de données géospatiale de classe mondiale
-- **TimescaleDB** : Optimise PostgreSQL pour les séries temporelles
-- **pgvector** : Ajoute la recherche vectorielle pour l'IA et les embeddings
-- **pg_trgm** : Recherche floue et similarité de texte
+- **PostGIS** : Transforme PostgreSQL en base de données géospatiale de classe mondiale  
+- **TimescaleDB** : Optimise PostgreSQL pour les séries temporelles  
+- **pgvector** : Ajoute la recherche vectorielle pour l'IA et les embeddings  
+- **pg_trgm** : Recherche floue et similarité de texte  
 - **hstore** : Stockage clé-valeur dans une colonne
 
 Ces extensions ne sont possibles que grâce à l'architecture objet-relationnelle de PostgreSQL.
@@ -286,8 +286,8 @@ L'approche objet-relationnelle permet à PostgreSQL de s'adapter à une grande v
 
 En restant fidèle aux standards SQL tout en innovant, PostgreSQL garantit :
 
-- **Compatibilité** : Votre code SQL reste valide d'une version à l'autre
-- **Portabilité** : Facilité de migration depuis/vers d'autres SGBD relationnels
+- **Compatibilité** : Votre code SQL reste valide d'une version à l'autre  
+- **Portabilité** : Facilité de migration depuis/vers d'autres SGBD relationnels  
 - **Investissement sûr** : Vos compétences SQL restent pertinentes
 
 ### 3. **Innovation Sans Rupture**
@@ -308,18 +308,18 @@ Aujourd'hui, PostgreSQL est reconnu comme l'un des SGBD les plus avancés et les
 
 **Quelques faits marquants :**
 
-- **DB-Engines** : Régulièrement classé parmi les 4 premiers SGBD mondiaux
-- **StackOverflow Survey** : L'un des SGBD les plus aimés par les développeurs
-- **Adoption massive** : Utilisé par Apple, Instagram, Spotify, Netflix, Reddit, et des milliers d'autres entreprises
+- **DB-Engines** : Régulièrement classé parmi les 4 premiers SGBD mondiaux  
+- **StackOverflow Survey** : L'un des SGBD les plus aimés par les développeurs  
+- **Adoption massive** : Utilisé par Apple, Instagram, Spotify, Netflix, Reddit, et des milliers d'autres entreprises  
 - **Cloud providers** : Support natif par AWS, Azure, Google Cloud, et tous les grands fournisseurs
 
 ### Une Communauté Mondiale
 
 Le succès de PostgreSQL repose sur une communauté active et diversifiée :
 
-- **Développeurs** : Des centaines de contributeurs actifs dans le monde entier
-- **Entreprises** : Des sociétés comme Crunchy Data, EDB, 2ndQuadrant qui financent le développement
-- **Utilisateurs** : Des millions d'installations à travers le monde
+- **Développeurs** : Des centaines de contributeurs actifs dans le monde entier  
+- **Entreprises** : Des sociétés comme Crunchy Data, EDB, Percona, Timescale qui financent le développement  
+- **Utilisateurs** : Des millions d'installations à travers le monde  
 - **Événements** : Conférences PGConf sur tous les continents
 
 ---
@@ -379,11 +379,11 @@ L'histoire et la philosophie de PostgreSQL expliquent sa réussite actuelle :
 
 **Les Clés du Succès :**
 
-1. **Héritage académique** : Des fondations solides posées par des chercheurs de Berkeley
-2. **Open source** : Une licence permissive qui encourage l'adoption et la contribution
-3. **Communauté** : Une gouvernance communautaire qui garantit indépendance et qualité
-4. **Innovation** : Une approche objet-relationnelle qui permet l'extensibilité
-5. **Rigueur** : Un respect strict des standards et de l'intégrité des données
+1. **Héritage académique** : Des fondations solides posées par des chercheurs de Berkeley  
+2. **Open source** : Une licence permissive qui encourage l'adoption et la contribution  
+3. **Communauté** : Une gouvernance communautaire qui garantit indépendance et qualité  
+4. **Innovation** : Une approche objet-relationnelle qui permet l'extensibilité  
+5. **Rigueur** : Un respect strict des standards et de l'intégrité des données  
 6. **Pragmatisme** : Des fonctionnalités qui répondent aux besoins réels
 
 PostgreSQL n'est pas simplement un SGBD parmi d'autres. C'est un projet avec une vision, une histoire et des valeurs qui se reflètent dans chaque aspect de sa conception et de son évolution.
@@ -394,11 +394,11 @@ En tant que développeur ou DevOps, comprendre cette philosophie vous aidera à 
 
 ## Points Clés à Retenir
 
-- ✅ PostgreSQL est issu du projet POSTGRES de l'Université de Berkeley (1986)
-- ✅ Il est open source depuis 1996 avec une licence très permissive
-- ✅ C'est un projet communautaire indépendant de toute entreprise
-- ✅ Il combine le modèle relationnel avec des capacités orientées objet
-- ✅ Sa philosophie privilégie : conformité, extensibilité, fiabilité, intégrité
+- ✅ PostgreSQL est issu du projet POSTGRES de l'Université de Berkeley (1986)  
+- ✅ Il est open source depuis 1996 avec une licence très permissive  
+- ✅ C'est un projet communautaire indépendant de toute entreprise  
+- ✅ Il combine le modèle relationnel avec des capacités orientées objet  
+- ✅ Sa philosophie privilégie : conformité, extensibilité, fiabilité, intégrité  
 - ✅ PostgreSQL est aujourd'hui l'un des SGBD les plus avancés et respectés
 
 ---
