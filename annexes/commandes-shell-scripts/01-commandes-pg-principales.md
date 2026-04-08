@@ -11,8 +11,8 @@ PostgreSQL fournit un ensemble d'outils en ligne de commande (CLI - Command Line
 
 Dans cette annexe, nous allons explorer trois outils fondamentaux :
 
-1. **pg_ctl** : Contrôle du serveur PostgreSQL (démarrage, arrêt, redémarrage)
-2. **pg_dump** : Sauvegarde logique de bases de données
+1. **pg_ctl** : Contrôle du serveur PostgreSQL (démarrage, arrêt, redémarrage)  
+2. **pg_dump** : Sauvegarde logique de bases de données  
 3. **pg_restore** : Restauration de sauvegardes
 
 Ces outils sont installés automatiquement avec PostgreSQL et sont généralement situés dans le répertoire `bin` de votre installation PostgreSQL.
@@ -37,7 +37,7 @@ pg_ctl [OPTIONS] ACTION
 ```
 
 **Où :**
-- `OPTIONS` : Paramètres de configuration (chemin des données, mode, timeout, etc.)
+- `OPTIONS` : Paramètres de configuration (chemin des données, mode, timeout, etc.)  
 - `ACTION` : L'action à effectuer (start, stop, restart, status, etc.)
 
 ### 1.3. Actions Principales
@@ -49,7 +49,7 @@ pg_ctl -D /chemin/vers/data start
 ```
 
 **Explication :**
-- `-D /chemin/vers/data` : Spécifie le répertoire de données PostgreSQL (souvent `/var/lib/postgresql/data` sur Linux)
+- `-D /chemin/vers/data` : Spécifie le répertoire de données PostgreSQL (souvent `/var/lib/postgresql/data` sur Linux)  
 - `start` : Lance le serveur PostgreSQL
 
 **Options utiles pour le démarrage :**
@@ -66,8 +66,8 @@ pg_ctl -D /var/lib/postgresql/data -w start
 ```
 
 **Les options expliquées :**
-- `-l <logfile>` : Redirige les logs du serveur vers un fichier
-- `-s` : Mode silencieux (moins de sortie console)
+- `-l <logfile>` : Redirige les logs du serveur vers un fichier  
+- `-s` : Mode silencieux (moins de sortie console)  
 - `-w` : Attend (wait) que le serveur soit complètement démarré avant de rendre la main
 
 #### 1.3.2. Arrêter le Serveur PostgreSQL
@@ -122,7 +122,7 @@ pg_ctl -D /var/lib/postgresql/data -m immediate stop
 ```
 
 **Comportement :**
-- **Tue brutalement** tous les processus PostgreSQL (SIGQUIT)
+- **Tue brutalement** tous les processus PostgreSQL (SIGQUIT)  
 - **Aucun checkpoint** : équivalent d'un crash
 - Au redémarrage, PostgreSQL devra effectuer une **récupération des WAL** (replay)
 - **Arrêt le plus rapide mais le plus violent**
@@ -158,8 +158,8 @@ pg_ctl -D /chemin/vers/data restart
 
 **Équivalent à :**
 ```bash
-pg_ctl -D /chemin/vers/data stop
-pg_ctl -D /chemin/vers/data start
+pg_ctl -D /chemin/vers/data stop  
+pg_ctl -D /chemin/vers/data start  
 ```
 
 **Option utile :**
@@ -188,23 +188,23 @@ pg_ctl -D /chemin/vers/data reload
 - Ne fonctionne que pour les paramètres marqués comme "reloadable"
 
 **Exemple de paramètres rechargeables :**
-- `log_min_duration_statement` : Seuil de logging des requêtes lentes
-- `work_mem` : Mémoire de travail pour les requêtes
+- `log_min_duration_statement` : Seuil de logging des requêtes lentes  
+- `work_mem` : Mémoire de travail pour les requêtes  
 - `max_connections` : ❌ **Non rechargeable** (nécessite un restart)
 
 **Comment savoir si un paramètre est rechargeable ?**
 
 ```sql
 -- Dans psql
-SELECT name, context, setting
-FROM pg_settings
-WHERE name = 'work_mem';
+SELECT name, context, setting  
+FROM pg_settings  
+WHERE name = 'work_mem';  
 ```
 
 **Les valeurs de `context` :**
-- `postmaster` : Nécessite un **redémarrage complet**
-- `sighup` : Rechargeable avec `reload` ✅
-- `backend` : Applicable aux nouvelles connexions seulement
+- `postmaster` : Nécessite un **redémarrage complet**  
+- `sighup` : Rechargeable avec `reload` ✅  
+- `backend` : Applicable aux nouvelles connexions seulement  
 - `superuser` / `user` : Modifiable par session
 
 #### 1.3.5. Vérifier le Statut du Serveur
@@ -221,7 +221,7 @@ pg_ctl: server is running (PID: 12345)
 ```
 
 **Interprétation :**
-- `server is running` : Le serveur est actif
+- `server is running` : Le serveur est actif  
 - `PID: 12345` : Process ID du processus principal (postmaster)
 - Si le serveur est arrêté : `pg_ctl: no server running`
 
@@ -248,9 +248,9 @@ pg_ctl -D /chemin/vers/data promote
 - Crucial lors d'un **failover** (bascule après panne du serveur principal)
 
 **Exemple de scénario :**
-1. Serveur Primary tombe en panne
-2. L'administrateur décide de promouvoir le Standby
-3. `pg_ctl promote` → Le standby devient le nouveau primary
+1. Serveur Primary tombe en panne  
+2. L'administrateur décide de promouvoir le Standby  
+3. `pg_ctl promote` → Le standby devient le nouveau primary  
 4. Les applications se reconnectent au nouveau primary
 
 ### 1.4. Options Globales Importantes
@@ -268,9 +268,9 @@ pg_ctl -D /var/lib/postgresql/data [ACTION]
 export PGDATA=/var/lib/postgresql/data
 
 # Puis simplement :
-pg_ctl start
-pg_ctl stop
-pg_ctl status
+pg_ctl start  
+pg_ctl stop  
+pg_ctl status  
 ```
 
 **💡 Astuce :** Définir `PGDATA` simplifie grandement vos commandes !
@@ -302,7 +302,7 @@ pg_ctl -D /var/lib/postgresql/data -W start
 ```
 
 **Différence :**
-- `-w` : La commande **attend** que PostgreSQL soit complètement démarré/arrêté
+- `-w` : La commande **attend** que PostgreSQL soit complètement démarré/arrêté  
 - `-W` : La commande rend la main **immédiatement** (comportement asynchrone)
 
 **Quand utiliser `-w` ?**
@@ -313,8 +313,8 @@ pg_ctl -D /var/lib/postgresql/data -W start
 
 ```bash
 #!/bin/bash
-echo "Démarrage de PostgreSQL..."
-pg_ctl -D /var/lib/postgresql/data -w start
+echo "Démarrage de PostgreSQL..."  
+pg_ctl -D /var/lib/postgresql/data -w start  
 
 if [ $? -eq 0 ]; then
     echo "PostgreSQL démarré avec succès"
@@ -356,7 +356,7 @@ fi
 - Contient tous les paramètres du serveur
 
 **Rechargé par :**
-- `pg_ctl reload` (pour les paramètres rechargeables)
+- `pg_ctl reload` (pour les paramètres rechargeables)  
 - `pg_ctl restart` (pour tous les paramètres)
 
 ### 1.6. Exemples de Scripts Pratiques
@@ -367,17 +367,17 @@ fi
 #!/bin/bash
 # start_postgresql.sh
 
-PGDATA="/var/lib/postgresql/data"
-LOGFILE="/var/log/postgresql/server.log"
+PGDATA="/var/lib/postgresql/data"  
+LOGFILE="/var/log/postgresql/server.log"  
 
-echo "Vérification du statut de PostgreSQL..."
-if pg_ctl -D "$PGDATA" status > /dev/null 2>&1; then
+echo "Vérification du statut de PostgreSQL..."  
+if pg_ctl -D "$PGDATA" status > /dev/null 2>&1; then  
     echo "PostgreSQL est déjà actif."
     exit 0
 fi
 
-echo "Démarrage de PostgreSQL..."
-pg_ctl -D "$PGDATA" -l "$LOGFILE" -w start
+echo "Démarrage de PostgreSQL..."  
+pg_ctl -D "$PGDATA" -l "$LOGFILE" -w start  
 
 if [ $? -eq 0 ]; then
     echo "✅ PostgreSQL démarré avec succès"
@@ -397,8 +397,8 @@ fi
 
 PGDATA="/var/lib/postgresql/data"
 
-echo "Arrêt de PostgreSQL (mode fast)..."
-pg_ctl -D "$PGDATA" -m fast -t 120 -w stop
+echo "Arrêt de PostgreSQL (mode fast)..."  
+pg_ctl -D "$PGDATA" -m fast -t 120 -w stop  
 
 if [ $? -eq 0 ]; then
     echo "✅ PostgreSQL arrêté avec succès"
@@ -424,19 +424,19 @@ fi
 #!/bin/bash
 # restart_postgresql.sh
 
-PGDATA="/var/lib/postgresql/data"
-BACKUP_DIR="/var/backups/postgresql/config"
+PGDATA="/var/lib/postgresql/data"  
+BACKUP_DIR="/var/backups/postgresql/config"  
 
 # Créer le répertoire de backup si nécessaire
 mkdir -p "$BACKUP_DIR"
 
-echo "Sauvegarde de la configuration actuelle..."
-TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-cp "$PGDATA/postgresql.conf" "$BACKUP_DIR/postgresql.conf.$TIMESTAMP"
-cp "$PGDATA/pg_hba.conf" "$BACKUP_DIR/pg_hba.conf.$TIMESTAMP"
+echo "Sauvegarde de la configuration actuelle..."  
+TIMESTAMP=$(date +%Y%m%d_%H%M%S)  
+cp "$PGDATA/postgresql.conf" "$BACKUP_DIR/postgresql.conf.$TIMESTAMP"  
+cp "$PGDATA/pg_hba.conf" "$BACKUP_DIR/pg_hba.conf.$TIMESTAMP"  
 
-echo "Redémarrage de PostgreSQL..."
-pg_ctl -D "$PGDATA" -m fast -w restart
+echo "Redémarrage de PostgreSQL..."  
+pg_ctl -D "$PGDATA" -m fast -w restart  
 
 if [ $? -eq 0 ]; then
     echo "✅ PostgreSQL redémarré avec succès"
@@ -511,8 +511,8 @@ tail -f /var/log/postgresql/server.log
 #### Problème : "pg_ctl: could not start server"
 
 **Causes possibles :**
-1. Port déjà utilisé
-2. Permissions incorrectes sur le répertoire de données
+1. Port déjà utilisé  
+2. Permissions incorrectes sur le répertoire de données  
 3. Erreur de configuration dans `postgresql.conf`
 
 **Solution :**
@@ -551,7 +551,7 @@ pg_ctl -D /var/lib/postgresql/data -m immediate stop
 **pg_dump** est l'outil de **sauvegarde logique** de PostgreSQL. Il exporte le contenu d'une base de données sous forme de commandes SQL ou dans un format personnalisé compressé.
 
 **Différence avec une sauvegarde physique :**
-- **Logique** (pg_dump) : Exporte les données et la structure en SQL → Portable, lisible
+- **Logique** (pg_dump) : Exporte les données et la structure en SQL → Portable, lisible  
 - **Physique** (pg_basebackup) : Copie les fichiers binaires du disque → Plus rapide, mais moins flexible
 
 **Quand utiliser pg_dump ?**
@@ -608,9 +608,9 @@ pg_dump mabase > backup.sql
 -- PostgreSQL database dump
 --
 
-SET statement_timeout = 0;
-SET lock_timeout = 0;
-SET client_encoding = 'UTF8';
+SET statement_timeout = 0;  
+SET lock_timeout = 0;  
+SET client_encoding = 'UTF8';  
 
 CREATE TABLE utilisateurs (
     id integer NOT NULL,
@@ -643,11 +643,11 @@ pg_dump -F c mabase -f backup.dump
 
 **Caractéristiques :**
 - Format binaire compressé propriétaire à PostgreSQL
-- **Avantages :** 🌟
-  - **Compressé automatiquement** → Gain d'espace considérable
-  - **Restauration sélective** → Restaurer uniquement certaines tables
-  - **Restauration parallèle** → Utilisation de plusieurs processus
-  - **Plus flexible** pour la restauration avec pg_restore
+- **Avantages :** 🌟  
+  - **Compressé automatiquement** → Gain d'espace considérable  
+  - **Restauration sélective** → Restaurer uniquement certaines tables  
+  - **Restauration parallèle** → Utilisation de plusieurs processus  
+  - **Plus flexible** pour la restauration avec pg_restore  
 - **Inconvénients :**
   - Non lisible (binaire)
   - Nécessite pg_restore pour restaurer
@@ -722,10 +722,10 @@ pg_dump -h db.example.com -p 5432 -U admin -d production > backup.sql
 **💡 Astuce :** Vous pouvez aussi utiliser les variables d'environnement :
 
 ```bash
-export PGHOST=localhost
-export PGPORT=5432
-export PGUSER=postgres
-export PGDATABASE=mabase
+export PGHOST=localhost  
+export PGPORT=5432  
+export PGUSER=postgres  
+export PGDATABASE=mabase  
 
 # Puis simplement
 pg_dump > backup.sql
@@ -751,10 +751,10 @@ pg_dump -U postgres mabase > backup.sql  # Pas de prompt
 
 ```bash
 # Créer le fichier
-cat > ~/.pgpass << EOF
-localhost:5432:*:postgres:motdepasse_postgres
-db.example.com:5432:production:admin:motdepasse_admin
-EOF
+cat > ~/.pgpass << EOF  
+localhost:5432:*:postgres:motdepasse_postgres  
+db.example.com:5432:production:admin:motdepasse_admin  
+EOF  
 
 # Sécuriser les permissions (OBLIGATOIRE)
 chmod 600 ~/.pgpass
@@ -791,12 +791,12 @@ pg_dump mabase | xz > backup.sql.xz
 **Comparaison de taille typique (pour une base de 1 GB) :**
 
 ```
-backup.sql           : 1000 MB  (100%)
-backup.sql.gz        :  250 MB  (25%)
-backup.dump (-Z 6)   :  220 MB  (22%)
-backup.dump (-Z 9)   :  200 MB  (20%)
-backup.sql.bz2       :  180 MB  (18%)
-backup.sql.xz        :  150 MB  (15%)
+backup.sql           : 1000 MB  (100%)  
+backup.sql.gz        :  250 MB  (25%)  
+backup.dump (-Z 6)   :  220 MB  (22%)  
+backup.dump (-Z 9)   :  200 MB  (20%)  
+backup.sql.bz2       :  180 MB  (18%)  
+backup.sql.xz        :  150 MB  (15%)  
 ```
 
 #### 2.4.4. Backup Sélectif
@@ -873,9 +873,9 @@ pg_dump -s mabase > schema.sql
 
 ```bash
 # 1. Backup de la structure en Git pour versioning
-pg_dump --schema-only mabase > schema.sql
-git add schema.sql
-git commit -m "Update database schema"
+pg_dump --schema-only mabase > schema.sql  
+git add schema.sql  
+git commit -m "Update database schema"  
 
 # 2. Backup des données séparément (non versionné, plus gros)
 pg_dump --data-only -F c mabase -f data.dump
@@ -890,9 +890,9 @@ pg_dumpall > cluster_backup.sql
 ```
 
 **Contenu sauvegardé :**
-- **Toutes les bases de données** de l'instance
-- **Rôles et utilisateurs** (CREATE ROLE)
-- **Tablespaces**
+- **Toutes les bases de données** de l'instance  
+- **Rôles et utilisateurs** (CREATE ROLE)  
+- **Tablespaces**  
 - **Attributs globaux** (configurations au niveau cluster)
 
 **⚠️ Important :** pg_dumpall produit uniquement du SQL plain text (pas de format custom).
@@ -910,8 +910,8 @@ pg_dumpall --tablespaces-only > tablespaces.sql
 pg_dumpall --globals-only > globals.sql
 
 # Puis sauvegarder chaque base séparément en format custom
-pg_dump -F c base1 -f base1.dump
-pg_dump -F c base2 -f base2.dump
+pg_dump -F c base1 -f base1.dump  
+pg_dump -F c base2 -f base2.dump  
 ```
 
 **Stratégie recommandée pour backup complet :**
@@ -920,15 +920,15 @@ pg_dump -F c base2 -f base2.dump
 #!/bin/bash
 # Backup complet d'une instance PostgreSQL
 
-BACKUP_DIR="/var/backups/postgresql/$(date +%Y%m%d_%H%M%S)"
-mkdir -p "$BACKUP_DIR"
+BACKUP_DIR="/var/backups/postgresql/$(date +%Y%m%d_%H%M%S)"  
+mkdir -p "$BACKUP_DIR"  
 
-echo "Sauvegarde des rôles et objets globaux..."
-pg_dumpall --globals-only > "$BACKUP_DIR/globals.sql"
+echo "Sauvegarde des rôles et objets globaux..."  
+pg_dumpall --globals-only > "$BACKUP_DIR/globals.sql"  
 
-echo "Sauvegarde des bases de données..."
-for DB in $(psql -t -c "SELECT datname FROM pg_database WHERE NOT datistemplate AND datname != 'postgres'")
-do
+echo "Sauvegarde des bases de données..."  
+for DB in $(psql -t -c "SELECT datname FROM pg_database WHERE NOT datistemplate AND datname != 'postgres'")  
+do  
     echo "  - Backup de $DB"
     pg_dump -F c "$DB" -f "$BACKUP_DIR/${DB}.dump"
 done
@@ -972,13 +972,13 @@ Base de 100 GB :
 #!/bin/bash
 # backup_simple.sh
 
-DATABASE="mabase"
-BACKUP_DIR="/var/backups/postgresql"
-RETENTION_DAYS=7
+DATABASE="mabase"  
+BACKUP_DIR="/var/backups/postgresql"  
+RETENTION_DAYS=7  
 
 # Créer le nom de fichier avec timestamp
-TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-BACKUP_FILE="$BACKUP_DIR/${DATABASE}_${TIMESTAMP}.dump"
+TIMESTAMP=$(date +%Y%m%d_%H%M%S)  
+BACKUP_FILE="$BACKUP_DIR/${DATABASE}_${TIMESTAMP}.dump"  
 
 echo "Début du backup de $DATABASE..."
 
@@ -1010,19 +1010,19 @@ fi
 # backup_avance.sh
 
 # Configuration
-DATABASE="production"
-BACKUP_DIR="/var/backups/postgresql"
-LOG_DIR="/var/log/postgresql_backup"
-RETENTION_DAYS=30
-ALERT_EMAIL="admin@example.com"
+DATABASE="production"  
+BACKUP_DIR="/var/backups/postgresql"  
+LOG_DIR="/var/log/postgresql_backup"  
+RETENTION_DAYS=30  
+ALERT_EMAIL="admin@example.com"  
 
 # Créer les répertoires si nécessaires
 mkdir -p "$BACKUP_DIR" "$LOG_DIR"
 
 # Noms de fichiers
-TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-BACKUP_FILE="$BACKUP_DIR/${DATABASE}_${TIMESTAMP}.dump"
-LOG_FILE="$LOG_DIR/backup_${TIMESTAMP}.log"
+TIMESTAMP=$(date +%Y%m%d_%H%M%S)  
+BACKUP_FILE="$BACKUP_DIR/${DATABASE}_${TIMESTAMP}.dump"  
+LOG_FILE="$LOG_DIR/backup_${TIMESTAMP}.log"  
 
 # Fonction de log
 log() {
@@ -1047,15 +1047,15 @@ if ! pg_isready -d "$DATABASE" > /dev/null 2>&1; then
 fi
 
 # Taille de la base avant backup
-DB_SIZE=$(psql -t -c "SELECT pg_size_pretty(pg_database_size('$DATABASE'))")
-log "Taille de la base : $DB_SIZE"
+DB_SIZE=$(psql -t -c "SELECT pg_size_pretty(pg_database_size('$DATABASE'))")  
+log "Taille de la base : $DB_SIZE"  
 
 # Effectuer le backup avec temps d'exécution
-START_TIME=$(date +%s)
-pg_dump -F c -Z 9 "$DATABASE" -f "$BACKUP_FILE" 2>> "$LOG_FILE"
-BACKUP_STATUS=$?
-END_TIME=$(date +%s)
-DURATION=$((END_TIME - START_TIME))
+START_TIME=$(date +%s)  
+pg_dump -F c -Z 9 "$DATABASE" -f "$BACKUP_FILE" 2>> "$LOG_FILE"  
+BACKUP_STATUS=$?  
+END_TIME=$(date +%s)  
+DURATION=$((END_TIME - START_TIME))  
 
 if [ $BACKUP_STATUS -eq 0 ]; then
     BACKUP_SIZE=$(du -h "$BACKUP_FILE" | cut -f1)
@@ -1094,19 +1094,19 @@ fi
 #!/bin/bash
 # backup_multi_bases.sh
 
-BACKUP_DIR="/var/backups/postgresql/$(date +%Y%m%d_%H%M%S)"
-PARALLEL_JOBS=4
-RETENTION_DAYS=14
+BACKUP_DIR="/var/backups/postgresql/$(date +%Y%m%d_%H%M%S)"  
+PARALLEL_JOBS=4  
+RETENTION_DAYS=14  
 
 mkdir -p "$BACKUP_DIR"
 
-echo "=== Backup de toutes les bases PostgreSQL ==="
-echo "Répertoire : $BACKUP_DIR"
-echo "Jobs parallèles : $PARALLEL_JOBS"
+echo "=== Backup de toutes les bases PostgreSQL ==="  
+echo "Répertoire : $BACKUP_DIR"  
+echo "Jobs parallèles : $PARALLEL_JOBS"  
 
 # Sauvegarder les objets globaux
-echo "Sauvegarde des rôles et objets globaux..."
-pg_dumpall --globals-only > "$BACKUP_DIR/globals.sql"
+echo "Sauvegarde des rôles et objets globaux..."  
+pg_dumpall --globals-only > "$BACKUP_DIR/globals.sql"  
 
 # Obtenir la liste des bases (hors templates et postgres)
 DATABASES=$(psql -t -c "SELECT datname FROM pg_database WHERE NOT datistemplate AND datname != 'postgres'")
@@ -1125,8 +1125,8 @@ backup_database() {
     fi
 }
 
-export -f backup_database
-export BACKUP_DIR
+export -f backup_database  
+export BACKUP_DIR  
 
 # Exécuter les backups en parallèle avec GNU parallel ou xargs
 if command -v parallel > /dev/null 2>&1; then
@@ -1138,16 +1138,16 @@ else
 fi
 
 # Créer une archive tar compressée du tout
-echo "Création de l'archive finale..."
-tar -czf "$BACKUP_DIR.tar.gz" -C "$(dirname "$BACKUP_DIR")" "$(basename "$BACKUP_DIR")"
-echo "✅ Archive : $BACKUP_DIR.tar.gz"
+echo "Création de l'archive finale..."  
+tar -czf "$BACKUP_DIR.tar.gz" -C "$(dirname "$BACKUP_DIR")" "$(basename "$BACKUP_DIR")"  
+echo "✅ Archive : $BACKUP_DIR.tar.gz"  
 
 # Nettoyage
 rm -rf "$BACKUP_DIR"
 
 # Rotation
-echo "Rotation des anciens backups..."
-find "$(dirname "$BACKUP_DIR")" -name "*.tar.gz" -mtime +$RETENTION_DAYS -delete
+echo "Rotation des anciens backups..."  
+find "$(dirname "$BACKUP_DIR")" -name "*.tar.gz" -mtime +$RETENTION_DAYS -delete  
 
 echo "=== Backup terminé ==="
 ```
@@ -1228,12 +1228,12 @@ psql -h localhost -U postgres -d mabase -c "SELECT 1"
 **Solution :**
 ```bash
 # Augmenter les timeouts
-export PGCONNECT_TIMEOUT=300
-pg_dump mabase > backup.sql
+export PGCONNECT_TIMEOUT=300  
+pg_dump mabase > backup.sql  
 
 # Ou diviser le backup en tables
-pg_dump -t grande_table mabase > grande_table.sql
-pg_dump -T grande_table mabase > rest.sql
+pg_dump -t grande_table mabase > grande_table.sql  
+pg_dump -T grande_table mabase > rest.sql  
 ```
 
 #### Problème : Backup trop lent
@@ -1272,7 +1272,7 @@ psql mabase < backup.sql
 **Pourquoi utiliser pg_restore ?**
 - Restauration **sélective** (seulement certaines tables)
 - Restauration **parallèle** (beaucoup plus rapide)
-- **Flexibilité** : réordonner les objets, gérer les erreurs
+- **Flexibilité** : réordonner les objets, gérer les erreurs  
 - **Options avancées** : restauration incrémentale, skip d'objets
 
 ### 3.2. Syntaxe de Base
@@ -1297,8 +1297,8 @@ pg_restore -d mabase backup.dump
 
 ```bash
 # Restaurer dans une base déjà créée
-createdb nouvelle_base
-pg_restore -d nouvelle_base backup.dump
+createdb nouvelle_base  
+pg_restore -d nouvelle_base backup.dump  
 ```
 
 **⚠️ Attention :**
@@ -1313,7 +1313,7 @@ pg_restore -C -d postgres backup.dump
 ```
 
 **Explication :**
-- `-C` : Crée la base de données avant de restaurer
+- `-C` : Crée la base de données avant de restaurer  
 - `-d postgres` : Se connecte d'abord à la base `postgres` (base système)
 - La base est créée avec le même nom que dans le backup
 
@@ -1370,9 +1370,9 @@ pg_restore --list backup.dump
 ```
 
 **Éléments importants :**
-- **TOC ID** (première colonne) : Identifiant unique de chaque objet
-- **Type d'objet** : TABLE, INDEX, CONSTRAINT, etc.
-- **Nom de l'objet**
+- **TOC ID** (première colonne) : Identifiant unique de chaque objet  
+- **Type d'objet** : TABLE, INDEX, CONSTRAINT, etc.  
+- **Nom de l'objet**  
 - **Propriétaire**
 
 #### 3.4.2. Restaurer Uniquement Certaines Tables
@@ -1492,24 +1492,24 @@ pg_restore -d mabase --section=post-data -j 8 backup.dump
 ```
 
 **Explication des sections :**
-- **pre-data** : Structure des tables, séquences, types
-- **data** : Données (COPY)
+- **pre-data** : Structure des tables, séquences, types  
+- **data** : Données (COPY)  
 - **post-data** : Index, contraintes, triggers
 
 **💡 Stratégie optimale :**
-1. Restaurer pre-data + data (rapide, sans index)
+1. Restaurer pre-data + data (rapide, sans index)  
 2. Restaurer post-data en parallèle (créer les index en //)
 
 **Exemple complet :**
 
 ```bash
 # Étape 1 : Restaurer structure + données
-echo "Restauration structure et données..."
-pg_restore -d mabase --section=pre-data --section=data backup.dump
+echo "Restauration structure et données..."  
+pg_restore -d mabase --section=pre-data --section=data backup.dump  
 
 # Étape 2 : Restaurer index en parallèle (très rapide !)
-echo "Création des index en parallèle..."
-pg_restore -d mabase --section=post-data -j 8 backup.dump
+echo "Création des index en parallèle..."  
+pg_restore -d mabase --section=post-data -j 8 backup.dump  
 
 echo "✅ Restauration terminée"
 ```
@@ -1526,8 +1526,8 @@ pg_restore -d mabase --no-owner --no-acl backup.dump
 ```
 
 **Options utiles :**
-- `--no-owner` : Ignore les propriétaires d'objets (évite les erreurs si l'utilisateur n'existe pas)
-- `--no-acl` : Ignore les permissions (GRANT/REVOKE)
+- `--no-owner` : Ignore les propriétaires d'objets (évite les erreurs si l'utilisateur n'existe pas)  
+- `--no-acl` : Ignore les permissions (GRANT/REVOKE)  
 - `--if-exists` : Ajoute IF EXISTS aux DROP (évite erreurs si objet n'existe pas)
 
 #### 3.7.2. Mode Transaction Unique
@@ -1570,8 +1570,8 @@ pg_restore -U admin -d mabase backup.dump
 #!/bin/bash
 # restore_simple.sh
 
-BACKUP_FILE="$1"
-TARGET_DB="$2"
+BACKUP_FILE="$1"  
+TARGET_DB="$2"  
 
 if [ -z "$BACKUP_FILE" ] || [ -z "$TARGET_DB" ]; then
     echo "Usage: $0 <backup_file> <target_database>"
@@ -1603,8 +1603,8 @@ else
 fi
 
 # Restaurer avec parallélisme
-echo "Restauration en cours..."
-pg_restore -d "$TARGET_DB" -j 4 --no-owner --no-acl "$BACKUP_FILE"
+echo "Restauration en cours..."  
+pg_restore -d "$TARGET_DB" -j 4 --no-owner --no-acl "$BACKUP_FILE"  
 
 if [ $? -eq 0 ]; then
     echo "✅ Restauration réussie !"
@@ -1632,112 +1632,112 @@ fi
 #!/bin/bash
 # restore_optimized.sh
 
-BACKUP_FILE="$1"
-TARGET_DB="$2"
+BACKUP_FILE="$1"  
+TARGET_DB="$2"  
 
 if [ -z "$BACKUP_FILE" ] || [ -z "$TARGET_DB" ]; then
     echo "Usage: $0 <backup_file> <target_database>"
     exit 1
 fi
 
-echo "=== Restauration Optimisée ==="
-echo "Source : $BACKUP_FILE"
-echo "Destination : $TARGET_DB"
-echo ""
+echo "=== Restauration Optimisée ==="  
+echo "Source : $BACKUP_FILE"  
+echo "Destination : $TARGET_DB"  
+echo ""  
 
 # Vérifier le backup
-echo "1. Vérification du backup..."
-if ! pg_restore --list "$BACKUP_FILE" > /dev/null 2>&1; then
+echo "1. Vérification du backup..."  
+if ! pg_restore --list "$BACKUP_FILE" > /dev/null 2>&1; then  
     echo "❌ Le fichier de backup semble corrompu"
     exit 1
-fi
-echo "✅ Backup valide"
+fi  
+echo "✅ Backup valide"  
 
 # Créer la base
-echo ""
-echo "2. Création de la base de destination..."
-dropdb --if-exists "$TARGET_DB"
-createdb "$TARGET_DB"
+echo ""  
+echo "2. Création de la base de destination..."  
+dropdb --if-exists "$TARGET_DB"  
+createdb "$TARGET_DB"  
 
 # Configuration temporaire pour optimiser la restauration
-echo ""
-echo "3. Configuration des paramètres d'optimisation..."
-psql -d "$TARGET_DB" << EOF
+echo ""  
+echo "3. Configuration des paramètres d'optimisation..."  
+psql -d "$TARGET_DB" << EOF  
 -- Désactiver les triggers et contraintes temporairement
 SET session_replication_role = replica;
 
 -- Augmenter les paramètres de performance
-SET maintenance_work_mem = '2GB';
-SET max_parallel_workers_per_gather = 4;
+SET maintenance_work_mem = '2GB';  
+SET max_parallel_workers_per_gather = 4;  
 
 -- Désactiver autovacuum pendant la restauration
-ALTER TABLE pg_catalog.pg_class SET (autovacuum_enabled = false);
-EOF
+ALTER TABLE pg_catalog.pg_class SET (autovacuum_enabled = false);  
+EOF  
 
 # Étape 1 : Restaurer structure + données (sans index)
-echo ""
-echo "4. Restauration de la structure et des données..."
-START_TIME=$(date +%s)
-pg_restore -d "$TARGET_DB" \
+echo ""  
+echo "4. Restauration de la structure et des données..."  
+START_TIME=$(date +%s)  
+pg_restore -d "$TARGET_DB" \  
     --section=pre-data \
     --section=data \
     --no-owner \
     --no-acl \
     "$BACKUP_FILE"
 
-DATA_TIME=$(($(date +%s) - START_TIME))
-echo "✅ Données restaurées en ${DATA_TIME}s"
+DATA_TIME=$(($(date +%s) - START_TIME))  
+echo "✅ Données restaurées en ${DATA_TIME}s"  
 
 # Étape 2 : Créer les index en parallèle (le plus efficace)
-echo ""
-echo "5. Création des index en parallèle..."
-START_TIME=$(date +%s)
-pg_restore -d "$TARGET_DB" \
+echo ""  
+echo "5. Création des index en parallèle..."  
+START_TIME=$(date +%s)  
+pg_restore -d "$TARGET_DB" \  
     --section=post-data \
     -j 8 \
     --no-owner \
     --no-acl \
     "$BACKUP_FILE"
 
-INDEX_TIME=$(($(date +%s) - START_TIME))
-echo "✅ Index créés en ${INDEX_TIME}s"
+INDEX_TIME=$(($(date +%s) - START_TIME))  
+echo "✅ Index créés en ${INDEX_TIME}s"  
 
 # Réactiver la configuration normale
-echo ""
-echo "6. Réactivation de la configuration normale..."
-psql -d "$TARGET_DB" << EOF
+echo ""  
+echo "6. Réactivation de la configuration normale..."  
+psql -d "$TARGET_DB" << EOF  
 -- Réactiver les triggers
 SET session_replication_role = DEFAULT;
 
 -- Réactiver autovacuum
-ALTER TABLE pg_catalog.pg_class SET (autovacuum_enabled = true);
-EOF
+ALTER TABLE pg_catalog.pg_class SET (autovacuum_enabled = true);  
+EOF  
 
 # ANALYZE pour mettre à jour les statistiques
-echo ""
-echo "7. Analyse de la base (mise à jour des statistiques)..."
-psql -d "$TARGET_DB" -c "ANALYZE;"
+echo ""  
+echo "7. Analyse de la base (mise à jour des statistiques)..."  
+psql -d "$TARGET_DB" -c "ANALYZE;"  
 
 # Résumé
-TOTAL_TIME=$((DATA_TIME + INDEX_TIME))
-echo ""
-echo "=== Restauration Terminée ==="
-echo "Temps total : ${TOTAL_TIME}s"
-echo "  - Données : ${DATA_TIME}s"
-echo "  - Index : ${INDEX_TIME}s"
+TOTAL_TIME=$((DATA_TIME + INDEX_TIME))  
+echo ""  
+echo "=== Restauration Terminée ==="  
+echo "Temps total : ${TOTAL_TIME}s"  
+echo "  - Données : ${DATA_TIME}s"  
+echo "  - Index : ${INDEX_TIME}s"  
 
 # Afficher les informations
-echo ""
-echo "Informations sur la base restaurée :"
-psql -d "$TARGET_DB" << EOF
-SELECT
+echo ""  
+echo "Informations sur la base restaurée :"  
+psql -d "$TARGET_DB" << EOF  
+SELECT  
     pg_size_pretty(pg_database_size('$TARGET_DB')) as taille_totale,
     (SELECT COUNT(*) FROM pg_tables WHERE schemaname = 'public') as nb_tables,
     (SELECT COUNT(*) FROM pg_indexes WHERE schemaname = 'public') as nb_index;
 EOF
 
-echo ""
-echo "✅ Restauration terminée avec succès !"
+echo ""  
+echo "✅ Restauration terminée avec succès !"  
 ```
 
 #### 3.9.3. Script de Restauration Sélective
@@ -1746,8 +1746,8 @@ echo "✅ Restauration terminée avec succès !"
 #!/bin/bash
 # restore_selective.sh
 
-BACKUP_FILE="$1"
-TARGET_DB="$2"
+BACKUP_FILE="$1"  
+TARGET_DB="$2"  
 
 # Liste des tables à restaurer (une par ligne)
 TABLES_TO_RESTORE=(
@@ -1763,28 +1763,28 @@ TABLES_TO_EXCLUDE=(
     "cache"
 )
 
-echo "=== Restauration Sélective ==="
-echo "Backup : $BACKUP_FILE"
-echo "Base : $TARGET_DB"
-echo ""
+echo "=== Restauration Sélective ==="  
+echo "Backup : $BACKUP_FILE"  
+echo "Base : $TARGET_DB"  
+echo ""  
 
 # Créer la base
 createdb "$TARGET_DB"
 
 # Restaurer la structure complète
-echo "1. Restauration de la structure..."
-pg_restore -d "$TARGET_DB" --schema-only "$BACKUP_FILE"
+echo "1. Restauration de la structure..."  
+pg_restore -d "$TARGET_DB" --schema-only "$BACKUP_FILE"  
 
 # Restaurer uniquement les tables sélectionnées
-echo ""
-echo "2. Restauration des tables sélectionnées..."
-for table in "${TABLES_TO_RESTORE[@]}"; do
+echo ""  
+echo "2. Restauration des tables sélectionnées..."  
+for table in "${TABLES_TO_RESTORE[@]}"; do  
     echo "  - Restauration de $table..."
     pg_restore -d "$TARGET_DB" --data-only -t "$table" "$BACKUP_FILE"
 done
 
-echo ""
-echo "✅ Restauration sélective terminée"
+echo ""  
+echo "✅ Restauration sélective terminée"  
 ```
 
 ### 3.10. Stratégies de Restauration
@@ -1922,9 +1922,9 @@ pg_restore --no-owner -d mabase backup.dump
 pg_restore -c -d mabase backup.dump
 
 # Option 2 : Restaurer dans une base vide
-dropdb mabase
-createdb mabase
-pg_restore -d mabase backup.dump
+dropdb mabase  
+createdb mabase  
+pg_restore -d mabase backup.dump  
 ```
 
 #### Problème : Restauration très lente
@@ -1934,8 +1934,8 @@ pg_restore -d mabase backup.dump
 **Solution :**
 ```bash
 # Créer les index en parallèle
-pg_restore -d mabase --section=pre-data --section=data backup.dump
-pg_restore -d mabase --section=post-data -j 8 backup.dump
+pg_restore -d mabase --section=pre-data --section=data backup.dump  
+pg_restore -d mabase --section=post-data -j 8 backup.dump  
 ```
 
 #### Problème : Manque de mémoire
@@ -1945,8 +1945,8 @@ pg_restore -d mabase --section=post-data -j 8 backup.dump
 **Solution :**
 ```sql
 -- Augmenter temporairement
-ALTER SYSTEM SET maintenance_work_mem = '2GB';
-SELECT pg_reload_conf();
+ALTER SYSTEM SET maintenance_work_mem = '2GB';  
+SELECT pg_reload_conf();  
 
 -- Puis restaurer
 ```
@@ -1993,30 +1993,30 @@ SELECT pg_reload_conf();
 ### 5.1. Checklist de Production
 
 #### Pour pg_ctl :
-- [ ] Définir `PGDATA` dans l'environnement
-- [ ] Utiliser `-m fast` pour les arrêts standards
-- [ ] Toujours logger les démarrages/arrêts
-- [ ] Vérifier le statut avant toute action
+- [ ] Définir `PGDATA` dans l'environnement  
+- [ ] Utiliser `-m fast` pour les arrêts standards  
+- [ ] Toujours logger les démarrages/arrêts  
+- [ ] Vérifier le statut avant toute action  
 - [ ] Utiliser `-w` dans les scripts pour synchronisation
 
 #### Pour pg_dump :
-- [ ] Automatiser avec cron
-- [ ] Utiliser format custom (-F c) en production
-- [ ] Activer compression maximale (-Z 9)
-- [ ] Paralléliser pour grandes bases (-j)
-- [ ] Mettre en place rotation des backups
-- [ ] Tester régulièrement la restauration
-- [ ] Stocker hors site (NAS, S3, etc.)
-- [ ] Monitorer taille et durée des backups
+- [ ] Automatiser avec cron  
+- [ ] Utiliser format custom (-F c) en production  
+- [ ] Activer compression maximale (-Z 9)  
+- [ ] Paralléliser pour grandes bases (-j)  
+- [ ] Mettre en place rotation des backups  
+- [ ] Tester régulièrement la restauration  
+- [ ] Stocker hors site (NAS, S3, etc.)  
+- [ ] Monitorer taille et durée des backups  
 - [ ] Sauvegarder aussi les objets globaux (pg_dumpall --globals-only)
 
 #### Pour pg_restore :
-- [ ] Toujours vérifier le backup avant (--list)
-- [ ] Utiliser parallélisme (-j)
-- [ ] Restaurer en deux phases (data puis index)
-- [ ] Utiliser --no-owner --no-acl pour portabilité
-- [ ] Tester dans environnement de test d'abord
-- [ ] Lancer ANALYZE après restauration
+- [ ] Toujours vérifier le backup avant (--list)  
+- [ ] Utiliser parallélisme (-j)  
+- [ ] Restaurer en deux phases (data puis index)  
+- [ ] Utiliser --no-owner --no-acl pour portabilité  
+- [ ] Tester dans environnement de test d'abord  
+- [ ] Lancer ANALYZE après restauration  
 - [ ] Documenter le processus (runbook)
 
 ### 5.2. Stratégie de Backup Complète
@@ -2086,8 +2086,8 @@ fi
 /usr/local/bin/backup_all.sh
 
 # 3. Vérifier l'espace disque
-USAGE=$(df -h /var/backups | tail -1 | awk '{print $5}' | sed 's/%//')
-if [ "$USAGE" -gt 80 ]; then
+USAGE=$(df -h /var/backups | tail -1 | awk '{print $5}' | sed 's/%//')  
+if [ "$USAGE" -gt 80 ]; then  
     echo "⚠️  Espace disque critique : ${USAGE}%"
     # Nettoyer les vieux backups
     find /var/backups/postgresql -mtime +7 -delete
@@ -2101,8 +2101,8 @@ psql -c "
 "
 
 # 5. Vérifier les connexions
-CONN_COUNT=$(psql -t -c "SELECT count(*) FROM pg_stat_activity")
-echo "Connexions actives : $CONN_COUNT"
+CONN_COUNT=$(psql -t -c "SELECT count(*) FROM pg_stat_activity")  
+echo "Connexions actives : $CONN_COUNT"  
 
 echo "✅ Maintenance terminée"
 ```
@@ -2115,9 +2115,9 @@ echo "✅ Maintenance terminée"
 - pg_restore: https://www.postgresql.org/docs/18/app-pgrestore.html
 
 **Outils complémentaires :**
-- **pgBackRest** : Solution de backup complète (physique + logique)
-- **Barman** : Backup and Recovery Manager pour PostgreSQL
-- **WAL-E / WAL-G** : Archivage continu des WAL vers S3
+- **pgBackRest** : Solution de backup complète (physique + logique)  
+- **Barman** : Backup and Recovery Manager pour PostgreSQL  
+- **WAL-E / WAL-G** : Archivage continu des WAL vers S3  
 - **pg_back** : Script de backup simplifié
 
 ---
@@ -2126,7 +2126,7 @@ echo "✅ Maintenance terminée"
 
 **Points Clés à Retenir :**
 
-1. **pg_ctl** contrôle le cycle de vie du serveur PostgreSQL
+1. **pg_ctl** contrôle le cycle de vie du serveur PostgreSQL  
    - `start`, `stop -m fast`, `restart`, `reload`, `status`
 
 2. **pg_dump** crée des backups logiques

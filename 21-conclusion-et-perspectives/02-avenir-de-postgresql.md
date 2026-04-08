@@ -124,8 +124,8 @@ L'explosion de l'IA générative a propulsé PostgreSQL au cœur des architectur
 Le cloud computing exige des bases de données élastiques, résilientes et faciles à opérer.
 
 **Évolutions clés** :
-- **Kubernetes Operators** : CloudNativePG, Zalando, Crunchy
-- **Serverless** : Neon, Aurora Serverless, Supabase
+- **Kubernetes Operators** : CloudNativePG, Zalando, Crunchy  
+- **Serverless** : Neon, Aurora Serverless, Supabase  
 - **Distribution** : Citus, YugabyteDB, CockroachDB
 - Séparation compute/stockage
 
@@ -136,7 +136,7 @@ Le cloud computing exige des bases de données élastiques, résilientes et faci
 La convergence OLTP/OLAP permet d'utiliser une seule base pour les transactions ET l'analytique.
 
 **Évolutions clés** :
-- **Hydra** : Stockage colonnaire natif PostgreSQL
+- **Hydra** : Stockage colonnaire natif PostgreSQL  
 - **pg_analytics** : Format Parquet et écosystème lakehouse
 - Compression avancée
 - Exécution vectorisée
@@ -234,9 +234,9 @@ L'une des forces de PostgreSQL est son écosystème d'extensions qui étend ses 
 
 Les extensions permettent à PostgreSQL de :
 
-1. **Rester léger** : Le core reste simple et performant
-2. **Évoluer rapidement** : Les extensions innovent plus vite que le core
-3. **S'adapter** : Chaque déploiement active ce dont il a besoin
+1. **Rester léger** : Le core reste simple et performant  
+2. **Évoluer rapidement** : Les extensions innovent plus vite que le core  
+3. **S'adapter** : Chaque déploiement active ce dont il a besoin  
 4. **Expérimenter** : Tester des fonctionnalités avant intégration au core
 
 > **Tendance** : Certaines extensions populaires (comme les colonnes virtuelles, maintenant dans PostgreSQL 18) finissent par être intégrées au core.
@@ -383,20 +383,20 @@ Ce chapitre explore en détail les quatre grandes tendances qui façonnent l'ave
 
 ### Pour les Développeurs
 
-- **Moins d'outils** : PostgreSQL couvre plus de cas d'usage (transactions, analytics, IA)
-- **Compétences transférables** : SQL reste le langage universel
+- **Moins d'outils** : PostgreSQL couvre plus de cas d'usage (transactions, analytics, IA)  
+- **Compétences transférables** : SQL reste le langage universel  
 - **Innovation accessible** : Les nouvelles fonctionnalités sont gratuites et open source
 
 ### Pour les Entreprises
 
-- **Réduction des coûts** : Une seule base au lieu de plusieurs systèmes spécialisés
-- **Simplification** : Moins de complexité opérationnelle
+- **Réduction des coûts** : Une seule base au lieu de plusieurs systèmes spécialisés  
+- **Simplification** : Moins de complexité opérationnelle  
 - **Pérennité** : PostgreSQL est là pour durer (35+ ans et en croissance)
 
 ### Pour l'Écosystème
 
-- **Standardisation** : PostgreSQL devient la référence pour la compatibilité
-- **Innovation** : La communauté attire les meilleurs talents
+- **Standardisation** : PostgreSQL devient la référence pour la compatibilité  
+- **Innovation** : La communauté attire les meilleurs talents  
 - **Écosystème riche** : Extensions, outils, services cloud
 
 ---
@@ -419,9 +419,9 @@ Les chapitres suivants détaillent chacune des quatre grandes tendances qui cont
 
 *Les sections suivantes explorent en détail :*
 
-- **21.2.1** — Performances I/O et Parallélisation
-- **21.2.2** — IA et Machine Learning Intégrés
-- **21.2.3** — Cloud-Native et Distributed PostgreSQL
+- **21.2.1** — Performances I/O et Parallélisation  
+- **21.2.2** — IA et Machine Learning Intégrés  
+- **21.2.3** — Cloud-Native et Distributed PostgreSQL  
 - **21.2.4** — Columnar Storage (Hydra, pg_analytics)
 
 ---

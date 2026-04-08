@@ -8,7 +8,7 @@
 
 Félicitations d'être arrivé à cette troisième partie de la formation ! Si vous avez assimilé les concepts des parties précédentes, vous maîtrisez désormais :
 
-- **Les fondamentaux** : architecture PostgreSQL, types de données, objets de base
+- **Les fondamentaux** : architecture PostgreSQL, types de données, objets de base  
 - **Le SQL fonctionnel** : requêtes de sélection, manipulation de données (DML), jointures, agrégation
 
 Vous êtes maintenant capable d'écrire des requêtes SQL correctes et d'interagir efficacement avec une base PostgreSQL. Mais la route vers l'expertise ne s'arrête pas là.
@@ -36,21 +36,21 @@ Dans le monde professionnel, la différence entre un développeur junior et un d
 À l'issue de cette partie, vous serez capable de :
 
 #### Sur le Plan Technique SQL
-- ✅ Maîtriser les **sous-requêtes avancées** et les **CTE** (y compris récursives) pour résoudre des problèmes hiérarchiques complexes
-- ✅ Utiliser les **window functions** pour effectuer des calculs analytiques sophistiqués (classements, moyennes mobiles, comparaisons temporelles)
-- ✅ Exploiter les **opérations d'ensembles** (UNION, INTERSECT, EXCEPT) pour des manipulations de données avancées
+- ✅ Maîtriser les **sous-requêtes avancées** et les **CTE** (y compris récursives) pour résoudre des problèmes hiérarchiques complexes  
+- ✅ Utiliser les **window functions** pour effectuer des calculs analytiques sophistiqués (classements, moyennes mobiles, comparaisons temporelles)  
+- ✅ Exploiter les **opérations d'ensembles** (UNION, INTERSECT, EXCEPT) pour des manipulations de données avancées  
 - ✅ Comprendre et appliquer les **optimisations PostgreSQL 18** (OR-clauses transformées en ANY, etc.)
 
 #### Sur le Plan Modélisation
-- ✅ Appliquer les principes de **normalisation** (1NF à 3NF/BCNF) tout en sachant quand **dénormaliser stratégiquement**
-- ✅ Concevoir des schémas hybrides exploitant **JSONB** pour combiner les avantages du relationnel et du NoSQL
-- ✅ Implémenter le **partitionnement de tables** pour gérer des volumes massifs de données
-- ✅ Utiliser les **vues matérialisées** et les **colonnes générées virtuelles** (nouveauté PG 18) pour optimiser les performances
+- ✅ Appliquer les principes de **normalisation** (1NF à 3NF/BCNF) tout en sachant quand **dénormaliser stratégiquement**  
+- ✅ Concevoir des schémas hybrides exploitant **JSONB** pour combiner les avantages du relationnel et du NoSQL  
+- ✅ Implémenter le **partitionnement de tables** pour gérer des volumes massifs de données  
+- ✅ Utiliser les **vues matérialisées** et les **colonnes générées virtuelles** (nouveauté PG 18) pour optimiser les performances  
 - ✅ Comprendre les **contraintes avancées** (différées, temporelles) pour garantir l'intégrité des données
 
 #### Sur le Plan Professionnel
-- ✅ Écrire du SQL **lisible et maintenable** qui sera compris par vos collègues dans 6 mois
-- ✅ Faire des **choix architecturaux éclairés** basés sur une compréhension profonde des trade-offs
+- ✅ Écrire du SQL **lisible et maintenable** qui sera compris par vos collègues dans 6 mois  
+- ✅ Faire des **choix architecturaux éclairés** basés sur une compréhension profonde des trade-offs  
 - ✅ Anticiper les **problèmes de performance** avant qu'ils n'impactent la production
 
 ---
@@ -64,8 +64,8 @@ Dans le monde professionnel, la différence entre un développeur junior et un d
 - Vous êtes à l'aise avec la logique algorithmique et le raisonnement abstrait
 
 **Prérequis recommandés :**
-- ✓ Avoir terminé les Parties 1 et 2 de cette formation (ou équivalent)
-- ✓ Avoir une expérience pratique d'au moins 3-6 mois avec SQL
+- ✓ Avoir terminé les Parties 1 et 2 de cette formation (ou équivalent)  
+- ✓ Avoir une expérience pratique d'au moins 3-6 mois avec SQL  
 - ✓ Être confronté à des problèmes de données qui vous semblent difficiles à résoudre
 
 **Note importante :** Cette partie est exigeante intellectuellement. Certains concepts (comme les CTE récursives ou les window functions) nécessitent du temps pour être pleinement assimilés. Ne vous découragez pas si tout n'est pas immédiatement clair : la pratique et la répétition sont essentielles.
@@ -129,11 +129,11 @@ Au-delà de la simple création de tables. Vous maîtriserez :
 
 Pour chaque technique avancée présentée, nous suivrons ce modèle :
 
-1. **Le Problème** : Pourquoi cette technique existe-t-elle ? Quel problème résout-elle ?
-2. **Le Concept** : Explication théorique claire et structurée
-3. **La Syntaxe** : Comment l'écrire en SQL
-4. **Les Cas d'Usage** : Quand l'utiliser (et quand l'éviter)
-5. **Les Pièges** : Les erreurs courantes à éviter
+1. **Le Problème** : Pourquoi cette technique existe-t-elle ? Quel problème résout-elle ?  
+2. **Le Concept** : Explication théorique claire et structurée  
+3. **La Syntaxe** : Comment l'écrire en SQL  
+4. **Les Cas d'Usage** : Quand l'utiliser (et quand l'éviter)  
+5. **Les Pièges** : Les erreurs courantes à éviter  
 6. **Les Nouveautés PG 18** : Comment PostgreSQL 18 améliore cette fonctionnalité
 
 ---
@@ -169,8 +169,8 @@ Vous êtes sur le point de rejoindre le cercle des développeurs qui **pensent e
 
 Tout au long de cette partie, vous remarquerez l'annotation **"Nouveauté PG 18"** qui signale les améliorations spécifiques à PostgreSQL 18 (septembre 2025). Ces nouveautés incluent :
 
-- **Optimisations du planificateur** : OR-clauses transformées en ANY, élimination automatique des self-joins
-- **Colonnes générées virtuelles** : Calculs sans stockage physique
+- **Optimisations du planificateur** : OR-clauses transformées en ANY, élimination automatique des self-joins  
+- **Colonnes générées virtuelles** : Calculs sans stockage physique  
 - **Contraintes temporelles** : Validation basée sur des périodes de temps
 
 Ces innovations rendent PostgreSQL encore plus performant et expressif. Même si vous utilisez une version antérieure, comprendre ces concepts vous préparera à les exploiter lors de votre migration.

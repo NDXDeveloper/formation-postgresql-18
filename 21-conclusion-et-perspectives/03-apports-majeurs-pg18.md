@@ -16,9 +16,9 @@ PostgreSQL 18 n'est pas une simple mise à jour incrémentale : c'est une versio
 
 Comme chaque version majeure de PostgreSQL, la version 18 est le fruit d'environ **un an de développement intensif** par une communauté mondiale de contributeurs. Cette version se distingue par :
 
-- **Des changements architecturaux profonds** : Le sous-système d'I/O a été repensé
-- **Une modernisation de la sécurité** : Adoption des standards d'authentification actuels
-- **Une amélioration de l'expérience opérationnelle** : Mises à jour majeures simplifiées
+- **Des changements architecturaux profonds** : Le sous-système d'I/O a été repensé  
+- **Une modernisation de la sécurité** : Adoption des standards d'authentification actuels  
+- **Une amélioration de l'expérience opérationnelle** : Mises à jour majeures simplifiées  
 - **Des fonctionnalités développeur attendues** : UUIDv7, colonnes virtuelles, et plus
 
 ### Les Grands Axes de Cette Version
@@ -197,9 +197,9 @@ Chaque section est conçue pour être accessible aux débutants tout en fourniss
 
 PostgreSQL 18 représente une évolution majeure qui positionne PostgreSQL pour les défis des années à venir :
 
-- **Performance** : L'I/O asynchrone exploite enfin le potentiel des systèmes de stockage modernes
-- **Productivité** : UUIDv7 et les colonnes virtuelles réduisent le code applicatif nécessaire
-- **Sécurité** : OAuth 2.0 et SCRAM-SHA-256 alignent PostgreSQL sur les standards actuels
+- **Performance** : L'I/O asynchrone exploite enfin le potentiel des systèmes de stockage modernes  
+- **Productivité** : UUIDv7 et les colonnes virtuelles réduisent le code applicatif nécessaire  
+- **Sécurité** : OAuth 2.0 et SCRAM-SHA-256 alignent PostgreSQL sur les standards actuels  
 - **Opérations** : Les mises à jour majeures ne sont plus synonymes d'indisponibilité prolongée
 
 Cette version confirme la capacité de la communauté PostgreSQL à innover tout en préservant la stabilité et la compatibilité qui font la réputation de ce SGBD.

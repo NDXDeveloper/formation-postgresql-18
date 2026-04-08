@@ -2,9 +2,9 @@
 
 # Partie 2 : Le Langage SQL - Interrogation et Manipulation
 
-**Niveau** : Intermédiaire
-**Durée estimée** : 12-16 heures
-**Prérequis** : Partie 1 complétée (concepts fondamentaux et objets de base de données)
+**Niveau** : Intermédiaire  
+**Durée estimée** : 12-16 heures  
+**Prérequis** : Partie 1 complétée (concepts fondamentaux et objets de base de données)  
 
 ---
 
@@ -18,15 +18,15 @@ SQL (Structured Query Language) est le langage universel des bases de données r
 
 SQL est bien plus qu'un simple langage de requêtes. C'est un outil de pensée qui vous permet de :
 
-- **Extraire l'information** dont vous avez besoin, de la manière dont vous en avez besoin
-- **Transformer et manipuler** vos données directement dans la base
-- **Établir et maintenir** l'intégrité de vos données via les relations
+- **Extraire l'information** dont vous avez besoin, de la manière dont vous en avez besoin  
+- **Transformer et manipuler** vos données directement dans la base  
+- **Établir et maintenir** l'intégrité de vos données via les relations  
 - **Agréger et synthétiser** des volumes importants d'informations
 
 Dans cette partie, nous couvrons les quatre sous-langages SQL fondamentaux que vous utiliserez quotidiennement :
-- **DQL** (Data Query Language) : Interrogation avec SELECT
-- **DML** (Data Manipulation Language) : INSERT, UPDATE, DELETE
-- **Relations** : Jointures et intégrité référentielle
+- **DQL** (Data Query Language) : Interrogation avec SELECT  
+- **DML** (Data Manipulation Language) : INSERT, UPDATE, DELETE  
+- **Relations** : Jointures et intégrité référentielle  
 - **Agrégation** : GROUP BY et fonctions statistiques
 
 ---
@@ -94,17 +94,17 @@ Contrairement à la Partie 1 purement conceptuelle, cette partie **introduit des
 ### 🧠 Comprendre avant d'exécuter
 
 Nous ne nous contentons pas de montrer la syntaxe SQL. Nous expliquons :
-- **Comment** PostgreSQL exécute vos requêtes
-- **Pourquoi** certaines approches sont plus efficaces
-- **Quand** utiliser telle ou telle technique
+- **Comment** PostgreSQL exécute vos requêtes  
+- **Pourquoi** certaines approches sont plus efficaces  
+- **Quand** utiliser telle ou telle technique  
 - **Quels** pièges éviter
 
 ### 🔄 Construction progressive
 
 Chaque chapitre s'appuie sur les précédents :
-1. SELECT simple → Filtrage → Tri → Pagination
-2. Manipulations de base → Techniques avancées (upserts, MERGE)
-3. Contraintes → Jointures simples → Jointures complexes
+1. SELECT simple → Filtrage → Tri → Pagination  
+2. Manipulations de base → Techniques avancées (upserts, MERGE)  
+3. Contraintes → Jointures simples → Jointures complexes  
 4. Agrégations de base → Extensions avancées
 
 ### ⚠️ Pièges courants et bonnes pratiques
@@ -122,19 +122,17 @@ Tout au long de cette partie, nous mettons en évidence :
 Cette deuxième partie présente plusieurs innovations majeures de PostgreSQL 18 :
 
 ### 🆕 DML amélioré
-- **Support OLD et NEW dans RETURNING** : Accès aux valeurs avant/après modification dans UPDATE
-- **Améliorations COPY** : Gestion optimisée du marqueur de fin `\.` en CSV
+- **Support OLD et NEW dans RETURNING** : Accès aux valeurs avant/après modification dans UPDATE  
+- **Améliorations COPY** : Gestion optimisée du marqueur de fin `\.` en CSV  
 - **MERGE avec OLD/NEW** : Consolidation de données avec accès aux anciennes valeurs
 
 ### 🔗 Contraintes évoluées
 - **Contraintes temporelles (Temporal Constraints)** : Validation de périodes de temps et chevauchements
 - Gestion native des périodes de validité dans les données
 
-### ⚡ Optimisations du planificateur
-- **Optimisation des OR-clauses** : Transformation automatique en ANY pour de meilleures performances
-- Amélioration du traitement des conditions multiples
-
 Ces nouveautés seront expliquées en détail dans les chapitres correspondants.
+
+> 💡 D'autres nouveautés PostgreSQL 18 liées au SQL (optimisation des OR-clauses transformées en ANY, Skip Scan, etc.) sont couvertes dans les Parties 3 et 4 de la formation.
 
 ---
 
@@ -142,9 +140,9 @@ Ces nouveautés seront expliquées en détail dans les chapitres correspondants.
 
 ### 👥 Pour qui ?
 
-- **Développeurs** écrivant des requêtes applicatives quotidiennes
-- **Data Analysts** interrogeant des bases de données
-- **DevOps** devant manipuler des données en production
+- **Développeurs** écrivant des requêtes applicatives quotidiennes  
+- **Data Analysts** interrogeant des bases de données  
+- **DevOps** devant manipuler des données en production  
 - **Architectes** concevant des schémas de bases de données
 - Toute personne ayant complété la Partie 1 ou possédant des bases solides en concepts de BDD
 
@@ -190,9 +188,9 @@ Cette partie couvre le SQL **intermédiaire**. Les sujets suivants seront abord�
 ### 📖 Lecture active
 
 Pour chaque chapitre :
-1. **Lisez attentivement** la théorie
-2. **Visualisez** mentalement les opérations décrites
-3. **Notez** les concepts clés et les pièges
+1. **Lisez attentivement** la théorie  
+2. **Visualisez** mentalement les opérations décrites  
+3. **Notez** les concepts clés et les pièges  
 4. **Expérimentez** (si possible) avec vos propres exemples
 
 ### 🧪 Expérimentation (fortement recommandée)
@@ -249,7 +247,7 @@ Cette compréhension sera approfondie dans le Chapitre 5.
 ### ⚠️ Maîtrisez la logique NULL
 
 Les valeurs NULL sont une source constante de confusion :
-- `NULL = NULL` → `NULL` (pas TRUE !)
+- `NULL = NULL` → `NULL` (pas TRUE !)  
 - `NULL <> NULL` → `NULL` (pas TRUE !)
 - Utilisez `IS NULL` et `IS NOT NULL`
 
@@ -301,26 +299,26 @@ Dans cette formation, nous utilisons les conventions suivantes :
 
 ```sql
 -- Mots-clés SQL en MAJUSCULES
-SELECT nom, prenom
-FROM utilisateurs
-WHERE age > 18
-ORDER BY nom ASC;
+SELECT nom, prenom  
+FROM utilisateurs  
+WHERE age > 18  
+ORDER BY nom ASC;  
 
 -- Indentation pour la lisibilité
 SELECT
     u.nom,
     u.email,
     COUNT(c.id) AS nb_commandes
-FROM utilisateurs u
-LEFT JOIN commandes c ON u.id = c.user_id
-GROUP BY u.id, u.nom, u.email
-HAVING COUNT(c.id) > 0;
+FROM utilisateurs u  
+LEFT JOIN commandes c ON u.id = c.user_id  
+GROUP BY u.id, u.nom, u.email  
+HAVING COUNT(c.id) > 0;  
 ```
 
 ### 🔤 Nommage
 
-- **Tables** : pluriel, minuscules, séparées par underscores (`utilisateurs`, `commandes_lignes`)
-- **Colonnes** : singulier, snake_case (`date_creation`, `prix_unitaire`)
+- **Tables** : pluriel, minuscules, séparées par underscores (`utilisateurs`, `commandes_lignes`)  
+- **Colonnes** : singulier, snake_case (`date_creation`, `prix_unitaire`)  
 - **Alias** : courts et significatifs (`u` pour users, `c` pour commandes)
 
 ### 💬 Commentaires
@@ -359,13 +357,13 @@ psql -U postgres -d ma_base
 ### 📊 Jeux de données d'entraînement
 
 Pour expérimenter, utilisez des jeux de données publics :
-- **Pagila** : Base de données de location de films (clone de Sakila)
-- **DVD Rental** : Exemple classique PostgreSQL
+- **Pagila** : Base de données de location de films (clone de Sakila)  
+- **DVD Rental** : Exemple classique PostgreSQL  
 - **Northwind** : Base de données commerciale
 
 ### 🔧 Outils de formatage
 
-- **pgFormatter** : Formater automatiquement votre SQL
+- **pgFormatter** : Formater automatiquement votre SQL  
 - **SQLFluff** : Linter SQL avec règles de style
 
 ---
@@ -388,23 +386,23 @@ Extensions (PostGIS, pgvector), déploiement production, architectures modernes,
 ## Ressources complémentaires
 
 ### 📚 Documentation PostgreSQL
-- [SQL Commands Reference](https://www.postgresql.org/docs/18/sql-commands.html)
-- [Data Types](https://www.postgresql.org/docs/18/datatype.html)
+- [SQL Commands Reference](https://www.postgresql.org/docs/18/sql-commands.html)  
+- [Data Types](https://www.postgresql.org/docs/18/datatype.html)  
 - [Functions and Operators](https://www.postgresql.org/docs/18/functions.html)
 
 ### 📖 Livres recommandés
-- **"PostgreSQL: Up and Running"** - Regina Obe, Leo Hsu (O'Reilly)
-- **"The Art of PostgreSQL"** - Dimitri Fontaine
+- **"PostgreSQL: Up and Running"** - Regina Obe, Leo Hsu (O'Reilly)  
+- **"The Art of PostgreSQL"** - Dimitri Fontaine  
 - **"SQL Antipatterns"** - Bill Karwin (Pragmatic Bookshelf)
 
 ### 🎓 Pratique en ligne
-- [PostgreSQL Exercises](https://pgexercises.com/)
-- [SQL Zoo](https://sqlzoo.net/)
+- [PostgreSQL Exercises](https://pgexercises.com/)  
+- [SQL Zoo](https://sqlzoo.net/)  
 - [LeetCode SQL Problems](https://leetcode.com/problemset/database/)
 
 ### 👥 Communauté
-- [Stack Overflow - PostgreSQL](https://stackoverflow.com/questions/tagged/postgresql)
-- [PostgreSQL Slack](https://postgres-slack.herokuapp.com/)
+- [Stack Overflow - PostgreSQL](https://stackoverflow.com/questions/tagged/postgresql)  
+- [PostgreSQL Slack](https://postgres-slack.herokuapp.com/)  
 - [Reddit r/PostgreSQL](https://www.reddit.com/r/PostgreSQL/)
 
 ---
@@ -413,11 +411,11 @@ Extensions (PostGIS, pgvector), déploiement production, architectures modernes,
 
 Avant d'entamer le Chapitre 5, assurez-vous de :
 
-- ✅ Avoir complété la Partie 1 (ou avoir les connaissances équivalentes)
-- ✅ Comprendre la hiérarchie logique (Database → Schema → Table)
-- ✅ Savoir créer des tables avec les types de données de base
-- ✅ Avoir accès à une instance PostgreSQL (recommandé)
-- ✅ Être familier avec un client SQL (psql, DBeaver ou pgAdmin)
+- ✅ Avoir complété la Partie 1 (ou avoir les connaissances équivalentes)  
+- ✅ Comprendre la hiérarchie logique (Database → Schema → Table)  
+- ✅ Savoir créer des tables avec les types de données de base  
+- ✅ Avoir accès à une instance PostgreSQL (recommandé)  
+- ✅ Être familier avec un client SQL (psql, DBeaver ou pgAdmin)  
 - ✅ Avoir un environnement de test pour expérimenter
 
 ---

@@ -31,9 +31,9 @@ Les acronymes sont classés par catégorie pour faciliter votre apprentissage.
 **Définition** : Le langage standardisé pour interagir avec les bases de données relationnelles.
 
 **Les 4 catégories principales** :
-- **DDL** : Définir la structure
-- **DML** : Manipuler les données
-- **DQL** : Interroger les données
+- **DDL** : Définir la structure  
+- **DML** : Manipuler les données  
+- **DQL** : Interroger les données  
 - **DCL** : Contrôler les permissions
 
 **Exemple** :
@@ -49,9 +49,9 @@ SELECT nom FROM clients WHERE ville = 'Paris';
 
 **Définition** : Les quatre propriétés garantissant la fiabilité des transactions.
 
-- **A**tomicity : Tout ou rien
-- **C**onsistency : Toujours conforme aux règles
-- **I**solation : Les transactions ne s'interfèrent pas
+- **A**tomicity : Tout ou rien  
+- **C**onsistency : Toujours conforme aux règles  
+- **I**solation : Les transactions ne s'interfèrent pas  
 - **D**urability : Les données validées sont permanentes
 
 **Importance** : ACID différencie les "vraies" bases de données des simples systèmes de stockage.
@@ -67,9 +67,9 @@ SELECT nom FROM clients WHERE ville = 'Paris';
 **Définition** : Commandes pour créer, modifier ou supprimer la structure de la base.
 
 **Commandes principales** :
-- `CREATE` : Créer des objets
-- `ALTER` : Modifier des objets
-- `DROP` : Supprimer des objets
+- `CREATE` : Créer des objets  
+- `ALTER` : Modifier des objets  
+- `DROP` : Supprimer des objets  
 - `TRUNCATE` : Vider une table
 
 **Exemple** :
@@ -93,9 +93,9 @@ DROP TABLE ancienne_table;
 **Définition** : Commandes pour insérer, modifier ou supprimer des données.
 
 **Commandes principales** :
-- `INSERT` : Ajouter des lignes
-- `UPDATE` : Modifier des lignes
-- `DELETE` : Supprimer des lignes
+- `INSERT` : Ajouter des lignes  
+- `UPDATE` : Modifier des lignes  
+- `DELETE` : Supprimer des lignes  
 - `MERGE` : Fusionner des données (PG 15+)
 
 **Exemple** :
@@ -120,10 +120,10 @@ DELETE FROM employes WHERE id = 99;
 
 **Exemple** :
 ```sql
-SELECT nom, email
-FROM employes
-WHERE ville = 'Lyon'
-ORDER BY nom;
+SELECT nom, email  
+FROM employes  
+WHERE ville = 'Lyon'  
+ORDER BY nom;  
 ```
 
 **Note** : Certains considèrent DQL comme faisant partie du DML. La distinction n'est pas universelle.
@@ -137,7 +137,7 @@ ORDER BY nom;
 **Définition** : Commandes pour gérer les permissions et la sécurité.
 
 **Commandes principales** :
-- `GRANT` : Donner des permissions
+- `GRANT` : Donner des permissions  
 - `REVOKE` : Retirer des permissions
 
 **Exemple** :
@@ -158,9 +158,9 @@ REVOKE INSERT, UPDATE, DELETE ON TABLE clients FROM user_readonly;
 **Définition** : Commandes pour gérer les transactions.
 
 **Commandes principales** :
-- `BEGIN` : Démarrer une transaction
-- `COMMIT` : Valider une transaction
-- `ROLLBACK` : Annuler une transaction
+- `BEGIN` : Démarrer une transaction  
+- `COMMIT` : Valider une transaction  
+- `ROLLBACK` : Annuler une transaction  
 - `SAVEPOINT` : Créer un point de sauvegarde
 
 **Exemple** :
@@ -221,8 +221,8 @@ CREATE TABLE commandes (
 ```
 
 **Actions possibles** :
-- `ON DELETE CASCADE` : Supprime les lignes liées
-- `ON DELETE SET NULL` : Met à NULL les références
+- `ON DELETE CASCADE` : Supprime les lignes liées  
+- `ON DELETE SET NULL` : Met à NULL les références  
 - `ON DELETE RESTRICT` : Empêche la suppression (défaut)
 
 ---
@@ -274,8 +274,8 @@ CREATE TABLE users (
 **Définition** : Un journal qui enregistre toutes les modifications AVANT qu'elles ne soient appliquées aux fichiers de données.
 
 **Utilités** :
-1. **Durabilité** : Récupération après crash
-2. **Performance** : Écriture séquentielle rapide
+1. **Durabilité** : Récupération après crash  
+2. **Performance** : Écriture séquentielle rapide  
 3. **Réplication** : Envoi du WAL vers des standby
 
 **Localisation** : Répertoire `pg_wal/` (anciennement `pg_xlog/`)
@@ -380,9 +380,9 @@ CREATE INDEX idx_nom ON clients(nom);  -- B-Tree par défaut
 **Définition** : Index spécialisé pour les types de données composés (tableaux, JSONB, full-text).
 
 **Cas d'usage** :
-- **Full-Text Search** : Recherche dans du texte
-- **JSONB** : Recherche dans des documents JSON
-- **Arrays** : Recherche dans des tableaux
+- **Full-Text Search** : Recherche dans du texte  
+- **JSONB** : Recherche dans des documents JSON  
+- **Arrays** : Recherche dans des tableaux  
 - **hstore** : Paires clé-valeur
 
 **Exemple** :
@@ -405,10 +405,10 @@ SELECT * FROM produits WHERE data @> '{"categorie": "electronique"}';
 **Définition** : Framework d'index flexible pour des types de données non-standards.
 
 **Cas d'usage** :
-- **PostGIS** : Géométries (points, polygones)
-- **Full-Text Search** : Alternative à GIN
-- **Range types** : `int4range`, `tstzrange`
-- **ltree** : Hiérarchies arborescentes
+- **PostGIS** : Géométries (points, polygones)  
+- **Full-Text Search** : Alternative à GIN  
+- **Range types** : `int4range`, `tstzrange`  
+- **ltree** : Hiérarchies arborescentes  
 - **Recherche de similarité** : pg_trgm
 
 **Exemple spatial** :
@@ -416,8 +416,8 @@ SELECT * FROM produits WHERE data @> '{"categorie": "electronique"}';
 CREATE INDEX idx_location ON restaurants USING GiST(location);
 
 -- Trouver les restaurants dans un rayon
-SELECT * FROM restaurants
-WHERE ST_DWithin(location, ST_Point(2.3522, 48.8566), 1000);
+SELECT * FROM restaurants  
+WHERE ST_DWithin(location, ST_Point(2.3522, 48.8566), 1000);  
 ```
 
 ---
@@ -489,10 +489,10 @@ WITH ventes_2024 AS (
 SELECT
     p.nom,
     v.total_vendu
-FROM ventes_2024 v
-JOIN produits p ON v.produit_id = p.id
-ORDER BY v.total_vendu DESC
-LIMIT 10;
+FROM ventes_2024 v  
+JOIN produits p ON v.produit_id = p.id  
+ORDER BY v.total_vendu DESC  
+LIMIT 10;  
 ```
 
 **CTE récursive** :
@@ -522,14 +522,14 @@ SELECT * FROM subordinates;
 **Définition** : Commande qui affiche comment PostgreSQL va exécuter une requête.
 
 **Variantes** :
-- `EXPLAIN` : Plan théorique
-- `EXPLAIN ANALYZE` : Exécute et montre les temps réels
+- `EXPLAIN` : Plan théorique  
+- `EXPLAIN ANALYZE` : Exécute et montre les temps réels  
 - `EXPLAIN (BUFFERS, ANALYZE)` : Ajoute les statistiques d'I/O
 
 **Exemple** :
 ```sql
-EXPLAIN ANALYZE
-SELECT * FROM clients WHERE ville = 'Paris';
+EXPLAIN ANALYZE  
+SELECT * FROM clients WHERE ville = 'Paris';  
 ```
 
 **Lecture** : Identifier les scans séquentiels coûteux, vérifier l'utilisation d'index.
@@ -542,9 +542,9 @@ SELECT * FROM clients WHERE ville = 'Paris';
 **Définition** : Processus de nettoyage qui récupère l'espace des lignes mortes (dead tuples).
 
 **Variantes** :
-- `VACUUM` : Nettoyage standard
-- `VACUUM FULL` : Réorganisation complète (bloque la table)
-- `VACUUM ANALYZE` : Nettoyage + mise à jour des statistiques
+- `VACUUM` : Nettoyage standard  
+- `VACUUM FULL` : Réorganisation complète (bloque la table)  
+- `VACUUM ANALYZE` : Nettoyage + mise à jour des statistiques  
 - `autovacuum` : Automatique (recommandé)
 
 **Pourquoi c'est vital** : MVCC crée des anciennes versions qui doivent être nettoyées.
@@ -565,8 +565,8 @@ VACUUM ANALYZE ma_table;
 
 **Commande** :
 ```sql
-ANALYZE ma_table;
-ANALYZE;  -- Toutes les tables
+ANALYZE ma_table;  
+ANALYZE;  -- Toutes les tables  
 ```
 
 **Automatique** : `autovacuum` exécute aussi ANALYZE.
@@ -616,19 +616,19 @@ SELECT * FROM clients_distants WHERE id = 42;
 **Définition** : Capacité de recherche avancée dans du texte (comme un moteur de recherche).
 
 **Types spéciaux** :
-- `tsvector` : Document indexé
+- `tsvector` : Document indexé  
 - `tsquery` : Requête de recherche
 
 **Exemple** :
 ```sql
 -- Créer un index FTS
-CREATE INDEX idx_articles_fts
-ON articles USING GIN(to_tsvector('french', contenu));
+CREATE INDEX idx_articles_fts  
+ON articles USING GIN(to_tsvector('french', contenu));  
 
 -- Rechercher
-SELECT titre, contenu
-FROM articles
-WHERE to_tsvector('french', contenu) @@ to_tsquery('french', 'postgresql & performance');
+SELECT titre, contenu  
+FROM articles  
+WHERE to_tsvector('french', contenu) @@ to_tsquery('french', 'postgresql & performance');  
 ```
 
 **Fonctionnalités** :
@@ -661,9 +661,9 @@ INSERT INTO produits (data) VALUES
 ('{"nom": "Laptop", "prix": 999, "specs": {"cpu": "i7", "ram": "16GB"}}');
 
 -- Requêtes JSONB
-SELECT * FROM produits WHERE data->>'nom' = 'Laptop';
-SELECT * FROM produits WHERE data->'specs'->>'ram' = '16GB';
-SELECT * FROM produits WHERE data @> '{"prix": 999}';
+SELECT * FROM produits WHERE data->>'nom' = 'Laptop';  
+SELECT * FROM produits WHERE data->'specs'->>'ram' = '16GB';  
+SELECT * FROM produits WHERE data @> '{"prix": 999}';  
 
 -- Index GIN
 CREATE INDEX idx_data ON produits USING GIN(data);
@@ -685,7 +685,7 @@ CREATE INDEX idx_data ON produits USING GIN(data);
 - Fusion de bases facilitée
 
 **Versions** :
-- **UUID v4** : Aléatoire (classique)
+- **UUID v4** : Aléatoire (classique)  
 - **UUID v7** : Ordonné par timestamp (nouveau en PG 18)
 
 **Exemple** :
@@ -738,7 +738,7 @@ pg_ctl start -D /data/pgdata \
 - Monitoring et alerting
 
 **Objectifs** :
-- **RTO** (Recovery Time Objective) : Temps maximum de panne acceptable
+- **RTO** (Recovery Time Objective) : Temps maximum de panne acceptable  
 - **RPO** (Recovery Point Objective) : Perte de données maximale acceptable
 
 ---
@@ -789,10 +789,10 @@ CREATE POLICY manager_team ON documents
 **Configuration** :
 ```
 # postgresql.conf
-ssl = on
-ssl_cert_file = 'server.crt'
-ssl_key_file = 'server.key'
-ssl_ca_file = 'root.crt'
+ssl = on  
+ssl_cert_file = 'server.crt'  
+ssl_key_file = 'server.key'  
+ssl_ca_file = 'root.crt'  
 ```
 
 **Note** : TLS est la version moderne de SSL (SSL est obsolète mais le nom reste).
@@ -935,10 +935,10 @@ psql -f mon_script.sql
 **Définition** : Interface visuelle pour interagir avec PostgreSQL.
 
 **Outils populaires** :
-- **pgAdmin** : L'officiel, complet mais parfois lourd
-- **DBeaver** : Multi-SGBD, moderne, gratuit
-- **DataGrip** : JetBrains (payant), très puissant
-- **TablePlus** : Mac/Windows, élégant et rapide
+- **pgAdmin** : L'officiel, complet mais parfois lourd  
+- **DBeaver** : Multi-SGBD, moderne, gratuit  
+- **DataGrip** : JetBrains (payant), très puissant  
+- **TablePlus** : Mac/Windows, élégant et rapide  
 - **Postico** : Mac seulement, simple et efficace
 
 ---
@@ -950,8 +950,8 @@ psql -f mon_script.sql
 **Définition** : Processus de migration et transformation de données.
 
 **Étapes** :
-1. **Extract** : Extraire des données sources
-2. **Transform** : Nettoyer, transformer, enrichir
+1. **Extract** : Extraire des données sources  
+2. **Transform** : Nettoyer, transformer, enrichir  
 3. **Load** : Charger dans la base cible
 
 **Outils avec PostgreSQL** :
@@ -988,9 +988,9 @@ psql -f mon_script.sql
 **Définition** : Les quatre opérations de base sur les données.
 
 **Correspondance SQL** :
-- **C**reate → `INSERT`
-- **R**ead → `SELECT`
-- **U**pdate → `UPDATE`
+- **C**reate → `INSERT`  
+- **R**ead → `SELECT`  
+- **U**pdate → `UPDATE`  
 - **D**elete → `DELETE`
 
 **Exemple** :
@@ -1017,11 +1017,11 @@ DELETE FROM produits WHERE id = 1;
 **Définition** : Technique/bibliothèque qui convertit entre objets du code et tables de base de données.
 
 **ORMs populaires** :
-- **Python** : SQLAlchemy, Django ORM, Peewee
-- **Java** : Hibernate, JPA
-- **JavaScript/Node** : Sequelize, TypeORM, Prisma
-- **Ruby** : ActiveRecord
-- **PHP** : Eloquent (Laravel), Doctrine
+- **Python** : SQLAlchemy, Django ORM, Peewee  
+- **Java** : Hibernate, JPA  
+- **JavaScript/Node** : Sequelize, TypeORM, Prisma  
+- **Ruby** : ActiveRecord  
+- **PHP** : Eloquent (Laravel), Doctrine  
 - **.NET** : Entity Framework
 
 **Avantages** :
@@ -1218,20 +1218,20 @@ CREATE DATABASE ma_base
 **PostgreSQL** :
 ```sql
 -- Créer des rôles
-CREATE ROLE lecteur;
-CREATE ROLE editeur;
+CREATE ROLE lecteur;  
+CREATE ROLE editeur;  
 
 -- Attribuer permissions
-GRANT SELECT ON ALL TABLES IN SCHEMA public TO lecteur;
-GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO editeur;
+GRANT SELECT ON ALL TABLES IN SCHEMA public TO lecteur;  
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO editeur;  
 
 -- Créer un utilisateur avec un rôle
-CREATE USER alice WITH PASSWORD 'secret';
-GRANT lecteur TO alice;
+CREATE USER alice WITH PASSWORD 'secret';  
+GRANT lecteur TO alice;  
 
 -- User Bob a les deux rôles
-CREATE USER bob WITH PASSWORD 'secret';
-GRANT lecteur, editeur TO bob;
+CREATE USER bob WITH PASSWORD 'secret';  
+GRANT lecteur, editeur TO bob;  
 ```
 
 ---
@@ -1279,8 +1279,8 @@ GRANT lecteur, editeur TO bob;
 - Scaling facilité
 
 **Équivalents** :
-- **Google Cloud** : Cloud SQL
-- **Azure** : Azure Database for PostgreSQL
+- **Google Cloud** : Cloud SQL  
+- **Azure** : Azure Database for PostgreSQL  
 - **DigitalOcean** : Managed Databases
 
 ---
@@ -1291,8 +1291,8 @@ GRANT lecteur, editeur TO bob;
 
 **Niveaux d'abstraction** :
 
-- **IaaS** : Vous gérez PostgreSQL sur une VM (EC2, Google Compute)
-- **PaaS** : Service managé gère PostgreSQL (RDS, Cloud SQL)
+- **IaaS** : Vous gérez PostgreSQL sur une VM (EC2, Google Compute)  
+- **PaaS** : Service managé gère PostgreSQL (RDS, Cloud SQL)  
 - **SaaS** : Application complète utilisant PostgreSQL en backend (invisible pour vous)
 
 ---

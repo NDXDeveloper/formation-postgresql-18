@@ -20,10 +20,10 @@ Cette annexe présente des configurations de référence **prêtes à l'emploi**
 
 Un **cas d'usage** (ou *workload* en anglais) définit le **type de charge de travail** que votre base de données doit supporter. Il détermine :
 
-- **Le type d'opérations** : Lectures, écritures, ou les deux ?
-- **La fréquence** : Milliers de requêtes par seconde ou quelques analyses par jour ?
-- **La complexité** : Requêtes simples ou agrégations massives ?
-- **La latence acceptable** : Millisecondes ou minutes ?
+- **Le type d'opérations** : Lectures, écritures, ou les deux ?  
+- **La fréquence** : Milliers de requêtes par seconde ou quelques analyses par jour ?  
+- **La complexité** : Requêtes simples ou agrégations massives ?  
+- **La latence acceptable** : Millisecondes ou minutes ?  
 - **Le volume de données** : Gigaoctets ou téraoctets ?
 
 ### Pourquoi la Configuration doit-elle s'Adapter au Cas d'Usage ?
@@ -70,18 +70,18 @@ Cette annexe couvre les quatre configurations les plus courantes en production e
 **🎯 Objectif :** Gérer des milliers de transactions courtes par seconde avec une latence minimale.
 
 **Caractéristiques :**
-- **Opérations** : INSERT, UPDATE, DELETE, SELECT simples
-- **Volume par requête** : 1-1000 lignes
-- **Fréquence** : Très élevée (milliers/seconde)
-- **Latence** : < 100ms (critique)
-- **Concurrence** : Très élevée (200-500 connexions)
+- **Opérations** : INSERT, UPDATE, DELETE, SELECT simples  
+- **Volume par requête** : 1-1000 lignes  
+- **Fréquence** : Très élevée (milliers/seconde)  
+- **Latence** : < 100ms (critique)  
+- **Concurrence** : Très élevée (200-500 connexions)  
 - **Exemples** : Applications Web, e-commerce, API REST, applications mobiles
 
 **Priorités de configuration :**
-1. **Latence faible** : Minimiser le temps de réponse
-2. **Haute concurrence** : Gérer beaucoup de connexions simultanées
-3. **Écritures fréquentes** : Optimiser WAL et checkpoints
-4. **Cache efficace** : Maximiser le cache hit ratio
+1. **Latence faible** : Minimiser le temps de réponse  
+2. **Haute concurrence** : Gérer beaucoup de connexions simultanées  
+3. **Écritures fréquentes** : Optimiser WAL et checkpoints  
+4. **Cache efficace** : Maximiser le cache hit ratio  
 5. **Autovacuum agressif** : Nettoyer rapidement les tuples morts
 
 **Compromis acceptés :**
@@ -96,18 +96,18 @@ Cette annexe couvre les quatre configurations les plus courantes en production e
 **🎯 Objectif :** Analyser et agréger des millions/milliards de lignes avec un débit de données maximal.
 
 **Caractéristiques :**
-- **Opérations** : SELECT complexes avec GROUP BY, JOIN multiples, agrégations
-- **Volume par requête** : Millions à milliards de lignes
-- **Fréquence** : Faible (quelques requêtes/heure)
-- **Latence** : Secondes à minutes (acceptable)
-- **Concurrence** : Faible (10-50 connexions)
+- **Opérations** : SELECT complexes avec GROUP BY, JOIN multiples, agrégations  
+- **Volume par requête** : Millions à milliards de lignes  
+- **Fréquence** : Faible (quelques requêtes/heure)  
+- **Latence** : Secondes à minutes (acceptable)  
+- **Concurrence** : Faible (10-50 connexions)  
 - **Exemples** : Data warehouse, BI, rapports, analytics
 
 **Priorités de configuration :**
-1. **Débit élevé** : Lire et traiter des GB/s de données
-2. **Parallélisation maximale** : Utiliser tous les CPU
-3. **Mémoire généreuse** : work_mem élevé pour tris et groupements
-4. **Scan séquentiel optimisé** : Lire de grandes portions de tables
+1. **Débit élevé** : Lire et traiter des GB/s de données  
+2. **Parallélisation maximale** : Utiliser tous les CPU  
+3. **Mémoire généreuse** : work_mem élevé pour tris et groupements  
+4. **Scan séquentiel optimisé** : Lire de grandes portions de tables  
 5. **Statistiques détaillées** : Plans de requête optimaux
 
 **Compromis acceptés :**
@@ -122,18 +122,18 @@ Cette annexe couvre les quatre configurations les plus courantes en production e
 **🎯 Objectif :** Équilibrer OLTP et OLAP sur la même instance.
 
 **Caractéristiques :**
-- **Opérations** : Mix de transactions rapides ET d'analyses complexes
-- **Volume** : Variable selon le type de requête
-- **Fréquence** : Élevée pour OLTP, faible pour OLAP
-- **Latence** : Critique pour OLTP, acceptable pour OLAP
-- **Concurrence** : Moyenne à élevée
+- **Opérations** : Mix de transactions rapides ET d'analyses complexes  
+- **Volume** : Variable selon le type de requête  
+- **Fréquence** : Élevée pour OLTP, faible pour OLAP  
+- **Latence** : Critique pour OLTP, acceptable pour OLAP  
+- **Concurrence** : Moyenne à élevée  
 - **Exemples** : Applications SaaS avec dashboards intégrés, CRM, ERP
 
 **Priorités de configuration :**
-1. **Compromis intelligent** : 70% OLTP, 30% OLAP
-2. **Séparation logique** : Rôles et pools différenciés
-3. **Ajustements dynamiques** : work_mem par rôle/session
-4. **Protection OLTP** : Empêcher OLAP de bloquer OLTP
+1. **Compromis intelligent** : 70% OLTP, 30% OLAP  
+2. **Séparation logique** : Rôles et pools différenciés  
+3. **Ajustements dynamiques** : work_mem par rôle/session  
+4. **Protection OLTP** : Empêcher OLAP de bloquer OLTP  
 5. **Monitoring différencié** : Distinguer les deux charges
 
 **Compromis nécessaires :**
@@ -152,18 +152,18 @@ Cette annexe couvre les quatre configurations les plus courantes en production e
 **🎯 Objectif :** Environnement simple et confortable pour développer et apprendre.
 
 **Caractéristiques :**
-- **Matériel** : Laptop (8-32 GB RAM, 4-8 CPU)
-- **Utilisateurs** : Un seul développeur
-- **Données** : Volume faible, données de test
-- **Sécurité** : Minimale (pas de vraies données)
-- **Durabilité** : Optionnelle (accepter perte si crash)
+- **Matériel** : Laptop (8-32 GB RAM, 4-8 CPU)  
+- **Utilisateurs** : Un seul développeur  
+- **Données** : Volume faible, données de test  
+- **Sécurité** : Minimale (pas de vraies données)  
+- **Durabilité** : Optionnelle (accepter perte si crash)  
 - **Exemples** : Développement d'applications, apprentissage SQL, tests
 
 **Priorités de configuration :**
-1. **Simplicité** : Configuration minimale, compréhensible
-2. **Feedback rapide** : Voir immédiatement les résultats
-3. **Logs détaillés** : Apprendre en observant PostgreSQL
-4. **Performance raisonnable** : Confort sans surcharger le laptop
+1. **Simplicité** : Configuration minimale, compréhensible  
+2. **Feedback rapide** : Voir immédiatement les résultats  
+3. **Logs détaillés** : Apprendre en observant PostgreSQL  
+4. **Performance raisonnable** : Confort sans surcharger le laptop  
 5. **Économie de ressources** : Laisser de la RAM pour l'IDE
 
 **Compromis acceptés :**
@@ -186,7 +186,7 @@ Posez-vous ces questions :
    - Les deux en proportions significatives → **Mixed**
    - Développement sur laptop → **Dev Local**
 
-2. **Quelle est la latence acceptable ?**
+2. **Quelle est la latence acceptable ?**  
    - < 100ms obligatoire → **OLTP**
    - Quelques secondes OK → **OLAP**
    - Variable selon l'opération → **Mixed**
@@ -208,11 +208,11 @@ Posez-vous ces questions :
 
 Chaque section de cette annexe fournit :
 
-1. **Configuration complète** : Fichier postgresql.conf prêt à l'emploi
-2. **Explications détaillées** : Pourquoi chaque paramètre a cette valeur
-3. **Dimensionnement** : Comment adapter selon votre matériel
-4. **Optimisations supplémentaires** : Index, partitionnement, etc.
-5. **Monitoring** : Métriques à surveiller pour ce cas d'usage
+1. **Configuration complète** : Fichier postgresql.conf prêt à l'emploi  
+2. **Explications détaillées** : Pourquoi chaque paramètre a cette valeur  
+3. **Dimensionnement** : Comment adapter selon votre matériel  
+4. **Optimisations supplémentaires** : Index, partitionnement, etc.  
+5. **Monitoring** : Métriques à surveiller pour ce cas d'usage  
 6. **Checklist** : Points de vérification avant mise en production
 
 ### Étape 3 : Mesurer et Ajuster
@@ -221,15 +221,15 @@ Chaque section de cette annexe fournit :
 
 **Processus itératif :**
 
-1. **Appliquer** la configuration recommandée
-2. **Mesurer** les performances (voir section Monitoring)
-3. **Identifier** les goulots d'étranglement
-4. **Ajuster** les paramètres progressivement
-5. **Valider** l'amélioration
+1. **Appliquer** la configuration recommandée  
+2. **Mesurer** les performances (voir section Monitoring)  
+3. **Identifier** les goulots d'étranglement  
+4. **Ajuster** les paramètres progressivement  
+5. **Valider** l'amélioration  
 6. Répéter
 
 **Outils de mesure :**
-- `pg_stat_statements` : Analyser les requêtes
+- `pg_stat_statements` : Analyser les requêtes  
 - `EXPLAIN ANALYZE` : Comprendre les plans
 - Monitoring système : CPU, RAM, I/O
 - Logs PostgreSQL : Détecter anomalies
@@ -283,8 +283,8 @@ Chaque section de cette annexe fournit :
    - Config prod optimisée pour 128 GB RAM → crash sur laptop 16 GB
    - Toujours utiliser la config appropriée au contexte
 
-2. **Ne JAMAIS utiliser la config dev en production**
-   - `fsync = off` cause des pertes de données si crash
+2. **Ne JAMAIS utiliser la config dev en production**  
+   - `fsync = off` cause des pertes de données si crash  
    - `log_statement = all` remplit le disque en quelques heures
    - Authentification `trust` = aucune sécurité
 
@@ -314,11 +314,11 @@ Chaque section de cette annexe fournit :
    - Valider impact sur charge réelle
    - Avoir un plan de rollback
 
-4. **Automatiser avec des outils**
+4. **Automatiser avec des outils**  
    - **PGTune** : https://pgtune.leopard.in.ua/
      - Génère config selon matériel et cas d'usage
      - Bon point de départ
-   - **pgtop** : Monitoring temps réel
+   - **pgtop** : Monitoring temps réel  
    - **pgBadger** : Analyse de logs
 
 5. **Maintenir la configuration à jour**
@@ -335,37 +335,37 @@ Chaque configuration implique des **compromis**. Il n'existe pas de "meilleure c
 ### Exemple : Parallélisation
 
 **OLTP :**
-- ❌ Parallélisation faible (`max_parallel_workers_per_gather = 2`)
-- ✅ Pourquoi ? Requêtes courtes, overhead de parallélisation > gain
+- ❌ Parallélisation faible (`max_parallel_workers_per_gather = 2`)  
+- ✅ Pourquoi ? Requêtes courtes, overhead de parallélisation > gain  
 - ✅ Avantage : Plus de CPU disponible pour gérer concurrence
 
 **OLAP :**
-- ✅ Parallélisation maximale (`max_parallel_workers_per_gather = 8`)
-- ✅ Pourquoi ? Requêtes longues sur millions de lignes
-- ✅ Avantage : Diviser le travail = requête 5-8× plus rapide
+- ✅ Parallélisation maximale (`max_parallel_workers_per_gather = 8`)  
+- ✅ Pourquoi ? Requêtes longues sur millions de lignes  
+- ✅ Avantage : Diviser le travail = requête 5-8× plus rapide  
 - ❌ Inconvénient : Moins de ressources pour autres requêtes
 
 **Mixed :**
-- 🤝 Parallélisation modérée (`max_parallel_workers_per_gather = 4`)
-- 🤝 Compromis entre les deux
+- 🤝 Parallélisation modérée (`max_parallel_workers_per_gather = 4`)  
+- 🤝 Compromis entre les deux  
 - 🤝 + Ajustement par rôle (OLTP: 0, OLAP: 8)
 
 ### Exemple : work_mem
 
 **OLTP :**
-- ❌ work_mem faible (32 MB)
-- ✅ Pourquoi ? 300 connexions × 32 MB × 3 ops = 28 GB max (acceptable)
+- ❌ work_mem faible (32 MB)  
+- ✅ Pourquoi ? 300 connexions × 32 MB × 3 ops = 28 GB max (acceptable)  
 - ❌ Inconvénient : Grandes agrégations écrivent sur disque (rare en OLTP)
 
 **OLAP :**
-- ✅ work_mem élevé (1 GB)
-- ✅ Pourquoi ? 50 connexions × 1 GB × 2 ops = 100 GB max (mais rarement atteint)
-- ✅ Avantage : Tris et groupements en RAM (10-100× plus rapide)
+- ✅ work_mem élevé (1 GB)  
+- ✅ Pourquoi ? 50 connexions × 1 GB × 2 ops = 100 GB max (mais rarement atteint)  
+- ✅ Avantage : Tris et groupements en RAM (10-100× plus rapide)  
 - ❌ Risque : OOM si trop de connexions utilisent 1 GB simultanément
 
 **Solution Mixed :**
-- 🤝 work_mem global modéré (64 MB)
-- 🤝 + Ajustement par rôle (OLTP: 32 MB, OLAP: 512 MB-1 GB)
+- 🤝 work_mem global modéré (64 MB)  
+- 🤝 + Ajustement par rôle (OLTP: 32 MB, OLAP: 512 MB-1 GB)  
 - 🤝 Protection : timeouts pour limiter durée requêtes OLAP
 
 ---
@@ -394,12 +394,12 @@ Chaque configuration implique des **compromis**. Il n'existe pas de "meilleure c
 
 ### Processus de Migration
 
-1. **Identifier le nouveau cas d'usage**
-2. **Préparer nouvelle configuration** (fichier postgresql.conf)
-3. **Tester en staging** avec charge simulée
-4. **Planifier fenêtre de maintenance**
-5. **Appliquer configuration** + redémarrage
-6. **Monitorer intensément** pendant 24-48h
+1. **Identifier le nouveau cas d'usage**  
+2. **Préparer nouvelle configuration** (fichier postgresql.conf)  
+3. **Tester en staging** avec charge simulée  
+4. **Planifier fenêtre de maintenance**  
+5. **Appliquer configuration** + redémarrage  
+6. **Monitorer intensément** pendant 24-48h  
 7. **Ajuster si nécessaire**
 
 **Exemple : Dev → Production**
@@ -418,9 +418,9 @@ cp postgresql.conf.oltp /etc/postgresql/18/main/postgresql.conf
 sudo systemctl restart postgresql@18-main
 
 # 5. Vérifier paramètres actifs
-psql -c "SHOW shared_buffers;"
-psql -c "SHOW work_mem;"
-psql -c "SHOW fsync;"  # DOIT être 'on' en production !
+psql -c "SHOW shared_buffers;"  
+psql -c "SHOW work_mem;"  
+psql -c "SHOW fsync;"  # DOIT être 'on' en production !  
 ```
 
 ---
@@ -477,7 +477,7 @@ Cette annexe est divisée en **quatre sections principales**, une pour chaque ca
    - Ligne de commande (bash/powershell)
    - Concepts PostgreSQL de base (tables, index, transactions)
 
-4. **Outils recommandés**
+4. **Outils recommandés**  
    - `psql` (client ligne de commande)
    - Éditeur de texte
    - Outil graphique optionnel (pgAdmin, DBeaver)
@@ -525,20 +525,20 @@ work_mem = 32MB                  # Faible car beaucoup de connexions (OLTP)
 
 ### Symboles Utilisés
 
-- ✅ **Recommandé** : Configuration idéale pour ce cas d'usage
-- ❌ **Déconseillé** : À éviter pour ce cas d'usage
-- ⚠️ **Attention** : Paramètre critique, lire avertissement
-- 🤝 **Compromis** : Équilibre entre plusieurs objectifs
-- 💡 **Astuce** : Conseil pratique
+- ✅ **Recommandé** : Configuration idéale pour ce cas d'usage  
+- ❌ **Déconseillé** : À éviter pour ce cas d'usage  
+- ⚠️ **Attention** : Paramètre critique, lire avertissement  
+- 🤝 **Compromis** : Équilibre entre plusieurs objectifs  
+- 💡 **Astuce** : Conseil pratique  
 - 🐛 **Debug** : Aide au débogage
 
 ### Niveaux de Priorité
 
 Les paramètres sont classés par importance :
 
-1. **🔴 CRITIQUE** : Impact majeur, à configurer en premier
-2. **🟠 IMPORTANT** : Impact significatif, à configurer rapidement
-3. **🟡 RECOMMANDÉ** : Amélioration notable, configurer si temps
+1. **🔴 CRITIQUE** : Impact majeur, à configurer en premier  
+2. **🟠 IMPORTANT** : Impact significatif, à configurer rapidement  
+3. **🟡 RECOMMANDÉ** : Amélioration notable, configurer si temps  
 4. **🟢 OPTIONNEL** : Amélioration mineure, configurer si besoin spécifique
 
 ---
@@ -546,23 +546,23 @@ Les paramètres sont classés par importance :
 ## Ressources Complémentaires
 
 ### Documentation Officielle PostgreSQL
-- **Configuration** : https://www.postgresql.org/docs/18/runtime-config.html
-- **Performance Tips** : https://www.postgresql.org/docs/18/performance-tips.html
+- **Configuration** : https://www.postgresql.org/docs/18/runtime-config.html  
+- **Performance Tips** : https://www.postgresql.org/docs/18/performance-tips.html  
 - **Monitoring** : https://www.postgresql.org/docs/18/monitoring.html
 
 ### Outils de Configuration
-- **PGTune** : https://pgtune.leopard.in.ua/
-- **pgBench** : Outil de benchmark intégré à PostgreSQL
+- **PGTune** : https://pgtune.leopard.in.ua/  
+- **pgBench** : Outil de benchmark intégré à PostgreSQL  
 - **pgBadger** : Analyse de logs
 
 ### Communauté
-- **Mailing list pgsql-performance** : Discussions sur la performance
-- **Reddit r/PostgreSQL** : Communauté active
+- **Mailing list pgsql-performance** : Discussions sur la performance  
+- **Reddit r/PostgreSQL** : Communauté active  
 - **Stack Overflow** : Tag [postgresql-performance]
 
 ### Blogs Recommandés
-- **Percona Blog** : https://www.percona.com/blog/
-- **CrunchyData Blog** : https://www.crunchydata.com/blog
+- **Percona Blog** : https://www.percona.com/blog/  
+- **CrunchyData Blog** : https://www.crunchydata.com/blog  
 - **2ndQuadrant Blog** : Experts PostgreSQL
 
 ---
@@ -577,9 +577,9 @@ Maintenant que vous comprenez :
 
 **→ Passez à la section correspondant à votre cas d'usage :**
 
-1. **OLTP** si vous gérez des transactions rapides et nombreuses
-2. **OLAP** si vous faites de l'analyse et du reporting
-3. **Mixed** si vous combinez les deux
+1. **OLTP** si vous gérez des transactions rapides et nombreuses  
+2. **OLAP** si vous faites de l'analyse et du reporting  
+3. **Mixed** si vous combinez les deux  
 4. **Dev Local** si vous développez sur votre machine
 
 Chaque section fournit une configuration complète, expliquée et prête à l'emploi.

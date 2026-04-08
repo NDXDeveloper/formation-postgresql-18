@@ -5,10 +5,10 @@
 ## Introduction
 
 L'import et l'export de données sont des opérations fondamentales dans la gestion de bases de données. Que ce soit pour :
-- 📤 **Exporter** des données vers Excel ou un autre système
-- 📥 **Importer** des données depuis un fichier CSV
-- 💾 **Sauvegarder** des résultats de requêtes
-- 🔄 **Migrer** des données entre environnements
+- 📤 **Exporter** des données vers Excel ou un autre système  
+- 📥 **Importer** des données depuis un fichier CSV  
+- 💾 **Sauvegarder** des résultats de requêtes  
+- 🔄 **Migrer** des données entre environnements  
 - 📊 **Partager** des données avec des collègues
 
 Ce guide vous montre comment utiliser les trois commandes essentielles de psql : `\copy`, `\i` et `\o`.
@@ -40,8 +40,8 @@ Ce guide vous montre comment utiliser les trois commandes essentielles de psql :
 \o /tmp/resultats.txt
 
 # Tout ce qui suit sera écrit dans le fichier
-SELECT * FROM clients;
-SELECT COUNT(*) FROM commandes;
+SELECT * FROM clients;  
+SELECT COUNT(*) FROM commandes;  
 
 # Revenir à l'affichage normal
 \o
@@ -135,10 +135,10 @@ SELECT
     DATE_TRUNC('day', date_commande) AS jour,
     COUNT(*) AS nb_commandes,
     SUM(montant_total) AS total_ventes
-FROM commandes
-WHERE date_commande >= '2024-11-01'
-GROUP BY 1
-ORDER BY 1;
+FROM commandes  
+WHERE date_commande >= '2024-11-01'  
+GROUP BY 1  
+ORDER BY 1;  
 
 -- Ajouter des statistiques
 \echo ''
@@ -147,8 +147,8 @@ SELECT
     'Total' AS type,
     COUNT(*) AS nb_commandes,
     SUM(montant_total) AS total
-FROM commandes
-WHERE date_commande >= '2024-11-01';
+FROM commandes  
+WHERE date_commande >= '2024-11-01';  
 
 \o
 
@@ -257,9 +257,9 @@ id,nom,prenom,email,ville
 
 **Résultat** :
 ```csv
-nom,prenom,email
-Dupont,Alice,alice.dupont@mail.fr
-Martin,Bob,bob.martin@mail.fr
+nom,prenom,email  
+Dupont,Alice,alice.dupont@mail.fr  
+Martin,Bob,bob.martin@mail.fr  
 ```
 
 ---
@@ -484,8 +484,8 @@ Format propriétaire PostgreSQL, très rapide mais non-portable.
 ```
 
 **Solutions** :
-1. Spécifier les colonnes explicitement
-2. Ajouter les colonnes manquantes au fichier
+1. Spécifier les colonnes explicitement  
+2. Ajouter les colonnes manquantes au fichier  
 3. Créer les colonnes dans la table
 
 ```bash
@@ -517,7 +517,7 @@ Format propriétaire PostgreSQL, très rapide mais non-portable.
 ```
 
 **Solutions** :
-1. Nettoyer les doublons dans le fichier
+1. Nettoyer les doublons dans le fichier  
 2. Utiliser une stratégie ON CONFLICT (nécessite SQL, pas \copy)
 
 ---
@@ -573,14 +573,14 @@ CREATE TEMP TABLE temp_clients (
 \copy temp_clients FROM '/tmp/nouveaux_clients.csv' CSV HEADER
 
 # 3. Nettoyer et valider
-DELETE FROM temp_clients WHERE email IS NULL;
-DELETE FROM temp_clients WHERE email !~ '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}$';
+DELETE FROM temp_clients WHERE email IS NULL;  
+DELETE FROM temp_clients WHERE email !~ '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}$';  
 
 # 4. Insérer dans la vraie table
-INSERT INTO clients (nom, prenom, email, ville)
-SELECT nom, prenom, email, ville
-FROM temp_clients
-ON CONFLICT (email) DO NOTHING;
+INSERT INTO clients (nom, prenom, email, ville)  
+SELECT nom, prenom, email, ville  
+FROM temp_clients  
+ON CONFLICT (email) DO NOTHING;  
 
 # 5. Vérifier les résultats
 SELECT
@@ -706,8 +706,8 @@ COMMIT;
 
 **Exécution** :
 ```bash
-cd /projet
-psql -U postgres -d ma_base -f main.sql
+cd /projet  
+psql -U postgres -d ma_base -f main.sql  
 
 # Ou depuis psql déjà connecté
 \i /projet/main.sql
@@ -761,8 +761,8 @@ CREATE TABLE IF NOT EXISTS users (
 );
 
 \echo 'Insertion des données de test...'
-INSERT INTO users (username) VALUES ('alice'), ('bob')
-ON CONFLICT (username) DO NOTHING;
+INSERT INTO users (username) VALUES ('alice'), ('bob')  
+ON CONFLICT (username) DO NOTHING;  
 
 COMMIT;
 
@@ -784,8 +784,8 @@ COMMIT;
 BEGIN;
 
 -- Vérification pré-migration
-DO $$
-BEGIN
+DO $$  
+BEGIN  
     IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'users') THEN
         RAISE EXCEPTION 'Table users existe déjà. Migration annulée.';
     END IF;
@@ -800,8 +800,8 @@ CREATE TABLE users (
 );
 
 -- Index
-CREATE INDEX idx_users_username ON users(username);
-CREATE INDEX idx_users_email ON users(email);
+CREATE INDEX idx_users_username ON users(username);  
+CREATE INDEX idx_users_email ON users(email);  
 
 -- Enregistrer la migration
 CREATE TABLE IF NOT EXISTS migrations (
@@ -896,9 +896,9 @@ SELECT
     DATE_TRUNC('month', date_commande) AS mois,
     COUNT(*) AS nb_commandes,
     SUM(montant_total) AS total
-FROM commandes
-GROUP BY 1
-ORDER BY 1;
+FROM commandes  
+GROUP BY 1  
+ORDER BY 1;  
 
 \o
 
@@ -990,17 +990,17 @@ SELECT
 FROM staging_clients;
 
 -- Supprimer les invalides
-DELETE FROM staging_clients
-WHERE nom IS NULL OR nom = ''
+DELETE FROM staging_clients  
+WHERE nom IS NULL OR nom = ''  
    OR email IS NULL OR email = ''
    OR email !~ '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}$';
 
 -- Insérer les valides
-INSERT INTO clients (nom, prenom, email, telephone)
-SELECT nom, prenom, email, telephone
-FROM staging_clients
-ON CONFLICT (email) DO UPDATE
-SET
+INSERT INTO clients (nom, prenom, email, telephone)  
+SELECT nom, prenom, email, telephone  
+FROM staging_clients  
+ON CONFLICT (email) DO UPDATE  
+SET  
     nom = EXCLUDED.nom,
     prenom = EXCLUDED.prenom,
     telephone = EXCLUDED.telephone,
@@ -1192,8 +1192,8 @@ SELECT * FROM autre_chose;  -- Écrase le fichier !
 ```
 
 **Solutions** :
-1. Vérifier que le fichier existe : `\! ls -l /tmp/fichier_inexistant.csv`
-2. Vérifier le chemin
+1. Vérifier que le fichier existe : `\! ls -l /tmp/fichier_inexistant.csv`  
+2. Vérifier le chemin  
 3. Vérifier les permissions
 
 ---
@@ -1221,8 +1221,8 @@ SELECT * FROM autre_chose;  -- Écrase le fichier !
 ```
 
 **Solutions** :
-1. Fichier a plus de colonnes que la table
-2. Spécifier les colonnes explicitement
+1. Fichier a plus de colonnes que la table  
+2. Spécifier les colonnes explicitement  
 3. Corriger le fichier
 
 ```bash
@@ -1270,9 +1270,9 @@ echo "1,Test,User,test@mail.fr" | psql -c "\copy clients FROM STDIN CSV"
 ```bash
 #!/bin/bash
 
-DATE=$(date +%Y%m%d)
-BACKUP_DIR="/backup/$DATE"
-mkdir -p "$BACKUP_DIR"
+DATE=$(date +%Y%m%d)  
+BACKUP_DIR="/backup/$DATE"  
+mkdir -p "$BACKUP_DIR"  
 
 psql -U postgres -d production <<EOF
 \o $BACKUP_DIR/backup.log
@@ -1294,9 +1294,9 @@ psql -U postgres -d production <<EOF
 EOF
 
 # Compression
-cd "$BACKUP_DIR"
-tar czf "../backup_$DATE.tar.gz" *.csv
-rm *.csv
+cd "$BACKUP_DIR"  
+tar czf "../backup_$DATE.tar.gz" *.csv  
+rm *.csv  
 
 echo "Backup sauvegardé dans /backup/backup_$DATE.tar.gz"
 ```
@@ -1326,22 +1326,22 @@ INSERT INTO import_log (message) VALUES ('Début import...');
 \copy staging FROM '/data/clients.csv' CSV HEADER
 
 -- Validation
-INSERT INTO import_log (message)
-VALUES ('Lignes importées: ' || (SELECT COUNT(*) FROM staging)::TEXT);
+INSERT INTO import_log (message)  
+VALUES ('Lignes importées: ' || (SELECT COUNT(*) FROM staging)::TEXT);  
 
 -- Nettoyage
 DELETE FROM staging WHERE email IS NULL;
 
-INSERT INTO import_log (message)
-VALUES ('Lignes invalides supprimées: ' ||
+INSERT INTO import_log (message)  
+VALUES ('Lignes invalides supprimées: ' ||  
         (SELECT COUNT(*) FROM staging WHERE email IS NULL)::TEXT);
 
 -- Insertion
-INSERT INTO clients SELECT * FROM staging
-ON CONFLICT (email) DO NOTHING;
+INSERT INTO clients SELECT * FROM staging  
+ON CONFLICT (email) DO NOTHING;  
 
-INSERT INTO import_log (message)
-VALUES ('Lignes insérées: ' || (SELECT COUNT(*) FROM clients
+INSERT INTO import_log (message)  
+VALUES ('Lignes insérées: ' || (SELECT COUNT(*) FROM clients  
         WHERE created_at > NOW() - INTERVAL '1 second')::TEXT);
 
 -- Rapport
@@ -1369,9 +1369,9 @@ COMMIT;
 
 L'import/export de données est une compétence essentielle. Les points clés :
 
-🎯 **Essentiels** :
-- `\copy` pour importer/exporter des données (CSV)
-- `\o` pour sauvegarder des résultats formatés
+🎯 **Essentiels** :  
+- `\copy` pour importer/exporter des données (CSV)  
+- `\o` pour sauvegarder des résultats formatés  
 - `\i` pour exécuter des scripts SQL
 
 📋 **Formats** :

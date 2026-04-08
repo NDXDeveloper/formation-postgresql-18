@@ -8,18 +8,18 @@
 
 **OLAP** signifie **Online Analytical Processing** (Traitement Analytique en Ligne). C'est un type de charge de travail caractérisé par :
 
-- **Requêtes complexes et longues** : Analyses qui peuvent durer de quelques secondes à plusieurs minutes
-- **Agrégations massives** : Calculs sur des millions voire des milliards de lignes
-- **Principalement des lectures** : Peu ou pas d'écritures pendant les heures d'analyse
-- **Faible concurrence** : Quelques analystes/rapports simultanés (vs milliers d'utilisateurs en OLTP)
+- **Requêtes complexes et longues** : Analyses qui peuvent durer de quelques secondes à plusieurs minutes  
+- **Agrégations massives** : Calculs sur des millions voire des milliards de lignes  
+- **Principalement des lectures** : Peu ou pas d'écritures pendant les heures d'analyse  
+- **Faible concurrence** : Quelques analystes/rapports simultanés (vs milliers d'utilisateurs en OLTP)  
 - **Données historiques** : Conservation de plusieurs années de données pour analyse de tendances
 
 ### Exemples d'Applications OLAP
 
-- **Business Intelligence (BI)** : Tableaux de bord, rapports de ventes, KPIs
-- **Data Warehouse** : Entrepôt de données consolidées de plusieurs sources
-- **Analytics avancés** : Analyse de cohortes, segmentation clients, prévisions
-- **Reporting financier** : Bilans, états financiers, analyses de rentabilité
+- **Business Intelligence (BI)** : Tableaux de bord, rapports de ventes, KPIs  
+- **Data Warehouse** : Entrepôt de données consolidées de plusieurs sources  
+- **Analytics avancés** : Analyse de cohortes, segmentation clients, prévisions  
+- **Reporting financier** : Bilans, états financiers, analyses de rentabilité  
 - **Big Data Analytics** : Analyse de logs, télémétrie, IoT
 
 ### OLAP vs OLTP : Tableau Comparatif
@@ -67,7 +67,7 @@ Le modèle le plus courant en OLAP :
 ```
 
 **Composants :**
-- **Tables de faits (FACT)** : Mesures numériques (ventes, quantités, revenus)
+- **Tables de faits (FACT)** : Mesures numériques (ventes, quantités, revenus)  
 - **Tables de dimensions (DIM)** : Contexte (qui, quoi, où, quand)
 
 **Exemple concret :**
@@ -103,11 +103,11 @@ CREATE TABLE dim_time (
 
 Pour une charge de travail OLAP, nous cherchons à optimiser PostgreSQL selon ces principes :
 
-1. **Maximiser le débit de données** (MB/s lus et traités)
-2. **Paralléliser les requêtes** (utiliser tous les CPU)
-3. **Optimiser les agrégations** (GROUP BY, SUM, AVG sur millions de lignes)
-4. **Favoriser les scans séquentiels** (lire de grandes portions de tables)
-5. **Réduire l'importance de la latence** (OK si requête prend 30s au lieu de 5s)
+1. **Maximiser le débit de données** (MB/s lus et traités)  
+2. **Paralléliser les requêtes** (utiliser tous les CPU)  
+3. **Optimiser les agrégations** (GROUP BY, SUM, AVG sur millions de lignes)  
+4. **Favoriser les scans séquentiels** (lire de grandes portions de tables)  
+5. **Réduire l'importance de la latence** (OK si requête prend 30s au lieu de 5s)  
 6. **Allouer beaucoup de mémoire par requête** (pour tris et hachages massifs)
 
 ---
@@ -193,7 +193,7 @@ work_mem = 1GB
 ```
 
 **💡 Impact direct :**
-- `work_mem` trop faible → PostgreSQL écrit sur disque (TEMP FILES) → requête 10× plus lente
+- `work_mem` trop faible → PostgreSQL écrit sur disque (TEMP FILES) → requête 10× plus lente  
 - `work_mem` suffisant → Tout reste en RAM → requête rapide
 
 **Vérifier l'utilisation :**
@@ -202,9 +202,9 @@ work_mem = 1GB
 SELECT
     query,
     temp_blks_written
-FROM pg_stat_statements
-WHERE temp_blks_written > 0
-ORDER BY temp_blks_written DESC;
+FROM pg_stat_statements  
+WHERE temp_blks_written > 0  
+ORDER BY temp_blks_written DESC;  
 ```
 
 Si vous voyez beaucoup de `temp_blks_written`, augmentez `work_mem` !
@@ -333,13 +333,13 @@ max_parallel_maintenance_workers = 8
 #### **parallel_setup_cost** et **parallel_tuple_cost** : Seuils de Parallélisation
 
 **Par défaut :**
-- `parallel_setup_cost = 1000` (coût d'initialisation du parallélisme)
+- `parallel_setup_cost = 1000` (coût d'initialisation du parallélisme)  
 - `parallel_tuple_cost = 0.1` (coût par tuple en parallèle)
 
 **Configuration recommandée pour OLAP :**
 ```ini
-parallel_setup_cost = 100  # Réduire pour favoriser parallélisation
-parallel_tuple_cost = 0.01  # Réduire pour favoriser parallélisation
+parallel_setup_cost = 100  # Réduire pour favoriser parallélisation  
+parallel_tuple_cost = 0.01  # Réduire pour favoriser parallélisation  
 ```
 
 **Pourquoi ?**
@@ -381,8 +381,8 @@ random_page_cost = 1.1
 
 **Configuration recommandée pour OLAP (SSD/NVMe) :**
 ```ini
-effective_io_concurrency = 200-300 (SSD)
-effective_io_concurrency = 300-500 (NVMe)
+effective_io_concurrency = 200-300 (SSD)  
+effective_io_concurrency = 300-500 (NVMe)  
 ```
 
 **Configuration dans postgresql.conf :**
@@ -398,7 +398,7 @@ PostgreSQL 18 introduit le sous-système I/O asynchrone qui peut améliorer sign
 
 **Configuration dans postgresql.conf :**
 ```ini
-io_method = 'async'  # Nécessite Linux 5.1+ avec io_uring
+io_method = 'worker'  # Nécessite Linux 5.1+ avec io_uring
 ```
 
 **Impact typique :** Amélioration de 20-30% sur les requêtes avec gros scans séquentiels.
@@ -434,14 +434,14 @@ En OLAP, vous avez peu d'écritures (chargements batch quotidiens/horaires). Les
 
 ```ini
 # WAL
-wal_level = replica                     # Pour réplication si besoin
-max_wal_size = 4GB                      # Suffisant pour OLAP
-min_wal_size = 1GB
-wal_compression = on                    # Économiser de l'espace
+wal_level = replica                     # Pour réplication si besoin  
+max_wal_size = 4GB                      # Suffisant pour OLAP  
+min_wal_size = 1GB  
+wal_compression = on                    # Économiser de l'espace  
 
 # Checkpoints (peut être plus espacés qu'en OLTP)
-checkpoint_timeout = 30min              # Défaut 5min trop fréquent
-checkpoint_completion_target = 0.9
+checkpoint_timeout = 30min              # Défaut 5min trop fréquent  
+checkpoint_completion_target = 0.9  
 ```
 
 ---
@@ -459,19 +459,19 @@ En OLAP :
 
 ```ini
 # Autovacuum moins agressif qu'en OLTP
-autovacuum = on
-autovacuum_max_workers = 4
-autovacuum_naptime = 5min               # Moins fréquent qu'en OLTP (10s)
+autovacuum = on  
+autovacuum_max_workers = 4  
+autovacuum_naptime = 5min               # Moins fréquent qu'en OLTP (10s)  
 
 # Seuils plus élevés (tables plus grandes)
-autovacuum_vacuum_threshold = 1000      # Défaut 50
-autovacuum_vacuum_scale_factor = 0.1    # Défaut 0.2
-autovacuum_analyze_threshold = 1000
-autovacuum_analyze_scale_factor = 0.05  # Important : statistiques à jour !
+autovacuum_vacuum_threshold = 1000      # Défaut 50  
+autovacuum_vacuum_scale_factor = 0.1    # Défaut 0.2  
+autovacuum_analyze_threshold = 1000  
+autovacuum_analyze_scale_factor = 0.05  # Important : statistiques à jour !  
 
 # Laisser autovacuum consommer plus de ressources (moins de concurrence)
-autovacuum_vacuum_cost_delay = 0        # Pas de ralentissement artificiel
-autovacuum_vacuum_cost_limit = -1       # Pas de limite
+autovacuum_vacuum_cost_delay = 0        # Pas de ralentissement artificiel  
+autovacuum_vacuum_cost_limit = -1       # Pas de limite  
 ```
 
 **⚠️ ANALYZE est plus important que VACUUM en OLAP**
@@ -521,10 +521,10 @@ PostgreSQL peut compiler les expressions SQL en code machine pour accélérer l'
 
 **Configuration recommandée pour OLAP :**
 ```ini
-jit = on  # Activé par défaut dans PostgreSQL 11+
-jit_above_cost = 100000  # Seuil d'activation (requêtes longues)
-jit_inline_above_cost = 500000
-jit_optimize_above_cost = 500000
+jit = on  # Activé par défaut dans PostgreSQL 11+  
+jit_above_cost = 100000  # Seuil d'activation (requêtes longues)  
+jit_inline_above_cost = 500000  
+jit_optimize_above_cost = 500000  
 ```
 
 **Impact :** Amélioration de 10-30% sur requêtes avec beaucoup d'expressions (calculs, CASE, etc.)
@@ -541,25 +541,25 @@ Voici une configuration **complète** pour un serveur PostgreSQL 18 dédié à O
 # ===================================
 # MÉMOIRE
 # ===================================
-shared_buffers = 32GB                   # 25% de 128GB
-effective_cache_size = 96GB             # 75% de 128GB
-work_mem = 1GB                          # (128 × 0.5) / 30 / 2
-maintenance_work_mem = 4GB
-hash_mem_multiplier = 2.0               # 2× work_mem pour hash operations
+shared_buffers = 32GB                   # 25% de 128GB  
+effective_cache_size = 96GB             # 75% de 128GB  
+work_mem = 1GB                          # (128 × 0.5) / 30 / 2  
+maintenance_work_mem = 4GB  
+hash_mem_multiplier = 2.0               # 2× work_mem pour hash operations  
 
 # ===================================
 # PARALLÉLISATION (crucial pour OLAP)
 # ===================================
-max_worker_processes = 32               # Tous les CPU
-max_parallel_workers_per_gather = 8     # Jusqu'à 8 workers par opération
-max_parallel_workers = 32               # Pool global
-max_parallel_maintenance_workers = 8
+max_worker_processes = 32               # Tous les CPU  
+max_parallel_workers_per_gather = 8     # Jusqu'à 8 workers par opération  
+max_parallel_workers = 32               # Pool global  
+max_parallel_maintenance_workers = 8  
 
 # Favoriser parallélisation (réduire seuils)
-parallel_setup_cost = 100               # Défaut 1000
-parallel_tuple_cost = 0.01              # Défaut 0.1
-min_parallel_table_scan_size = 8MB      # Défaut 8MB
-min_parallel_index_scan_size = 512kB    # Défaut 512kB
+parallel_setup_cost = 100               # Défaut 1000  
+parallel_tuple_cost = 0.01              # Défaut 0.1  
+min_parallel_table_scan_size = 8MB      # Défaut 8MB  
+min_parallel_index_scan_size = 512kB    # Défaut 512kB  
 
 # Force parallélisation pour tests (désactiver en prod)
 # force_parallel_mode = on
@@ -567,59 +567,59 @@ min_parallel_index_scan_size = 512kB    # Défaut 512kB
 # ===================================
 # CONNEXIONS (peu en OLAP)
 # ===================================
-max_connections = 50
-superuser_reserved_connections = 3
+max_connections = 50  
+superuser_reserved_connections = 3  
 
 # ===================================
 # WAL et CHECKPOINTS
 # ===================================
-wal_level = replica
-max_wal_size = 4GB
-min_wal_size = 1GB
-checkpoint_timeout = 30min              # Plus espacé qu'en OLTP
-checkpoint_completion_target = 0.9
-wal_compression = on
-wal_buffers = 64MB
+wal_level = replica  
+max_wal_size = 4GB  
+min_wal_size = 1GB  
+checkpoint_timeout = 30min              # Plus espacé qu'en OLTP  
+checkpoint_completion_target = 0.9  
+wal_compression = on  
+wal_buffers = 64MB  
 
 # Durabilité
-synchronous_commit = on
-fsync = on
+synchronous_commit = on  
+fsync = on  
 
 # ===================================
 # AUTOVACUUM (adapté OLAP)
 # ===================================
-autovacuum = on
-autovacuum_max_workers = 4
-autovacuum_naptime = 5min
+autovacuum = on  
+autovacuum_max_workers = 4  
+autovacuum_naptime = 5min  
 
 # Seuils plus élevés (grandes tables)
-autovacuum_vacuum_threshold = 1000
-autovacuum_vacuum_scale_factor = 0.1
-autovacuum_analyze_threshold = 1000
-autovacuum_analyze_scale_factor = 0.05
+autovacuum_vacuum_threshold = 1000  
+autovacuum_vacuum_scale_factor = 0.1  
+autovacuum_analyze_threshold = 1000  
+autovacuum_analyze_scale_factor = 0.05  
 
 # Pas de throttling (peu de concurrence)
-autovacuum_vacuum_cost_delay = 0
-autovacuum_vacuum_cost_limit = -1
+autovacuum_vacuum_cost_delay = 0  
+autovacuum_vacuum_cost_limit = -1  
 
 # ===================================
 # PLANIFICATEUR (optimisé OLAP + SSD)
 # ===================================
-random_page_cost = 1.1                  # SSD/NVMe
-seq_page_cost = 1.0
-effective_io_concurrency = 400          # NVMe
+random_page_cost = 1.1                  # SSD/NVMe  
+seq_page_cost = 1.0  
+effective_io_concurrency = 400          # NVMe  
 
 # Statistiques détaillées (crucial OLAP)
 default_statistics_target = 500
 
 # JIT pour requêtes complexes
-jit = on
-jit_above_cost = 100000
-jit_inline_above_cost = 500000
-jit_optimize_above_cost = 500000
+jit = on  
+jit_above_cost = 100000  
+jit_inline_above_cost = 500000  
+jit_optimize_above_cost = 500000  
 
 # PostgreSQL 18 : I/O asynchrone
-io_method = 'async'
+io_method = 'worker'
 
 # ===================================
 # LIMITES DE REQUÊTE
@@ -631,28 +631,28 @@ io_method = 'async'
 # ===================================
 # LOGGING et MONITORING
 # ===================================
-logging_collector = on
-log_destination = 'stderr'
-log_directory = 'log'
-log_filename = 'postgresql-%Y-%m-%d.log'
-log_rotation_age = 1d
-log_rotation_size = 500MB               # Plus gros qu'en OLTP
+logging_collector = on  
+log_destination = 'stderr'  
+log_directory = 'log'  
+log_filename = 'postgresql-%Y-%m-%d.log'  
+log_rotation_age = 1d  
+log_rotation_size = 500MB               # Plus gros qu'en OLTP  
 
-log_line_prefix = '%t [%p]: user=%u,db=%d,app=%a,client=%h '
-log_min_duration_statement = 5000       # Log requêtes > 5 secondes
-log_checkpoints = on
-log_connections = on
-log_disconnections = on
-log_lock_waits = on
-log_temp_files = 0                      # Log tous fichiers temp (crucial OLAP)
-log_autovacuum_min_duration = 0         # Log tous autovacuum
+log_line_prefix = '%t [%p]: user=%u,db=%d,app=%a,client=%h '  
+log_min_duration_statement = 5000       # Log requêtes > 5 secondes  
+log_checkpoints = on  
+log_connections = on  
+log_disconnections = on  
+log_lock_waits = on  
+log_temp_files = 0                      # Log tous fichiers temp (crucial OLAP)  
+log_autovacuum_min_duration = 0         # Log tous autovacuum  
 
 # Monitoring étendu
-track_activities = on
-track_counts = on
-track_io_timing = on
-track_functions = pl
-compute_query_id = on                   # Pour pg_stat_statements
+track_activities = on  
+track_counts = on  
+track_io_timing = on  
+track_functions = pl  
+compute_query_id = on                   # Pour pg_stat_statements  
 
 # Extensions monitoring
 shared_preload_libraries = 'pg_stat_statements'
@@ -660,19 +660,19 @@ shared_preload_libraries = 'pg_stat_statements'
 # ===================================
 # SÉCURITÉ
 # ===================================
-ssl = on
-ssl_prefer_server_ciphers = on
-password_encryption = scram-sha-256
+ssl = on  
+ssl_prefer_server_ciphers = on  
+password_encryption = scram-sha-256  
 
 # ===================================
 # TIMEZONE et LOCALE
 # ===================================
-timezone = 'UTC'
-lc_messages = 'en_US.UTF-8'
-lc_monetary = 'en_US.UTF-8'
-lc_numeric = 'en_US.UTF-8'
-lc_time = 'en_US.UTF-8'
-default_text_search_config = 'pg_catalog.english'
+timezone = 'UTC'  
+lc_messages = 'en_US.UTF-8'  
+lc_monetary = 'en_US.UTF-8'  
+lc_numeric = 'en_US.UTF-8'  
+lc_time = 'en_US.UTF-8'  
+default_text_search_config = 'pg_catalog.english'  
 ```
 
 ---
@@ -684,9 +684,9 @@ default_text_search_config = 'pg_catalog.english'
 #### **Pourquoi Partitionner en OLAP ?**
 
 Tables de faits avec plusieurs années de données = milliards de lignes. Avantages du partitionnement :
-- **Partition Pruning** : PostgreSQL ignore les partitions non concernées
-- **Maintenance ciblée** : VACUUM/ANALYZE seulement les partitions récentes
-- **Archivage facile** : Détacher partitions anciennes
+- **Partition Pruning** : PostgreSQL ignore les partitions non concernées  
+- **Maintenance ciblée** : VACUUM/ANALYZE seulement les partitions récentes  
+- **Archivage facile** : Détacher partitions anciennes  
 - **Requêtes plus rapides** : Traiter 50M lignes au lieu de 2B
 
 #### **Exemple : Partitionnement par Mois**
@@ -716,10 +716,10 @@ CREATE TABLE fact_sales_2024_02 PARTITION OF fact_sales
 
 ```sql
 -- Analyse des ventes de janvier 2024
-SELECT product_id, SUM(amount)
-FROM fact_sales
-WHERE sale_date >= '2024-01-01' AND sale_date < '2024-02-01'
-GROUP BY product_id;
+SELECT product_id, SUM(amount)  
+FROM fact_sales  
+WHERE sale_date >= '2024-01-01' AND sale_date < '2024-02-01'  
+GROUP BY product_id;  
 
 -- PostgreSQL scanne SEULEMENT fact_sales_2024_01
 -- (50M lignes au lieu de 2B lignes)
@@ -752,8 +752,8 @@ SELECT partman.run_maintenance('public.fact_sales');
 #### **BRIN : L'Index OLAP par Excellence**
 
 **BRIN** (Block Range Index) est idéal pour OLAP :
-- **Très compact** : 1000× plus petit qu'un B-Tree
-- **Données séquentielles** : Parfait pour tables partitionnées par date
+- **Très compact** : 1000× plus petit qu'un B-Tree  
+- **Données séquentielles** : Parfait pour tables partitionnées par date  
 - **Faible maintenance** : Peu d'espace disque
 
 **Exemple :**
@@ -780,8 +780,8 @@ Pour les dimensions (petites tables) :
 
 ```sql
 -- Dimensions : B-Tree classiques
-CREATE INDEX idx_dim_product_id ON dim_product(product_id);
-CREATE INDEX idx_dim_customer_id ON dim_customer(customer_id);
+CREATE INDEX idx_dim_product_id ON dim_product(product_id);  
+CREATE INDEX idx_dim_customer_id ON dim_customer(customer_id);  
 ```
 
 ---
@@ -798,8 +798,8 @@ CREATE INDEX idx_sales_metadata_gin ON fact_sales
     USING GIN (metadata jsonb_path_ops);
 
 -- Requête rapide sur JSONB
-SELECT * FROM fact_sales
-WHERE metadata @> '{"campaign": "summer2024"}';
+SELECT * FROM fact_sales  
+WHERE metadata @> '{"campaign": "summer2024"}';  
 ```
 
 ---
@@ -822,23 +822,23 @@ Une vue matérialisée stocke physiquement le résultat d'une requête complexe.
 
 ```sql
 -- Calcul initial : 30 secondes sur 1 milliard de lignes
-CREATE MATERIALIZED VIEW mv_sales_by_month_product AS
-SELECT
+CREATE MATERIALIZED VIEW mv_sales_by_month_product AS  
+SELECT  
     DATE_TRUNC('month', sale_date) AS month,
     product_id,
     SUM(amount) AS total_amount,
     SUM(quantity) AS total_quantity,
     COUNT(*) AS num_sales
-FROM fact_sales
-GROUP BY DATE_TRUNC('month', sale_date), product_id;
+FROM fact_sales  
+GROUP BY DATE_TRUNC('month', sale_date), product_id;  
 
 -- Index sur la vue matérialisée
 CREATE INDEX idx_mv_sales_month_product
     ON mv_sales_by_month_product(month, product_id);
 
 -- Requête sur vue : < 10ms (au lieu de 30 secondes)
-SELECT * FROM mv_sales_by_month_product
-WHERE month = '2024-01-01';
+SELECT * FROM mv_sales_by_month_product  
+WHERE month = '2024-01-01';  
 ```
 
 #### **Rafraîchir les Données**
@@ -848,8 +848,8 @@ WHERE month = '2024-01-01';
 REFRESH MATERIALIZED VIEW mv_sales_by_month_product;
 
 -- Rafraîchissement concurrent (non bloquant, nécessite UNIQUE index)
-CREATE UNIQUE INDEX ON mv_sales_by_month_product(month, product_id);
-REFRESH MATERIALIZED VIEW CONCURRENTLY mv_sales_by_month_product;
+CREATE UNIQUE INDEX ON mv_sales_by_month_product(month, product_id);  
+REFRESH MATERIALIZED VIEW CONCURRENTLY mv_sales_by_month_product;  
 ```
 
 #### **Automatiser avec pg_cron**
@@ -879,10 +879,10 @@ En OLAP, les jointures sur tables massives sont coûteuses. Stratégie : **déno
 SELECT
     d.category,
     SUM(f.amount)
-FROM fact_sales f
-JOIN dim_product d ON f.product_id = d.product_id
-WHERE d.category = 'Electronics'
-GROUP BY d.category;
+FROM fact_sales f  
+JOIN dim_product d ON f.product_id = d.product_id  
+WHERE d.category = 'Electronics'  
+GROUP BY d.category;  
 ```
 
 **Après (dénormalisé) :**
@@ -894,16 +894,16 @@ ALTER TABLE fact_sales ADD COLUMN product_category VARCHAR(50);
 SELECT
     product_category,
     SUM(amount)
-FROM fact_sales
-WHERE product_category = 'Electronics'
-GROUP BY product_category;
+FROM fact_sales  
+WHERE product_category = 'Electronics'  
+GROUP BY product_category;  
 -- 10× plus rapide
 ```
 
 **Compromis :**
-- ✅ Requêtes plus rapides
-- ✅ Moins de jointures
-- ❌ Duplication de données (espace disque)
+- ✅ Requêtes plus rapides  
+- ✅ Moins de jointures  
+- ❌ Duplication de données (espace disque)  
 - ❌ Maintenance ETL plus complexe
 
 ---
@@ -952,11 +952,11 @@ SELECT amount_with_tax FROM fact_sales;
 #### **EXPLAIN pour Vérifier**
 
 ```sql
-EXPLAIN (ANALYZE, BUFFERS)
-SELECT product_id, SUM(amount)
-FROM fact_sales
-WHERE sale_date >= '2024-01-01'
-GROUP BY product_id;
+EXPLAIN (ANALYZE, BUFFERS)  
+SELECT product_id, SUM(amount)  
+FROM fact_sales  
+WHERE sale_date >= '2024-01-01'  
+GROUP BY product_id;  
 ```
 
 **Sortie attendue pour OLAP :**
@@ -971,8 +971,8 @@ Finalize GroupAggregate (actual time=1234.56..1234.78 rows=1000)
 ```
 
 **Points clés :**
-- `Workers Planned: 8` → Parallélisation activée
-- `Parallel Seq Scan` → Scan séquentiel parallèle
+- `Workers Planned: 8` → Parallélisation activée  
+- `Parallel Seq Scan` → Scan séquentiel parallèle  
 - `Gather Merge` → Fusion des résultats de chaque worker
 
 **Si pas de parallélisation :**
@@ -996,10 +996,10 @@ SELECT
     mean_exec_time,
     temp_blks_written,
     temp_blks_written * 8192 / 1024 / 1024 AS temp_mb
-FROM pg_stat_statements
-WHERE temp_blks_written > 0
-ORDER BY temp_blks_written DESC
-LIMIT 10;
+FROM pg_stat_statements  
+WHERE temp_blks_written > 0  
+ORDER BY temp_blks_written DESC  
+LIMIT 10;  
 ```
 
 **Action :** Si vous voyez beaucoup de MB dans `temp_mb`, augmentez `work_mem`.
@@ -1015,9 +1015,9 @@ SELECT
     calls,
     total_exec_time / calls AS avg_time_ms,
     rows / calls AS avg_rows
-FROM pg_stat_statements
-WHERE query LIKE '%Parallel%'
-ORDER BY total_exec_time DESC;
+FROM pg_stat_statements  
+WHERE query LIKE '%Parallel%'  
+ORDER BY total_exec_time DESC;  
 ```
 
 ---
@@ -1047,10 +1047,10 @@ SELECT
     pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename)) AS total_size,
     pg_size_pretty(pg_relation_size(schemaname||'.'||tablename)) AS table_size,
     pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename) - pg_relation_size(schemaname||'.'||tablename)) AS index_size
-FROM pg_tables
-WHERE schemaname NOT IN ('pg_catalog', 'information_schema')
-ORDER BY pg_total_relation_size(schemaname||'.'||tablename) DESC
-LIMIT 10;
+FROM pg_tables  
+WHERE schemaname NOT IN ('pg_catalog', 'information_schema')  
+ORDER BY pg_total_relation_size(schemaname||'.'||tablename) DESC  
+LIMIT 10;  
 ```
 
 ---
@@ -1068,9 +1068,9 @@ SELECT
     last_autoanalyze,
     n_live_tup,
     n_dead_tup
-FROM pg_stat_user_tables
-WHERE schemaname NOT IN ('pg_catalog', 'information_schema')
-ORDER BY last_analyze ASC NULLS FIRST;
+FROM pg_stat_user_tables  
+WHERE schemaname NOT IN ('pg_catalog', 'information_schema')  
+ORDER BY last_analyze ASC NULLS FIRST;  
 ```
 
 **⚠️ Alerte :** Si `last_analyze` est NULL ou très ancien, lancez :
@@ -1085,46 +1085,46 @@ ANALYZE fact_sales;
 Avant de mettre en production un data warehouse, vérifiez :
 
 ### Mémoire et CPU
-- [ ] **shared_buffers** = 25% RAM
-- [ ] **effective_cache_size** = 75% RAM
-- [ ] **work_mem** = (RAM × 50%) / max_connections / 2 (au moins 256MB)
-- [ ] **maintenance_work_mem** ≥ 2GB
-- [ ] **max_worker_processes** = Nombre de CPU
-- [ ] **max_parallel_workers_per_gather** ≥ 4
+- [ ] **shared_buffers** = 25% RAM  
+- [ ] **effective_cache_size** = 75% RAM  
+- [ ] **work_mem** = (RAM × 50%) / max_connections / 2 (au moins 256MB)  
+- [ ] **maintenance_work_mem** ≥ 2GB  
+- [ ] **max_worker_processes** = Nombre de CPU  
+- [ ] **max_parallel_workers_per_gather** ≥ 4  
 - [ ] **max_parallel_workers** = max_worker_processes
 
 ### Parallélisation
-- [ ] **parallel_setup_cost** = 100 (réduit)
-- [ ] **parallel_tuple_cost** = 0.01 (réduit)
+- [ ] **parallel_setup_cost** = 100 (réduit)  
+- [ ] **parallel_tuple_cost** = 0.01 (réduit)  
 - [ ] Vérifier avec EXPLAIN que requêtes sont parallélisées
 
 ### Planificateur
-- [ ] **default_statistics_target** ≥ 500
-- [ ] **random_page_cost** = 1.1 (SSD/NVMe)
+- [ ] **default_statistics_target** ≥ 500  
+- [ ] **random_page_cost** = 1.1 (SSD/NVMe)  
 - [ ] **jit** = on
 
 ### Stockage et I/O
-- [ ] **PostgreSQL 18** : io_method = 'async' (si compatible)
+- [ ] **PostgreSQL 18** : io_method = 'worker' (si compatible)  
 - [ ] **effective_io_concurrency** ≥ 200
 
 ### Autovacuum et Maintenance
-- [ ] **autovacuum** = on
-- [ ] **autovacuum_analyze_scale_factor** = 0.05
-- [ ] **autovacuum_vacuum_cost_delay** = 0
+- [ ] **autovacuum** = on  
+- [ ] **autovacuum_analyze_scale_factor** = 0.05  
+- [ ] **autovacuum_vacuum_cost_delay** = 0  
 - [ ] ANALYZE exécuté après chargements ETL
 
 ### Modélisation
-- [ ] Tables de faits partitionnées par date
-- [ ] Index BRIN sur colonnes de date
-- [ ] Index B-Tree sur dimensions
-- [ ] Vues matérialisées pour agrégations fréquentes
+- [ ] Tables de faits partitionnées par date  
+- [ ] Index BRIN sur colonnes de date  
+- [ ] Index B-Tree sur dimensions  
+- [ ] Vues matérialisées pour agrégations fréquentes  
 - [ ] Dénormalisation appliquée où pertinent
 
 ### Monitoring
-- [ ] pg_stat_statements activé
-- [ ] Logs des requêtes > 5 secondes
-- [ ] Logs des fichiers temporaires (log_temp_files = 0)
-- [ ] Surveillance taille des tables/index
+- [ ] pg_stat_statements activé  
+- [ ] Logs des requêtes > 5 secondes  
+- [ ] Logs des fichiers temporaires (log_temp_files = 0)  
+- [ ] Surveillance taille des tables/index  
 - [ ] Surveillance état vues matérialisées
 
 ---
@@ -1132,32 +1132,32 @@ Avant de mettre en production un data warehouse, vérifiez :
 ## Erreurs Courantes à Éviter
 
 ### ❌ Erreur 1 : work_mem Trop Faible
-**Symptôme :** Requêtes très lentes, logs montrent "temporary file"
-**Solution :** Augmenter work_mem progressivement (256MB → 512MB → 1GB)
+**Symptôme :** Requêtes très lentes, logs montrent "temporary file"  
+**Solution :** Augmenter work_mem progressivement (256MB → 512MB → 1GB)  
 
 ### ❌ Erreur 2 : Pas de Partitionnement sur Tables Massives
-**Symptôme :** Requêtes scannent toute la table (milliards de lignes)
-**Solution :** Partitionner par date/région/autre critère fréquent
+**Symptôme :** Requêtes scannent toute la table (milliards de lignes)  
+**Solution :** Partitionner par date/région/autre critère fréquent  
 
 ### ❌ Erreur 3 : Statistiques Obsolètes
-**Symptôme :** Plans de requête absurdes, estimations erronées
-**Solution :** ANALYZE après chaque chargement ETL
+**Symptôme :** Plans de requête absurdes, estimations erronées  
+**Solution :** ANALYZE après chaque chargement ETL  
 
 ### ❌ Erreur 4 : Index B-Tree sur Tout
-**Symptôme :** Maintenance lente, index énormes, peu utilisés
-**Solution :** Utiliser BRIN pour colonnes séquentielles
+**Symptôme :** Maintenance lente, index énormes, peu utilisés  
+**Solution :** Utiliser BRIN pour colonnes séquentielles  
 
 ### ❌ Erreur 5 : Pas de Vues Matérialisées
-**Symptôme :** Mêmes agrégations recalculées à chaque fois (lent)
-**Solution :** Créer vues matérialisées pour KPIs fréquents
+**Symptôme :** Mêmes agrégations recalculées à chaque fois (lent)  
+**Solution :** Créer vues matérialisées pour KPIs fréquents  
 
 ### ❌ Erreur 6 : Parallélisation Désactivée
-**Symptôme :** Un seul CPU utilisé malgré serveur 32 CPU
-**Solution :** Vérifier paramètres `max_parallel_*`, réduire `parallel_setup_cost`
+**Symptôme :** Un seul CPU utilisé malgré serveur 32 CPU  
+**Solution :** Vérifier paramètres `max_parallel_*`, réduire `parallel_setup_cost`  
 
 ### ❌ Erreur 7 : Trop de Normalisation
-**Symptôme :** Jointures sur 5+ tables, requêtes extrêmement lentes
-**Solution :** Dénormaliser (dupliquer colonnes dans table de faits)
+**Symptôme :** Jointures sur 5+ tables, requêtes extrêmement lentes  
+**Solution :** Dénormaliser (dupliquer colonnes dans table de faits)  
 
 ---
 
@@ -1206,10 +1206,10 @@ PostgreSQL 18 améliore significativement COPY :
 
 ```sql
 -- Charger seulement les nouvelles données (delta)
-INSERT INTO fact_sales
-SELECT * FROM staging_sales
-WHERE sale_date >= CURRENT_DATE - INTERVAL '1 day'
-ON CONFLICT (sale_id) DO NOTHING;
+INSERT INTO fact_sales  
+SELECT * FROM staging_sales  
+WHERE sale_date >= CURRENT_DATE - INTERVAL '1 day'  
+ON CONFLICT (sale_id) DO NOTHING;  
 ```
 
 ---
@@ -1243,8 +1243,8 @@ ALTER TABLE fact_sales ATTACH PARTITION fact_sales_2024_01_temp
 
 Pour volumes extrêmes (> 10 TB), considérez des solutions distribuées :
 
-- **Citus** : Extension PostgreSQL pour sharding automatique
-- **Greenplum** : Fork PostgreSQL MPP (Massively Parallel Processing)
+- **Citus** : Extension PostgreSQL pour sharding automatique  
+- **Greenplum** : Fork PostgreSQL MPP (Massively Parallel Processing)  
 - **TimescaleDB** : Extension pour séries temporelles
 
 **Exemple Citus :**
@@ -1262,7 +1262,7 @@ SELECT create_distributed_table('fact_sales', 'customer_id');
 PostgreSQL est orienté lignes (row-based), mais pour analytics purs, le stockage colonnes est plus efficace.
 
 **Options :**
-- **Hydra Columnar** : Extension columnar pour PostgreSQL
+- **Hydra Columnar** : Extension columnar pour PostgreSQL  
 - **pg_analytics** : Autre extension columnar
 
 **Avantage :** Lire seulement les colonnes nécessaires (compression 10×, requêtes 5-10× plus rapides).
@@ -1272,9 +1272,9 @@ PostgreSQL est orienté lignes (row-based), mais pour analytics purs, le stockag
 ### 3. Intégration avec Outils BI
 
 **Connexions typiques :**
-- **Tableau** → PostgreSQL (via driver natif)
-- **Power BI** → PostgreSQL (via ODBC/DirectQuery)
-- **Metabase** → PostgreSQL (open-source BI)
+- **Tableau** → PostgreSQL (via driver natif)  
+- **Power BI** → PostgreSQL (via ODBC/DirectQuery)  
+- **Metabase** → PostgreSQL (open-source BI)  
 - **Apache Superset** → PostgreSQL
 
 **Bonnes pratiques :**
@@ -1287,24 +1287,24 @@ PostgreSQL est orienté lignes (row-based), mais pour analytics purs, le stockag
 ## Ressources pour Aller Plus Loin
 
 ### Documentation Officielle
-- [PostgreSQL Performance Optimization](https://www.postgresql.org/docs/18/performance-tips.html)
-- [Partitioning](https://www.postgresql.org/docs/18/ddl-partitioning.html)
+- [PostgreSQL Performance Optimization](https://www.postgresql.org/docs/18/performance-tips.html)  
+- [Partitioning](https://www.postgresql.org/docs/18/ddl-partitioning.html)  
 - [Parallel Query](https://www.postgresql.org/docs/18/parallel-query.html)
 
 ### Extensions Essentielles
-- **pg_stat_statements** : Analyse de requêtes
-- **pg_partman** : Gestion automatisée partitions
-- **pg_cron** : Planification de tâches (refresh MV, vacuum, etc.)
-- **TimescaleDB** : Séries temporelles
+- **pg_stat_statements** : Analyse de requêtes  
+- **pg_partman** : Gestion automatisée partitions  
+- **pg_cron** : Planification de tâches (refresh MV, vacuum, etc.)  
+- **TimescaleDB** : Séries temporelles  
 - **Citus** : Distribution multi-nœuds
 
 ### Outils
-- **PGTune** : https://pgtune.leopard.in.ua/ (choisir "Data warehouse")
-- **pgBadger** : Analyse de logs
+- **PGTune** : https://pgtune.leopard.in.ua/ (choisir "Data warehouse")  
+- **pgBadger** : Analyse de logs  
 - **Apache Hop / Airflow** : Orchestration ETL
 
 ### Lectures Recommandées
-- *The Data Warehouse Toolkit* (Ralph Kimball) : Modélisation dimensionnelle
+- *The Data Warehouse Toolkit* (Ralph Kimball) : Modélisation dimensionnelle  
 - *PostgreSQL Query Optimization* : Techniques avancées
 - Blogs : Percona, Crunchy Data, 2ndQuadrant
 
@@ -1314,21 +1314,21 @@ PostgreSQL est orienté lignes (row-based), mais pour analytics purs, le stockag
 
 La configuration OLAP de PostgreSQL vise à :
 
-1. **Maximiser le débit de données** (GB/s lus et traités)
-2. **Paralléliser massivement** (utiliser tous les CPU)
-3. **Optimiser pour agrégations** (work_mem élevé, statistiques détaillées)
-4. **Partitionner intelligemment** (Partition Pruning)
-5. **Pré-calculer** (vues matérialisées)
+1. **Maximiser le débit de données** (GB/s lus et traités)  
+2. **Paralléliser massivement** (utiliser tous les CPU)  
+3. **Optimiser pour agrégations** (work_mem élevé, statistiques détaillées)  
+4. **Partitionner intelligemment** (Partition Pruning)  
+5. **Pré-calculer** (vues matérialisées)  
 6. **Monitorer** (temp files, parallélisation, statistiques)
 
 **Points clés à retenir :**
 
-- ✅ **work_mem élevé** est LE paramètre critique (256MB-2GB)
-- ✅ **Parallélisation** essentielle (max_parallel_workers_per_gather ≥ 4)
-- ✅ **Partitionnement** obligatoire pour tables > 100M lignes
-- ✅ **BRIN** index idéal pour colonnes séquentielles
-- ✅ **Vues matérialisées** pour agrégations fréquentes
-- ✅ **Statistiques détaillées** (default_statistics_target ≥ 500)
+- ✅ **work_mem élevé** est LE paramètre critique (256MB-2GB)  
+- ✅ **Parallélisation** essentielle (max_parallel_workers_per_gather ≥ 4)  
+- ✅ **Partitionnement** obligatoire pour tables > 100M lignes  
+- ✅ **BRIN** index idéal pour colonnes séquentielles  
+- ✅ **Vues matérialisées** pour agrégations fréquentes  
+- ✅ **Statistiques détaillées** (default_statistics_target ≥ 500)  
 - ✅ **ANALYZE** après chaque chargement ETL
 
 **Différences clés OLTP vs OLAP :**
@@ -1351,12 +1351,12 @@ PostgreSQL 18 apporte des améliorations significatives pour OLAP :
 
 **Prochaines Étapes :**
 
-1. Appliquer configuration sur environnement dev/staging
-2. Charger données représentatives
-3. Tester requêtes typiques avec EXPLAIN ANALYZE
-4. Ajuster work_mem et parallélisation selon résultats
-5. Créer partitions et vues matérialisées
-6. Mettre en place monitoring (pg_stat_statements)
+1. Appliquer configuration sur environnement dev/staging  
+2. Charger données représentatives  
+3. Tester requêtes typiques avec EXPLAIN ANALYZE  
+4. Ajuster work_mem et parallélisation selon résultats  
+5. Créer partitions et vues matérialisées  
+6. Mettre en place monitoring (pg_stat_statements)  
 7. Automatiser ETL et refresh vues matérialisées
 
 Bonne chance avec votre Data Warehouse PostgreSQL ! 📊🚀

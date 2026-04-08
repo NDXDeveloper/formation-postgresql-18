@@ -7,13 +7,13 @@
 
 ## Table des Matières
 
-1. [Introduction](#1-introduction)
-2. [Pourquoi Utiliser la Ligne de Commande ?](#2-pourquoi-utiliser-la-ligne-de-commande-)
-3. [Prérequis](#3-pr%C3%A9requis)
-4. [Environnement Shell](#4-environnement-shell)
-5. [Organisation de cette Annexe](#5-organisation-de-cette-annexe)
-6. [Conventions et Notations](#6-conventions-et-notations)
-7. [Premiers Pas](#7-premiers-pas)
+1. [Introduction](#1-introduction)  
+2. [Pourquoi Utiliser la Ligne de Commande ?](#2-pourquoi-utiliser-la-ligne-de-commande-)  
+3. [Prérequis](#3-pr%C3%A9requis)  
+4. [Environnement Shell](#4-environnement-shell)  
+5. [Organisation de cette Annexe](#5-organisation-de-cette-annexe)  
+6. [Conventions et Notations](#6-conventions-et-notations)  
+7. [Premiers Pas](#7-premiers-pas)  
 8. [Sécurité et Bonnes Pratiques](#8-s%C3%A9curit%C3%A9-et-bonnes-pratiques)
 
 ---
@@ -32,16 +32,16 @@ Cette annexe est un **guide pratique et complet** des outils en ligne de command
 - Gérer PostgreSQL en production avec confiance
 
 **Ce que cette annexe n'est PAS :**
-- ❌ Un cours sur le langage SQL (voir chapitres principaux)
-- ❌ Un guide d'installation de PostgreSQL
+- ❌ Un cours sur le langage SQL (voir chapitres principaux)  
+- ❌ Un guide d'installation de PostgreSQL  
 - ❌ Un tutoriel de programmation Bash avancée (nous restons pragmatiques)
 
 ### 1.2. À qui s'adresse cette Annexe ?
 
 **Profils ciblés :**
-- **Développeurs** qui souhaitent comprendre l'administration de base
-- **DevOps/SRE** qui doivent gérer PostgreSQL en production
-- **Administrateurs système** découvrant PostgreSQL
+- **Développeurs** qui souhaitent comprendre l'administration de base  
+- **DevOps/SRE** qui doivent gérer PostgreSQL en production  
+- **Administrateurs système** découvrant PostgreSQL  
 - **Data Engineers** nécessitant automatisation et monitoring
 
 **Niveau de compétence :**
@@ -57,10 +57,10 @@ Cette annexe est un **guide pratique et complet** des outils en ligne de command
 
 Cette annexe suit une approche **progressive et pédagogique** :
 
-1. **Comprendre** : Pourquoi cette commande/script existe
-2. **Observer** : Voir des exemples concrets
-3. **Expliquer** : Décortiquer chaque élément
-4. **Appliquer** : Scripts prêts à l'emploi
+1. **Comprendre** : Pourquoi cette commande/script existe  
+2. **Observer** : Voir des exemples concrets  
+3. **Expliquer** : Décortiquer chaque élément  
+4. **Appliquer** : Scripts prêts à l'emploi  
 5. **Adapter** : Personnaliser pour vos besoins
 
 **Exemple de progression :**
@@ -81,23 +81,23 @@ Script production-ready (150+ lignes)
 ### 2.1. Les Limites des Interfaces Graphiques
 
 **Interfaces graphiques (pgAdmin, DBeaver, etc.) :**
-- ✅ Faciles pour débuter
-- ✅ Visuelles et intuitives
+- ✅ Faciles pour débuter  
+- ✅ Visuelles et intuitives  
 - ✅ Bonnes pour l'exploration
 
 **Mais :**
-- ❌ Difficiles à automatiser
-- ❌ Lentes pour tâches répétitives
-- ❌ Non scriptables
-- ❌ Dépendent d'un environnement graphique
+- ❌ Difficiles à automatiser  
+- ❌ Lentes pour tâches répétitives  
+- ❌ Non scriptables  
+- ❌ Dépendent d'un environnement graphique  
 - ❌ Consomment plus de ressources
 
 **Ligne de commande :**
-- ✅ Automatisation complète
-- ✅ Scripts réutilisables
-- ✅ Rapide et efficace
-- ✅ Fonctionne en SSH distant
-- ✅ Essentielle en production
+- ✅ Automatisation complète  
+- ✅ Scripts réutilisables  
+- ✅ Rapide et efficace  
+- ✅ Fonctionne en SSH distant  
+- ✅ Essentielle en production  
 - ✅ Facilite l'intégration CI/CD
 
 ### 2.2. Cas d'Usage Concrets
@@ -130,12 +130,12 @@ pg_dump -F c mabase -f backup_$(date +%Y%m%d).dump
 
 ❌ **Avec interface graphique :**
 ```
-Se connecter à chaque serveur
-Ouvrir pgAdmin
-Vérifier manuellement
-Prendre des notes
-Répéter pour les 9 autres serveurs... 😫
-Temps estimé : 2 heures
+Se connecter à chaque serveur  
+Ouvrir pgAdmin  
+Vérifier manuellement  
+Prendre des notes  
+Répéter pour les 9 autres serveurs... 😫  
+Temps estimé : 2 heures  
 ```
 
 ✅ **Avec ligne de commande :**
@@ -152,11 +152,11 @@ done
 
 ❌ **Avec interface graphique :**
 ```
-Réveillé en panique
-Chercher le laptop
-Lancer l'interface graphique
-Chercher le bon bouton...
-Stress maximum ! 😱
+Réveillé en panique  
+Chercher le laptop  
+Lancer l'interface graphique  
+Chercher le bon bouton...  
+Stress maximum ! 😱  
 ```
 
 ✅ **Avec ligne de commande :**
@@ -190,20 +190,20 @@ ssh production
 ### 3.1. Connaissances Requises
 
 **Indispensable :**
-- ✅ Bases du système Linux/Unix
-- ✅ Navigation dans les répertoires (`cd`, `ls`, `pwd`)
-- ✅ Utilisation basique de l'éditeur de texte (nano, vim, ou autre)
+- ✅ Bases du système Linux/Unix  
+- ✅ Navigation dans les répertoires (`cd`, `ls`, `pwd`)  
+- ✅ Utilisation basique de l'éditeur de texte (nano, vim, ou autre)  
 - ✅ Compréhension du concept de processus
 
 **Recommandé :**
-- ⭐ Notions de shell scripting (Bash)
-- ⭐ Concept de variables d'environnement
-- ⭐ Redirections (`>`, `>>`, `2>&1`)
+- ⭐ Notions de shell scripting (Bash)  
+- ⭐ Concept de variables d'environnement  
+- ⭐ Redirections (`>`, `>>`, `2>&1`)  
 - ⭐ Pipes (`|`)
 
 **Pas nécessaire (on vous l'expliquera) :**
-- ❌ Expertise en scripting Bash
-- ❌ Connaissance approfondie de Linux
+- ❌ Expertise en scripting Bash  
+- ❌ Connaissance approfondie de Linux  
 - ❌ Administration système avancée
 
 ### 3.2. Environnement Technique
@@ -220,22 +220,22 @@ ssh production
 **Outils nécessaires :**
 ```bash
 # Vérifier PostgreSQL
-psql --version
-pg_dump --version
+psql --version  
+pg_dump --version  
 
 # Vérifier Bash
 bash --version
 
 # Outils système recommandés
-which cron
-which mail  # Pour alertes email
-which bc    # Calculatrice en ligne de commande
+which cron  
+which mail  # Pour alertes email  
+which bc    # Calculatrice en ligne de commande  
 ```
 
 **Accès requis :**
-- ✅ Compte utilisateur avec accès PostgreSQL
-- ✅ Accès SSH au serveur (si distant)
-- ✅ Droits d'écriture dans `/usr/local/bin` (ou équivalent)
+- ✅ Compte utilisateur avec accès PostgreSQL  
+- ✅ Accès SSH au serveur (si distant)  
+- ✅ Droits d'écriture dans `/usr/local/bin` (ou équivalent)  
 - ✅ Possibilité d'éditer le crontab
 
 ### 3.3. Installation des Outils PostgreSQL
@@ -254,16 +254,16 @@ ls -l /usr/bin/pg_* 2>/dev/null || ls -l /usr/pgsql-*/bin/pg_*
 
 **Outils principaux disponibles :**
 ```
-pg_ctl          # Contrôle du serveur
-pg_dump         # Backup logique
-pg_dumpall      # Backup complet (toutes les bases)
-pg_restore      # Restauration
-psql            # Client interactif
-pg_isready      # Test de connexion
-pg_basebackup   # Backup physique
-createdb        # Créer une base
-dropdb          # Supprimer une base
-createuser      # Créer un utilisateur
+pg_ctl          # Contrôle du serveur  
+pg_dump         # Backup logique  
+pg_dumpall      # Backup complet (toutes les bases)  
+pg_restore      # Restauration  
+psql            # Client interactif  
+pg_isready      # Test de connexion  
+pg_basebackup   # Backup physique  
+createdb        # Créer une base  
+dropdb          # Supprimer une base  
+createuser      # Créer un utilisateur  
 ...et bien d'autres
 ```
 
@@ -315,8 +315,8 @@ export PGUSER=postgres
 export PGDATABASE=postgres
 
 # Afficher les variables
-echo "PGDATA=$PGDATA"
-env | grep ^PG
+echo "PGDATA=$PGDATA"  
+env | grep ^PG  
 ```
 
 **Pourquoi c'est important ?**
@@ -335,10 +335,10 @@ pg_dump mabase > backup.sql
 
 ```bash
 # Ajouter dans ~/.bashrc ou ~/.bash_profile
-echo 'export PGDATA=/var/lib/postgresql/data' >> ~/.bashrc
-echo 'export PGHOST=localhost' >> ~/.bashrc
-echo 'export PGPORT=5432' >> ~/.bashrc
-echo 'export PGUSER=postgres' >> ~/.bashrc
+echo 'export PGDATA=/var/lib/postgresql/data' >> ~/.bashrc  
+echo 'export PGHOST=localhost' >> ~/.bashrc  
+echo 'export PGPORT=5432' >> ~/.bashrc  
+echo 'export PGUSER=postgres' >> ~/.bashrc  
 
 # Recharger la configuration
 source ~/.bashrc
@@ -357,10 +357,10 @@ hostname:port:database:username:password
 
 ```bash
 # Créer le fichier
-cat > ~/.pgpass << EOF
-localhost:5432:*:postgres:monmotdepasse
-production.example.com:5432:*:admin:autremotdepasse
-EOF
+cat > ~/.pgpass << EOF  
+localhost:5432:*:postgres:monmotdepasse  
+production.example.com:5432:*:admin:autremotdepasse  
+EOF  
 
 # IMPORTANT : Sécuriser les permissions (obligatoire)
 chmod 600 ~/.pgpass
@@ -397,9 +397,9 @@ psql -U postgres -d mabase
 # ==========================================
 
 # 1. Configuration (variables)
-DATABASE="mabase"
-BACKUP_DIR="/var/backups/postgresql"
-LOG_FILE="/var/log/mon_script.log"
+DATABASE="mabase"  
+BACKUP_DIR="/var/backups/postgresql"  
+LOG_FILE="/var/log/mon_script.log"  
 
 # 2. Fonctions (code réutilisable)
 log() {
@@ -422,17 +422,17 @@ check_postgres
 log "Traitement en cours..."
 
 # Code de retour
-log "=== Script terminé avec succès ==="
-exit 0
+log "=== Script terminé avec succès ==="  
+exit 0  
 ```
 
 **Éléments clés :**
 
-1. **Shebang** (`#!/bin/bash`) : Indique quel interpréteur utiliser
-2. **Commentaires** : Documenter le script
-3. **Variables** : Configuration centralisée
-4. **Fonctions** : Réutilisation du code
-5. **Logs** : Traçabilité
+1. **Shebang** (`#!/bin/bash`) : Indique quel interpréteur utiliser  
+2. **Commentaires** : Documenter le script  
+3. **Variables** : Configuration centralisée  
+4. **Fonctions** : Réutilisation du code  
+5. **Logs** : Traçabilité  
 6. **Codes de retour** : `exit 0` (succès), `exit 1` (erreur)
 
 ---
@@ -464,42 +464,42 @@ Cette annexe est organisée en **trois parties principales** :
   - Gestion des erreurs
   - Optimisation
 
-**Public :** Débutant à Intermédiaire
-**Durée estimée :** 2-3 heures de lecture
+**Public :** Débutant à Intermédiaire  
+**Durée estimée :** 2-3 heures de lecture  
 
 ### 5.2. Partie 2 : Scripts de Backup Automatisés
 
 **Fichier dédié : `postgresql_scripts_backup_automatises.md`**
 
 **Contenu :**
-- **Stratégies de backup** : Fréquence, rétention, règle 3-2-1
-- **Scripts de base** : Du minimal au robuste
-- **Scripts avancés** : Production-ready avec configuration
-- **Automatisation avec Cron** : Planification et surveillance
-- **Rotation des backups** : Gestion de l'historique (GFS)
-- **Destinations multiples** : Local, NAS, Cloud (S3)
-- **Monitoring et alertes** : Détection des problèmes
+- **Stratégies de backup** : Fréquence, rétention, règle 3-2-1  
+- **Scripts de base** : Du minimal au robuste  
+- **Scripts avancés** : Production-ready avec configuration  
+- **Automatisation avec Cron** : Planification et surveillance  
+- **Rotation des backups** : Gestion de l'historique (GFS)  
+- **Destinations multiples** : Local, NAS, Cloud (S3)  
+- **Monitoring et alertes** : Détection des problèmes  
 - **Scripts de vérification** : Tests de restauration
 
-**Public :** Intermédiaire à Avancé
-**Durée estimée :** 3-4 heures de lecture
+**Public :** Intermédiaire à Avancé  
+**Durée estimée :** 3-4 heures de lecture  
 
 ### 5.3. Partie 3 : Scripts de Monitoring Système
 
 **Fichier dédié : `postgresql_scripts_monitoring_systeme.md`**
 
 **Contenu :**
-- **Introduction au monitoring** : Concepts, métriques, observabilité
-- **Métriques système** : CPU, RAM, disque, réseau
-- **Métriques PostgreSQL** : Connexions, requêtes, cache, transactions
-- **Scripts de monitoring** : Santé, performance, ressources
-- **Alertes et seuils** : Gestion des anomalies
-- **Tableaux de bord** : Rapports HTML, dashboards
-- **Intégration** : Prometheus, Grafana, Slack
+- **Introduction au monitoring** : Concepts, métriques, observabilité  
+- **Métriques système** : CPU, RAM, disque, réseau  
+- **Métriques PostgreSQL** : Connexions, requêtes, cache, transactions  
+- **Scripts de monitoring** : Santé, performance, ressources  
+- **Alertes et seuils** : Gestion des anomalies  
+- **Tableaux de bord** : Rapports HTML, dashboards  
+- **Intégration** : Prometheus, Grafana, Slack  
 - **Bonnes pratiques** : Méthodologie, architecture recommandée
 
-**Public :** Intermédiaire à Avancé
-**Durée estimée :** 4-5 heures de lecture
+**Public :** Intermédiaire à Avancé  
+**Durée estimée :** 4-5 heures de lecture  
 
 ### 5.4. Parcours d'Apprentissage Recommandé
 
@@ -559,12 +559,12 @@ commande --option argument
 ```
 
 **Variables :**
-- `$VARIABLE` : Variable shell
+- `$VARIABLE` : Variable shell  
 - `CONSTANTE` : Valeur fixe en majuscules
 
 **Chemins :**
-- `/chemin/absolu/fichier.txt` : Chemin complet depuis la racine
-- `chemin/relatif/fichier.txt` : Chemin relatif au répertoire actuel
+- `/chemin/absolu/fichier.txt` : Chemin complet depuis la racine  
+- `chemin/relatif/fichier.txt` : Chemin relatif au répertoire actuel  
 - `~/.fichier` : Fichier dans le répertoire home de l'utilisateur
 
 ### 6.2. Symboles dans les Exemples
@@ -593,8 +593,8 @@ Sortie de la commande
 echo $?
 
 # Exemple
-pg_dump mabase > backup.sql
-if [ $? -eq 0 ]; then
+pg_dump mabase > backup.sql  
+if [ $? -eq 0 ]; then  
     echo "✅ Backup réussi"
 else
     echo "❌ Backup échoué"
@@ -605,16 +605,16 @@ fi
 
 Chaque script est marqué par un niveau :
 
-- 🟢 **DÉBUTANT** : Script simple, peu de lignes, concepts de base
-- 🟡 **INTERMÉDIAIRE** : Script avec gestion d'erreurs, fonctions
+- 🟢 **DÉBUTANT** : Script simple, peu de lignes, concepts de base  
+- 🟡 **INTERMÉDIAIRE** : Script avec gestion d'erreurs, fonctions  
 - 🔴 **AVANCÉ** : Script complet, production-ready, optimisé
 
 ### 6.5. Priorité des Sections
 
 Chaque section est marquée :
 
-- ⭐ **ESSENTIEL** : À lire absolument
-- ⭐⭐ **IMPORTANT** : Recommandé fortement
+- ⭐ **ESSENTIEL** : À lire absolument  
+- ⭐⭐ **IMPORTANT** : Recommandé fortement  
 - ⭐⭐⭐ **AVANCÉ** : Pour aller plus loin
 
 ---
@@ -633,9 +633,9 @@ nano ~/mon_premier_script.sh
 #!/bin/bash
 # Mon premier script PostgreSQL
 
-echo "=== Premier Script PostgreSQL ==="
-echo "Date : $(date)"
-echo ""
+echo "=== Premier Script PostgreSQL ==="  
+echo "Date : $(date)"  
+echo ""  
 
 # Vérifier PostgreSQL
 if pg_isready > /dev/null 2>&1; then
@@ -645,12 +645,12 @@ else
 fi
 
 # Lister les bases de données
-echo ""
-echo "Bases de données disponibles :"
-psql -l
+echo ""  
+echo "Bases de données disponibles :"  
+psql -l  
 
-echo ""
-echo "=== Script terminé ==="
+echo ""  
+echo "=== Script terminé ==="  
 
 # 3. Sauvegarder et quitter (Ctrl+X, Y, Enter dans nano)
 
@@ -710,15 +710,15 @@ else
 fi
 
 # Informations
-VERSION=$(psql -d "$DATABASE" -t -c "SELECT version();" | head -1 | xargs)
-echo ""
-echo "Version : $VERSION"
+VERSION=$(psql -d "$DATABASE" -t -c "SELECT version();" | head -1 | xargs)  
+echo ""  
+echo "Version : $VERSION"  
 
-DATABASES=$(psql -d "$DATABASE" -t -c "SELECT COUNT(*) FROM pg_database WHERE datistemplate = false;" | xargs)
-echo "Nombre de bases : $DATABASES"
+DATABASES=$(psql -d "$DATABASE" -t -c "SELECT COUNT(*) FROM pg_database WHERE datistemplate = false;" | xargs)  
+echo "Nombre de bases : $DATABASES"  
 
-echo ""
-echo "✅ Tout fonctionne correctement !"
+echo ""  
+echo "✅ Tout fonctionne correctement !"  
 ```
 
 ### 7.3. Ressources pour Apprendre Bash
@@ -736,8 +736,8 @@ echo "✅ Tout fonctionne correctement !"
 **Aide-mémoire :**
 ```bash
 # Aide sur une commande
-man pg_dump
-pg_dump --help
+man pg_dump  
+pg_dump --help  
 
 # Rechercher dans l'historique
 history | grep pg_dump
@@ -770,8 +770,8 @@ pg_dump mabase > backup.sql
 
 ```bash
 # Scripts contenant de la logique sensible
-chmod 700 mon_script.sh       # Lecture/Écriture/Exécution pour le propriétaire uniquement
-chown postgres:postgres mon_script.sh
+chmod 700 mon_script.sh       # Lecture/Écriture/Exécution pour le propriétaire uniquement  
+chown postgres:postgres mon_script.sh  
 
 # Backups
 chmod 600 backup.dump         # Lecture/Écriture pour le propriétaire uniquement
@@ -781,8 +781,8 @@ chmod 600 backup.dump         # Lecture/Écriture pour le propriétaire uniqueme
 
 ```bash
 # ❌ MAUVAIS - Injection SQL possible
-DATABASE=$1
-psql -d "$DATABASE" -c "SELECT * FROM users"
+DATABASE=$1  
+psql -d "$DATABASE" -c "SELECT * FROM users"  
 
 # ✅ BON - Valider l'entrée
 DATABASE=$1
@@ -800,13 +800,13 @@ psql -d "$DATABASE" -c "SELECT * FROM users"
 
 ```bash
 # ❌ MAUVAIS - Chemin relatif
-cd backups
-pg_dump mabase > backup.sql
+cd backups  
+pg_dump mabase > backup.sql  
 
 # ✅ BON - Chemin absolu
-BACKUP_DIR="/var/backups/postgresql"
-mkdir -p "$BACKUP_DIR"
-pg_dump mabase -f "$BACKUP_DIR/backup.sql"
+BACKUP_DIR="/var/backups/postgresql"  
+mkdir -p "$BACKUP_DIR"  
+pg_dump mabase -f "$BACKUP_DIR/backup.sql"  
 ```
 
 ### 8.2. Gestion des Erreurs
@@ -816,9 +816,9 @@ pg_dump mabase -f "$BACKUP_DIR/backup.sql"
 ```bash
 #!/bin/bash
 # Arrêter le script en cas d'erreur
-set -e  # Exit si une commande échoue
-set -u  # Exit si une variable non définie est utilisée
-set -o pipefail  # Exit si une commande dans un pipe échoue
+set -e  # Exit si une commande échoue  
+set -u  # Exit si une variable non définie est utilisée  
+set -o pipefail  # Exit si une commande dans un pipe échoue  
 
 # Alternative : Gestion manuelle
 DATABASE="mabase"
@@ -861,15 +861,15 @@ log "Fin du script"
 
 **Checklist avant de mettre un script en production :**
 
-- [ ] Testé manuellement plusieurs fois
-- [ ] Testé avec des données réelles (non-production)
-- [ ] Gestion des erreurs implémentée
-- [ ] Logs configurés
-- [ ] Codes de retour appropriés
-- [ ] Documentation du script (commentaires)
-- [ ] Permissions correctes (chmod, chown)
-- [ ] Pas de mots de passe en clair
-- [ ] Variables d'environnement vérifiées
+- [ ] Testé manuellement plusieurs fois  
+- [ ] Testé avec des données réelles (non-production)  
+- [ ] Gestion des erreurs implémentée  
+- [ ] Logs configurés  
+- [ ] Codes de retour appropriés  
+- [ ] Documentation du script (commentaires)  
+- [ ] Permissions correctes (chmod, chown)  
+- [ ] Pas de mots de passe en clair  
+- [ ] Variables d'environnement vérifiées  
 - [ ] Chemins absolus utilisés
 
 ### 8.5. Principe du Moindre Privilège
@@ -882,8 +882,8 @@ log "Fin du script"
 sudo useradd -r -m -d /home/pgbackup -s /bin/bash pgbackup
 
 # Scripts dans son répertoire
-sudo mkdir -p /home/pgbackup/scripts
-sudo chown pgbackup:pgbackup /home/pgbackup/scripts
+sudo mkdir -p /home/pgbackup/scripts  
+sudo chown pgbackup:pgbackup /home/pgbackup/scripts  
 
 # Exécuter en tant que cet utilisateur
 sudo -u pgbackup /home/pgbackup/scripts/backup.sh
@@ -920,8 +920,8 @@ sudo crontab -u pgbackup -e
 # ===========================================
 
 # Configuration
-DATABASE="production"
-BACKUP_DIR="/var/backups/postgresql"
+DATABASE="production"  
+BACKUP_DIR="/var/backups/postgresql"  
 
 # ... reste du script
 ```
@@ -932,25 +932,25 @@ BACKUP_DIR="/var/backups/postgresql"
 
 ### Ce que vous avez appris
 
-- ✅ **Pourquoi la ligne de commande est essentielle** pour PostgreSQL
-- ✅ **Les avantages de l'automatisation** (scripts vs GUI)
-- ✅ **L'environnement shell** et les variables PostgreSQL
-- ✅ **La structure de cette annexe** et son organisation
-- ✅ **Les conventions** utilisées dans les exemples
-- ✅ **Les premiers pas** avec des scripts simples
+- ✅ **Pourquoi la ligne de commande est essentielle** pour PostgreSQL  
+- ✅ **Les avantages de l'automatisation** (scripts vs GUI)  
+- ✅ **L'environnement shell** et les variables PostgreSQL  
+- ✅ **La structure de cette annexe** et son organisation  
+- ✅ **Les conventions** utilisées dans les exemples  
+- ✅ **Les premiers pas** avec des scripts simples  
 - ✅ **Les règles de sécurité** fondamentales
 
 ### Prochaines Étapes
 
 **Vous êtes maintenant prêt à :**
 
-1. **Découvrir les outils de base** (pg_ctl, pg_dump, pg_restore)
+1. **Découvrir les outils de base** (pg_ctl, pg_dump, pg_restore)  
    → Fichier : `postgresql_outils_shell.md`
 
-2. **Créer des scripts de backup automatisés**
+2. **Créer des scripts de backup automatisés**  
    → Fichier : `postgresql_scripts_backup_automatises.md`
 
-3. **Mettre en place le monitoring**
+3. **Mettre en place le monitoring**  
    → Fichier : `postgresql_scripts_monitoring_systeme.md`
 
 ### Points Clés à Retenir
@@ -984,9 +984,9 @@ Cette annexe vous donnera tous les outils pour administrer PostgreSQL efficaceme
 
 ---
 
-**Version :** 1.0 - Novembre 2025
-**PostgreSQL :** Version 18
-**Auteur :** Formation PostgreSQL pour Développeurs et DevOps
+**Version :** 1.0 - Novembre 2025  
+**PostgreSQL :** Version 18  
+**Auteur :** Formation PostgreSQL pour Développeurs et DevOps  
 
 ---
 

@@ -14,9 +14,9 @@ Que vous soyez un débutant cherchant à valider vos acquis, un développeur int
 
 Ce chapitre récapitulatif a plusieurs objectifs :
 
-1. **Consolider les apprentissages** : Revoir les concepts essentiels de manière structurée
-2. **Évaluer sa progression** : Identifier clairement son niveau actuel
-3. **Guider l'approfondissement** : Savoir quels sujets approfondir en priorité
+1. **Consolider les apprentissages** : Revoir les concepts essentiels de manière structurée  
+2. **Évaluer sa progression** : Identifier clairement son niveau actuel  
+3. **Guider l'approfondissement** : Savoir quels sujets approfondir en priorité  
 4. **Servir de référence** : Disposer d'un aide-mémoire pour le travail quotidien
 
 ---
@@ -145,23 +145,23 @@ Le niveau avancé vous prépare à gérer PostgreSQL en environnement de product
 
 ### Pour les Débutants
 
-1. **Lisez d'abord le chapitre 21.1.1** entièrement
-2. **Vérifiez votre compréhension** de chaque concept
-3. **Identifiez les zones d'ombre** et revenez aux chapitres correspondants
+1. **Lisez d'abord le chapitre 21.1.1** entièrement  
+2. **Vérifiez votre compréhension** de chaque concept  
+3. **Identifiez les zones d'ombre** et revenez aux chapitres correspondants  
 4. **Ne passez au niveau suivant** que lorsque les bases sont solides
 
 ### Pour les Intermédiaires
 
-1. **Validez vos acquis** du niveau débutant (rapide survol)
-2. **Concentrez-vous sur le chapitre 21.1.2**
-3. **Pratiquez les jointures complexes** et l'analyse de plans d'exécution
+1. **Validez vos acquis** du niveau débutant (rapide survol)  
+2. **Concentrez-vous sur le chapitre 21.1.2**  
+3. **Pratiquez les jointures complexes** et l'analyse de plans d'exécution  
 4. **Commencez à explorer** les concepts avancés qui vous intéressent
 
 ### Pour les Avancés
 
-1. **Utilisez ce résumé comme checklist** de compétences
-2. **Approfondissez les sujets** que vous maîtrisez moins
-3. **Restez à jour** avec les nouveautés de PostgreSQL 18
+1. **Utilisez ce résumé comme checklist** de compétences  
+2. **Approfondissez les sujets** que vous maîtrisez moins  
+3. **Restez à jour** avec les nouveautés de PostgreSQL 18  
 4. **Partagez vos connaissances** avec votre équipe
 
 ---
@@ -264,8 +264,8 @@ Travaillez avec des jeux de données conséquents pour comprendre les vrais enje
 
 ```sql
 -- Générer des données de test
-INSERT INTO clients (nom, email, ville)
-SELECT
+INSERT INTO clients (nom, email, ville)  
+SELECT  
     'Client ' || i,
     'client' || i || '@example.com',
     (ARRAY['Paris', 'Lyon', 'Marseille', 'Bordeaux', 'Lille'])[1 + (i % 5)]
@@ -297,14 +297,14 @@ PostgreSQL évolue rapidement. Suivez les release notes et les blogs de la commu
 - Wiki PostgreSQL : https://wiki.postgresql.org/
 
 ### Livres Recommandés
-- "PostgreSQL: Up and Running" (O'Reilly)
-- "The Art of PostgreSQL" (Dimitri Fontaine)
+- "PostgreSQL: Up and Running" (O'Reilly)  
+- "The Art of PostgreSQL" (Dimitri Fontaine)  
 - "Mastering PostgreSQL" (Packt)
 
 ### Outils Essentiels
-- **psql** : Client en ligne de commande
-- **pgAdmin** : Interface graphique
-- **DBeaver** : Client universel
+- **psql** : Client en ligne de commande  
+- **pgAdmin** : Interface graphique  
+- **DBeaver** : Client universel  
 - **pg_stat_statements** : Analyse des requêtes
 
 ### Communauté
@@ -327,8 +327,8 @@ Bonne continuation dans votre apprentissage !
 
 *Les chapitres suivants détaillent chaque niveau :*
 
-- **21.1.1** — Débutant : SQL, DDL, DML, Contraintes
-- **21.1.2** — Intermédiaire : Jointures, Agrégation, Indexation
+- **21.1.1** — Débutant : SQL, DDL, DML, Contraintes  
+- **21.1.2** — Intermédiaire : Jointures, Agrégation, Indexation  
 - **21.1.3** — Avancé : MVCC, Réplication, Optimisation, Production
 
 

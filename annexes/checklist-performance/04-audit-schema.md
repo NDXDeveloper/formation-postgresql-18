@@ -6,17 +6,17 @@
 ---
 
 ## Table des Matières
-1. [Introduction](#introduction)
-2. [Pourquoi Auditer son Schéma ?](#pourquoi-auditer-son-sch%C3%A9ma-)
-3. [Les Piliers d'un Audit de Schéma](#les-piliers-dun-audit-de-sch%C3%A9ma)
-4. [Audit des Tables](#audit-des-tables)
-5. [Audit des Contraintes](#audit-des-contraintes)
-6. [Audit des Index](#audit-des-index)
-7. [Audit des Types de Données](#audit-des-types-de-donn%C3%A9es)
-8. [Audit de la Normalisation](#audit-de-la-normalisation)
-9. [Audit de Sécurité](#audit-de-s%C3%A9curit%C3%A9)
-10. [Audit de Performance](#audit-de-performance)
-11. [Checklist Complète](#checklist-compl%C3%A8te)
+1. [Introduction](#introduction)  
+2. [Pourquoi Auditer son Schéma ?](#pourquoi-auditer-son-sch%C3%A9ma-)  
+3. [Les Piliers d'un Audit de Schéma](#les-piliers-dun-audit-de-sch%C3%A9ma)  
+4. [Audit des Tables](#audit-des-tables)  
+5. [Audit des Contraintes](#audit-des-contraintes)  
+6. [Audit des Index](#audit-des-index)  
+7. [Audit des Types de Données](#audit-des-types-de-donn%C3%A9es)  
+8. [Audit de la Normalisation](#audit-de-la-normalisation)  
+9. [Audit de Sécurité](#audit-de-s%C3%A9curit%C3%A9)  
+10. [Audit de Performance](#audit-de-performance)  
+11. [Checklist Complète](#checklist-compl%C3%A8te)  
 12. [Conclusion](#conclusion)
 
 ---
@@ -66,10 +66,10 @@ Un schéma mal conçu peut entraîner :
 
 ### Quand Effectuer un Audit ?
 
-- **Avant la mise en production** : Valider la conception initiale
-- **Périodiquement en production** : Tous les 3-6 mois pour détecter la dérive
-- **Après une migration** : Vérifier que tout est correct
-- **En cas de problèmes de performance** : Identifier la cause racine
+- **Avant la mise en production** : Valider la conception initiale  
+- **Périodiquement en production** : Tous les 3-6 mois pour détecter la dérive  
+- **Après une migration** : Vérifier que tout est correct  
+- **En cas de problèmes de performance** : Identifier la cause racine  
 - **Lors de la reprise d'un projet existant** : Comprendre l'état actuel
 
 ---
@@ -189,11 +189,11 @@ CREATE TABLE cmd (
 
 ✅ **Conventions Standards**
 
-- **Tables** : Pluriel, snake_case → `utilisateurs`, `commandes_clients`
-- **Colonnes** : Singulier, snake_case → `nom`, `date_creation`
-- **Clés Primaires** : `id` ou `table_id` → `id`, `utilisateur_id`
-- **Clés Étrangères** : `table_id` → `client_id`, `produit_id`
-- **Index** : `idx_table_colonne` → `idx_commandes_client_id`
+- **Tables** : Pluriel, snake_case → `utilisateurs`, `commandes_clients`  
+- **Colonnes** : Singulier, snake_case → `nom`, `date_creation`  
+- **Clés Primaires** : `id` ou `table_id` → `id`, `utilisateur_id`  
+- **Clés Étrangères** : `table_id` → `client_id`, `produit_id`  
+- **Index** : `idx_table_colonne` → `idx_commandes_client_id`  
 - **Contraintes** :
   - FK : `fk_table_colonne` → `fk_commandes_client_id`
   - Unique : `uk_table_colonne` → `uk_utilisateurs_email`
@@ -237,9 +237,9 @@ PostgreSQL permet d'automatiser la mise à jour de `updated_at` :
 
 ```sql
 -- Fonction trigger pour updated_at
-CREATE OR REPLACE FUNCTION update_timestamp()
-RETURNS TRIGGER AS $$
-BEGIN
+CREATE OR REPLACE FUNCTION update_timestamp()  
+RETURNS TRIGGER AS $$  
+BEGIN  
     NEW.updated_at = NOW();
     RETURN NEW;
 END;
@@ -276,17 +276,17 @@ DELETE FROM utilisateurs WHERE id = 42;
 
 ```sql
 -- Ajout d'une colonne deleted_at
-ALTER TABLE utilisateurs
-ADD COLUMN deleted_at TIMESTAMP;
+ALTER TABLE utilisateurs  
+ADD COLUMN deleted_at TIMESTAMP;  
 
 -- "Suppression" logique
-UPDATE utilisateurs
-SET deleted_at = NOW()
-WHERE id = 42;
+UPDATE utilisateurs  
+SET deleted_at = NOW()  
+WHERE id = 42;  
 
 -- Requêtes sur données actives
-SELECT * FROM utilisateurs
-WHERE deleted_at IS NULL;
+SELECT * FROM utilisateurs  
+WHERE deleted_at IS NULL;  
 ```
 
 ✅ **Avantages** :
@@ -326,9 +326,9 @@ CREATE TABLE produits (
 
 **Pourquoi c'est Important ?**
 
-1. **Clarté de l'intention** : Indique explicitement les champs obligatoires
-2. **Intégrité des données** : Évite les valeurs manquantes non prévues
-3. **Performance** : PostgreSQL peut optimiser les requêtes
+1. **Clarté de l'intention** : Indique explicitement les champs obligatoires  
+2. **Intégrité des données** : Évite les valeurs manquantes non prévues  
+3. **Performance** : PostgreSQL peut optimiser les requêtes  
 4. **Évite les bugs** : Moins de gestion de NULL dans le code applicatif
 
 **Le Piège du NULL**
@@ -374,8 +374,8 @@ CREATE TABLE commandes (
 );
 
 -- Problème : On peut insérer n'importe quel client_id
-INSERT INTO commandes (client_id, montant)
-VALUES (999999, 100.00);  -- client_id 999999 n'existe peut-être pas
+INSERT INTO commandes (client_id, montant)  
+VALUES (999999, 100.00);  -- client_id 999999 n'existe peut-être pas  
 ```
 
 **Exemple Avec Foreign Key (BON)**
@@ -398,8 +398,8 @@ CREATE TABLE commandes (
 );
 
 -- PostgreSQL refuse maintenant les client_id invalides
-INSERT INTO commandes (client_id, montant)
-VALUES (999999, 100.00);
+INSERT INTO commandes (client_id, montant)  
+VALUES (999999, 100.00);  
 -- ERROR: insert or update on table "commandes" violates foreign key constraint
 ```
 
@@ -437,9 +437,9 @@ ON DELETE NO ACTION
 **Audit des Foreign Keys**
 
 Points à vérifier :
-- ✅ Toutes les colonnes `xxx_id` ont-elles une FK ?
-- ✅ Les actions ON DELETE sont-elles appropriées ?
-- ✅ Les FK sont-elles indexées ? (Performance !)
+- ✅ Toutes les colonnes `xxx_id` ont-elles une FK ?  
+- ✅ Les actions ON DELETE sont-elles appropriées ?  
+- ✅ Les FK sont-elles indexées ? (Performance !)  
 - ✅ Les FK sont-elles nommées explicitement ?
 
 ### 2. Contraintes UNIQUE
@@ -462,11 +462,11 @@ CREATE TABLE utilisateurs (
 );
 
 -- Tentative de doublon refusée
-INSERT INTO utilisateurs (email, username)
-VALUES ('john@example.com', 'john');  -- OK
+INSERT INTO utilisateurs (email, username)  
+VALUES ('john@example.com', 'john');  -- OK  
 
-INSERT INTO utilisateurs (email, username)
-VALUES ('john@example.com', 'john2'); -- ERROR: duplicate key value
+INSERT INTO utilisateurs (email, username)  
+VALUES ('john@example.com', 'john2'); -- ERROR: duplicate key value  
 ```
 
 **UNIQUE Composite (Multiple Colonnes)**
@@ -495,8 +495,8 @@ CREATE TABLE inscriptions_cours (
 **Audit des UNIQUE**
 
 Points à vérifier :
-- ✅ Email, username, numéro de série → doivent être UNIQUE
-- ✅ Les combinaisons métier uniques sont-elles protégées ?
+- ✅ Email, username, numéro de série → doivent être UNIQUE  
+- ✅ Les combinaisons métier uniques sont-elles protégées ?  
 - ✅ Les contraintes UNIQUE sont-elles nommées explicitement ?
 
 ### 3. Contraintes CHECK
@@ -529,12 +529,12 @@ CREATE TABLE produits (
 );
 
 -- Tentatives invalides refusées
-INSERT INTO produits (nom, prix, stock, reduction_pct)
-VALUES ('Laptop', -500, 10, 0.2);
+INSERT INTO produits (nom, prix, stock, reduction_pct)  
+VALUES ('Laptop', -500, 10, 0.2);  
 -- ERROR: violates check constraint "ck_produits_prix_positif"
 
-INSERT INTO produits (nom, prix, stock, reduction_pct)
-VALUES ('Laptop', 500, -5, 0.2);
+INSERT INTO produits (nom, prix, stock, reduction_pct)  
+VALUES ('Laptop', 500, -5, 0.2);  
 -- ERROR: violates check constraint "ck_produits_stock_positif"
 ```
 
@@ -570,9 +570,9 @@ CREATE TABLE employees (
 
 **Avantages des Contraintes CHECK**
 
-1. **Intégrité au niveau de la base** : Impossible d'insérer des données invalides
-2. **Documentation du schéma** : Les règles métier sont explicites
-3. **Centralisation** : Pas besoin de valider dans chaque application
+1. **Intégrité au niveau de la base** : Impossible d'insérer des données invalides  
+2. **Documentation du schéma** : Les règles métier sont explicites  
+3. **Centralisation** : Pas besoin de valider dans chaque application  
 4. **Performance** : Validation au plus proche des données
 
 **Limites des Contraintes CHECK**
@@ -584,9 +584,9 @@ CREATE TABLE employees (
 **Audit des CHECK**
 
 Points à vérifier :
-- ✅ Les valeurs numériques ont-elles des limites logiques ?
-- ✅ Les pourcentages sont-ils entre 0 et 100 ?
-- ✅ Les dates de fin sont-elles après les dates de début ?
+- ✅ Les valeurs numériques ont-elles des limites logiques ?  
+- ✅ Les pourcentages sont-ils entre 0 et 100 ?  
+- ✅ Les dates de fin sont-elles après les dates de début ?  
 - ✅ Les statuts sont-ils limités à des valeurs valides ?
 
 ### 4. Contraintes NOT NULL (Rappel)
@@ -612,8 +612,8 @@ CREATE TABLE commandes (
 );
 
 -- Insertion sans spécifier les colonnes avec DEFAULT
-INSERT INTO commandes (client_id)
-VALUES (42);
+INSERT INTO commandes (client_id)  
+VALUES (42);  
 -- statut = 'en_attente', date_commande = NOW(), priorite = 1, remise = 0.00
 ```
 
@@ -622,9 +622,9 @@ VALUES (42);
 ✅ **Valeurs Sensées**
 ```sql
 -- BON : Valeur par défaut logique
-created_at TIMESTAMP NOT NULL DEFAULT NOW()
-is_active BOOLEAN NOT NULL DEFAULT TRUE
-quantity INTEGER NOT NULL DEFAULT 1
+created_at TIMESTAMP NOT NULL DEFAULT NOW()  
+is_active BOOLEAN NOT NULL DEFAULT TRUE  
+quantity INTEGER NOT NULL DEFAULT 1  
 
 -- MAUVAIS : Valeur par défaut qui n'a pas de sens
 prix NUMERIC(10,2) NOT NULL DEFAULT 0  -- Un prix à 0 ?
@@ -640,9 +640,9 @@ statut VARCHAR(20) NOT NULL DEFAULT 'actif'
 **Audit des DEFAULT**
 
 Points à vérifier :
-- ✅ `created_at` a-t-il `DEFAULT NOW()` ?
-- ✅ Les booléens ont-ils une valeur par défaut claire ?
-- ✅ Les statuts ont-ils un état initial par défaut ?
+- ✅ `created_at` a-t-il `DEFAULT NOW()` ?  
+- ✅ Les booléens ont-ils une valeur par défaut claire ?  
+- ✅ Les statuts ont-ils un état initial par défaut ?  
 - ✅ Les valeurs par défaut sont-elles logiques métier ?
 
 ---
@@ -655,11 +655,11 @@ Les index sont cruciaux pour les performances, mais mal gérés, ils peuvent aus
 
 **Quelles Colonnes Doivent Être Indexées ?**
 
-✅ **TOUJOURS Indexer**
-1. **Clés primaires** : Automatique (PostgreSQL le fait)
-2. **Clés étrangères** : TRÈS IMPORTANT (pas automatique !)
-3. **Colonnes dans WHERE fréquents** : Filtres courants
-4. **Colonnes dans JOIN** : Améliore les jointures
+✅ **TOUJOURS Indexer**  
+1. **Clés primaires** : Automatique (PostgreSQL le fait)  
+2. **Clés étrangères** : TRÈS IMPORTANT (pas automatique !)  
+3. **Colonnes dans WHERE fréquents** : Filtres courants  
+4. **Colonnes dans JOIN** : Améliore les jointures  
 5. **Colonnes dans ORDER BY** : Tri rapide
 
 **Le Problème des FK Non Indexées**
@@ -710,8 +710,8 @@ SELECT
     indexname,
     idx_scan AS utilisations,
     pg_size_pretty(pg_relation_size(indexrelid)) AS taille
-FROM pg_stat_user_indexes
-WHERE idx_scan = 0  -- Jamais utilisé
+FROM pg_stat_user_indexes  
+WHERE idx_scan = 0  -- Jamais utilisé  
     AND indexrelid NOT IN (
         SELECT indexrelid
         FROM pg_constraint
@@ -722,8 +722,8 @@ ORDER BY pg_relation_size(indexrelid) DESC;
 
 **Pourquoi les Supprimer ?**
 
-1. **Consommation d'espace disque** : Peut être significative
-2. **Ralentissement des écritures** : Chaque INSERT/UPDATE/DELETE doit mettre à jour tous les index
+1. **Consommation d'espace disque** : Peut être significative  
+2. **Ralentissement des écritures** : Chaque INSERT/UPDATE/DELETE doit mettre à jour tous les index  
 3. **Consommation mémoire** : Index chargés en cache inutilement
 
 **Index Redondants**
@@ -753,9 +753,9 @@ Parfois, la "redondance" est justifiée :
 CREATE INDEX idx_orders_status ON orders(status);
 
 -- Index 2 : Partiel sur statut "pending" uniquement
-CREATE INDEX idx_orders_status_pending
-ON orders(status)
-WHERE status = 'pending';
+CREATE INDEX idx_orders_status_pending  
+ON orders(status)  
+WHERE status = 'pending';  
 
 -- Pas de redondance : Le 2ème est plus petit et plus rapide pour les
 -- requêtes WHERE status = 'pending'
@@ -780,16 +780,16 @@ CREATE INDEX idx_orders_date_client ON orders(order_date, client_id);
 **Règle d'Utilisation**
 
 Un index `(A, B, C)` peut être utilisé pour :
-- `WHERE A = ...` ✅
-- `WHERE A = ... AND B = ...` ✅
-- `WHERE A = ... AND B = ... AND C = ...` ✅
-- `WHERE B = ...` ❌ (sauf avec Skip Scan en PG 18)
+- `WHERE A = ...` ✅  
+- `WHERE A = ... AND B = ...` ✅  
+- `WHERE A = ... AND B = ... AND C = ...` ✅  
+- `WHERE B = ...` ❌ (sauf avec Skip Scan en PG 18)  
 - `WHERE C = ...` ❌
 
 **Ordre Optimal**
 
-1. **Colonnes avec égalité** (`=`) en premier
-2. **Colonnes triées** (`ORDER BY`) en dernier
+1. **Colonnes avec égalité** (`=`) en premier  
+2. **Colonnes triées** (`ORDER BY`) en dernier  
 3. **Colonnes les plus sélectives** en premier (celles qui filtrent le plus)
 
 ```sql
@@ -797,9 +797,9 @@ Un index `(A, B, C)` peut être utilisé pour :
 CREATE INDEX idx_orders_client_date ON orders(client_id, order_date);
 
 -- Usage optimal
-SELECT * FROM orders
-WHERE client_id = 42
-ORDER BY order_date DESC;
+SELECT * FROM orders  
+WHERE client_id = 42  
+ORDER BY order_date DESC;  
 ```
 
 ### 4. Sur-Indexation
@@ -807,8 +807,8 @@ ORDER BY order_date DESC;
 **Le Problème de Trop d'Index**
 
 Avoir trop d'index cause :
-1. **Ralentissement des écritures** : Chaque modification doit mettre à jour tous les index
-2. **Consommation mémoire et disque** : Peut devenir majeure
+1. **Ralentissement des écritures** : Chaque modification doit mettre à jour tous les index  
+2. **Consommation mémoire et disque** : Peut devenir majeure  
 3. **Ralentissement du planificateur** : Trop d'options à évaluer
 
 **Symptômes de Sur-Indexation**
@@ -844,12 +844,12 @@ Avoir trop d'index cause :
 
 ```sql
 -- Index GIN sur colonne JSONB
-CREATE INDEX idx_products_attributes
-ON products USING GIN (attributes);
+CREATE INDEX idx_products_attributes  
+ON products USING GIN (attributes);  
 
 -- Recherche dans JSONB rapide
-SELECT * FROM products
-WHERE attributes @> '{"color": "red"}';
+SELECT * FROM products  
+WHERE attributes @> '{"color": "red"}';  
 ```
 
 **GiST (Generalized Search Tree)**
@@ -862,16 +862,16 @@ WHERE attributes @> '{"color": "red"}';
 
 ```sql
 -- BRIN pour table de logs avec millions de lignes
-CREATE INDEX idx_logs_timestamp
-ON logs USING BRIN (timestamp);
+CREATE INDEX idx_logs_timestamp  
+ON logs USING BRIN (timestamp);  
 -- Très compact (quelques Ko pour des millions de lignes)
 ```
 
 **Audit des Types d'Index**
 
 Points à vérifier :
-- ✅ Les colonnes JSONB ont-elles des index GIN ?
-- ✅ Les grandes tables avec dates ont-elles des index BRIN ?
+- ✅ Les colonnes JSONB ont-elles des index GIN ?  
+- ✅ Les grandes tables avec dates ont-elles des index BRIN ?  
 - ✅ Les index Hash sont-ils vraiment nécessaires ?
 
 ---
@@ -889,7 +889,7 @@ Le choix du bon type de données est crucial pour :
 **La Question Éternelle**
 
 PostgreSQL ne fait AUCUNE différence de performance entre :
-- `VARCHAR` (avec ou sans limite)
+- `VARCHAR` (avec ou sans limite)  
 - `TEXT`
 
 **Recommandations**
@@ -906,8 +906,8 @@ description VARCHAR(1000)  -- Limite arbitraire
 ✅ **Utiliser VARCHAR(n) Quand la Limite est Métier**
 ```sql
 -- BON : Contrainte métier réelle
-code_postal VARCHAR(5)
-code_pays VARCHAR(2)  -- ISO 3166-1 alpha-2
+code_postal VARCHAR(5)  
+code_pays VARCHAR(2)  -- ISO 3166-1 alpha-2  
 
 -- BON : Contrainte d'affichage
 titre VARCHAR(200)  -- Titre de page web
@@ -950,8 +950,8 @@ CREATE TABLE users (
 ✅ **Utiliser INTEGER pour les Compteurs**
 ```sql
 -- BON : Suffisant pour la plupart des compteurs
-views_count INTEGER NOT NULL DEFAULT 0,
-stock_quantity INTEGER NOT NULL DEFAULT 0
+views_count INTEGER NOT NULL DEFAULT 0,  
+stock_quantity INTEGER NOT NULL DEFAULT 0  
 ```
 
 **Le Problème de l'Épuisement des ID**
@@ -1075,13 +1075,13 @@ created_at TIMESTAMP NOT NULL DEFAULT NOW()
 
 ```sql
 -- Avec TIMESTAMP (sans fuseau)
-INSERT INTO events (name, event_time)
-VALUES ('Meeting', '2025-03-15 14:00:00');
+INSERT INTO events (name, event_time)  
+VALUES ('Meeting', '2025-03-15 14:00:00');  
 -- Question : 14h dans quel fuseau horaire ? 🤔
 
 -- Avec TIMESTAMPTZ (recommandé)
-INSERT INTO events (name, event_time)
-VALUES ('Meeting', '2025-03-15 14:00:00+01:00');  -- CET explicite
+INSERT INTO events (name, event_time)  
+VALUES ('Meeting', '2025-03-15 14:00:00+01:00');  -- CET explicite  
 -- OU
 VALUES ('Meeting', '2025-03-15 13:00:00+00:00');  -- UTC explicite
 ```
@@ -1103,12 +1103,12 @@ CREATE TABLE products (
 );
 
 -- Index GIN sur JSONB
-CREATE INDEX idx_products_attributes
-ON products USING GIN (attributes);
+CREATE INDEX idx_products_attributes  
+ON products USING GIN (attributes);  
 
 -- Requêtes rapides
-SELECT * FROM products
-WHERE attributes @> '{"color": "red"}';
+SELECT * FROM products  
+WHERE attributes @> '{"color": "red"}';  
 ```
 
 **UUID vs UUIDv7 (Nouveauté PG 18)**
@@ -1119,7 +1119,7 @@ id UUID DEFAULT gen_random_uuid()
 -- Problème : Pas d'ordre temporel, fragmentation d'index
 
 -- UUIDv7 (PG 18 - recommandé)
-id UUID DEFAULT gen_random_uuid_v7()
+id UUID DEFAULT uuidv7()
 -- Avantage : Contient un timestamp, meilleur pour les index B-Tree
 ```
 
@@ -1276,9 +1276,9 @@ CREATE TABLE statistiques_journalieres (
 
 **Règles de Dénormalisation**
 
-1. ✅ Dénormaliser seulement si un besoin de performance est prouvé
-2. ✅ Maintenir la cohérence via triggers ou batch jobs
-3. ✅ Documenter clairement la dénormalisation
+1. ✅ Dénormaliser seulement si un besoin de performance est prouvé  
+2. ✅ Maintenir la cohérence via triggers ou batch jobs  
+3. ✅ Documenter clairement la dénormalisation  
 4. ✅ Considérer d'abord les vues matérialisées
 
 ---
@@ -1307,10 +1307,10 @@ GRANT ALL PRIVILEGES ON DATABASE mydb TO app_user;
 CREATE ROLE app_user LOGIN PASSWORD 'secure_password';
 
 -- Permissions minimales
-GRANT CONNECT ON DATABASE mydb TO app_user;
-GRANT USAGE ON SCHEMA public TO app_user;
-GRANT SELECT, INSERT, UPDATE ON TABLE users TO app_user;
-GRANT SELECT ON TABLE products TO app_user;  -- Lecture seule
+GRANT CONNECT ON DATABASE mydb TO app_user;  
+GRANT USAGE ON SCHEMA public TO app_user;  
+GRANT SELECT, INSERT, UPDATE ON TABLE users TO app_user;  
+GRANT SELECT ON TABLE products TO app_user;  -- Lecture seule  
 
 -- Permissions sur séquences (pour SERIAL/IDENTITY)
 GRANT USAGE ON SEQUENCE users_id_seq TO app_user;
@@ -1320,13 +1320,13 @@ GRANT USAGE ON SEQUENCE users_id_seq TO app_user;
 
 ```sql
 -- Rôle lecture seule pour analytics
-CREATE ROLE analytics_readonly;
-GRANT CONNECT ON DATABASE mydb TO analytics_readonly;
-GRANT SELECT ON ALL TABLES IN SCHEMA public TO analytics_readonly;
+CREATE ROLE analytics_readonly;  
+GRANT CONNECT ON DATABASE mydb TO analytics_readonly;  
+GRANT SELECT ON ALL TABLES IN SCHEMA public TO analytics_readonly;  
 
 -- Rôle admin pour migrations
-CREATE ROLE migrations_admin;
-GRANT ALL PRIVILEGES ON DATABASE mydb TO migrations_admin;
+CREATE ROLE migrations_admin;  
+GRANT ALL PRIVILEGES ON DATABASE mydb TO migrations_admin;  
 ```
 
 ### 2. Row-Level Security (RLS)
@@ -1363,9 +1363,9 @@ SELECT * FROM documents;
 
 **Avantages RLS**
 
-1. Sécurité au niveau base de données (pas seulement applicatif)
-2. Impossible d'oublier un WHERE tenant_id = ...
-3. Protection contre les injections SQL
+1. Sécurité au niveau base de données (pas seulement applicatif)  
+2. Impossible d'oublier un WHERE tenant_id = ...  
+3. Protection contre les injections SQL  
 4. Centralisation de la logique de sécurité
 
 ### 3. Colonnes Sensibles
@@ -1382,9 +1382,9 @@ Certaines colonnes doivent avoir une attention particulière :
 
 **Stratégies de Protection**
 
-1. **Chiffrement au Repos** (TDE - Transparent Data Encryption)
-2. **Chiffrement Applicatif** (avant insertion dans la base)
-3. **Pseudonymisation** (remplacer par des identifiants)
+1. **Chiffrement au Repos** (TDE - Transparent Data Encryption)  
+2. **Chiffrement Applicatif** (avant insertion dans la base)  
+3. **Pseudonymisation** (remplacer par des identifiants)  
 4. **Hachage** (pour données non-réversibles comme mots de passe)
 
 **Exemple : Mots de Passe**
@@ -1410,8 +1410,8 @@ CREATE TABLE users (
 
 -- Exemple d'insertion (côté application)
 -- password_hash = bcrypt.hash('my_password', rounds=12)
-INSERT INTO users (email, password_hash)
-VALUES ('user@example.com', '$2b$12$...');
+INSERT INTO users (email, password_hash)  
+VALUES ('user@example.com', '$2b$12$...');  
 ```
 
 ### 4. Audit Trail et Logs
@@ -1461,9 +1461,9 @@ CREATE TABLE produits_historique (
 );
 
 -- Trigger pour alimenter l'historique
-CREATE OR REPLACE FUNCTION log_produit_change()
-RETURNS TRIGGER AS $$
-BEGIN
+CREATE OR REPLACE FUNCTION log_produit_change()  
+RETURNS TRIGGER AS $$  
+BEGIN  
     IF TG_OP = 'DELETE' THEN
         INSERT INTO produits_historique (produit_id, nom, prix, operation)
         VALUES (OLD.id, OLD.nom, OLD.prix, 'DELETE');
@@ -1475,9 +1475,9 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE TRIGGER trg_produit_audit
-AFTER INSERT OR UPDATE OR DELETE ON produits
-FOR EACH ROW EXECUTE FUNCTION log_produit_change();
+CREATE TRIGGER trg_produit_audit  
+AFTER INSERT OR UPDATE OR DELETE ON produits  
+FOR EACH ROW EXECUTE FUNCTION log_produit_change();  
 ```
 
 ---
@@ -1505,8 +1505,8 @@ SELECT
     tablename,
     last_analyze,
     last_autoanalyze
-FROM pg_stat_user_tables
-ORDER BY last_analyze NULLS FIRST;
+FROM pg_stat_user_tables  
+ORDER BY last_analyze NULLS FIRST;  
 ```
 
 **Solution : Autovacuum**
@@ -1537,8 +1537,8 @@ Extensions recommandées :
 
 **Prévention du Bloat**
 
-1. ✅ Autovacuum correctement configuré
-2. ✅ VACUUM réguliers sur tables à forte écriture
+1. ✅ Autovacuum correctement configuré  
+2. ✅ VACUUM réguliers sur tables à forte écriture  
 3. ✅ Éviter les transactions très longues (bloquent le VACUUM)
 
 ### 3. Partitionnement Manquant
@@ -1552,8 +1552,8 @@ Tables avec :
 
 **Avantages du Partitionnement**
 
-1. **Partition Pruning** : Ignore les partitions non pertinentes
-2. **Maintenance facilitée** : Supprimer des données = DROP partition
+1. **Partition Pruning** : Ignore les partitions non pertinentes  
+2. **Maintenance facilitée** : Supprimer des données = DROP partition  
 3. **Requêtes plus rapides** : Scans sur moins de données
 
 **Exemple : Partitionnement par Date**
@@ -1575,8 +1575,8 @@ CREATE TABLE logs_2025_02 PARTITION OF logs
     FOR VALUES FROM ('2025-02-01') TO ('2025-03-01');
 
 -- Requête automatiquement optimisée
-SELECT * FROM logs
-WHERE timestamp >= '2025-01-15' AND timestamp < '2025-01-20';
+SELECT * FROM logs  
+WHERE timestamp >= '2025-01-15' AND timestamp < '2025-01-20';  
 -- PostgreSQL scan UNIQUEMENT logs_2025_01
 ```
 
@@ -1590,15 +1590,15 @@ SELECT
     prix,
     quantite,
     prix * quantite AS total  -- Recalculé à chaque fois
-FROM lignes_commandes
-WHERE prix * quantite > 100;  -- Pas d'index possible
+FROM lignes_commandes  
+WHERE prix * quantite > 100;  -- Pas d'index possible  
 ```
 
 **Solution 1 : Colonne Stockée**
 
 ```sql
-ALTER TABLE lignes_commandes
-ADD COLUMN total NUMERIC(10, 2)
+ALTER TABLE lignes_commandes  
+ADD COLUMN total NUMERIC(10, 2)  
     GENERATED ALWAYS AS (prix * quantite) STORED;
 
 -- Index possible
@@ -1612,8 +1612,8 @@ SELECT * FROM lignes_commandes WHERE total > 100;
 
 ```sql
 -- Nouveauté PostgreSQL 18
-ALTER TABLE lignes_commandes
-ADD COLUMN total NUMERIC(10, 2)
+ALTER TABLE lignes_commandes  
+ADD COLUMN total NUMERIC(10, 2)  
     GENERATED ALWAYS AS (prix * quantite);  -- VIRTUAL par défaut
 
 -- Pas de stockage, calcul à la volée, mais index possible
@@ -1639,7 +1639,7 @@ effective_cache_size = 16GB
 
 **Outils d'Aide**
 
-- **PGTune** : Génère une config selon votre matériel
+- **PGTune** : Génère une config selon votre matériel  
 - **pg_stat_statements** : Identifie les requêtes lentes
 
 ---
@@ -1648,78 +1648,78 @@ effective_cache_size = 16GB
 
 ### ✅ Structure des Tables
 
-- [ ] Toutes les tables ont une clé primaire
-- [ ] Les clés primaires sont BIGSERIAL (ou UUID)
-- [ ] Conventions de nommage cohérentes (snake_case)
-- [ ] Colonnes d'audit trail présentes (created_at, updated_at)
-- [ ] Stratégie soft delete vs hard delete définie
-- [ ] Colonnes NOT NULL là où nécessaire
+- [ ] Toutes les tables ont une clé primaire  
+- [ ] Les clés primaires sont BIGSERIAL (ou UUID)  
+- [ ] Conventions de nommage cohérentes (snake_case)  
+- [ ] Colonnes d'audit trail présentes (created_at, updated_at)  
+- [ ] Stratégie soft delete vs hard delete définie  
+- [ ] Colonnes NOT NULL là où nécessaire  
 - [ ] Valeurs DEFAULT logiques et cohérentes
 
 ### ✅ Contraintes d'Intégrité
 
-- [ ] Foreign Keys présentes sur toutes les relations
-- [ ] Actions CASCADE/RESTRICT appropriées sur les FK
-- [ ] Contraintes UNIQUE sur colonnes métier (email, username)
-- [ ] Contraintes CHECK pour validation métier
-- [ ] Contraintes nommées explicitement
+- [ ] Foreign Keys présentes sur toutes les relations  
+- [ ] Actions CASCADE/RESTRICT appropriées sur les FK  
+- [ ] Contraintes UNIQUE sur colonnes métier (email, username)  
+- [ ] Contraintes CHECK pour validation métier  
+- [ ] Contraintes nommées explicitement  
 - [ ] Contraintes temporelles (PG 18) si pertinentes
 
 ### ✅ Indexation
 
-- [ ] Index sur toutes les clés étrangères
-- [ ] Index sur colonnes fréquemment filtrées (WHERE)
-- [ ] Index sur colonnes de jointure
-- [ ] Index multi-colonnes correctement ordonnés
-- [ ] Pas d'index inutilisés ou redondants
-- [ ] Type d'index approprié (B-Tree, GIN, BRIN)
+- [ ] Index sur toutes les clés étrangères  
+- [ ] Index sur colonnes fréquemment filtrées (WHERE)  
+- [ ] Index sur colonnes de jointure  
+- [ ] Index multi-colonnes correctement ordonnés  
+- [ ] Pas d'index inutilisés ou redondants  
+- [ ] Type d'index approprié (B-Tree, GIN, BRIN)  
 - [ ] Index partiels pour sous-ensembles fréquents
 
 ### ✅ Types de Données
 
-- [ ] TEXT préféré sauf contrainte métier
-- [ ] BIGINT pour les clés primaires
-- [ ] NUMERIC pour les montants financiers
-- [ ] TIMESTAMPTZ pour les dates
-- [ ] JSONB (pas JSON) pour données semi-structurées
-- [ ] UUID ou UUIDv7 si distribué
+- [ ] TEXT préféré sauf contrainte métier  
+- [ ] BIGINT pour les clés primaires  
+- [ ] NUMERIC pour les montants financiers  
+- [ ] TIMESTAMPTZ pour les dates  
+- [ ] JSONB (pas JSON) pour données semi-structurées  
+- [ ] UUID ou UUIDv7 si distribué  
 - [ ] Types appropriés pour la précision nécessaire
 
 ### ✅ Normalisation
 
-- [ ] Pas de colonnes multi-valuées (1NF)
-- [ ] Pas de dépendances partielles (2NF)
-- [ ] Pas de dépendances transitives (3NF)
-- [ ] Dénormalisation justifiée et documentée
+- [ ] Pas de colonnes multi-valuées (1NF)  
+- [ ] Pas de dépendances partielles (2NF)  
+- [ ] Pas de dépendances transitives (3NF)  
+- [ ] Dénormalisation justifiée et documentée  
 - [ ] Redondance maintenue par triggers si nécessaire
 
 ### ✅ Sécurité
 
-- [ ] Principe du moindre privilège appliqué
-- [ ] Rôles granulaires définis
-- [ ] Row-Level Security (RLS) si multi-tenant
-- [ ] Colonnes sensibles protégées
-- [ ] Mots de passe hashés (jamais en clair)
-- [ ] Audit trail pour traçabilité
+- [ ] Principe du moindre privilège appliqué  
+- [ ] Rôles granulaires définis  
+- [ ] Row-Level Security (RLS) si multi-tenant  
+- [ ] Colonnes sensibles protégées  
+- [ ] Mots de passe hashés (jamais en clair)  
+- [ ] Audit trail pour traçabilité  
 - [ ] Permissions documentées
 
 ### ✅ Performance
 
-- [ ] Statistiques à jour (ANALYZE)
-- [ ] Autovacuum activé et configuré
-- [ ] Bloat surveillé et géré
-- [ ] Partitionnement sur grandes tables temporelles
-- [ ] Colonnes calculées stockées ou virtuelles
-- [ ] Configuration PostgreSQL optimisée
+- [ ] Statistiques à jour (ANALYZE)  
+- [ ] Autovacuum activé et configuré  
+- [ ] Bloat surveillé et géré  
+- [ ] Partitionnement sur grandes tables temporelles  
+- [ ] Colonnes calculées stockées ou virtuelles  
+- [ ] Configuration PostgreSQL optimisée  
 - [ ] Vues matérialisées pour agrégats coûteux
 
 ### ✅ Maintenance et Monitoring
 
-- [ ] pg_stat_statements installé
-- [ ] Logs configurés et analysés
-- [ ] Monitoring des métriques vitales actif
-- [ ] Sauvegardes régulières testées
-- [ ] Stratégie de migration définie
+- [ ] pg_stat_statements installé  
+- [ ] Logs configurés et analysés  
+- [ ] Monitoring des métriques vitales actif  
+- [ ] Sauvegardes régulières testées  
+- [ ] Stratégie de migration définie  
 - [ ] Documentation du schéma à jour
 
 ---
@@ -1728,18 +1728,18 @@ effective_cache_size = 16GB
 
 L'audit de schéma est une **discipline continue**, pas un événement ponctuel. Un schéma bien conçu est :
 
-- ✅ **Performant** : Requêtes rapides, index appropriés
-- ✅ **Intègre** : Contraintes qui garantissent la cohérence
-- ✅ **Sécurisé** : Permissions granulaires, données protégées
-- ✅ **Maintenable** : Conventions claires, documentation
+- ✅ **Performant** : Requêtes rapides, index appropriés  
+- ✅ **Intègre** : Contraintes qui garantissent la cohérence  
+- ✅ **Sécurisé** : Permissions granulaires, données protégées  
+- ✅ **Maintenable** : Conventions claires, documentation  
 - ✅ **Évolutif** : Prêt pour la croissance future
 
 ### Prochaines Étapes
 
-1. **Auditer votre schéma actuel** avec cette checklist
-2. **Prioriser les problèmes** : Sécurité > Performance > Conventions
-3. **Planifier les corrections** : Migrations par étapes
-4. **Automatiser** : Scripts de validation, monitoring continu
+1. **Auditer votre schéma actuel** avec cette checklist  
+2. **Prioriser les problèmes** : Sécurité > Performance > Conventions  
+3. **Planifier les corrections** : Migrations par étapes  
+4. **Automatiser** : Scripts de validation, monitoring continu  
 5. **Documenter** : Rationale des choix, patterns utilisés
 
 ### Ressources Complémentaires

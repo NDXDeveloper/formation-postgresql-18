@@ -8,17 +8,17 @@
 
 **OLTP** signifie **Online Transaction Processing** (Traitement Transactionnel en Ligne). C'est un type de charge de travail caractérisé par :
 
-- **Nombreuses transactions courtes** : Des milliers voire des millions de petites requêtes par seconde
-- **Opérations de lecture ET d'écriture fréquentes** : INSERT, UPDATE, DELETE en temps réel
-- **Faible latence requise** : Les utilisateurs attendent des réponses quasi-instantanées (< 100ms)
+- **Nombreuses transactions courtes** : Des milliers voire des millions de petites requêtes par seconde  
+- **Opérations de lecture ET d'écriture fréquentes** : INSERT, UPDATE, DELETE en temps réel  
+- **Faible latence requise** : Les utilisateurs attendent des réponses quasi-instantanées (< 100ms)  
 - **Haute concurrence** : Beaucoup d'utilisateurs/applications accèdent simultanément à la base
 
 ### Exemples d'Applications OLTP
 
-- **E-commerce** : Ajout au panier, commandes, paiements
-- **Applications bancaires** : Transactions, virements, consultations de solde
-- **Réseaux sociaux** : Publications, likes, commentaires
-- **Systèmes de réservation** : Réservations d'hôtels, vols, restaurants
+- **E-commerce** : Ajout au panier, commandes, paiements  
+- **Applications bancaires** : Transactions, virements, consultations de solde  
+- **Réseaux sociaux** : Publications, likes, commentaires  
+- **Systèmes de réservation** : Réservations d'hôtels, vols, restaurants  
 - **Applications SaaS** : CRM, ERP, outils collaboratifs
 
 ### OLTP vs OLAP : Quelle Différence ?
@@ -40,10 +40,10 @@
 
 Pour une charge de travail OLTP, nous cherchons à optimiser PostgreSQL selon ces principes :
 
-1. **Maximiser le débit de transactions** (transactions/seconde)
-2. **Minimiser la latence** (temps de réponse)
-3. **Gérer efficacement la concurrence** (beaucoup de connexions simultanées)
-4. **Optimiser les opérations en mémoire** (éviter les accès disque lents)
+1. **Maximiser le débit de transactions** (transactions/seconde)  
+2. **Minimiser la latence** (temps de réponse)  
+3. **Gérer efficacement la concurrence** (beaucoup de connexions simultanées)  
+4. **Optimiser les opérations en mémoire** (éviter les accès disque lents)  
 5. **Équilibrer les écritures** (WAL, checkpoints) pour éviter les pics de latence
 
 ---
@@ -166,8 +166,8 @@ En OLTP, beaucoup d'applications Web créent une connexion par requête. Avec 10
 
 **Configuration recommandée pour OLTP :**
 ```ini
-max_connections = 200-500 (avec connection pooling)
-max_connections = 50-100 (sans connection pooling)
+max_connections = 200-500 (avec connection pooling)  
+max_connections = 50-100 (sans connection pooling)  
 ```
 
 **💡 Solution : Connection Pooling**
@@ -226,8 +226,8 @@ Des checkpoints trop fréquents = pics de latence réguliers = mauvaise expérie
 
 **Configuration recommandée pour OLTP :**
 ```ini
-checkpoint_timeout = 15min (défaut : 5min)
-max_wal_size = 4-8GB (défaut : 1GB)
+checkpoint_timeout = 15min (défaut : 5min)  
+max_wal_size = 4-8GB (défaut : 1GB)  
 ```
 
 **Pourquoi ces valeurs ?**
@@ -239,10 +239,10 @@ Plus de WAL à rejouer en cas de crash = temps de récupération plus long (acce
 
 **Configuration dans postgresql.conf :**
 ```ini
-checkpoint_timeout = 15min
-max_wal_size = 4GB
-min_wal_size = 1GB
-checkpoint_completion_target = 0.9
+checkpoint_timeout = 15min  
+max_wal_size = 4GB  
+min_wal_size = 1GB  
+checkpoint_completion_target = 0.9  
 ```
 
 ---
@@ -252,8 +252,8 @@ checkpoint_completion_target = 0.9
 **Qu'est-ce que c'est ?**
 Pourcentage de `checkpoint_timeout` pendant lequel PostgreSQL étale les écritures du checkpoint.
 
-**Valeur par défaut :** 0.5 (écrit pendant 50% de l'intervalle)
-**Recommandation OLTP :** 0.9 (écrit pendant 90% de l'intervalle)
+**Valeur par défaut :** 0.5 (écrit pendant 50% de l'intervalle)  
+**Recommandation OLTP :** 0.9 (écrit pendant 90% de l'intervalle)  
 
 **Pourquoi 0.9 ?**
 Étaler les écritures sur une plus longue période réduit les pics d'I/O et donc les pics de latence.
@@ -294,10 +294,10 @@ synchronous_commit = off
 **💡 Astuce :** Vous pouvez configurer cela par session ou par transaction :
 ```sql
 -- Pour une transaction spécifique
-BEGIN;
-SET LOCAL synchronous_commit = off;
-INSERT INTO logs VALUES (...);
-COMMIT;
+BEGIN;  
+SET LOCAL synchronous_commit = off;  
+INSERT INTO logs VALUES (...);  
+COMMIT;  
 ```
 
 ---
@@ -317,23 +317,23 @@ En OLTP, vous avez beaucoup de UPDATE et DELETE. Grâce au MVCC (Multiversion Co
 
 ```ini
 # Rendre autovacuum plus agressif
-autovacuum = on (toujours activé !)
-autovacuum_max_workers = 4 à 8 (selon nombre de CPU)
-autovacuum_naptime = 10s (défaut : 1min)
+autovacuum = on (toujours activé !)  
+autovacuum_max_workers = 4 à 8 (selon nombre de CPU)  
+autovacuum_naptime = 10s (défaut : 1min)  
 
 # Seuils plus bas pour déclencher autovacuum plus tôt
-autovacuum_vacuum_threshold = 25 (défaut : 50)
-autovacuum_vacuum_scale_factor = 0.05 (défaut : 0.2)
+autovacuum_vacuum_threshold = 25 (défaut : 50)  
+autovacuum_vacuum_scale_factor = 0.05 (défaut : 0.2)  
 
 # Accélérer les vacuum
-autovacuum_vacuum_cost_delay = 2ms (défaut : 2ms, descendre à 0 si I/O disponible)
-autovacuum_vacuum_cost_limit = 2000 (défaut : 200, augmenter si I/O disponible)
+autovacuum_vacuum_cost_delay = 2ms (défaut : 2ms, descendre à 0 si I/O disponible)  
+autovacuum_vacuum_cost_limit = 2000 (défaut : 200, augmenter si I/O disponible)  
 ```
 
 **Explication pour débutants :**
 
-- `autovacuum_naptime` : Fréquence de réveil d'autovacuum (vérifier si des tables ont besoin de nettoyage)
-- `autovacuum_vacuum_threshold` : Nombre minimum de tuples morts avant de déclencher vacuum
+- `autovacuum_naptime` : Fréquence de réveil d'autovacuum (vérifier si des tables ont besoin de nettoyage)  
+- `autovacuum_vacuum_threshold` : Nombre minimum de tuples morts avant de déclencher vacuum  
 - `autovacuum_vacuum_scale_factor` : Pourcentage de la table en tuples morts pour déclencher vacuum
 
 **Exemple de calcul :**
@@ -353,8 +353,8 @@ Avec `scale_factor = 0.2` (défaut), autovacuum se déclencherait à 200,050 tup
 **Qu'est-ce que c'est ?**
 Estimation du coût relatif d'un accès disque aléatoire par rapport à un accès séquentiel.
 
-**Valeur par défaut :** 4.0 (disques mécaniques)
-**Recommandation OLTP (SSD/NVMe) :** 1.1 à 1.5
+**Valeur par défaut :** 4.0 (disques mécaniques)  
+**Recommandation OLTP (SSD/NVMe) :** 1.1 à 1.5  
 
 **Pourquoi important ?**
 Avec des SSD, les accès aléatoires sont beaucoup plus rapides qu'avec des disques mécaniques. Si vous gardez 4.0, PostgreSQL sous-estime l'intérêt des index et fait trop de scans séquentiels.
@@ -371,8 +371,8 @@ random_page_cost = 1.1  # SSD/NVMe
 **Qu'est-ce que c'est ?**
 Nombre d'opérations I/O simultanées que le stockage peut gérer efficacement.
 
-**Valeur par défaut :** 1 (disque mécanique)
-**Recommandation OLTP :**
+**Valeur par défaut :** 1 (disque mécanique)  
+**Recommandation OLTP :**  
 - SSD : 200-300
 - NVMe : 300-400
 
@@ -389,7 +389,7 @@ PostgreSQL 18 introduit un nouveau sous-système I/O asynchrone qui peut amélio
 
 **Configuration dans postgresql.conf :**
 ```ini
-io_method = 'async'  # Défaut : 'sync'
+io_method = 'worker'  # Défaut : 'sync'
 ```
 
 **⚠️ Attention :** Nécessite un noyau Linux récent (5.1+) avec support io_uring.
@@ -402,9 +402,9 @@ io_method = 'async'  # Défaut : 'sync'
 
 **Configuration dans postgresql.conf :**
 ```ini
-track_activities = on
-track_counts = on
-track_io_timing = on  # Mesure le temps I/O (léger overhead)
+track_activities = on  
+track_counts = on  
+track_io_timing = on  # Mesure le temps I/O (léger overhead)  
 ```
 
 **Pourquoi important en OLTP ?**
@@ -447,102 +447,102 @@ Voici une configuration **complète** pour un serveur PostgreSQL 18 dédié à O
 # ===================================
 # MÉMOIRE
 # ===================================
-shared_buffers = 8GB                    # 25% de 32GB
-effective_cache_size = 24GB             # 75% de 32GB
-work_mem = 16MB                         # (32GB × 0.25) / 300 / 3
-maintenance_work_mem = 1GB
-wal_buffers = 32MB
+shared_buffers = 8GB                    # 25% de 32GB  
+effective_cache_size = 24GB             # 75% de 32GB  
+work_mem = 16MB                         # (32GB × 0.25) / 300 / 3  
+maintenance_work_mem = 1GB  
+wal_buffers = 32MB  
 
 # ===================================
 # CONNEXIONS
 # ===================================
-max_connections = 300
-superuser_reserved_connections = 3
+max_connections = 300  
+superuser_reserved_connections = 3  
 
 # ===================================
 # WAL et CHECKPOINTS
 # ===================================
-wal_level = replica                     # Pour réplication
-max_wal_size = 4GB
-min_wal_size = 1GB
-checkpoint_timeout = 15min
-checkpoint_completion_target = 0.9
-wal_compression = on                    # Compresser le WAL (économise disque)
+wal_level = replica                     # Pour réplication  
+max_wal_size = 4GB  
+min_wal_size = 1GB  
+checkpoint_timeout = 15min  
+checkpoint_completion_target = 0.9  
+wal_compression = on                    # Compresser le WAL (économise disque)  
 
 # Durabilité (ajuster selon criticité des données)
-synchronous_commit = on                 # 'off' si données non critiques
-fsync = on                              # Ne JAMAIS désactiver en production !
+synchronous_commit = on                 # 'off' si données non critiques  
+fsync = on                              # Ne JAMAIS désactiver en production !  
 
 # ===================================
 # AUTOVACUUM (agressif pour OLTP)
 # ===================================
-autovacuum = on
-autovacuum_max_workers = 6
-autovacuum_naptime = 10s
-autovacuum_vacuum_threshold = 25
-autovacuum_vacuum_scale_factor = 0.05
-autovacuum_analyze_threshold = 25
-autovacuum_analyze_scale_factor = 0.05
-autovacuum_vacuum_cost_delay = 2ms
-autovacuum_vacuum_cost_limit = 2000
+autovacuum = on  
+autovacuum_max_workers = 6  
+autovacuum_naptime = 10s  
+autovacuum_vacuum_threshold = 25  
+autovacuum_vacuum_scale_factor = 0.05  
+autovacuum_analyze_threshold = 25  
+autovacuum_analyze_scale_factor = 0.05  
+autovacuum_vacuum_cost_delay = 2ms  
+autovacuum_vacuum_cost_limit = 2000  
 
 # ===================================
 # PLANIFICATEUR (optimisé SSD/NVMe)
 # ===================================
-random_page_cost = 1.1                  # SSD/NVMe
-effective_io_concurrency = 300          # NVMe
-default_statistics_target = 100
+random_page_cost = 1.1                  # SSD/NVMe  
+effective_io_concurrency = 300          # NVMe  
+default_statistics_target = 100  
 
 # PostgreSQL 18 : I/O asynchrone
-io_method = 'async'
+io_method = 'worker'
 
 # ===================================
 # PARALLÉLISATION (si applicable)
 # ===================================
-max_worker_processes = 8
-max_parallel_workers_per_gather = 4
-max_parallel_workers = 8
-max_parallel_maintenance_workers = 4
+max_worker_processes = 8  
+max_parallel_workers_per_gather = 4  
+max_parallel_workers = 8  
+max_parallel_maintenance_workers = 4  
 
 # ===================================
 # LOGGING et MONITORING
 # ===================================
-logging_collector = on
-log_destination = 'stderr'
-log_directory = 'log'
-log_filename = 'postgresql-%Y-%m-%d.log'
-log_rotation_age = 1d
-log_rotation_size = 100MB
+logging_collector = on  
+log_destination = 'stderr'  
+log_directory = 'log'  
+log_filename = 'postgresql-%Y-%m-%d.log'  
+log_rotation_age = 1d  
+log_rotation_size = 100MB  
 
-log_line_prefix = '%t [%p]: user=%u,db=%d,app=%a,client=%h '
-log_min_duration_statement = 100ms      # Log requêtes > 100ms
-log_checkpoints = on
-log_connections = on
-log_disconnections = on
-log_lock_waits = on                     # Log attentes de verrous
-log_temp_files = 0                      # Log tous les fichiers temporaires
+log_line_prefix = '%t [%p]: user=%u,db=%d,app=%a,client=%h '  
+log_min_duration_statement = 100ms      # Log requêtes > 100ms  
+log_checkpoints = on  
+log_connections = on  
+log_disconnections = on  
+log_lock_waits = on                     # Log attentes de verrous  
+log_temp_files = 0                      # Log tous les fichiers temporaires  
 
-track_activities = on
-track_counts = on
-track_io_timing = on
-track_functions = pl                    # Tracker fonctions PL/pgSQL
+track_activities = on  
+track_counts = on  
+track_io_timing = on  
+track_functions = pl                    # Tracker fonctions PL/pgSQL  
 
 # ===================================
 # SÉCURITÉ
 # ===================================
-ssl = on
-ssl_prefer_server_ciphers = on
-password_encryption = scram-sha-256     # SHA-256 (pas MD5 !)
+ssl = on  
+ssl_prefer_server_ciphers = on  
+password_encryption = scram-sha-256     # SHA-256 (pas MD5 !)  
 
 # ===================================
 # TIMEZONE et LOCALE
 # ===================================
-timezone = 'UTC'                        # TOUJOURS UTC en production !
-lc_messages = 'en_US.UTF-8'
-lc_monetary = 'en_US.UTF-8'
-lc_numeric = 'en_US.UTF-8'
-lc_time = 'en_US.UTF-8'
-default_text_search_config = 'pg_catalog.english'
+timezone = 'UTC'                        # TOUJOURS UTC en production !  
+lc_messages = 'en_US.UTF-8'  
+lc_monetary = 'en_US.UTF-8'  
+lc_numeric = 'en_US.UTF-8'  
+lc_time = 'en_US.UTF-8'  
+default_text_search_config = 'pg_catalog.english'  
 ```
 
 ---
@@ -561,14 +561,14 @@ default_text_search_config = 'pg_catalog.english'
 mydb = host=localhost dbname=mydb
 
 [pgbouncer]
-listen_addr = *
-listen_port = 6432
-auth_type = scram-sha-256
-pool_mode = transaction              # Crucial pour OLTP
-max_client_conn = 10000              # Clients peuvent se connecter
-default_pool_size = 100              # Seulement 100 connexions vers PostgreSQL
-reserve_pool_size = 50
-reserve_pool_timeout = 5
+listen_addr = *  
+listen_port = 6432  
+auth_type = scram-sha-256  
+pool_mode = transaction              # Crucial pour OLTP  
+max_client_conn = 10000              # Clients peuvent se connecter  
+default_pool_size = 100              # Seulement 100 connexions vers PostgreSQL  
+reserve_pool_size = 50  
+reserve_pool_timeout = 5  
 ```
 
 **Résultat :**
@@ -583,9 +583,9 @@ reserve_pool_timeout = 5
 
 #### Index B-Tree sur colonnes de filtrage fréquent
 ```sql
-CREATE INDEX idx_users_email ON users(email);
-CREATE INDEX idx_orders_user_id ON orders(user_id);
-CREATE INDEX idx_orders_created_at ON orders(created_at);
+CREATE INDEX idx_users_email ON users(email);  
+CREATE INDEX idx_orders_user_id ON orders(user_id);  
+CREATE INDEX idx_orders_created_at ON orders(created_at);  
 ```
 
 #### Index composites pour requêtes multi-colonnes
@@ -597,8 +597,8 @@ CREATE INDEX idx_orders_status_created ON orders(status, created_at);
 #### Index partiels pour sous-ensembles fréquents
 ```sql
 -- Seulement indexer les commandes actives (90% des requêtes)
-CREATE INDEX idx_orders_active ON orders(user_id)
-WHERE status IN ('pending', 'processing');
+CREATE INDEX idx_orders_active ON orders(user_id)  
+WHERE status IN ('pending', 'processing');  
 ```
 
 #### Nouveauté PostgreSQL 18 : Skip Scan Optimization
@@ -625,8 +625,8 @@ SELECT * FROM orders WHERE created_at > '2025-01-01';
 cursor.execute("SELECT * FROM users WHERE email = %s", (email,))
 
 # Bon : Préparer une fois, exécuter plusieurs fois
-cursor.execute("PREPARE get_user AS SELECT * FROM users WHERE email = $1")
-cursor.execute("EXECUTE get_user(%s)", (email,))
+cursor.execute("PREPARE get_user AS SELECT * FROM users WHERE email = $1")  
+cursor.execute("EXECUTE get_user(%s)", (email,))  
 ```
 
 **Gain typique :** 10-30% de réduction de latence sur requêtes simples fréquentes.
@@ -702,9 +702,9 @@ SELECT
     calls,
     mean_exec_time,
     total_exec_time
-FROM pg_stat_statements
-ORDER BY mean_exec_time DESC
-LIMIT 10;
+FROM pg_stat_statements  
+ORDER BY mean_exec_time DESC  
+LIMIT 10;  
 ```
 
 **Action :** Optimiser les requêtes avec `mean_exec_time` > 100ms.
@@ -720,9 +720,9 @@ SELECT
     n_dead_tup,
     n_live_tup,
     round(100.0 * n_dead_tup / NULLIF(n_live_tup + n_dead_tup, 0), 2) AS dead_ratio
-FROM pg_stat_user_tables
-WHERE n_dead_tup > 1000
-ORDER BY dead_ratio DESC;
+FROM pg_stat_user_tables  
+WHERE n_dead_tup > 1000  
+ORDER BY dead_ratio DESC;  
 ```
 
 **⚠️ Alerte :** Si `dead_ratio` > 10%, autovacuum ne suit pas ! Augmenter agressivité ou lancer VACUUM manuel.
@@ -733,26 +733,26 @@ ORDER BY dead_ratio DESC;
 
 Avant de mettre en production, vérifiez :
 
-- [ ] **Mémoire** : `shared_buffers` = 25% RAM
-- [ ] **Mémoire** : `effective_cache_size` = 75% RAM
-- [ ] **Mémoire** : `work_mem` dimensionné selon max_connections
-- [ ] **Connexions** : Connection pooling configuré (PgBouncer)
-- [ ] **WAL** : `max_wal_size` ≥ 4GB
-- [ ] **Checkpoints** : `checkpoint_timeout` = 15min
-- [ ] **Checkpoints** : `checkpoint_completion_target` = 0.9
-- [ ] **Autovacuum** : Activé et configuré agressivement
-- [ ] **Autovacuum** : `autovacuum_naptime` = 10s
-- [ ] **Autovacuum** : `scale_factor` = 0.05
-- [ ] **Disques** : `random_page_cost` = 1.1 (SSD/NVMe)
-- [ ] **I/O** : `effective_io_concurrency` = 200-300
-- [ ] **PostgreSQL 18** : `io_method` = 'async' (si kernel compatible)
-- [ ] **Monitoring** : `log_min_duration_statement` configuré
-- [ ] **Monitoring** : pg_stat_statements activé
-- [ ] **Sécurité** : `password_encryption` = scram-sha-256
-- [ ] **Sécurité** : SSL activé
-- [ ] **Index** : Index B-Tree sur toutes les colonnes de WHERE/JOIN
-- [ ] **Index** : Index partiels pour filtres fréquents
-- [ ] **Sauvegarde** : WAL archiving configuré
+- [ ] **Mémoire** : `shared_buffers` = 25% RAM  
+- [ ] **Mémoire** : `effective_cache_size` = 75% RAM  
+- [ ] **Mémoire** : `work_mem` dimensionné selon max_connections  
+- [ ] **Connexions** : Connection pooling configuré (PgBouncer)  
+- [ ] **WAL** : `max_wal_size` ≥ 4GB  
+- [ ] **Checkpoints** : `checkpoint_timeout` = 15min  
+- [ ] **Checkpoints** : `checkpoint_completion_target` = 0.9  
+- [ ] **Autovacuum** : Activé et configuré agressivement  
+- [ ] **Autovacuum** : `autovacuum_naptime` = 10s  
+- [ ] **Autovacuum** : `scale_factor` = 0.05  
+- [ ] **Disques** : `random_page_cost` = 1.1 (SSD/NVMe)  
+- [ ] **I/O** : `effective_io_concurrency` = 200-300  
+- [ ] **PostgreSQL 18** : `io_method` = 'worker' (défaut) ou 'io_uring' (Linux 5.1+)  
+- [ ] **Monitoring** : `log_min_duration_statement` configuré  
+- [ ] **Monitoring** : pg_stat_statements activé  
+- [ ] **Sécurité** : `password_encryption` = scram-sha-256  
+- [ ] **Sécurité** : SSL activé  
+- [ ] **Index** : Index B-Tree sur toutes les colonnes de WHERE/JOIN  
+- [ ] **Index** : Index partiels pour filtres fréquents  
+- [ ] **Sauvegarde** : WAL archiving configuré  
 - [ ] **Sauvegarde** : pg_basebackup testé et automatisé
 
 ---
@@ -760,35 +760,35 @@ Avant de mettre en production, vérifiez :
 ## Erreurs Courantes à Éviter
 
 ### ❌ Erreur 1 : Trop de Connexions sans Pooling
-**Symptôme :** RAM saturée, performances dégradées
-**Solution :** PgBouncer en mode transaction
+**Symptôme :** RAM saturée, performances dégradées  
+**Solution :** PgBouncer en mode transaction  
 
 ### ❌ Erreur 2 : work_mem trop Élevé
-**Symptôme :** OOM (Out of Memory) kills
-**Solution :** Dimensionner selon formule : `(RAM × 0.25) / max_connections / 3`
+**Symptôme :** OOM (Out of Memory) kills  
+**Solution :** Dimensionner selon formule : `(RAM × 0.25) / max_connections / 3`  
 
 ### ❌ Erreur 3 : Autovacuum Désactivé ou Trop Lent
-**Symptôme :** Tables gonflent, performances se dégradent avec le temps
-**Solution :** Activer et configurer agressivement
+**Symptôme :** Tables gonflent, performances se dégradent avec le temps  
+**Solution :** Activer et configurer agressivement  
 
 ### ❌ Erreur 4 : synchronous_commit = off sur Données Critiques
-**Symptôme :** Pertes de transactions récentes après crash
-**Solution :** `synchronous_commit = on` pour données critiques
+**Symptôme :** Pertes de transactions récentes après crash  
+**Solution :** `synchronous_commit = on` pour données critiques  
 
 ### ❌ Erreur 5 : random_page_cost = 4.0 avec SSD
-**Symptôme :** Planificateur évite les index, fait trop de scans séquentiels
-**Solution :** `random_page_cost = 1.1`
+**Symptôme :** Planificateur évite les index, fait trop de scans séquentiels  
+**Solution :** `random_page_cost = 1.1`  
 
 ### ❌ Erreur 6 : Pas de Monitoring
-**Symptôme :** Problèmes découverts trop tard
-**Solution :** pg_stat_statements + logs + métriques système
+**Symptôme :** Problèmes découverts trop tard  
+**Solution :** pg_stat_statements + logs + métriques système  
 
 ---
 
 ## Ressources pour Aller Plus Loin
 
 ### Documentation Officielle
-- [PostgreSQL 18 Documentation - Server Configuration](https://www.postgresql.org/docs/18/runtime-config.html)
+- [PostgreSQL 18 Documentation - Server Configuration](https://www.postgresql.org/docs/18/runtime-config.html)  
 - [PostgreSQL Wiki - Tuning Your PostgreSQL Server](https://wiki.postgresql.org/wiki/Tuning_Your_PostgreSQL_Server)
 
 ### Outils Automatiques de Configuration
@@ -797,14 +797,14 @@ Avant de mettre en production, vérifiez :
   - Choisir "Web application" ou "OLTP" pour cas d'usage
 
 ### Blogs et Guides
-- **Percona Blog** : Articles avancés sur performance PostgreSQL
-- **CrunchyData Blog** : Guides pratiques d'administration
+- **Percona Blog** : Articles avancés sur performance PostgreSQL  
+- **CrunchyData Blog** : Guides pratiques d'administration  
 - **2ndQuadrant Blog** : Experts PostgreSQL (core developers)
 
 ### Extensions Utiles
-- **pg_stat_statements** : Analyse de requêtes (essentiel)
-- **pg_stat_kcache** : Métriques CPU et I/O par requête
-- **pgBadger** : Analyse de logs (graphiques)
+- **pg_stat_statements** : Analyse de requêtes (essentiel)  
+- **pg_stat_kcache** : Métriques CPU et I/O par requête  
+- **pgBadger** : Analyse de logs (graphiques)  
 - **HypoPG** : Tester des index hypothétiques sans les créer
 
 ---
@@ -812,10 +812,10 @@ Avant de mettre en production, vérifiez :
 ## Conclusion
 
 La configuration OLTP de PostgreSQL vise à :
-1. **Maximiser les données en mémoire** (shared_buffers, effective_cache_size)
-2. **Gérer efficacement la concurrence** (work_mem, max_connections, pooling)
-3. **Optimiser les écritures** (WAL, checkpoints étalés)
-4. **Maintenir la base propre** (autovacuum agressif)
+1. **Maximiser les données en mémoire** (shared_buffers, effective_cache_size)  
+2. **Gérer efficacement la concurrence** (work_mem, max_connections, pooling)  
+3. **Optimiser les écritures** (WAL, checkpoints étalés)  
+4. **Maintenir la base propre** (autovacuum agressif)  
 5. **Utiliser le stockage moderne efficacement** (random_page_cost, I/O async)
 
 **Points clés à retenir :**
@@ -830,10 +830,10 @@ PostgreSQL 18 apporte des améliorations significatives pour OLTP avec le sous-s
 ---
 
 **Prochaines Étapes :**
-1. Appliquer cette configuration sur un environnement de staging
-2. Lancer des tests de charge (pgbench, JMeter)
-3. Ajuster selon les résultats
-4. Activer pg_stat_statements et analyser les requêtes
+1. Appliquer cette configuration sur un environnement de staging  
+2. Lancer des tests de charge (pgbench, JMeter)  
+3. Ajuster selon les résultats  
+4. Activer pg_stat_statements et analyser les requêtes  
 5. Mettre en place un monitoring continu (Prometheus/Grafana)
 
 Bonne chance avec votre base PostgreSQL OLTP ! 🚀

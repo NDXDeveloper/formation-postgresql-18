@@ -7,15 +7,15 @@
 
 ## Table des Matières
 
-1. [Introduction à l'Analyse PostgreSQL](#1-introduction-%C3%A0-lanalyse-postgresql)
-2. [Analyse de la Taille des Objets](#2-analyse-de-la-taille-des-objets)
-3. [Statistiques des Tables](#3-statistiques-des-tables)
-4. [Statistiques des Colonnes](#4-statistiques-des-colonnes)
-5. [Analyse de la Distribution des Données](#5-analyse-de-la-distribution-des-donn%C3%A9es)
-6. [Analyse de la Fragmentation](#6-analyse-de-la-fragmentation)
-7. [Statistiques du Planificateur](#7-statistiques-du-planificateur)
-8. [Mise en Pratique : Scénarios d'Analyse](#8-mise-en-pratique--sc%C3%A9narios-danalyse)
-9. [Maintenance des Statistiques](#9-maintenance-des-statistiques)
+1. [Introduction à l'Analyse PostgreSQL](#1-introduction-%C3%A0-lanalyse-postgresql)  
+2. [Analyse de la Taille des Objets](#2-analyse-de-la-taille-des-objets)  
+3. [Statistiques des Tables](#3-statistiques-des-tables)  
+4. [Statistiques des Colonnes](#4-statistiques-des-colonnes)  
+5. [Analyse de la Distribution des Données](#5-analyse-de-la-distribution-des-donn%C3%A9es)  
+6. [Analyse de la Fragmentation](#6-analyse-de-la-fragmentation)  
+7. [Statistiques du Planificateur](#7-statistiques-du-planificateur)  
+8. [Mise en Pratique : Scénarios d'Analyse](#8-mise-en-pratique--sc%C3%A9narios-danalyse)  
+9. [Maintenance des Statistiques](#9-maintenance-des-statistiques)  
 10. [Bonnes Pratiques](#10-bonnes-pratiques)
 
 ---
@@ -58,10 +58,10 @@ Mesure l'**espace disque** occupé par vos objets PostgreSQL :
 - Bases de données complètes
 
 **Unités courantes** :
-- **Bytes** : Unité de base
-- **KB** (Kilobytes) : 1024 bytes
-- **MB** (Megabytes) : 1024 KB
-- **GB** (Gigabytes) : 1024 MB
+- **Bytes** : Unité de base  
+- **KB** (Kilobytes) : 1024 bytes  
+- **MB** (Megabytes) : 1024 KB  
+- **GB** (Gigabytes) : 1024 MB  
 - **TB** (Terabytes) : 1024 GB
 
 #### Analyse Statistique (Statistical Analysis)
@@ -143,9 +143,9 @@ ORDER BY
 ```
 database_name | size    | size_bytes
 --------------+---------+-------------
-production    | 450 GB  | 483183820800
-staging       | 125 GB  | 134217728000
-development   | 15 GB   | 16106127360
+production    | 450 GB  | 483183820800  
+staging       | 125 GB  | 134217728000  
+development   | 15 GB   | 16106127360  
 ```
 
 ### 2.2. Taille des Tables (Top 20)
@@ -174,9 +174,9 @@ LIMIT 20;
 
 **Colonnes importantes** :
 
-- **total_size** : Taille complète (table + index + TOAST)
-- **table_size** : Données de la table uniquement
-- **indexes_size** : Tous les index combinés
+- **total_size** : Taille complète (table + index + TOAST)  
+- **table_size** : Données de la table uniquement  
+- **indexes_size** : Tous les index combinés  
 - **toast_size** : Données TOAST (colonnes larges externalisées)
 
 **Analyse** :
@@ -189,9 +189,9 @@ LIMIT 20;
 ```
 tablename | total_size | table_size | indexes_size | toast_size
 ----------+------------+------------+--------------+-----------
-orders    | 45 GB      | 25 GB      | 18 GB        | 2 GB
-logs      | 120 GB     | 115 GB     | 5 GB         | 0 bytes
-users     | 8 GB       | 3 GB       | 4 GB         | 1 GB
+orders    | 45 GB      | 25 GB      | 18 GB        | 2 GB  
+logs      | 120 GB     | 115 GB     | 5 GB         | 0 bytes  
+users     | 8 GB       | 3 GB       | 4 GB         | 1 GB  
 ```
 
 ### 2.3. Répartition Taille Table vs Index
@@ -235,9 +235,9 @@ LIMIT 20;
 ```
 tablename | table_size | indexes_size | index_ratio_pct | index_count
 ----------+------------+--------------+-----------------+------------
-products  | 500 MB     | 2 GB         | 400.00          | 12
-orders    | 25 GB      | 18 GB        | 72.00           | 8
-logs      | 115 GB     | 5 GB         | 4.35            | 2
+products  | 500 MB     | 2 GB         | 400.00          | 12  
+orders    | 25 GB      | 18 GB        | 72.00           | 8  
+logs      | 115 GB     | 5 GB         | 4.35            | 2  
 ```
 
 → La table `products` a un ratio de **400%** : Révisez vos index !
@@ -266,8 +266,8 @@ ORDER BY
 
 **Analyse** :
 
-- **Gros index avec idx_scan = 0** : Index inutilisé, envisagez la suppression
-- **Petit index avec idx_scan élevé** : Index très utile, à conserver
+- **Gros index avec idx_scan = 0** : Index inutilisé, envisagez la suppression  
+- **Petit index avec idx_scan élevé** : Index très utile, à conserver  
 - **Plusieurs gros index** : Vérifiez s'il n'y a pas de redondance
 
 ### 2.5. Croissance des Tables dans le Temps
@@ -357,9 +357,9 @@ ORDER BY
 ```
 schemaname | table_count | total_size
 -----------+-------------+-----------
-public     | 45          | 350 GB
-analytics  | 12          | 120 GB
-staging    | 30          | 25 GB
+public     | 45          | 350 GB  
+analytics  | 12          | 120 GB  
+staging    | 30          | 25 GB  
 ```
 
 ### 2.7. Espace Disque Disponible
@@ -425,16 +425,16 @@ LIMIT 20;
 
 **Colonnes clés** :
 
-- **n_live_tup** : Nombre de lignes actives (estimation)
-- **n_dead_tup** : Nombre de lignes mortes (bloat potentiel)
-- **seq_scan** : Nombre de scans séquentiels (peut indiquer besoin d'index)
-- **idx_scan** : Nombre de scans d'index (bonne utilisation)
+- **n_live_tup** : Nombre de lignes actives (estimation)  
+- **n_dead_tup** : Nombre de lignes mortes (bloat potentiel)  
+- **seq_scan** : Nombre de scans séquentiels (peut indiquer besoin d'index)  
+- **idx_scan** : Nombre de scans d'index (bonne utilisation)  
 - **n_tup_ins/upd/del** : Activité d'écriture
 
 **Analyse** :
 
-- **dead_pct > 20%** : Besoin de VACUUM
-- **seq_scan élevé sur grosse table** : Manque d'index
+- **dead_pct > 20%** : Besoin de VACUUM  
+- **seq_scan élevé sur grosse table** : Manque d'index  
 - **last_autovacuum NULL** : Table jamais nettoyée (problème)
 
 ### 3.2. Tables les Plus Actives (Lectures)
@@ -464,8 +464,8 @@ LIMIT 20;
 
 **Analyse** :
 
-- **index_usage_pct < 50%** sur grosse table : Créez des index
-- **seq_tup_read >> n_live_tup** : Scans séquentiels multiples, optimisez
+- **index_usage_pct < 50%** sur grosse table : Créez des index  
+- **seq_tup_read >> n_live_tup** : Scans séquentiels multiples, optimisez  
 - **Tables très actives** : Candidates au caching applicatif (Redis, Memcached)
 
 ### 3.3. Tables les Plus Actives (Écritures)
@@ -535,9 +535,9 @@ LIMIT 20;
 
 **Analyse** :
 
-- **Append-only** (logs, events) : Pas de suppression, archivage nécessaire
-- **Stable** : INSERT = DELETE, table de taille constante (queue, cache)
-- **Growing** : Croissance continue, planifiez le partitionnement
+- **Append-only** (logs, events) : Pas de suppression, archivage nécessaire  
+- **Stable** : INSERT = DELETE, table de taille constante (queue, cache)  
+- **Growing** : Croissance continue, planifiez le partitionnement  
 - **Shrinking** : Rare, peut indiquer un nettoyage ou une migration
 
 ### 3.5. Statistiques d'I/O par Table
@@ -604,8 +604,8 @@ LIMIT 20;
 
 **Nouveaux compteurs** :
 
-- **vacuum_count** : Nombre de VACUUM manuels
-- **autovacuum_count** : Nombre d'autovacuum exécutés
+- **vacuum_count** : Nombre de VACUUM manuels  
+- **autovacuum_count** : Nombre d'autovacuum exécutés  
 - **analyze_count** / **autoanalyze_count** : Idem pour ANALYZE
 
 **Utilité** : Vérifier que VACUUM/ANALYZE s'exécutent régulièrement.
@@ -641,8 +641,8 @@ ORDER BY
 - **n_distinct** : Nombre de valeurs uniques estimé
   - Valeur positive : Nombre absolu
   - Valeur négative : Proportion (ex: -0.5 = 50% des lignes sont uniques)
-- **null_frac** : Proportion de valeurs NULL (0.0 à 1.0)
-- **avg_width** : Taille moyenne de la colonne en bytes
+- **null_frac** : Proportion de valeurs NULL (0.0 à 1.0)  
+- **avg_width** : Taille moyenne de la colonne en bytes  
 - **correlation** : Corrélation entre ordre physique et ordre logique (-1 à 1)
 
 ### 4.2. Cardinalité des Colonnes
@@ -691,11 +691,11 @@ ORDER BY
 ```
 column_name          | estimated_distinct | total_rows | null_percentage | avg_bytes
 ---------------------+--------------------+------------+-----------------+----------
-order_id             | 5000000            | 5000000    | 0.00            | 8
-user_id              | 250000             | 5000000    | 0.00            | 8
-status               | 5                  | 5000000    | 0.00            | 10
-created_at           | 4500000            | 5000000    | 0.00            | 8
-notes                | 3000000            | 5000000    | 45.00           | 120
+order_id             | 5000000            | 5000000    | 0.00            | 8  
+user_id              | 250000             | 5000000    | 0.00            | 8  
+status               | 5                  | 5000000    | 0.00            | 10  
+created_at           | 4500000            | 5000000    | 0.00            | 8  
+notes                | 3000000            | 5000000    | 45.00           | 120  
 ```
 
 ### 4.3. Distribution des Valeurs les Plus Fréquentes
@@ -721,7 +721,7 @@ ORDER BY
 
 **Utilisation** :
 
-- **most_common_vals** : Array des valeurs les plus fréquentes
+- **most_common_vals** : Array des valeurs les plus fréquentes  
 - **most_common_freqs** : Array des fréquences correspondantes (somme = 1.0)
 
 **Exemple** :
@@ -766,13 +766,13 @@ ORDER BY
 
 **Interprétation** :
 
-- **correlation ≈ 1.0** : Les données sont physiquement ordonnées dans l'ordre croissant
-- **correlation ≈ -1.0** : Les données sont physiquement ordonnées dans l'ordre décroissant
+- **correlation ≈ 1.0** : Les données sont physiquement ordonnées dans l'ordre croissant  
+- **correlation ≈ -1.0** : Les données sont physiquement ordonnées dans l'ordre décroissant  
 - **correlation ≈ 0** : Aucune corrélation, données désordonnées
 
 **Impact** :
 
-- **Haute corrélation** : Scans d'index très efficaces (lecture séquentielle)
+- **Haute corrélation** : Scans d'index très efficaces (lecture séquentielle)  
 - **Basse corrélation** : Scans d'index avec beaucoup de random I/O
 
 **Solution pour améliorer** :
@@ -881,8 +881,8 @@ ORDER BY
 
 **Analyse** :
 
-- **Distribution uniforme** : Bon partitionnement
-- **Quelques partitions très grosses** : Revoir la stratégie de partitionnement
+- **Distribution uniforme** : Bon partitionnement  
+- **Quelques partitions très grosses** : Revoir la stratégie de partitionnement  
 - **Beaucoup de petites partitions** : Overhead inutile
 
 ### 5.2. Distribution Temporelle des Données
@@ -947,10 +947,10 @@ ORDER BY
 ```
 status      | row_count | percentage | estimated_size
 ------------+-----------+------------+---------------
-pending     | 2500000   | 50.00      | 23 MB
-shipped     | 1500000   | 30.00      | 14 MB
-delivered   | 900000    | 18.00      | 8 MB
-cancelled   | 100000    | 2.00       | 1 MB
+pending     | 2500000   | 50.00      | 23 MB  
+shipped     | 1500000   | 30.00      | 14 MB  
+delivered   | 900000    | 18.00      | 8 MB  
+cancelled   | 100000    | 2.00       | 1 MB  
 ```
 
 ### 5.4. Distribution des Tailles de Lignes
@@ -1000,7 +1000,7 @@ GROUP BY
 
 La **fragmentation** se produit quand :
 
-1. **Fragmentation logique (bloat)** : Espace mort dû aux UPDATE/DELETE
+1. **Fragmentation logique (bloat)** : Espace mort dû aux UPDATE/DELETE  
 2. **Fragmentation physique** : Pages partiellement remplies
 
 **Conséquences** :
@@ -1024,20 +1024,20 @@ SELECT * FROM pgstattuple('orders');
 **Résultat** :
 
 ```
-table_len          | 26843545600   -- Taille totale en bytes
-tuple_count        | 5000000       -- Nombre de lignes vivantes
-tuple_len          | 20000000000   -- Espace occupé par les tuples
-tuple_percent      | 74.55         -- % d'espace utile
-dead_tuple_count   | 500000        -- Lignes mortes
-dead_tuple_len     | 2000000000    -- Espace mort
-dead_tuple_percent | 7.46          -- % de bloat
-free_space         | 4843545600    -- Espace libre dans les pages
-free_percent       | 18.05         -- % d'espace libre
+table_len          | 26843545600   -- Taille totale en bytes  
+tuple_count        | 5000000       -- Nombre de lignes vivantes  
+tuple_len          | 20000000000   -- Espace occupé par les tuples  
+tuple_percent      | 74.55         -- % d'espace utile  
+dead_tuple_count   | 500000        -- Lignes mortes  
+dead_tuple_len     | 2000000000    -- Espace mort  
+dead_tuple_percent | 7.46          -- % de bloat  
+free_space         | 4843545600    -- Espace libre dans les pages  
+free_percent       | 18.05         -- % d'espace libre  
 ```
 
 **Analyse** :
 
-- **dead_tuple_percent > 20%** : Beaucoup de bloat, VACUUM recommandé
+- **dead_tuple_percent > 20%** : Beaucoup de bloat, VACUUM recommandé  
 - **free_percent > 20%** : Pages partiellement remplies, VACUUM FULL ou pg_repack
 
 ### 6.3. Estimer le Bloat Sans pgstattuple
@@ -1082,21 +1082,21 @@ FROM
 **Résultat** :
 
 ```
-version            | 4
-tree_level         | 3              -- Profondeur de l'arbre B-Tree
-index_size         | 8960000        -- Taille en bytes
-root_block_no      | 412
-internal_pages     | 125            -- Pages internes
-leaf_pages         | 2000           -- Pages feuilles
-empty_pages        | 50             -- Pages vides (fragmentation)
-deleted_pages      | 20             -- Pages supprimées
-avg_leaf_density   | 67.45          -- Densité moyenne des feuilles (%)
-leaf_fragmentation | 15.23          -- % de fragmentation
+version            | 4  
+tree_level         | 3              -- Profondeur de l'arbre B-Tree  
+index_size         | 8960000        -- Taille en bytes  
+root_block_no      | 412  
+internal_pages     | 125            -- Pages internes  
+leaf_pages         | 2000           -- Pages feuilles  
+empty_pages        | 50             -- Pages vides (fragmentation)  
+deleted_pages      | 20             -- Pages supprimées  
+avg_leaf_density   | 67.45          -- Densité moyenne des feuilles (%)  
+leaf_fragmentation | 15.23          -- % de fragmentation  
 ```
 
 **Analyse** :
 
-- **leaf_fragmentation > 30%** : Index fragmenté, REINDEX recommandé
+- **leaf_fragmentation > 30%** : Index fragmenté, REINDEX recommandé  
 - **avg_leaf_density < 60%** : Pages peu remplies
 
 **Solution** :
@@ -1153,13 +1153,13 @@ LIMIT 20;
 Le planificateur utilise les statistiques pour estimer le nombre de lignes :
 
 ```sql
-EXPLAIN ANALYZE
-SELECT * FROM orders WHERE status = 'pending';
+EXPLAIN ANALYZE  
+SELECT * FROM orders WHERE status = 'pending';  
 ```
 
 **Comparer** :
 
-- **rows=X** (estimation du planificateur)
+- **rows=X** (estimation du planificateur)  
 - **actual rows=Y** (résultat réel)
 
 **Si |X - Y| / Y > 0.5** : Estimation mauvaise, réexécutez ANALYZE.
@@ -1195,7 +1195,7 @@ LIMIT 20;
 
 **Analyse** :
 
-- **staleness_pct > 10%** : Statistiques obsolètes
+- **staleness_pct > 10%** : Statistiques obsolètes  
 - **last_autoanalyze très ancien** : Augmentez la fréquence d'autovacuum
 
 **Solution** :
@@ -1212,9 +1212,9 @@ PostgreSQL 10+ supporte les statistiques multi-colonnes :
 
 ```sql
 -- Créer des statistiques étendues
-CREATE STATISTICS stats_orders_user_status
-ON user_id, status
-FROM orders;
+CREATE STATISTICS stats_orders_user_status  
+ON user_id, status  
+FROM orders;  
 
 -- Mettre à jour
 ANALYZE orders;
@@ -1369,17 +1369,17 @@ stats_health AS (
 SELECT
     'Database Size' AS metric,
     total_size AS value
-FROM db_overview
-UNION ALL
-SELECT 'Tables', table_count::text FROM db_overview
-UNION ALL
-SELECT 'Indexes', index_count::text FROM db_overview
-UNION ALL
-SELECT 'Cache Hit Ratio', cache_hit_ratio::text || '%' FROM cache_health
-UNION ALL
-SELECT 'Tables Needing VACUUM', tables_needing_vacuum::text FROM bloat_summary
-UNION ALL
-SELECT 'Tables Needing ANALYZE', tables_needing_analyze::text FROM stats_health;
+FROM db_overview  
+UNION ALL  
+SELECT 'Tables', table_count::text FROM db_overview  
+UNION ALL  
+SELECT 'Indexes', index_count::text FROM db_overview  
+UNION ALL  
+SELECT 'Cache Hit Ratio', cache_hit_ratio::text || '%' FROM cache_health  
+UNION ALL  
+SELECT 'Tables Needing VACUUM', tables_needing_vacuum::text FROM bloat_summary  
+UNION ALL  
+SELECT 'Tables Needing ANALYZE', tables_needing_analyze::text FROM stats_health;  
 ```
 
 ### Scénario 4 : Comparer Deux Environnements
@@ -1440,8 +1440,8 @@ Dans `postgresql.conf` :
 autovacuum = on
 
 # Seuil de déclenchement pour ANALYZE
-autovacuum_analyze_threshold = 50       # Minimum 50 lignes modifiées
-autovacuum_analyze_scale_factor = 0.1   # + 10% de la table
+autovacuum_analyze_threshold = 50       # Minimum 50 lignes modifiées  
+autovacuum_analyze_scale_factor = 0.1   # + 10% de la table  
 
 # Exemple : Table de 1M lignes
 # ANALYZE se déclenche après : 50 + (1M * 0.1) = 100,050 modifications
@@ -1458,9 +1458,9 @@ Pour les tables où les statistiques sont critiques :
 ALTER TABLE ma_table SET (autovacuum_analyze_scale_factor = 0.05);
 
 -- Ou manuellement avec target plus élevé
-SET default_statistics_target = 1000;  -- Défaut : 100
-ANALYZE ma_table;
-RESET default_statistics_target;
+SET default_statistics_target = 1000;  -- Défaut : 100  
+ANALYZE ma_table;  
+RESET default_statistics_target;  
 ```
 
 ### 9.4. Monitoring de l'Autoanalyze
@@ -1514,28 +1514,28 @@ LIMIT 20;
 #!/bin/bash
 # daily_stats_report.sh
 
-PGDATABASE="ma_base"
-OUTPUT_DIR="/var/reports/postgres"
-DATE=$(date +%Y%m%d)
+PGDATABASE="ma_base"  
+OUTPUT_DIR="/var/reports/postgres"  
+DATE=$(date +%Y%m%d)  
 
 # Taille des tables
-psql $PGDATABASE -c "
-SELECT schemaname, tablename,
+psql $PGDATABASE -c "  
+SELECT schemaname, tablename,  
        pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename)) AS size
-FROM pg_tables
-WHERE schemaname = 'public'
-ORDER BY pg_total_relation_size(schemaname||'.'||tablename) DESC
-LIMIT 20;
+FROM pg_tables  
+WHERE schemaname = 'public'  
+ORDER BY pg_total_relation_size(schemaname||'.'||tablename) DESC  
+LIMIT 20;  
 " > "$OUTPUT_DIR/table_sizes_$DATE.txt"
 
 # Bloat
-psql $PGDATABASE -c "
-SELECT schemaname, relname, n_live_tup, n_dead_tup,
+psql $PGDATABASE -c "  
+SELECT schemaname, relname, n_live_tup, n_dead_tup,  
        round(100.0 * n_dead_tup / NULLIF(n_live_tup, 0), 2) AS bloat_pct
-FROM pg_stat_user_tables
-WHERE n_dead_tup > 0
-ORDER BY n_dead_tup DESC
-LIMIT 20;
+FROM pg_stat_user_tables  
+WHERE n_dead_tup > 0  
+ORDER BY n_dead_tup DESC  
+LIMIT 20;  
 " > "$OUTPUT_DIR/bloat_$DATE.txt"
 ```
 
@@ -1569,23 +1569,23 @@ LIMIT 20;
 **Template** :
 
 ```
-Date: 2025-11-21
-Table: orders
-Action: VACUUM FULL
-Before: 45 GB (20% bloat)
-After: 36 GB (2% bloat)
-Downtime: 30 minutes
-Impact: 20% faster queries
+Date: 2025-11-21  
+Table: orders  
+Action: VACUUM FULL  
+Before: 45 GB (20% bloat)  
+After: 36 GB (2% bloat)  
+Downtime: 30 minutes  
+Impact: 20% faster queries  
 ```
 
 ### 10.5. Tests Avant Modifications
 
 **Avant tout changement majeur** :
 
-1. **Backup** : Toujours
-2. **Test en staging** : Valider l'impact
-3. **Mesure baseline** : Statistiques avant
-4. **Mesure post-change** : Statistiques après
+1. **Backup** : Toujours  
+2. **Test en staging** : Valider l'impact  
+3. **Mesure baseline** : Statistiques avant  
+4. **Mesure post-change** : Statistiques après  
 5. **Rollback plan** : Au cas où
 
 ### 10.6. Utilisation de Vues de Monitoring
@@ -1594,22 +1594,22 @@ Créez des vues pour simplifier l'analyse :
 
 ```sql
 -- Vue : Santé générale de la base
-CREATE VIEW monitoring.database_health AS
-SELECT
+CREATE VIEW monitoring.database_health AS  
+SELECT  
     'Total Size' AS metric,
     pg_size_pretty(pg_database_size(current_database())) AS value
-UNION ALL
-SELECT
+UNION ALL  
+SELECT  
     'Cache Hit Ratio',
     round(100.0 * blks_hit / NULLIF(blks_hit + blks_read, 0), 2)::text || '%'
-FROM pg_stat_database
-WHERE datname = current_database()
-UNION ALL
-SELECT
+FROM pg_stat_database  
+WHERE datname = current_database()  
+UNION ALL  
+SELECT  
     'Tables Needing VACUUM',
     count(*)::text
-FROM pg_stat_user_tables
-WHERE n_dead_tup > n_live_tup * 0.2;
+FROM pg_stat_user_tables  
+WHERE n_dead_tup > n_live_tup * 0.2;  
 
 -- Utilisation simple
 SELECT * FROM monitoring.database_health;
@@ -1635,10 +1635,10 @@ scrape_configs:
 
 **Points essentiels à former** :
 
-1. Lecture des statistiques de base (taille, bloat)
-2. Interprétation d'EXPLAIN ANALYZE
-3. Quand et comment exécuter VACUUM/ANALYZE
-4. Utilisation de pg_stat_statements
+1. Lecture des statistiques de base (taille, bloat)  
+2. Interprétation d'EXPLAIN ANALYZE  
+3. Quand et comment exécuter VACUUM/ANALYZE  
+4. Utilisation de pg_stat_statements  
 5. Procédures d'urgence (table saturée, stats obsolètes)
 
 ---
@@ -1647,37 +1647,37 @@ scrape_configs:
 
 ### Analyse de Taille
 
-- ✅ **Fonctions natives** : pg_relation_size, pg_total_relation_size, pg_database_size
-- ✅ **Top 20 tables** : Surveiller régulièrement (section 2.2)
-- ✅ **Ratio table/index** : Détecter sur-indexation (section 2.3)
+- ✅ **Fonctions natives** : pg_relation_size, pg_total_relation_size, pg_database_size  
+- ✅ **Top 20 tables** : Surveiller régulièrement (section 2.2)  
+- ✅ **Ratio table/index** : Détecter sur-indexation (section 2.3)  
 - ✅ **Tracking croissance** : Table historique pour prédire (section 2.5)
 
 ### Statistiques de Tables
 
-- ✅ **pg_stat_user_tables** : Lignes live/dead, scans, I/O
-- ✅ **PostgreSQL 18** : Nouveaux compteurs vacuum_count et analyze_count
-- ✅ **Tables actives** : Identifier lectures et écritures (sections 3.2 et 3.3)
+- ✅ **pg_stat_user_tables** : Lignes live/dead, scans, I/O  
+- ✅ **PostgreSQL 18** : Nouveaux compteurs vacuum_count et analyze_count  
+- ✅ **Tables actives** : Identifier lectures et écritures (sections 3.2 et 3.3)  
 - ✅ **Croissance pattern** : Append-only vs Stable vs Growing (section 3.4)
 
 ### Statistiques de Colonnes
 
-- ✅ **pg_stats** : Cardinalité, NULL %, distribution
-- ✅ **Corrélation** : Ordre physique vs logique (section 4.4)
-- ✅ **MCV** : Valeurs les plus fréquentes (section 4.3)
+- ✅ **pg_stats** : Cardinalité, NULL %, distribution  
+- ✅ **Corrélation** : Ordre physique vs logique (section 4.4)  
+- ✅ **MCV** : Valeurs les plus fréquentes (section 4.3)  
 - ✅ **Histogrammes** : Distribution pour le planificateur (section 4.6)
 
 ### Fragmentation
 
-- ✅ **pgstattuple** : Mesure précise du bloat
-- ✅ **Estimation rapide** : Via pg_stat_user_tables
-- ✅ **Index** : pgstatindex pour les index B-Tree
+- ✅ **pgstattuple** : Mesure précise du bloat  
+- ✅ **Estimation rapide** : Via pg_stat_user_tables  
+- ✅ **Index** : pgstatindex pour les index B-Tree  
 - ✅ **Solutions** : VACUUM, VACUUM FULL, REINDEX, pg_repack
 
 ### Maintenance
 
-- ✅ **ANALYZE** : Après modifications importantes
-- ✅ **Autoanalyze** : Configuration autovacuum_analyze_*
-- ✅ **Statistiques étendues** : CREATE STATISTICS pour colonnes corrélées
+- ✅ **ANALYZE** : Après modifications importantes  
+- ✅ **Autoanalyze** : Configuration autovacuum_analyze_*  
+- ✅ **Statistiques étendues** : CREATE STATISTICS pour colonnes corrélées  
 - ✅ **Monitoring** : Vérifier last_autoanalyze régulièrement
 
 ---
@@ -1686,29 +1686,29 @@ scrape_configs:
 
 ### Documentation Officielle PostgreSQL
 
-- [Monitoring Database Activity](https://www.postgresql.org/docs/18/monitoring.html)
-- [Statistics Used by the Planner](https://www.postgresql.org/docs/18/planner-stats.html)
-- [Routine Database Maintenance](https://www.postgresql.org/docs/18/maintenance.html)
+- [Monitoring Database Activity](https://www.postgresql.org/docs/18/monitoring.html)  
+- [Statistics Used by the Planner](https://www.postgresql.org/docs/18/planner-stats.html)  
+- [Routine Database Maintenance](https://www.postgresql.org/docs/18/maintenance.html)  
 - [System Catalogs](https://www.postgresql.org/docs/18/catalogs.html)
 
 ### Extensions Recommandées
 
-- **pgstattuple** : Analyse détaillée du bloat
-- **pg_stat_statements** : Tracking des requêtes
-- **pg_repack** : Réorganisation sans verrous
+- **pgstattuple** : Analyse détaillée du bloat  
+- **pg_stat_statements** : Tracking des requêtes  
+- **pg_repack** : Réorganisation sans verrous  
 - **HypoPG** : Test d'index hypothétiques
 
 ### Outils d'Analyse
 
-- **pgAdmin 4** : Interface graphique avec monitoring
-- **pgBadger** : Analyse de logs
-- **pg_activity** : Top-like pour PostgreSQL
+- **pgAdmin 4** : Interface graphique avec monitoring  
+- **pgBadger** : Analyse de logs  
+- **pg_activity** : Top-like pour PostgreSQL  
 - **pgtop** : Monitoring en temps réel
 
 ### Scripts Communautaires
 
-- [check_postgres](https://bucardo.org/check_postgres/) : Scripts Nagios/Icinga
-- [pgDash](https://pgdash.io/) : Monitoring et diagnostics
+- [check_postgres](https://bucardo.org/check_postgres/) : Scripts Nagios/Icinga  
+- [pgDash](https://pgdash.io/) : Monitoring et diagnostics  
 - [Postgres.ai](https://postgres.ai/) : Optimisation automatisée
 
 ### Communautés et Support

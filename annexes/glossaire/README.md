@@ -10,20 +10,20 @@ Bienvenue dans le glossaire des termes techniques de PostgreSQL, conçu spécial
 
 Ce glossaire est destiné à tous ceux qui souhaitent maîtriser PostgreSQL, qu'ils soient :
 
-- **Développeurs débutants** découvrant les bases de données pour la première fois
-- **Développeurs expérimentés** venant d'autres SGBD (MySQL, Oracle, SQL Server)
-- **DevOps et SRE** responsables de l'exploitation et de la maintenance
-- **Data Engineers** travaillant avec PostgreSQL dans leurs pipelines
+- **Développeurs débutants** découvrant les bases de données pour la première fois  
+- **Développeurs expérimentés** venant d'autres SGBD (MySQL, Oracle, SQL Server)  
+- **DevOps et SRE** responsables de l'exploitation et de la maintenance  
+- **Data Engineers** travaillant avec PostgreSQL dans leurs pipelines  
 - **DBAs en formation** souhaitant approfondir leurs connaissances
 
 ### Pourquoi ce glossaire ?
 
 PostgreSQL utilise un vocabulaire technique riche et précis. Maîtriser cette terminologie est essentiel pour :
 
-1. **Comprendre la documentation officielle** sans se sentir submergé
-2. **Communiquer efficacement** avec d'autres professionnels
-3. **Diagnostiquer les problèmes** en comprenant les messages d'erreur et les logs
-4. **Optimiser les performances** en sachant exactement de quoi on parle
+1. **Comprendre la documentation officielle** sans se sentir submergé  
+2. **Communiquer efficacement** avec d'autres professionnels  
+3. **Diagnostiquer les problèmes** en comprenant les messages d'erreur et les logs  
+4. **Optimiser les performances** en sachant exactement de quoi on parle  
 5. **Progresser rapidement** en construisant un socle de connaissances solide
 
 ### Organisation du glossaire
@@ -73,10 +73,10 @@ Guide alphabétique des acronymes et abréviations avec :
 #### 🎯 Approche progressive
 
 **Pour les débutants** :
-1. Commencez par les **Concepts fondamentaux** (ACID, Transaction, MVCC)
-2. Passez à l'**Architecture et stockage** (WAL, TOAST)
-3. Explorez l'**Organisation logique** (Schema, Sequence)
-4. Abordez l'**Optimisation** (Index) quand vous écrivez vos premières requêtes
+1. Commencez par les **Concepts fondamentaux** (ACID, Transaction, MVCC)  
+2. Passez à l'**Architecture et stockage** (WAL, TOAST)  
+3. Explorez l'**Organisation logique** (Schema, Sequence)  
+4. Abordez l'**Optimisation** (Index) quand vous écrivez vos premières requêtes  
 5. Approfondissez la **Concurrence** et la **Maintenance** quand votre application grandit
 
 **Pour les intermédiaires** :
@@ -133,26 +133,26 @@ SELECT * FROM exemple;
 
 Les termes sont annotés pour vous aider à prioriser votre apprentissage :
 
-- 🟢 **DÉBUTANT** : Concept fondamental, à maîtriser en priorité
-- 🟡 **INTERMÉDIAIRE** : Concept important pour le développement quotidien
+- 🟢 **DÉBUTANT** : Concept fondamental, à maîtriser en priorité  
+- 🟡 **INTERMÉDIAIRE** : Concept important pour le développement quotidien  
 - 🔴 **AVANCÉ** : Concept pour l'optimisation et la production
 
 #### Symboles et annotations
 
-- 💡 **Astuce** : Conseil pratique ou bonne pratique
-- ⚠️ **Attention** : Point important ou erreur courante à éviter
-- 🔗 **Voir aussi** : Références croisées vers d'autres termes liés
-- 🆕 **Nouveau en PG 18** : Fonctionnalité introduite dans PostgreSQL 18
+- 💡 **Astuce** : Conseil pratique ou bonne pratique  
+- ⚠️ **Attention** : Point important ou erreur courante à éviter  
+- 🔗 **Voir aussi** : Références croisées vers d'autres termes liés  
+- 🆕 **Nouveau en PG 18** : Fonctionnalité introduite dans PostgreSQL 18  
 - 🏆 **Best Practice** : Recommandation de la communauté
 
 ### Exemples de code
 
 Tous les exemples SQL de ce glossaire sont :
 
-✅ **Testables** : Vous pouvez les copier-coller dans `psql`
-✅ **Commentés** : Chaque ligne importante est expliquée
-✅ **Réalistes** : Inspirés de cas d'usage réels
-✅ **Progressifs** : Du simple au complexe
+✅ **Testables** : Vous pouvez les copier-coller dans `psql`  
+✅ **Commentés** : Chaque ligne importante est expliquée  
+✅ **Réalistes** : Inspirés de cas d'usage réels  
+✅ **Progressifs** : Du simple au complexe  
 ✅ **Compatibles** : Fonctionnent avec PostgreSQL 12+ (sauf mention contraire)
 
 #### Format des exemples
@@ -174,9 +174,9 @@ INSERT INTO exemple (nom) VALUES ('Test');
 
 Le glossaire utilise un système de références croisées pour vous aider à naviguer entre les concepts liés :
 
-- **🔗 Voir aussi** : Termes directement liés à approfondir
-- **📖 Prérequis** : Concepts à maîtriser avant celui-ci
-- **🎓 Approfondissement** : Concepts avancés qui en découlent
+- **🔗 Voir aussi** : Termes directement liés à approfondir  
+- **📖 Prérequis** : Concepts à maîtriser avant celui-ci  
+- **🎓 Approfondissement** : Concepts avancés qui en découlent  
 - **⚡ En pratique** : Sections du tutoriel principal utilisant ce terme
 
 ### Glossaire vivant et évolutif
@@ -228,27 +228,27 @@ Ce glossaire est conçu pour être utilisé en complément de :
 Si vous découvrez PostgreSQL, ne vous laissez pas impressionner par la quantité de termes ! Voici une roadmap suggérée :
 
 #### Semaine 1 : Les Bases
-- ✅ SQL, DDL, DML (les langages)
-- ✅ Table, Schema, Database (l'organisation)
-- ✅ PK, FK (les contraintes)
+- ✅ SQL, DDL, DML (les langages)  
+- ✅ Table, Schema, Database (l'organisation)  
+- ✅ PK, FK (les contraintes)  
 - ✅ Transaction, ACID (la fiabilité)
 
 #### Semaine 2-3 : Premiers Pas
-- ✅ SELECT, WHERE, JOIN (les requêtes)
-- ✅ Index, B-Tree (les performances)
-- ✅ MVCC (la concurrence)
+- ✅ SELECT, WHERE, JOIN (les requêtes)  
+- ✅ Index, B-Tree (les performances)  
+- ✅ MVCC (la concurrence)  
 - ✅ Backend, Postmaster (l'architecture)
 
 #### Semaine 4-6 : Approfondissement
-- ✅ CTE, Window Functions (SQL avancé)
-- ✅ GIN, GiST (index spécialisés)
-- ✅ JSONB, Array (types avancés)
+- ✅ CTE, Window Functions (SQL avancé)  
+- ✅ GIN, GiST (index spécialisés)  
+- ✅ JSONB, Array (types avancés)  
 - ✅ VACUUM, ANALYZE (la maintenance)
 
 #### Mois 2-3 : Production
-- ✅ WAL, Checkpoint (la persistance)
-- ✅ Streaming Replication (la disponibilité)
-- ✅ EXPLAIN, pg_stat_statements (l'optimisation)
+- ✅ WAL, Checkpoint (la persistance)  
+- ✅ Streaming Replication (la disponibilité)  
+- ✅ EXPLAIN, pg_stat_statements (l'optimisation)  
 - ✅ Connection Pooling, Prepared Statements (les performances)
 
 **N'oubliez pas** : La maîtrise vient avec la pratique. Expérimentez, cassez, réparez, et recommencez !
@@ -292,41 +292,41 @@ Si vous découvrez PostgreSQL, ne vous laissez pas impressionner par la quantit�
 ### Navigation recommandée
 
 #### Pour une lecture complète
-1. Lisez cette introduction
-2. Parcourez le **Document 1** (Termes essentiels) dans l'ordre
+1. Lisez cette introduction  
+2. Parcourez le **Document 1** (Termes essentiels) dans l'ordre  
 3. Gardez le **Document 2** (Acronymes) comme référence rapide
 
 #### Pour une consultation ponctuelle
-1. Identifiez votre besoin (concept ou acronyme)
-2. Consultez directement la section correspondante
+1. Identifiez votre besoin (concept ou acronyme)  
+2. Consultez directement la section correspondante  
 3. Suivez les références croisées pour approfondir
 
 #### Pour une révision
-1. Parcourez les titres de sections
-2. Testez vos connaissances en essayant de définir chaque terme
+1. Parcourez les titres de sections  
+2. Testez vos connaissances en essayant de définir chaque terme  
 3. Vérifiez votre compréhension avec les définitions
 
 ### Légende des icônes et marqueurs
 
 #### Niveaux de difficulté
-- 🟢 **Essentiel** : À maîtriser absolument
-- 🟡 **Important** : Nécessaire pour un usage quotidien
+- 🟢 **Essentiel** : À maîtriser absolument  
+- 🟡 **Important** : Nécessaire pour un usage quotidien  
 - 🔴 **Expert** : Pour l'optimisation et la production avancée
 
 #### Indicateurs de contenu
-- 💡 Astuce pratique
-- ⚠️ Attention / Point important
-- 🔗 Voir aussi / Référence croisée
-- 🆕 Nouveau dans PostgreSQL 18
-- 🏆 Best Practice / Bonne pratique
-- 📖 Prérequis à connaître
-- 🎓 Pour aller plus loin
-- ⚡ Application pratique
-- 🐘 Spécificité PostgreSQL
-- 🔧 Configuration / Paramètre
-- 📊 Performance / Optimisation
-- 🔐 Sécurité
-- 🌐 Cloud / Distributed
+- 💡 Astuce pratique  
+- ⚠️ Attention / Point important  
+- 🔗 Voir aussi / Référence croisée  
+- 🆕 Nouveau dans PostgreSQL 18  
+- 🏆 Best Practice / Bonne pratique  
+- 📖 Prérequis à connaître  
+- 🎓 Pour aller plus loin  
+- ⚡ Application pratique  
+- 🐘 Spécificité PostgreSQL  
+- 🔧 Configuration / Paramètre  
+- 📊 Performance / Optimisation  
+- 🔐 Sécurité  
+- 🌐 Cloud / Distributed  
 - 🎯 Cas d'usage typique
 
 ### À propos des exemples SQL
@@ -345,9 +345,9 @@ SELECT
     c.nom,
     c.email,
     COUNT(o.id) AS nb_commandes
-FROM clients c
-LEFT JOIN commandes o ON c.id = o.client_id
-GROUP BY c.id, c.nom, c.email;
+FROM clients c  
+LEFT JOIN commandes o ON c.id = o.client_id  
+GROUP BY c.id, c.nom, c.email;  
 
 -- Commentaires : Pour expliquer
 -- Ceci est un commentaire sur une ligne

@@ -14,9 +14,9 @@ Migrer vers PostgreSQL 18 signifie passer d'une version plus ancienne (comme Pos
 
 PostgreSQL 18 maintient une **excellente compatibilité** avec les versions précédentes. Cela signifie :
 
-- ✅ **Vos applications fonctionneront** sans modification dans 95% des cas
-- ✅ **Votre code SQL existant** continuera à fonctionner
-- ✅ **Vos scripts et outils** resteront opérationnels
+- ✅ **Vos applications fonctionneront** sans modification dans 95% des cas  
+- ✅ **Votre code SQL existant** continuera à fonctionner  
+- ✅ **Vos scripts et outils** resteront opérationnels  
 - ✅ **Vos extensions** seront généralement compatibles
 
 ---
@@ -43,8 +43,8 @@ PostgreSQL 18 maintient une **excellente compatibilité** avec les versions pré
 Les checksums sont comme des "codes de vérification" qui permettent à PostgreSQL de détecter si vos données ont été corrompues.
 
 **Impact sur la migration :**
-- ✅ **Nouvelles installations** : Activés automatiquement
-- ⚠️ **Migration depuis version antérieure** : Les checksums ne sont PAS activés automatiquement sur les bases migrées
+- ✅ **Nouvelles installations** : Activés automatiquement  
+- ⚠️ **Migration depuis version antérieure** : Les checksums ne sont PAS activés automatiquement sur les bases migrées  
 - 🔧 **Pour les activer après migration** : Nécessite une reconstruction complète (downtime)
 
 **Exemple concret :**
@@ -70,15 +70,15 @@ SHOW data_checksums;
 PostgreSQL 18 introduit un nouveau mode d'accès aux données sur disque (I/O asynchrone) beaucoup plus rapide.
 
 **Impact sur la migration :**
-- ✅ **Activation automatique** si votre système d'exploitation le supporte (Linux récent, Windows récent)
-- 🔧 **Nouveau paramètre** : `io_method` (valeurs : 'sync', 'async')
+- ✅ **Activation automatique** si votre système d'exploitation le supporte (Linux récent, Windows récent)  
+- 🔧 **Nouveau paramètre** : `io_method` (valeurs : `'sync'`, `'worker'`, `'io_uring'`)  
 - ⚡ **Performances** : Gain de 2-3× sur les opérations disque
 
 **Exemple de configuration :**
 ```sql
 -- Vérifier le mode I/O actuel
 SHOW io_method;
--- Résultat : 'async' (nouveau, rapide) ou 'sync' (ancien, compatible)
+-- Résultat : 'worker' (défaut PG 18) ou 'io_uring' (Linux) ou 'sync'
 
 -- Si besoin, forcer le mode synchrone (pour compatibilité)
 -- Dans postgresql.conf :
@@ -86,8 +86,9 @@ io_method = 'sync'
 ```
 
 **Recommandation :**
-- ✅ **Par défaut** : Laisser en mode 'async' (automatique)
-- ⚠️ **Problème de compatibilité** : Revenir en mode 'sync'
+- ✅ **Par défaut** : Laisser `'worker'` (défaut, multi-plateforme)  
+- 🚀 **Linux** : Passer à `'io_uring'` pour performances maximales (kernel 5.1+)  
+- ⚠️ **Problème de compatibilité** : Revenir en mode `'sync'`  
 - 📊 **Mesurer** : Comparer les performances avant/après migration
 
 ---
@@ -98,8 +99,8 @@ io_method = 'sync'
 MD5 est une ancienne méthode de chiffrement des mots de passe, moins sécurisée. PostgreSQL pousse vers SCRAM-SHA-256 (méthode moderne).
 
 **Impact sur la migration :**
-- ⚠️ **MD5 fonctionne encore** mais affiche des avertissements dans les logs
-- 🔒 **SCRAM-SHA-256** est maintenant le standard recommandé
+- ⚠️ **MD5 fonctionne encore** mais affiche des avertissements dans les logs  
+- 🔒 **SCRAM-SHA-256** est maintenant le standard recommandé  
 - 📝 **Fichier pg_hba.conf** : Doit être mis à jour
 
 **Migration progressive :**
@@ -115,16 +116,16 @@ host    all    all    0.0.0.0/0    scram-sha-256,md5
 ```
 
 **Plan de migration :**
-1. **Accepter les deux méthodes** (scram-sha-256,md5)
-2. **Migrer les utilisateurs un par un** vers SCRAM
+1. **Accepter les deux méthodes** (scram-sha-256,md5)  
+2. **Migrer les utilisateurs un par un** vers SCRAM  
 3. **Une fois tous migrés** : Retirer md5 de la configuration
 
 **Commandes de migration des utilisateurs :**
 ```sql
 -- Vérifier la méthode actuelle d'un utilisateur
-SELECT rolname, rolpassword
-FROM pg_authid
-WHERE rolname = 'mon_utilisateur';
+SELECT rolname, rolpassword  
+FROM pg_authid  
+WHERE rolname = 'mon_utilisateur';  
 -- Si commence par "md5" : Ancien format
 -- Si commence par "SCRAM-SHA-256" : Nouveau format
 
@@ -140,8 +141,8 @@ ALTER USER mon_utilisateur WITH PASSWORD 'nouveau_mot_de_passe';
 L'autovacuum est un processus de nettoyage automatique qui récupère l'espace et maintient les performances.
 
 **Impact sur la migration :**
-- ⚡ **Plus de workers** : PostgreSQL 18 peut lancer plus de processus de nettoyage en parallèle
-- 📊 **Ajustement dynamique** : Le système s'adapte automatiquement à la charge
+- ⚡ **Plus de workers** : PostgreSQL 18 peut lancer plus de processus de nettoyage en parallèle  
+- 📊 **Ajustement dynamique** : Le système s'adapte automatiquement à la charge  
 - 💻 **Consommation CPU** : Peut augmenter légèrement après migration
 
 **Nouveau paramètre :**
@@ -155,8 +156,8 @@ autovacuum_vacuum_max_threshold = 2000000000  -- 2 milliards de tuples
 ```
 
 **Recommandation :**
-- ✅ **Laisser les valeurs par défaut** pour la plupart des cas
-- 📊 **Surveiller** la consommation CPU après migration
+- ✅ **Laisser les valeurs par défaut** pour la plupart des cas  
+- 📊 **Surveiller** la consommation CPU après migration  
 - 🔧 **Ajuster si nécessaire** pour les systèmes à ressources limitées
 
 ---
@@ -167,15 +168,15 @@ autovacuum_vacuum_max_threshold = 2000000000  -- 2 milliards de tuples
 Les statistiques aident PostgreSQL à choisir le meilleur plan d'exécution pour vos requêtes.
 
 **Impact sur la migration :**
-- ✅ **Grande amélioration** : Avant PG 18, ces statistiques étaient perdues lors d'un upgrade
-- ⚡ **Performances immédiates** : Plus besoin d'attendre que le système recalcule tout
+- ✅ **Grande amélioration** : Avant PG 18, ces statistiques étaient perdues lors d'un upgrade  
+- ⚡ **Performances immédiates** : Plus besoin d'attendre que le système recalcule tout  
 - 🎯 **Plans optimaux** dès le démarrage post-migration
 
 **Avant PostgreSQL 18 :**
 ```
-Jour 1 (migration) : Plans d'exécution sous-optimaux ❌
-Jour 2-7 : Amélioration progressive ⚠️
-Jour 8+ : Performances normales ✅
+Jour 1 (migration) : Plans d'exécution sous-optimaux ❌  
+Jour 2-7 : Amélioration progressive ⚠️  
+Jour 8+ : Performances normales ✅  
 ```
 
 **Avec PostgreSQL 18 :**
@@ -195,12 +196,12 @@ Jour 1 (migration) : Plans d'exécution optimaux immédiatement ✅
 Utiliser l'outil `pg_upgrade` pour mettre à jour votre instance existante.
 
 **Avantages :**
-- ✅ Rapide (minutes à heures au lieu de jours)
-- ✅ Préservation des statistiques (nouveau dans PG18)
+- ✅ Rapide (minutes à heures au lieu de jours)  
+- ✅ Préservation des statistiques (nouveau dans PG18)  
 - ✅ Option `--swap` pour migration quasi-instantanée
 
 **Inconvénients :**
-- ⚠️ Nécessite un arrêt de service (downtime)
+- ⚠️ Nécessite un arrêt de service (downtime)  
 - ⚠️ Nécessite de l'espace disque (2× la taille de la base dans certains cas)
 
 **Temps d'arrêt estimé :**
@@ -243,13 +244,13 @@ pg_upgrade \
 Exporter toutes les données avec `pg_dump` puis les réimporter dans PostgreSQL 18.
 
 **Avantages :**
-- ✅ Très sûr (pas de risque de corruption)
-- ✅ Permet de "nettoyer" la base (réorganisation)
+- ✅ Très sûr (pas de risque de corruption)  
+- ✅ Permet de "nettoyer" la base (réorganisation)  
 - ✅ Pas de dépendance entre versions
 
 **Inconvénients :**
-- ⚠️ Très long pour les grosses bases
-- ⚠️ Downtime important
+- ⚠️ Très long pour les grosses bases  
+- ⚠️ Downtime important  
 - ⚠️ Nécessite beaucoup d'espace disque
 
 **Temps d'arrêt estimé :**
@@ -275,13 +276,13 @@ psql -h nouveau_serveur < backup_complet.sql
 Créer un serveur PostgreSQL 18 et y répliquer les données en continu, puis basculer.
 
 **Avantages :**
-- ✅ Zéro downtime (ou quelques secondes)
-- ✅ Possibilité de revenir en arrière facilement
+- ✅ Zéro downtime (ou quelques secondes)  
+- ✅ Possibilité de revenir en arrière facilement  
 - ✅ Test de la nouvelle version en production
 
 **Inconvénients :**
-- ⚠️ Configuration complexe
-- ⚠️ Nécessite PostgreSQL 10+ comme source
+- ⚠️ Configuration complexe  
+- ⚠️ Nécessite PostgreSQL 10+ comme source  
 - ⚠️ Certaines limitations (séquences, DDL)
 
 **Temps d'arrêt estimé :**
@@ -309,26 +310,26 @@ Avant de migrer, assurez-vous de vérifier ces points :
 
 ### ✅ Préparation Technique
 
-- [ ] **Sauvegarde complète** : Avoir une sauvegarde récente et testée
-- [ ] **Espace disque** : Vérifier l'espace disponible (minimum 2× la taille de la base)
-- [ ] **Version compatible** : Confirmer que vous êtes sur PostgreSQL 10+ minimum
-- [ ] **Extensions** : Vérifier la compatibilité de toutes les extensions tierces
+- [ ] **Sauvegarde complète** : Avoir une sauvegarde récente et testée  
+- [ ] **Espace disque** : Vérifier l'espace disponible (minimum 2× la taille de la base)  
+- [ ] **Version compatible** : Confirmer que vous êtes sur PostgreSQL 10+ minimum  
+- [ ] **Extensions** : Vérifier la compatibilité de toutes les extensions tierces  
 - [ ] **Outils** : S'assurer que pgAdmin, drivers applicatifs, etc. supportent PG18
 
 ### ✅ Préparation Applicative
 
-- [ ] **Inventaire** : Lister toutes les applications qui se connectent à la base
-- [ ] **Tests** : Préparer un environnement de test avec PostgreSQL 18
-- [ ] **Drivers** : Mettre à jour les drivers de connexion (libpq, JDBC, psycopg3, etc.)
-- [ ] **Scripts** : Tester tous les scripts de maintenance et de déploiement
+- [ ] **Inventaire** : Lister toutes les applications qui se connectent à la base  
+- [ ] **Tests** : Préparer un environnement de test avec PostgreSQL 18  
+- [ ] **Drivers** : Mettre à jour les drivers de connexion (libpq, JDBC, psycopg3, etc.)  
+- [ ] **Scripts** : Tester tous les scripts de maintenance et de déploiement  
 - [ ] **Documentation** : Documenter la procédure de rollback (retour arrière)
 
 ### ✅ Préparation Organisationnelle
 
-- [ ] **Fenêtre de maintenance** : Planifier un créneau avec faible activité
-- [ ] **Communication** : Informer les utilisateurs et équipes
-- [ ] **Équipe** : S'assurer d'avoir du support technique disponible
-- [ ] **Plan B** : Avoir une procédure de rollback documentée
+- [ ] **Fenêtre de maintenance** : Planifier un créneau avec faible activité  
+- [ ] **Communication** : Informer les utilisateurs et équipes  
+- [ ] **Équipe** : S'assurer d'avoir du support technique disponible  
+- [ ] **Plan B** : Avoir une procédure de rollback documentée  
 - [ ] **Monitoring** : Préparer les outils de surveillance post-migration
 
 ---
@@ -365,9 +366,9 @@ SELECT * FROM commandes WHERE date > CURRENT_DATE - 30;
 
 ### 3. Tests de Connectivité Applicative
 
-- [ ] Tester chaque application se connectant à la base
-- [ ] Vérifier les logs d'erreurs applicatives
-- [ ] Valider les fonctionnalités critiques métier
+- [ ] Tester chaque application se connectant à la base  
+- [ ] Vérifier les logs d'erreurs applicatives  
+- [ ] Valider les fonctionnalités critiques métier  
 - [ ] Tester les jobs automatisés et scripts cron
 
 ### 4. Vérifications Système
@@ -424,9 +425,9 @@ ANALYZE VERBOSE;
 VACUUM ANALYZE nom_table;
 
 -- Vérifier que les index sont valides
-SELECT schemaname, tablename, indexname
-FROM pg_indexes
-WHERE schemaname NOT IN ('pg_catalog', 'information_schema');
+SELECT schemaname, tablename, indexname  
+FROM pg_indexes  
+WHERE schemaname NOT IN ('pg_catalog', 'information_schema');  
 ```
 
 ---
@@ -439,13 +440,13 @@ Erreur "extension X does not exist" après migration.
 **Solution :**
 ```sql
 -- Lister les extensions disponibles
-SELECT * FROM pg_available_extensions
-ORDER BY name;
+SELECT * FROM pg_available_extensions  
+ORDER BY name;  
 
 -- Si l'extension manque, l'installer
 -- Sur le système (en tant que root/admin)
-apt-get install postgresql-18-extension-nom  -- Debian/Ubuntu
-yum install postgresql18-extension-nom       -- RedHat/CentOS
+apt-get install postgresql-18-extension-nom  -- Debian/Ubuntu  
+yum install postgresql18-extension-nom       -- RedHat/CentOS  
 
 -- Puis dans PostgreSQL
 CREATE EXTENSION nom_extension;
@@ -461,15 +462,15 @@ PostgreSQL utilise plus de RAM qu'avant.
 **Solution :**
 ```sql
 -- Vérifier la configuration mémoire
-SHOW shared_buffers;
-SHOW work_mem;
-SHOW maintenance_work_mem;
+SHOW shared_buffers;  
+SHOW work_mem;  
+SHOW maintenance_work_mem;  
 
 -- Ajuster si nécessaire dans postgresql.conf
 -- Règle générale : shared_buffers = 25% de la RAM totale
-shared_buffers = 4GB           -- Exemple pour 16GB RAM
-work_mem = 64MB                -- Par opération de tri
-maintenance_work_mem = 512MB   -- Pour VACUUM, CREATE INDEX
+shared_buffers = 4GB           -- Exemple pour 16GB RAM  
+work_mem = 64MB                -- Par opération de tri  
+maintenance_work_mem = 512MB   -- Pour VACUUM, CREATE INDEX  
 
 -- Redémarrer PostgreSQL
 pg_ctl restart
@@ -483,9 +484,9 @@ pg_ctl restart
 
 **Priorité : Compatibilité applicative**
 
-- ✅ Mettre à jour les drivers (psycopg3, node-pg, JDBC, etc.)
-- ✅ Tester toutes les fonctionnalités en environnement de dev
-- ✅ Profiter des nouvelles fonctionnalités (colonnes virtuelles, UUIDv7)
+- ✅ Mettre à jour les drivers (psycopg3, node-pg, JDBC, etc.)  
+- ✅ Tester toutes les fonctionnalités en environnement de dev  
+- ✅ Profiter des nouvelles fonctionnalités (colonnes virtuelles, UUIDv7)  
 - ⚠️ Vérifier les requêtes avec OR multiples (optimisées automatiquement)
 
 **Timeline recommandée :**
@@ -500,10 +501,10 @@ pg_ctl restart
 
 **Priorité : Stabilité et performances**
 
-- ✅ Planifier la stratégie de migration (pg_upgrade vs réplication)
-- ✅ Configurer le monitoring post-migration
-- ✅ Valider les sauvegardes et procédures de restauration
-- ✅ Documenter la procédure de rollback
+- ✅ Planifier la stratégie de migration (pg_upgrade vs réplication)  
+- ✅ Configurer le monitoring post-migration  
+- ✅ Valider les sauvegardes et procédures de restauration  
+- ✅ Documenter la procédure de rollback  
 - ⚠️ Surveiller l'autovacuum (plus agressif)
 
 **Timeline recommandée :**
@@ -517,10 +518,10 @@ pg_ctl restart
 
 **Priorité : Intégrité et optimisation**
 
-- ✅ Activer les data checksums sur nouvelles installations
-- ✅ Migrer MD5 vers SCRAM-SHA-256
-- ✅ Optimiser la configuration I/O (async)
-- ✅ Profiter des statistiques préservées
+- ✅ Activer les data checksums sur nouvelles installations  
+- ✅ Migrer MD5 vers SCRAM-SHA-256  
+- ✅ Optimiser la configuration I/O (async)  
+- ✅ Profiter des statistiques préservées  
 - ⚠️ Surveiller le bloat et l'espace disque
 
 **Timeline recommandée :**
@@ -546,8 +547,8 @@ pg_ctl restart
 | **Colonnes Virtuelles** | 🟢 Optionnel | Modifier schéma pour utilisation | 🔵 Optionnel |
 
 **Légende :**
-- 🟢 Transparent : Aucun impact négatif
-- 🟡 Partiel : Impact limité et gérable
+- 🟢 Transparent : Aucun impact négatif  
+- 🟡 Partiel : Impact limité et gérable  
 - 🟠 Moyen : Nécessite attention et planification
 
 ---
@@ -619,18 +620,18 @@ pg_ctl restart
 
 ### DO ✅
 
-1. **Toujours avoir une sauvegarde** : Avant toute migration, avoir une sauvegarde complète testée
-2. **Tester en dev d'abord** : Ne jamais migrer directement en production
-3. **Commencer petit** : Migrer d'abord les bases non-critiques
-4. **Surveiller attentivement** : Les 48 premières heures sont critiques
+1. **Toujours avoir une sauvegarde** : Avant toute migration, avoir une sauvegarde complète testée  
+2. **Tester en dev d'abord** : Ne jamais migrer directement en production  
+3. **Commencer petit** : Migrer d'abord les bases non-critiques  
+4. **Surveiller attentivement** : Les 48 premières heures sont critiques  
 5. **Documenter tout** : Chaque étape, chaque problème rencontré
 
 ### DON'T ❌
 
-1. **Ne pas précipiter** : Une migration mal préparée peut causer des interruptions majeures
-2. **Ne pas ignorer les warnings** : Les avertissements dans les logs sont importants
-3. **Ne pas oublier les extensions** : Vérifier qu'elles sont toutes compatibles
-4. **Ne pas négliger les tests** : Les tests de charge sont essentiels
+1. **Ne pas précipiter** : Une migration mal préparée peut causer des interruptions majeures  
+2. **Ne pas ignorer les warnings** : Les avertissements dans les logs sont importants  
+3. **Ne pas oublier les extensions** : Vérifier qu'elles sont toutes compatibles  
+4. **Ne pas négliger les tests** : Les tests de charge sont essentiels  
 5. **Ne pas migrer pendant les pics** : Choisir une période de faible activité
 
 ---
@@ -639,14 +640,14 @@ pg_ctl restart
 
 La migration vers PostgreSQL 18 est généralement **simple et sûre** grâce à :
 
-- ✅ L'excellente rétrocompatibilité
-- ✅ Les outils de migration améliorés (pg_upgrade avec --swap)
-- ✅ La préservation des statistiques
+- ✅ L'excellente rétrocompatibilité  
+- ✅ Les outils de migration améliorés (pg_upgrade avec --swap)  
+- ✅ La préservation des statistiques  
 - ✅ Les gains de performance immédiats
 
 **Trois règles d'or :**
-1. **Préparer** : Audit, tests, planification
-2. **Tester** : En dev, en staging, puis en production
+1. **Préparer** : Audit, tests, planification  
+2. **Tester** : En dev, en staging, puis en production  
 3. **Surveiller** : Monitoring actif post-migration
 
 Avec une préparation adéquate, votre migration sera un succès ! 🎉
@@ -655,9 +656,9 @@ Avec une préparation adéquate, votre migration sera un succès ! 🎉
 
 ## 📚 Ressources Complémentaires
 
-- **Chapitre 19.3** : Détails techniques sur pg_upgrade
-- **Chapitre 14** : Observabilité et monitoring post-migration
-- **Chapitre 16** : Configuration et tuning pour PostgreSQL 18
+- **Chapitre 19.3** : Détails techniques sur pg_upgrade  
+- **Chapitre 14** : Observabilité et monitoring post-migration  
+- **Chapitre 16** : Configuration et tuning pour PostgreSQL 18  
 - **Documentation officielle** : [postgresql.org/docs/18/upgrading.html](https://www.postgresql.org/docs/18/upgrading.html)
 
 ---

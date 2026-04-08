@@ -2,9 +2,9 @@
 
 # Partie 1 : Introduction et Concepts Fondamentaux
 
-**Niveau** : Débutant
-**Durée estimée** : 8-12 heures
-**Prérequis** : Aucun (connaissances de base en informatique suffisantes)
+**Niveau** : Débutant  
+**Durée estimée** : 5-7 heures  
+**Prérequis** : Aucun (connaissances de base en informatique suffisantes)  
 
 ---
 
@@ -16,9 +16,9 @@ Bienvenue dans cette première partie de cette formation. Cette section pose les
 
 Les bases de données sont au cœur de presque toutes les applications modernes. Avant de plonger dans les requêtes SQL complexes ou l'administration avancée, il est indispensable de comprendre :
 
-- **Ce qu'est réellement une base de données** et pourquoi nous en avons besoin
-- **Comment PostgreSQL fonctionne** sous le capot
-- **Les concepts fondamentaux** qui reviendront tout au long de votre parcours
+- **Ce qu'est réellement une base de données** et pourquoi nous en avons besoin  
+- **Comment PostgreSQL fonctionne** sous le capot  
+- **Les concepts fondamentaux** qui reviendront tout au long de votre parcours  
 - **L'écosystème** dans lequel PostgreSQL évolue
 
 Cette compréhension théorique vous permettra de prendre de meilleures décisions techniques, de déboguer plus efficacement et d'exploiter pleinement la puissance de PostgreSQL.
@@ -98,10 +98,10 @@ Tout au long de cette partie, nous mettons en évidence les **nouveautés de Pos
 
 ### 👥 Pour qui ?
 
-- **Développeurs** souhaitant comprendre comment fonctionne leur base de données
-- **DevOps/SRE** qui doivent déployer et maintenir PostgreSQL
-- **Data Engineers** débutant avec PostgreSQL
-- **Architectes** voulant prendre des décisions éclairées sur leur stack technique
+- **Développeurs** souhaitant comprendre comment fonctionne leur base de données  
+- **DevOps/SRE** qui doivent déployer et maintenir PostgreSQL  
+- **Data Engineers** débutant avec PostgreSQL  
+- **Architectes** voulant prendre des décisions éclairées sur leur stack technique  
 - **Étudiants** en informatique cherchant une formation structurée
 
 ### 📋 Prérequis
@@ -120,28 +120,19 @@ Bien que cette partie soit théorique, si vous souhaitez expérimenter parallèl
 
 ---
 
-## Nouveautés PostgreSQL 18 abordées
+## Nouveautés PostgreSQL 18 abordées dans cette partie
 
-Cette première partie présente déjà plusieurs innovations majeures de PostgreSQL 18 :
+Cette première partie introduit les innovations suivantes de PostgreSQL 18 :
 
-### ⚡ Performance et I/O
-- **Sous-système I/O asynchrone (AIO)** : Amélioration drastique des performances (jusqu'à 3× plus rapide)
-- Configuration `io_method='async'` pour exploitation optimale
+### ⚡ Performance et I/O (Chapitre 3)
+- **Sous-système I/O asynchrone (AIO)** : Amélioration drastique des performances I/O (jusqu'à 3× plus rapide sur certaines opérations)
+- Configuration `io_method` avec les modes `worker` (défaut) et `io_uring` (Linux)
+- **Wire Protocol 3.2** : Clés d'annulation 256 bits pour une sécurité renforcée
 
-### 🔐 Sécurité et authentification
-- **Authentification OAuth 2.0** : Intégration moderne des systèmes d'identité
-- **Mode FIPS** et TLS 1.3 (`ssl_tls13_ciphers`)
-- **SCRAM passthrough** avec postgres_fdw et dblink
+### 📊 Types de données (Chapitre 4)
+- **UUIDv7** : Nouvelle version des UUID avec tri temporel natif, idéale pour les clés primaires distribuées
 
-### 📊 Types de données
-- **UUIDv7** : Nouvelle version des UUID avec tri temporel natif
-- **Colonnes générées virtuelles** (Virtual Generated Columns)
-
-### 🛠️ Administration
-- **Data Checksums activés par défaut** pour détecter la corruption
-- Améliorations du `pg_upgrade` avec préservation des statistiques
-
-Ces nouveautés seront détaillées dans les chapitres appropriés de cette partie.
+> 💡 Les autres nouveautés majeures de PostgreSQL 18 (OAuth 2.0, colonnes virtuelles, Data Checksums par défaut, pg_upgrade amélioré, etc.) sont couvertes dans les parties suivantes de la formation.
 
 ---
 
@@ -173,20 +164,20 @@ Chaque chapitre peut soulever des questions. Notez-les et cherchez à y répondr
 
 ### 📝 Notation
 
-- **Gras** : Termes importants et concepts clés
-- `Code` : Commandes, noms de fichiers, paramètres
-- 🆕 : Nouveautés spécifiques à PostgreSQL 18
-- ⚠️ : Avertissements et points d'attention
-- 💡 : Conseils et bonnes pratiques
+- **Gras** : Termes importants et concepts clés  
+- `Code` : Commandes, noms de fichiers, paramètres  
+- 🆕 : Nouveautés spécifiques à PostgreSQL 18  
+- ⚠️ : Avertissements et points d'attention  
+- 💡 : Conseils et bonnes pratiques  
 - 📖 : Références à la documentation
 
 ### 🗂️ Structure des chapitres
 
 Chaque chapitre suit une structure similaire :
-1. Introduction et contexte
-2. Concepts théoriques détaillés
-3. Exemples et illustrations
-4. Nouveautés PostgreSQL 18 (si applicable)
+1. Introduction et contexte  
+2. Concepts théoriques détaillés  
+3. Exemples et illustrations  
+4. Nouveautés PostgreSQL 18 (si applicable)  
 5. Résumé des points clés
 
 ---
@@ -212,16 +203,16 @@ Extensions, déploiement production, architectures modernes, intégrations.
 ## Ressources complémentaires
 
 ### 📚 Documentation officielle
-- [PostgreSQL 18 Documentation](https://www.postgresql.org/docs/18/)
+- [PostgreSQL 18 Documentation](https://www.postgresql.org/docs/18/)  
 - [PostgreSQL Wiki](https://wiki.postgresql.org/)
 
 ### 🎥 Communauté
-- [pgsql-general Mailing List](https://www.postgresql.org/list/)
-- [Reddit r/PostgreSQL](https://www.reddit.com/r/PostgreSQL/)
+- [pgsql-general Mailing List](https://www.postgresql.org/list/)  
+- [Reddit r/PostgreSQL](https://www.reddit.com/r/PostgreSQL/)  
 - [Discord PostgreSQL](https://discord.gg/postgresql)
 
 ### 📖 Blogs recommandés
-- 2ndQuadrant Blog
+- EDB Blog (ex-2ndQuadrant)
 - Percona Database Performance Blog
 - CrunchyData Blog
 

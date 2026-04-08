@@ -8,9 +8,9 @@ Bienvenue dans les annexes du tutoriel **"Maîtriser PostgreSQL 18 : De la Théo
 
 Les annexes sont des **documents de référence** distincts du tutoriel principal. Contrairement aux chapitres qui suivent une progression pédagogique linéaire, les annexes sont conçues pour être :
 
-- 📖 **Consultées au besoin** : Pas besoin de tout lire d'un coup
-- 🔍 **Utilisées comme référence** : Gardez-les à portée de main pendant votre travail
-- 🎯 **Ciblées et pratiques** : Informations condensées et immédiatement utilisables
+- 📖 **Consultées au besoin** : Pas besoin de tout lire d'un coup  
+- 🔍 **Utilisées comme référence** : Gardez-les à portée de main pendant votre travail  
+- 🎯 **Ciblées et pratiques** : Informations condensées et immédiatement utilisables  
 - 🔄 **Réutilisables** : Vous y reviendrez régulièrement
 
 **Analogie** : Si le tutoriel principal est un cours magistral, les annexes sont votre encyclopédie de poche et votre guide de survie quotidien.
@@ -24,7 +24,7 @@ Les annexes sont des **documents de référence** distincts du tutoriel principa
 Le tutoriel principal suit une progression pédagogique structurée, des concepts de base aux techniques avancées. Intégrer toute la documentation de référence dans le flux principal surchargerait l'apprentissage et briserait la continuité.
 
 **Les annexes séparent** :
-- 📚 Le **parcours d'apprentissage** (tutoriel principal)
+- 📚 Le **parcours d'apprentissage** (tutoriel principal)  
 - 📋 La **documentation de référence** (annexes)
 
 Vous pouvez ainsi apprendre progressivement tout en ayant accès aux ressources détaillées quand vous en avez besoin.
@@ -111,8 +111,8 @@ Les annexes sont organisées en **sections thématiques indépendantes**, chacun
 
 #### Développeur Débutant
 **Recommandation** : Commencez par ces annexes dans cet ordre
-1. **Annexe A** : Glossaire - Familiarisez-vous avec le vocabulaire
-2. **Annexe B** : psql - Apprenez à naviguer et interroger
+1. **Annexe A** : Glossaire - Familiarisez-vous avec le vocabulaire  
+2. **Annexe B** : psql - Apprenez à naviguer et interroger  
 3. **Annexe C** : Requêtes SQL - Exemples pratiques à adapter
 
 **Usage** : Consultation fréquente pendant les premiers mois
@@ -121,8 +121,8 @@ Les annexes sont organisées en **sections thématiques indépendantes**, chacun
 
 #### Développeur Expérimenté
 **Recommandation** : Utilisez comme référence rapide
-1. **Annexe B** : psql - Découvrir les méta-commandes avancées
-2. **Annexe E** : Performance - Auditer vos applications
+1. **Annexe B** : psql - Découvrir les méta-commandes avancées  
+2. **Annexe E** : Performance - Auditer vos applications  
 3. **Annexe F** : PostgreSQL 18 - Nouveautés à exploiter
 
 **Usage** : Consultation ponctuelle selon les besoins
@@ -131,9 +131,9 @@ Les annexes sont organisées en **sections thématiques indépendantes**, chacun
 
 #### DevOps / SRE
 **Recommandation** : Focus sur l'exploitation et le monitoring
-1. **Annexe B** : psql - Scripts et automatisation
-2. **Annexe D** : Configuration - Tuning selon les charges
-3. **Annexe G** : Scripts Shell - Automatisation des tâches
+1. **Annexe B** : psql - Scripts et automatisation  
+2. **Annexe D** : Configuration - Tuning selon les charges  
+3. **Annexe G** : Scripts Shell - Automatisation des tâches  
 4. **Annexe C** : Requêtes - Monitoring et diagnostics
 
 **Usage** : Référence quotidienne pour l'exploitation
@@ -142,8 +142,8 @@ Les annexes sont organisées en **sections thématiques indépendantes**, chacun
 
 #### DBA
 **Recommandation** : Couverture complète
-1. **Toutes les annexes** sont pertinentes
-2. Focus particulier sur **D** (Configuration) et **E** (Performance)
+1. **Toutes les annexes** sont pertinentes  
+2. Focus particulier sur **D** (Configuration) et **E** (Performance)  
 3. **Annexe C** : Requêtes avancées de monitoring
 
 **Usage** : Documentation de référence permanente
@@ -213,9 +213,9 @@ Les annexes sont organisées en **sections thématiques indépendantes**, chacun
 ### 🎓 Pédagogie Adaptée
 
 Contrairement au tutoriel principal qui suit une progression linéaire, chaque annexe :
-- ✅ Est **autonome** : Peut être lue indépendamment
-- ✅ Est **ciblée** : Un sujet par annexe
-- ✅ Est **pratique** : Exemples immédiatement utilisables
+- ✅ Est **autonome** : Peut être lue indépendamment  
+- ✅ Est **ciblée** : Un sujet par annexe  
+- ✅ Est **pratique** : Exemples immédiatement utilisables  
 - ✅ Est **exhaustive** : Couvre le sujet en profondeur
 
 ---
@@ -223,10 +223,10 @@ Contrairement au tutoriel principal qui suit une progression linéaire, chaque a
 ### 📖 Format de Référence
 
 Chaque annexe inclut :
-- 📋 **Table des matières détaillée** : Navigation rapide
-- 🔍 **Index et recherche** : Retrouver l'information rapidement
-- 💡 **Exemples concrets** : Code testable et commenté
-- 📊 **Tableaux récapitulatifs** : Vue d'ensemble synthétique
+- 📋 **Table des matières détaillée** : Navigation rapide  
+- 🔍 **Index et recherche** : Retrouver l'information rapidement  
+- 💡 **Exemples concrets** : Code testable et commenté  
+- 📊 **Tableaux récapitulatifs** : Vue d'ensemble synthétique  
 - ⚠️ **Bonnes pratiques** : Recommandations et pièges à éviter
 
 ---
@@ -297,9 +297,9 @@ Les annexes sont mises à jour pour :
 ### Tutoriel Principal : L'Apprentissage
 
 Le tutoriel principal (Parties 1-21) vous guide pas à pas :
-- 📖 Progression pédagogique structurée
-- 🎯 Du débutant à l'expert
-- 💡 Concepts expliqués en contexte
+- 📖 Progression pédagogique structurée  
+- 🎯 Du débutant à l'expert  
+- 💡 Concepts expliqués en contexte  
 - 🔗 Liens entre les différentes notions
 
 **Quand l'utiliser** : Apprentissage initial, formation, compréhension des concepts
@@ -309,9 +309,9 @@ Le tutoriel principal (Parties 1-21) vous guide pas à pas :
 ### Annexes : La Référence
 
 Les annexes vous fournissent des ressources pratiques :
-- 📋 Documentation de référence
-- 🔍 Consultation rapide
-- ⚡ Exemples immédiatement utilisables
+- 📋 Documentation de référence  
+- 🔍 Consultation rapide  
+- ⚡ Exemples immédiatement utilisables  
 - 🎯 Information ciblée et dense
 
 **Quand les utiliser** : Travail quotidien, consultation ponctuelle, référence rapide
@@ -371,8 +371,8 @@ Les annexes vous fournissent des ressources pratiques :
 **Intégration dans votre workflow**
 
 Chaque jour pendant votre travail :
-1. Gardez l'**Annexe B (psql)** ouverte
-2. Consultez l'**Annexe A (Glossaire)** pour tout terme inconnu
+1. Gardez l'**Annexe B (psql)** ouverte  
+2. Consultez l'**Annexe A (Glossaire)** pour tout terme inconnu  
 3. Testez une nouvelle commande psql par jour
 
 **Objectif** : Intégrer les annexes dans votre routine quotidienne.
@@ -383,9 +383,9 @@ Chaque jour pendant votre travail :
 
 **Programme hebdomadaire**
 
-- **Semaine 1** : Annexe A (Glossaire) + Annexe B (psql Navigation)
-- **Semaine 2** : Annexe B (psql Configuration + Export/Import)
-- **Semaine 3** : Annexe C (Requêtes SQL) + Annexe D (Configuration)
+- **Semaine 1** : Annexe A (Glossaire) + Annexe B (psql Navigation)  
+- **Semaine 2** : Annexe B (psql Configuration + Export/Import)  
+- **Semaine 3** : Annexe C (Requêtes SQL) + Annexe D (Configuration)  
 - **Semaine 4** : Annexe E (Performance) + Annexe G (Scripts)
 
 **Objectif** : Avoir parcouru toutes les annexes et identifié vos favorites.
@@ -398,9 +398,9 @@ Chaque jour pendant votre travail :
 
 Les annexes sont disponibles en plusieurs formats pour s'adapter à vos préférences :
 
-- 📄 **Markdown** (.md) : Format source, lisible partout
-- 📱 **Web/HTML** : Navigation facile, recherche intégrée
-- 📖 **PDF** : Impression, annotation, lecture hors-ligne
+- 📄 **Markdown** (.md) : Format source, lisible partout  
+- 📱 **Web/HTML** : Navigation facile, recherche intégrée  
+- 📖 **PDF** : Impression, annotation, lecture hors-ligne  
 - 🖥️ **Terminal** : Lecture directe dans le terminal (avec un lecteur markdown)
 
 ---
@@ -408,9 +408,9 @@ Les annexes sont disponibles en plusieurs formats pour s'adapter à vos préfér
 ### Utilisation Hors-ligne
 
 Toutes les annexes sont conçues pour fonctionner **hors-ligne** :
-- ✅ Aucune dépendance externe
-- ✅ Pas de liens cassés si déconnecté
-- ✅ Exemples auto-suffisants
+- ✅ Aucune dépendance externe  
+- ✅ Pas de liens cassés si déconnecté  
+- ✅ Exemples auto-suffisants  
 - ✅ Téléchargeables localement
 
 **Idéal pour** : Déplacements, serveurs sans internet, documentation d'urgence.
@@ -457,8 +457,8 @@ Si vous découvrez :
 
 ### Documentation Officielle PostgreSQL
 
-- **Site officiel** : https://www.postgresql.org/docs/current/
-- **Wiki communautaire** : https://wiki.postgresql.org/
+- **Site officiel** : https://www.postgresql.org/docs/current/  
+- **Wiki communautaire** : https://wiki.postgresql.org/  
 - **FAQ** : https://wiki.postgresql.org/wiki/FAQ
 
 Les annexes ne remplacent pas la documentation officielle, elles la complètent avec une approche pratique et pédagogique.
@@ -480,9 +480,9 @@ Les annexes ne remplacent pas la documentation officielle, elles la complètent 
 
 ### Communautés
 
-- **Reddit** : r/PostgreSQL
-- **Stack Overflow** : Tag [postgresql]
-- **Discord** : Serveurs PostgreSQL
+- **Reddit** : r/PostgreSQL  
+- **Stack Overflow** : Tag [postgresql]  
+- **Discord** : Serveurs PostgreSQL  
 - **Mailing Lists** : pgsql-general@postgresql.org
 
 ---
@@ -575,8 +575,8 @@ Les annexes sont conçues comme vos **compagnons quotidiens** dans votre travail
 
 Vous êtes maintenant prêt à explorer les annexes ! Nous vous recommandons de commencer par :
 
-1. **Annexe A : Glossaire** si vous débutez avec PostgreSQL
-2. **Annexe B : Commandes psql** si vous voulez être productif rapidement
+1. **Annexe A : Glossaire** si vous débutez avec PostgreSQL  
+2. **Annexe B : Commandes psql** si vous voulez être productif rapidement  
 3. L'annexe correspondant à votre besoin immédiat si vous êtes expérimenté
 
 ---

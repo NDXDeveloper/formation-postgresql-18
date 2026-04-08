@@ -8,7 +8,7 @@
 
 Un **Mixed Workload** (charge de travail mixte) est un scénario où PostgreSQL doit gérer **simultanément** :
 
-- **Des opérations OLTP** : Transactions courtes, écritures fréquentes, faible latence
+- **Des opérations OLTP** : Transactions courtes, écritures fréquentes, faible latence  
 - **Des requêtes OLAP** : Analyses complexes, agrégations massives, longues durées
 
 C'est le cas le plus courant en production réelle, mais aussi le plus complexe à optimiser.
@@ -76,14 +76,14 @@ Avant même de configurer PostgreSQL, vous avez plusieurs options architecturale
 ```
 
 **Avantages :**
-- ✅ Isolation totale : OLAP n'impacte pas OLTP
-- ✅ Configuration optimale pour chaque charge
-- ✅ Scaling indépendant
+- ✅ Isolation totale : OLAP n'impacte pas OLTP  
+- ✅ Configuration optimale pour chaque charge  
+- ✅ Scaling indépendant  
 - ✅ Sécurité : replica read-only
 
 **Inconvénients :**
-- ❌ Coût : Deux serveurs
-- ❌ Complexité opérationnelle
+- ❌ Coût : Deux serveurs  
+- ❌ Complexité opérationnelle  
 - ❌ Latence de réplication (données pas 100% fraîches)
 
 **Quand utiliser :**
@@ -115,12 +115,12 @@ Avant même de configurer PostgreSQL, vous avez plusieurs options architecturale
 ```
 
 **Avantages :**
-- ✅ Un seul serveur à gérer
-- ✅ Données fraîches (même instance)
+- ✅ Un seul serveur à gérer  
+- ✅ Données fraîches (même instance)  
 - ✅ Moins coûteux
 
 **Inconvénients :**
-- ⚠️ Compétition pour ressources (CPU, RAM, I/O)
+- ⚠️ Compétition pour ressources (CPU, RAM, I/O)  
 - ⚠️ Configuration = compromis
 
 **Quand utiliser :**
@@ -166,8 +166,8 @@ Avant même de configurer PostgreSQL, vous avez plusieurs options architecturale
 **Règle d'or :** Prioriser OLTP (latence critique) tout en permettant OLAP (throughput).
 
 **Approche :**
-1. Configuration de base = **70% OLTP, 30% OLAP**
-2. Ajustements dynamiques par session/rôle
+1. Configuration de base = **70% OLTP, 30% OLAP**  
+2. Ajustements dynamiques par session/rôle  
 3. Monitoring pour détecter déséquilibres
 
 ---
@@ -238,12 +238,12 @@ work_mem = (64 × 0.30) / 200 / 2 = 48MB ≈ 64MB
 
 ```sql
 -- Rôle OLTP : work_mem faible
-CREATE ROLE app_oltp WITH LOGIN PASSWORD 'xxx';
-ALTER ROLE app_oltp SET work_mem = '32MB';
+CREATE ROLE app_oltp WITH LOGIN PASSWORD 'xxx';  
+ALTER ROLE app_oltp SET work_mem = '32MB';  
 
 -- Rôle OLAP : work_mem élevé
-CREATE ROLE analytics_user WITH LOGIN PASSWORD 'xxx';
-ALTER ROLE analytics_user SET work_mem = '512MB';
+CREATE ROLE analytics_user WITH LOGIN PASSWORD 'xxx';  
+ALTER ROLE analytics_user SET work_mem = '512MB';  
 ```
 
 **Avantage :** Chaque type de charge a sa propre configuration.
@@ -258,8 +258,8 @@ Application peut ajuster dynamiquement :
 conn.execute("SELECT * FROM users WHERE id = %s", (user_id,))
 
 # Requête OLAP : augmenter work_mem temporairement
-conn.execute("SET LOCAL work_mem = '1GB'")
-conn.execute("""
+conn.execute("SET LOCAL work_mem = '1GB'")  
+conn.execute("""  
     SELECT product_id, SUM(amount)
     FROM fact_sales
     WHERE sale_date >= '2024-01-01'
@@ -337,10 +337,10 @@ max_connections = 250
 
 **Configuration recommandée :**
 ```ini
-max_worker_processes = 16  # Nombre de CPU
-max_parallel_workers_per_gather = 4  # Compromis (OLTP: 2, OLAP: 8)
-max_parallel_workers = 12  # 75% des workers (laisser de la marge)
-max_parallel_maintenance_workers = 4
+max_worker_processes = 16  # Nombre de CPU  
+max_parallel_workers_per_gather = 4  # Compromis (OLTP: 2, OLAP: 8)  
+max_parallel_workers = 12  # 75% des workers (laisser de la marge)  
+max_parallel_maintenance_workers = 4  
 ```
 
 **Raisonnement :**
@@ -359,14 +359,14 @@ ALTER ROLE analytics_user SET max_parallel_workers_per_gather = 8;
 
 **Configuration dans postgresql.conf :**
 ```ini
-max_worker_processes = 16
-max_parallel_workers_per_gather = 4
-max_parallel_workers = 12
-max_parallel_maintenance_workers = 4
+max_worker_processes = 16  
+max_parallel_workers_per_gather = 4  
+max_parallel_workers = 12  
+max_parallel_maintenance_workers = 4  
 
 # Seuils de parallélisation modérés
-parallel_setup_cost = 500  # Entre OLTP (1000) et OLAP (100)
-parallel_tuple_cost = 0.05  # Entre OLTP (0.1) et OLAP (0.01)
+parallel_setup_cost = 500  # Entre OLTP (1000) et OLAP (100)  
+parallel_tuple_cost = 0.05  # Entre OLTP (0.1) et OLAP (0.01)  
 ```
 
 ---
@@ -377,12 +377,12 @@ En mixed workload, **prioriser OLTP** pour les écritures.
 
 **Configuration recommandée :**
 ```ini
-wal_buffers = 32MB
-max_wal_size = 4GB
-min_wal_size = 1GB
-checkpoint_timeout = 15min
-checkpoint_completion_target = 0.9
-wal_compression = on
+wal_buffers = 32MB  
+max_wal_size = 4GB  
+min_wal_size = 1GB  
+checkpoint_timeout = 15min  
+checkpoint_completion_target = 0.9  
+wal_compression = on  
 ```
 
 **Raisonnement :** Même configuration que OLTP pur (écritures OLTP ne doivent pas être pénalisées).
@@ -397,19 +397,19 @@ wal_compression = on
 
 **Configuration recommandée :**
 ```ini
-autovacuum = on
-autovacuum_max_workers = 4-6
-autovacuum_naptime = 30s  # Compromis entre 10s (OLTP) et 5min (OLAP)
+autovacuum = on  
+autovacuum_max_workers = 4-6  
+autovacuum_naptime = 30s  # Compromis entre 10s (OLTP) et 5min (OLAP)  
 
 # Seuils modérés
-autovacuum_vacuum_threshold = 50
-autovacuum_vacuum_scale_factor = 0.1  # Compromis entre 0.05 (OLTP) et 0.2
-autovacuum_analyze_threshold = 50
-autovacuum_analyze_scale_factor = 0.05
+autovacuum_vacuum_threshold = 50  
+autovacuum_vacuum_scale_factor = 0.1  # Compromis entre 0.05 (OLTP) et 0.2  
+autovacuum_analyze_threshold = 50  
+autovacuum_analyze_scale_factor = 0.05  
 
 # Throttling modéré
-autovacuum_vacuum_cost_delay = 2ms  # Compromis entre 0 (OLAP) et 2ms (OLTP)
-autovacuum_vacuum_cost_limit = 1000  # Compromis entre -1 (OLAP) et 2000 (OLTP)
+autovacuum_vacuum_cost_delay = 2ms  # Compromis entre 0 (OLAP) et 2ms (OLTP)  
+autovacuum_vacuum_cost_limit = 1000  # Compromis entre -1 (OLAP) et 2000 (OLTP)  
 ```
 
 **Stratégie par table :**
@@ -435,8 +435,8 @@ ALTER TABLE fact_sales_history SET (
 
 **Configuration recommandée :**
 ```ini
-random_page_cost = 1.1  # SSD/NVMe
-seq_page_cost = 1.0
+random_page_cost = 1.1  # SSD/NVMe  
+seq_page_cost = 1.0  
 ```
 
 ---
@@ -472,10 +472,10 @@ ALTER TABLE orders ALTER COLUMN status SET STATISTICS 100;
 
 **Configuration recommandée :**
 ```ini
-jit = on
-jit_above_cost = 200000  # Seulement pour requêtes OLAP longues
-jit_inline_above_cost = 500000
-jit_optimize_above_cost = 500000
+jit = on  
+jit_above_cost = 200000  # Seulement pour requêtes OLAP longues  
+jit_inline_above_cost = 500000  
+jit_optimize_above_cost = 500000  
 ```
 
 **Raisonnement :** JIT bénéficie surtout à OLAP, mais overhead pour OLTP. Seuil élevé évite impact sur OLTP.
@@ -486,7 +486,7 @@ jit_optimize_above_cost = 500000
 
 **Configuration recommandée :**
 ```ini
-io_method = 'async'  # Si kernel Linux 5.1+ avec io_uring
+io_method = 'worker'  # Si kernel Linux 5.1+ avec io_uring
 ```
 
 **Impact :** Bénéficie aux deux charges (OLTP et OLAP).
@@ -510,12 +510,12 @@ lock_timeout = 30s  # Éviter deadlocks prolongés
 **Ajustement par rôle :**
 ```sql
 -- OLTP : timeouts stricts
-ALTER ROLE app_oltp SET statement_timeout = '30s';
-ALTER ROLE app_oltp SET idle_in_transaction_session_timeout = '1min';
+ALTER ROLE app_oltp SET statement_timeout = '30s';  
+ALTER ROLE app_oltp SET idle_in_transaction_session_timeout = '1min';  
 
 -- OLAP : timeouts généreux
-ALTER ROLE analytics_user SET statement_timeout = '30min';
-ALTER ROLE analytics_user SET idle_in_transaction_session_timeout = '1h';
+ALTER ROLE analytics_user SET statement_timeout = '30min';  
+ALTER ROLE analytics_user SET idle_in_transaction_session_timeout = '1h';  
 ```
 
 ---
@@ -533,115 +533,115 @@ ALTER ROLE analytics_user SET idle_in_transaction_session_timeout = '1h';
 # ===================================
 # MÉMOIRE (compromis OLTP/OLAP)
 # ===================================
-shared_buffers = 16GB                   # 25% de 64GB
-effective_cache_size = 48GB             # 75% de 64GB
-work_mem = 64MB                         # Compromis (ajustable par rôle)
-maintenance_work_mem = 2GB
-hash_mem_multiplier = 1.5               # Légèrement favoriser OLAP
+shared_buffers = 16GB                   # 25% de 64GB  
+effective_cache_size = 48GB             # 75% de 64GB  
+work_mem = 64MB                         # Compromis (ajustable par rôle)  
+maintenance_work_mem = 2GB  
+hash_mem_multiplier = 1.5               # Légèrement favoriser OLAP  
 
 # ===================================
 # CONNEXIONS (dimensionné OLTP)
 # ===================================
-max_connections = 250
-superuser_reserved_connections = 3
+max_connections = 250  
+superuser_reserved_connections = 3  
 
 # ===================================
 # PARALLÉLISATION (modérée)
 # ===================================
-max_worker_processes = 16               # Tous les CPU
-max_parallel_workers_per_gather = 4     # Compromis entre 2 (OLTP) et 8 (OLAP)
-max_parallel_workers = 12               # 75% (laisser marge pour OLTP)
-max_parallel_maintenance_workers = 4
+max_worker_processes = 16               # Tous les CPU  
+max_parallel_workers_per_gather = 4     # Compromis entre 2 (OLTP) et 8 (OLAP)  
+max_parallel_workers = 12               # 75% (laisser marge pour OLTP)  
+max_parallel_maintenance_workers = 4  
 
 # Seuils de parallélisation modérés
-parallel_setup_cost = 500               # Entre 1000 (OLTP) et 100 (OLAP)
-parallel_tuple_cost = 0.05              # Entre 0.1 (OLTP) et 0.01 (OLAP)
-min_parallel_table_scan_size = 8MB
-min_parallel_index_scan_size = 512kB
+parallel_setup_cost = 500               # Entre 1000 (OLTP) et 100 (OLAP)  
+parallel_tuple_cost = 0.05              # Entre 0.1 (OLTP) et 0.01 (OLAP)  
+min_parallel_table_scan_size = 8MB  
+min_parallel_index_scan_size = 512kB  
 
 # ===================================
 # WAL et CHECKPOINTS (optimisé OLTP)
 # ===================================
-wal_level = replica
-wal_buffers = 32MB
-max_wal_size = 4GB
-min_wal_size = 1GB
-checkpoint_timeout = 15min
-checkpoint_completion_target = 0.9
-wal_compression = on
+wal_level = replica  
+wal_buffers = 32MB  
+max_wal_size = 4GB  
+min_wal_size = 1GB  
+checkpoint_timeout = 15min  
+checkpoint_completion_target = 0.9  
+wal_compression = on  
 
 # Durabilité
-synchronous_commit = on
-fsync = on
+synchronous_commit = on  
+fsync = on  
 
 # ===================================
 # AUTOVACUUM (équilibré)
 # ===================================
-autovacuum = on
-autovacuum_max_workers = 5
-autovacuum_naptime = 30s                # Compromis 10s (OLTP) et 5min (OLAP)
+autovacuum = on  
+autovacuum_max_workers = 5  
+autovacuum_naptime = 30s                # Compromis 10s (OLTP) et 5min (OLAP)  
 
 # Seuils modérés
-autovacuum_vacuum_threshold = 50
-autovacuum_vacuum_scale_factor = 0.1
-autovacuum_analyze_threshold = 50
-autovacuum_analyze_scale_factor = 0.05
+autovacuum_vacuum_threshold = 50  
+autovacuum_vacuum_scale_factor = 0.1  
+autovacuum_analyze_threshold = 50  
+autovacuum_analyze_scale_factor = 0.05  
 
 # Throttling modéré
-autovacuum_vacuum_cost_delay = 2ms
-autovacuum_vacuum_cost_limit = 1000
+autovacuum_vacuum_cost_delay = 2ms  
+autovacuum_vacuum_cost_limit = 1000  
 
 # ===================================
 # PLANIFICATEUR (SSD/NVMe)
 # ===================================
-random_page_cost = 1.1
-seq_page_cost = 1.0
-effective_io_concurrency = 300
+random_page_cost = 1.1  
+seq_page_cost = 1.0  
+effective_io_concurrency = 300  
 
 # Statistiques modérées
 default_statistics_target = 200         # Compromis 100 (OLTP) et 500 (OLAP)
 
 # JIT avec seuil élevé (OLAP seulement)
-jit = on
-jit_above_cost = 200000
-jit_inline_above_cost = 500000
-jit_optimize_above_cost = 500000
+jit = on  
+jit_above_cost = 200000  
+jit_inline_above_cost = 500000  
+jit_optimize_above_cost = 500000  
 
 # PostgreSQL 18 : I/O asynchrone
-io_method = 'async'
+io_method = 'worker'
 
 # ===================================
 # TIMEOUTS
 # ===================================
-statement_timeout = 0                   # Ajusté par rôle
-idle_in_transaction_session_timeout = 10min
-lock_timeout = 30s
+statement_timeout = 0                   # Ajusté par rôle  
+idle_in_transaction_session_timeout = 10min  
+lock_timeout = 30s  
 
 # ===================================
 # LOGGING et MONITORING
 # ===================================
-logging_collector = on
-log_destination = 'stderr'
-log_directory = 'log'
-log_filename = 'postgresql-%Y-%m-%d.log'
-log_rotation_age = 1d
-log_rotation_size = 200MB
+logging_collector = on  
+log_destination = 'stderr'  
+log_directory = 'log'  
+log_filename = 'postgresql-%Y-%m-%d.log'  
+log_rotation_age = 1d  
+log_rotation_size = 200MB  
 
-log_line_prefix = '%t [%p]: user=%u,db=%d,app=%a,client=%h '
-log_min_duration_statement = 1000       # Log requêtes > 1 seconde
-log_checkpoints = on
-log_connections = on
-log_disconnections = on
-log_lock_waits = on
-log_temp_files = 0                      # Log fichiers temporaires
-log_autovacuum_min_duration = 0
+log_line_prefix = '%t [%p]: user=%u,db=%d,app=%a,client=%h '  
+log_min_duration_statement = 1000       # Log requêtes > 1 seconde  
+log_checkpoints = on  
+log_connections = on  
+log_disconnections = on  
+log_lock_waits = on  
+log_temp_files = 0                      # Log fichiers temporaires  
+log_autovacuum_min_duration = 0  
 
 # Monitoring
-track_activities = on
-track_counts = on
-track_io_timing = on
-track_functions = pl
-compute_query_id = on
+track_activities = on  
+track_counts = on  
+track_io_timing = on  
+track_functions = pl  
+compute_query_id = on  
 
 # Extensions
 shared_preload_libraries = 'pg_stat_statements'
@@ -649,19 +649,19 @@ shared_preload_libraries = 'pg_stat_statements'
 # ===================================
 # SÉCURITÉ
 # ===================================
-ssl = on
-ssl_prefer_server_ciphers = on
-password_encryption = scram-sha-256
+ssl = on  
+ssl_prefer_server_ciphers = on  
+password_encryption = scram-sha-256  
 
 # ===================================
 # TIMEZONE et LOCALE
 # ===================================
-timezone = 'UTC'
-lc_messages = 'en_US.UTF-8'
-lc_monetary = 'en_US.UTF-8'
-lc_numeric = 'en_US.UTF-8'
-lc_time = 'en_US.UTF-8'
-default_text_search_config = 'pg_catalog.english'
+timezone = 'UTC'  
+lc_messages = 'en_US.UTF-8'  
+lc_monetary = 'en_US.UTF-8'  
+lc_numeric = 'en_US.UTF-8'  
+lc_time = 'en_US.UTF-8'  
+default_text_search_config = 'pg_catalog.english'  
 ```
 
 ---
@@ -679,16 +679,16 @@ default_text_search_config = 'pg_catalog.english'
 CREATE ROLE app_oltp WITH LOGIN PASSWORD 'secure_password_oltp';
 
 -- Configuration OLTP
-ALTER ROLE app_oltp SET work_mem = '32MB';
-ALTER ROLE app_oltp SET statement_timeout = '30s';
-ALTER ROLE app_oltp SET idle_in_transaction_session_timeout = '1min';
-ALTER ROLE app_oltp SET max_parallel_workers_per_gather = 0;  -- Pas de parallélisme
+ALTER ROLE app_oltp SET work_mem = '32MB';  
+ALTER ROLE app_oltp SET statement_timeout = '30s';  
+ALTER ROLE app_oltp SET idle_in_transaction_session_timeout = '1min';  
+ALTER ROLE app_oltp SET max_parallel_workers_per_gather = 0;  -- Pas de parallélisme  
 
 -- Permissions OLTP (lecture/écriture sur tables transactionnelles)
-GRANT CONNECT ON DATABASE mydb TO app_oltp;
-GRANT USAGE ON SCHEMA public TO app_oltp;
-GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO app_oltp;
-GRANT USAGE ON ALL SEQUENCES IN SCHEMA public TO app_oltp;
+GRANT CONNECT ON DATABASE mydb TO app_oltp;  
+GRANT USAGE ON SCHEMA public TO app_oltp;  
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO app_oltp;  
+GRANT USAGE ON ALL SEQUENCES IN SCHEMA public TO app_oltp;  
 
 -- =====================
 -- RÔLE OLAP
@@ -696,16 +696,16 @@ GRANT USAGE ON ALL SEQUENCES IN SCHEMA public TO app_oltp;
 CREATE ROLE analytics_user WITH LOGIN PASSWORD 'secure_password_analytics';
 
 -- Configuration OLAP
-ALTER ROLE analytics_user SET work_mem = '512MB';
-ALTER ROLE analytics_user SET statement_timeout = '30min';
-ALTER ROLE analytics_user SET idle_in_transaction_session_timeout = '1h';
-ALTER ROLE analytics_user SET max_parallel_workers_per_gather = 8;  -- Parallélisme max
-ALTER ROLE analytics_user SET default_statistics_target = 500;
+ALTER ROLE analytics_user SET work_mem = '512MB';  
+ALTER ROLE analytics_user SET statement_timeout = '30min';  
+ALTER ROLE analytics_user SET idle_in_transaction_session_timeout = '1h';  
+ALTER ROLE analytics_user SET max_parallel_workers_per_gather = 8;  -- Parallélisme max  
+ALTER ROLE analytics_user SET default_statistics_target = 500;  
 
 -- Permissions OLAP (lecture seule)
-GRANT CONNECT ON DATABASE mydb TO analytics_user;
-GRANT USAGE ON SCHEMA public TO analytics_user;
-GRANT SELECT ON ALL TABLES IN SCHEMA public TO analytics_user;
+GRANT CONNECT ON DATABASE mydb TO analytics_user;  
+GRANT USAGE ON SCHEMA public TO analytics_user;  
+GRANT SELECT ON ALL TABLES IN SCHEMA public TO analytics_user;  
 -- Pas de INSERT/UPDATE/DELETE pour analytics
 
 -- =====================
@@ -713,13 +713,13 @@ GRANT SELECT ON ALL TABLES IN SCHEMA public TO analytics_user;
 -- =====================
 CREATE ROLE etl_user WITH LOGIN PASSWORD 'secure_password_etl';
 
-ALTER ROLE etl_user SET work_mem = '1GB';
-ALTER ROLE etl_user SET maintenance_work_mem = '4GB';
-ALTER ROLE etl_user SET max_parallel_maintenance_workers = 8;
+ALTER ROLE etl_user SET work_mem = '1GB';  
+ALTER ROLE etl_user SET maintenance_work_mem = '4GB';  
+ALTER ROLE etl_user SET max_parallel_maintenance_workers = 8;  
 
-GRANT CONNECT ON DATABASE mydb TO etl_user;
-GRANT USAGE ON SCHEMA public TO etl_user;
-GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO etl_user;
+GRANT CONNECT ON DATABASE mydb TO etl_user;  
+GRANT USAGE ON SCHEMA public TO etl_user;  
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO etl_user;  
 ```
 
 ---
@@ -732,19 +732,19 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO etl_user;
 # /etc/pgbouncer/pgbouncer.ini
 
 [databases]
-mydb_oltp = host=localhost dbname=mydb
-mydb_olap = host=localhost dbname=mydb
+mydb_oltp = host=localhost dbname=mydb  
+mydb_olap = host=localhost dbname=mydb  
 
 [pgbouncer]
-listen_addr = *
-listen_port = 6432
-auth_type = scram-sha-256
+listen_addr = *  
+listen_port = 6432  
+auth_type = scram-sha-256  
 
 # Pool OLTP : Transaction pooling (beaucoup de connexions courtes)
-pool_mode = transaction
-default_pool_size = 20
-max_client_conn = 1000
-reserve_pool_size = 10
+pool_mode = transaction  
+default_pool_size = 20  
+max_client_conn = 1000  
+reserve_pool_size = 10  
 
 # Pool OLAP : Session pooling (peu de connexions longues)
 # Configurer dans section [databases]
@@ -794,13 +794,13 @@ IMPORT FOREIGN SCHEMA public
     INTO public;
 
 -- Créer vues matérialisées sur données importées
-CREATE MATERIALIZED VIEW mv_sales_summary AS
-SELECT
+CREATE MATERIALIZED VIEW mv_sales_summary AS  
+SELECT  
     DATE_TRUNC('day', created_at) AS day,
     product_id,
     SUM(amount) AS total_amount
-FROM orders
-GROUP BY DATE_TRUNC('day', created_at), product_id;
+FROM orders  
+GROUP BY DATE_TRUNC('day', created_at), product_id;  
 
 -- Rafraîchir périodiquement (pg_cron)
 SELECT cron.schedule('refresh-sales-mv', '0 * * * *',
@@ -846,8 +846,8 @@ CREATE TABLE orders_2025_08 PARTITION OF orders
 
 ```sql
 -- Partition "hot" : index B-Tree (OLTP)
-CREATE INDEX idx_orders_current_user ON orders_current(user_id);
-CREATE INDEX idx_orders_current_status ON orders_current(status);
+CREATE INDEX idx_orders_current_user ON orders_current(user_id);  
+CREATE INDEX idx_orders_current_status ON orders_current(status);  
 
 -- Partitions "cold" : index BRIN (OLAP)
 CREATE INDEX idx_orders_2025_08_created_brin ON orders_2025_08
@@ -882,15 +882,15 @@ CREATE INDEX idx_orders_2025_08_created_brin ON orders_2025_08
 
 ```sql
 -- Vue matérialisée rafraîchie toutes les heures
-CREATE MATERIALIZED VIEW mv_daily_sales AS
-SELECT
+CREATE MATERIALIZED VIEW mv_daily_sales AS  
+SELECT  
     DATE_TRUNC('day', created_at) AS day,
     COUNT(*) AS num_orders,
     SUM(amount) AS total_amount,
     AVG(amount) AS avg_amount
-FROM orders
-WHERE created_at >= CURRENT_DATE - INTERVAL '90 days'
-GROUP BY DATE_TRUNC('day', created_at);
+FROM orders  
+WHERE created_at >= CURRENT_DATE - INTERVAL '90 days'  
+GROUP BY DATE_TRUNC('day', created_at);  
 
 CREATE UNIQUE INDEX ON mv_daily_sales(day);
 
@@ -908,10 +908,10 @@ REFRESH MATERIALIZED VIEW CONCURRENTLY mv_daily_sales;
 
 ```sql
 -- Requête OLAP fréquente
-SELECT product_id, SUM(amount), COUNT(*)
-FROM orders
-WHERE created_at >= '2025-01-01' AND status = 'completed'
-GROUP BY product_id;
+SELECT product_id, SUM(amount), COUNT(*)  
+FROM orders  
+WHERE created_at >= '2025-01-01' AND status = 'completed'  
+GROUP BY product_id;  
 
 -- Index couvrant (INCLUDE clause)
 CREATE INDEX idx_orders_covering ON orders (status, created_at)
@@ -937,9 +937,9 @@ ALTER TABLE orders
 CREATE INDEX idx_orders_year_month ON orders(year_month);
 
 -- Requête OLAP simplifiée et rapide
-SELECT year_month, SUM(amount)
-FROM orders
-GROUP BY year_month;
+SELECT year_month, SUM(amount)  
+FROM orders  
+GROUP BY year_month;  
 ```
 
 ---
@@ -975,15 +975,15 @@ SELECT
     state,
     COUNT(*) AS num_queries,
     AVG(EXTRACT(EPOCH FROM (NOW() - query_start))) AS avg_duration_sec
-FROM pg_stat_activity
-WHERE state = 'active'
-GROUP BY usename, application_name, state
-ORDER BY avg_duration_sec DESC;
+FROM pg_stat_activity  
+WHERE state = 'active'  
+GROUP BY usename, application_name, state  
+ORDER BY avg_duration_sec DESC;  
 ```
 
 **Interprétation :**
-- `app_oltp` avec `avg_duration_sec < 1s` → OK
-- `analytics_user` avec `avg_duration_sec 10-60s` → OK
+- `app_oltp` avec `avg_duration_sec < 1s` → OK  
+- `analytics_user` avec `avg_duration_sec 10-60s` → OK  
 - `app_oltp` avec `avg_duration_sec > 5s` → ⚠️ Problème !
 
 ---
@@ -996,11 +996,11 @@ SELECT
     usename,
     query,
     temp_blks_written * 8192 / 1024 / 1024 AS temp_mb
-FROM pg_stat_statements pss
-JOIN pg_user pu ON pss.userid = pu.usesysid
-WHERE temp_blks_written > 0
-ORDER BY temp_blks_written DESC
-LIMIT 20;
+FROM pg_stat_statements pss  
+JOIN pg_user pu ON pss.userid = pu.usesysid  
+WHERE temp_blks_written > 0  
+ORDER BY temp_blks_written DESC  
+LIMIT 20;  
 ```
 
 **Action :**
@@ -1020,11 +1020,11 @@ SELECT
     total_exec_time,
     user_time,  -- Temps CPU utilisateur
     system_time  -- Temps CPU système
-FROM pg_stat_statements pss
-JOIN pg_stat_kcache psk USING (queryid)
-JOIN pg_user pu ON pss.userid = pu.usesysid
-ORDER BY (user_time + system_time) DESC
-LIMIT 10;
+FROM pg_stat_statements pss  
+JOIN pg_stat_kcache psk USING (queryid)  
+JOIN pg_user pu ON pss.userid = pu.usesysid  
+ORDER BY (user_time + system_time) DESC  
+LIMIT 10;  
 ```
 
 ---
@@ -1041,8 +1041,8 @@ SELECT
     wait_event_type,
     wait_event,
     query
-FROM pg_stat_activity
-WHERE wait_event = 'VacuumDelay'
+FROM pg_stat_activity  
+WHERE wait_event = 'VacuumDelay'  
    OR query ILIKE '%vacuum%';
 ```
 
@@ -1061,9 +1061,9 @@ SELECT
     blocking_activity.usename AS blocking_user,
     blocked_activity.query AS blocked_query,
     blocking_activity.query AS blocking_query
-FROM pg_catalog.pg_locks blocked_locks
-JOIN pg_catalog.pg_stat_activity blocked_activity ON blocked_activity.pid = blocked_locks.pid
-JOIN pg_catalog.pg_locks blocking_locks
+FROM pg_catalog.pg_locks blocked_locks  
+JOIN pg_catalog.pg_stat_activity blocked_activity ON blocked_activity.pid = blocked_locks.pid  
+JOIN pg_catalog.pg_locks blocking_locks  
     ON blocking_locks.locktype = blocked_locks.locktype
     AND blocking_locks.database IS NOT DISTINCT FROM blocked_locks.database
     AND blocking_locks.relation IS NOT DISTINCT FROM blocked_locks.relation
@@ -1075,8 +1075,8 @@ JOIN pg_catalog.pg_locks blocking_locks
     AND blocking_locks.objid IS NOT DISTINCT FROM blocked_locks.objid
     AND blocking_locks.objsubid IS NOT DISTINCT FROM blocked_locks.objsubid
     AND blocking_locks.pid != blocked_locks.pid
-JOIN pg_catalog.pg_stat_activity blocking_activity ON blocking_activity.pid = blocking_locks.pid
-WHERE NOT blocked_locks.granted;
+JOIN pg_catalog.pg_stat_activity blocking_activity ON blocking_activity.pid = blocking_locks.pid  
+WHERE NOT blocked_locks.granted;  
 ```
 
 **Action :** Si requête OLAP bloque OLTP, tuer la requête OLAP :
@@ -1089,43 +1089,43 @@ SELECT pg_terminate_backend(blocking_pid);
 ## Checklist Mixed Workload
 
 ### Configuration Générale
-- [ ] **shared_buffers** = 25% RAM
-- [ ] **effective_cache_size** = 75% RAM
-- [ ] **work_mem** = 64MB (valeur par défaut modérée)
-- [ ] **maintenance_work_mem** = 2GB
+- [ ] **shared_buffers** = 25% RAM  
+- [ ] **effective_cache_size** = 75% RAM  
+- [ ] **work_mem** = 64MB (valeur par défaut modérée)  
+- [ ] **maintenance_work_mem** = 2GB  
 - [ ] **max_connections** = 200-300 (dimensionné OLTP)
 
 ### Parallélisation
-- [ ] **max_parallel_workers_per_gather** = 4 (compromis)
+- [ ] **max_parallel_workers_per_gather** = 4 (compromis)  
 - [ ] **max_parallel_workers** = 75% des CPU (laisser marge OLTP)
 
 ### Rôles et Séparation
-- [ ] Rôle OLTP créé avec `work_mem = 32MB`, `statement_timeout = 30s`
-- [ ] Rôle OLAP créé avec `work_mem = 512MB`, `statement_timeout = 30min`
+- [ ] Rôle OLTP créé avec `work_mem = 32MB`, `statement_timeout = 30s`  
+- [ ] Rôle OLAP créé avec `work_mem = 512MB`, `statement_timeout = 30min`  
 - [ ] Connection pooling différencié (PgBouncer ou similaire)
 
 ### Tables et Index
-- [ ] Partitionnement sur tables mixtes (hot/warm/cold)
-- [ ] Index B-Tree sur partitions "hot" (OLTP)
-- [ ] Index BRIN sur partitions "cold" (OLAP)
-- [ ] Vues matérialisées pour agrégations fréquentes
+- [ ] Partitionnement sur tables mixtes (hot/warm/cold)  
+- [ ] Index B-Tree sur partitions "hot" (OLTP)  
+- [ ] Index BRIN sur partitions "cold" (OLAP)  
+- [ ] Vues matérialisées pour agrégations fréquentes  
 - [ ] Index couvrants pour requêtes OLAP récurrentes
 
 ### Autovacuum
-- [ ] **autovacuum_naptime** = 30s (compromis)
-- [ ] **autovacuum_vacuum_scale_factor** = 0.1
+- [ ] **autovacuum_naptime** = 30s (compromis)  
+- [ ] **autovacuum_vacuum_scale_factor** = 0.1  
 - [ ] Configuration par table pour OLTP vs OLAP
 
 ### Monitoring
-- [ ] pg_stat_statements activé
-- [ ] Surveillance des requêtes par rôle/application
-- [ ] Surveillance fichiers temporaires (work_mem insuffisant ?)
-- [ ] Surveillance locks (OLAP bloque OLTP ?)
+- [ ] pg_stat_statements activé  
+- [ ] Surveillance des requêtes par rôle/application  
+- [ ] Surveillance fichiers temporaires (work_mem insuffisant ?)  
+- [ ] Surveillance locks (OLAP bloque OLTP ?)  
 - [ ] Surveillance CPU par type de charge
 
 ### Planificateur
-- [ ] **random_page_cost** = 1.1 (SSD)
-- [ ] **default_statistics_target** = 200 (compromis)
+- [ ] **random_page_cost** = 1.1 (SSD)  
+- [ ] **default_statistics_target** = 200 (compromis)  
 - [ ] Statistiques détaillées (500) sur colonnes OLAP critiques
 
 ---
@@ -1133,35 +1133,35 @@ SELECT pg_terminate_backend(blocking_pid);
 ## Erreurs Courantes à Éviter
 
 ### ❌ Erreur 1 : Configuration Extrême (100% OLTP ou 100% OLAP)
-**Symptôme :** Une charge souffre au détriment de l'autre
-**Solution :** Trouver le compromis 70/30 et ajuster dynamiquement par rôle
+**Symptôme :** Une charge souffre au détriment de l'autre  
+**Solution :** Trouver le compromis 70/30 et ajuster dynamiquement par rôle  
 
 ### ❌ Erreur 2 : Pas de Séparation des Rôles
-**Symptôme :** Impossible de distinguer OLTP et OLAP dans le monitoring
-**Solution :** Créer rôles séparés avec configurations dédiées
+**Symptôme :** Impossible de distinguer OLTP et OLAP dans le monitoring  
+**Solution :** Créer rôles séparés avec configurations dédiées  
 
 ### ❌ Erreur 3 : Pas de Connection Pooling
-**Symptôme :** Épuisement des connexions, OLTP ralenti
-**Solution :** PgBouncer avec pools séparés OLTP/OLAP
+**Symptôme :** Épuisement des connexions, OLTP ralenti  
+**Solution :** PgBouncer avec pools séparés OLTP/OLAP  
 
 ### ❌ Erreur 4 : OLAP Bloque OLTP (Locks)
-**Symptôme :** Transactions OLTP attendent des requêtes OLAP longues
-**Solution :**
+**Symptôme :** Transactions OLTP attendent des requêtes OLAP longues  
+**Solution :**  
 - Utiliser vues matérialisées (pas de locks)
 - Isoler OLAP dans réplica read-only
 - `lock_timeout` pour OLTP
 
 ### ❌ Erreur 5 : Pas de Partitionnement
-**Symptôme :** Requêtes OLAP scannent des millions de lignes inutiles
-**Solution :** Partitionner par date (hot/warm/cold)
+**Symptôme :** Requêtes OLAP scannent des millions de lignes inutiles  
+**Solution :** Partitionner par date (hot/warm/cold)  
 
 ### ❌ Erreur 6 : work_mem Global Trop Élevé
-**Symptôme :** OOM sur charges OLTP (beaucoup de connexions)
-**Solution :** work_mem modéré global + ajustement par rôle OLAP
+**Symptôme :** OOM sur charges OLTP (beaucoup de connexions)  
+**Solution :** work_mem modéré global + ajustement par rôle OLAP  
 
 ### ❌ Erreur 7 : Pas de Monitoring Différencié
-**Symptôme :** Impossible de diagnostiquer quel type de charge pose problème
-**Solution :** Utiliser `application_name` et séparer monitoring OLTP vs OLAP
+**Symptôme :** Impossible de diagnostiquer quel type de charge pose problème  
+**Solution :** Utiliser `application_name` et séparer monitoring OLTP vs OLAP  
 
 ---
 
@@ -1193,32 +1193,32 @@ SELECT pg_terminate_backend(blocking_pid);
 ```
 
 **Avantages :**
-- ✅ Isolation totale (OLAP n'impacte jamais OLTP)
-- ✅ Configuration optimale pour chaque charge
+- ✅ Isolation totale (OLAP n'impacte jamais OLTP)  
+- ✅ Configuration optimale pour chaque charge  
 - ✅ Scaling indépendant
 
 **Configuration PRIMARY (postgresql.conf) :**
 ```ini
 # PRIMARY : Optimisé OLTP
-shared_buffers = 16GB
-work_mem = 32MB
-max_connections = 300
-max_parallel_workers_per_gather = 2
+shared_buffers = 16GB  
+work_mem = 32MB  
+max_connections = 300  
+max_parallel_workers_per_gather = 2  
 
 # Réplication
-wal_level = replica
-max_wal_senders = 3
+wal_level = replica  
+max_wal_senders = 3  
 ```
 
 **Configuration REPLICA (postgresql.conf) :**
 ```ini
 # REPLICA : Optimisé OLAP
-shared_buffers = 32GB
-work_mem = 1GB
-max_connections = 50
-max_parallel_workers_per_gather = 8
-hot_standby = on
-hot_standby_feedback = on  # Important !
+shared_buffers = 32GB  
+work_mem = 1GB  
+max_connections = 50  
+max_parallel_workers_per_gather = 8  
+hot_standby = on  
+hot_standby_feedback = on  # Important !  
 ```
 
 **hot_standby_feedback :** Empêche PRIMARY de nettoyer trop tôt (OLAP lit anciennes versions).
@@ -1290,14 +1290,14 @@ TRUNCATE staging_sales;
 **Configuration :**
 ```ini
 # Prioriser OLTP
-shared_buffers = 16GB
-work_mem = 32MB  # Défaut bas (OLTP)
-max_connections = 300
-max_parallel_workers_per_gather = 2
+shared_buffers = 16GB  
+work_mem = 32MB  # Défaut bas (OLTP)  
+max_connections = 300  
+max_parallel_workers_per_gather = 2  
 
 # Rôle OLAP avec ajustements
-ALTER ROLE analytics_user SET work_mem = '256MB';
-ALTER ROLE analytics_user SET max_parallel_workers_per_gather = 6;
+ALTER ROLE analytics_user SET work_mem = '256MB';  
+ALTER ROLE analytics_user SET max_parallel_workers_per_gather = 6;  
 
 # Vues matérialisées pour dashboards (rafraîchir toutes les heures)
 ```
@@ -1314,14 +1314,14 @@ ALTER ROLE analytics_user SET max_parallel_workers_per_gather = 6;
 **Configuration :**
 ```ini
 # Équilibre
-shared_buffers = 24GB
-work_mem = 64MB  # Compromis
-max_connections = 200
-max_parallel_workers_per_gather = 4
+shared_buffers = 24GB  
+work_mem = 64MB  # Compromis  
+max_connections = 200  
+max_parallel_workers_per_gather = 4  
 
 # Rôle OLAP avec beaucoup de ressources
-ALTER ROLE data_analyst SET work_mem = '1GB';
-ALTER ROLE data_analyst SET max_parallel_workers_per_gather = 8;
+ALTER ROLE data_analyst SET work_mem = '1GB';  
+ALTER ROLE data_analyst SET max_parallel_workers_per_gather = 8;  
 
 # Partitionnement + vues matérialisées
 # Séparation logique : schema 'analytics' pour OLAP
@@ -1339,14 +1339,14 @@ ALTER ROLE data_analyst SET max_parallel_workers_per_gather = 8;
 **Configuration :**
 ```ini
 # Compromis fort
-shared_buffers = 20GB
-work_mem = 64MB
-max_connections = 250
-max_parallel_workers_per_gather = 4
+shared_buffers = 20GB  
+work_mem = 64MB  
+max_connections = 250  
+max_parallel_workers_per_gather = 4  
 
 # Timeouts pour protéger OLTP
-statement_timeout = 60s  # Global, requêtes > 1min tuées
-idle_in_transaction_session_timeout = 5min
+statement_timeout = 60s  # Global, requêtes > 1min tuées  
+idle_in_transaction_session_timeout = 5min  
 
 # Connection pooling obligatoire (PgBouncer)
 # Surveillance intensive (pg_stat_statements)
@@ -1360,34 +1360,34 @@ Le **Mixed Workload** est le scénario le plus courant et le plus complexe. Il n
 
 ### Principes Clés
 
-1. **Compromis Intelligent** : Configuration par défaut modérée (70% OLTP, 30% OLAP)
-2. **Ajustements Dynamiques** : Utiliser rôles, sessions, application_name
-3. **Séparation Logique** : Rôles, bases, schémas, connection pooling
-4. **Monitoring Différencié** : Distinguer OLTP et OLAP dans les métriques
+1. **Compromis Intelligent** : Configuration par défaut modérée (70% OLTP, 30% OLAP)  
+2. **Ajustements Dynamiques** : Utiliser rôles, sessions, application_name  
+3. **Séparation Logique** : Rôles, bases, schémas, connection pooling  
+4. **Monitoring Différencié** : Distinguer OLTP et OLAP dans les métriques  
 5. **Architecture Progressive** : Commencer simple, migrer vers réplication si besoin
 
 ### Checklist Finale
 
 **Configuration de Base :**
-- [ ] Paramètres globaux = compromis OLTP/OLAP
-- [ ] Rôles séparés avec configurations dédiées
+- [ ] Paramètres globaux = compromis OLTP/OLAP  
+- [ ] Rôles séparés avec configurations dédiées  
 - [ ] Connection pooling différencié
 
 **Optimisations :**
-- [ ] Partitionnement (hot/warm/cold)
-- [ ] Index mixtes (B-Tree + BRIN selon partition)
-- [ ] Vues matérialisées pour OLAP fréquent
+- [ ] Partitionnement (hot/warm/cold)  
+- [ ] Index mixtes (B-Tree + BRIN selon partition)  
+- [ ] Vues matérialisées pour OLAP fréquent  
 - [ ] Colonnes générées pour simplifier requêtes
 
 **Monitoring :**
-- [ ] pg_stat_statements par rôle
-- [ ] Fichiers temporaires (work_mem insuffisant ?)
-- [ ] Locks (OLAP bloque OLTP ?)
+- [ ] pg_stat_statements par rôle  
+- [ ] Fichiers temporaires (work_mem insuffisant ?)  
+- [ ] Locks (OLAP bloque OLTP ?)  
 - [ ] CPU et I/O par type de charge
 
 **Évolution :**
-- [ ] Si OLAP > 30% → Envisager réplication
-- [ ] Si locks fréquents → Vues matérialisées ou réplication
+- [ ] Si OLAP > 30% → Envisager réplication  
+- [ ] Si locks fréquents → Vues matérialisées ou réplication  
 - [ ] Si OOM → Réduire work_mem global, augmenter par rôle OLAP
 
 ### Métriques de Succès
@@ -1404,9 +1404,9 @@ Le **Mixed Workload** est le scénario le plus courant et le plus complexe. Il n
 
 ### Ressources
 
-- **PgBouncer** : https://www.pgbouncer.org/
-- **pg_stat_statements** : Extension essentielle
-- **pg_cron** : Automatisation (vues matérialisées, vacuum)
+- **PgBouncer** : https://www.pgbouncer.org/  
+- **pg_stat_statements** : Extension essentielle  
+- **pg_cron** : Automatisation (vues matérialisées, vacuum)  
 - **Patroni** : HA avec réplication automatique
 
 Le Mixed Workload demande de la **finesse** et du **monitoring constant**. Commencez par une configuration équilibrée, mesurez, ajustez, et évoluez vers une architecture séparée si les besoins le justifient.

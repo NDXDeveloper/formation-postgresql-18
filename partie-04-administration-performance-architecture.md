@@ -8,13 +8,13 @@
 
 Vous avez parcouru un long chemin depuis le début de cette formation :
 
-- **Partie 1** : Vous avez compris l'architecture PostgreSQL et maîtrisé les fondamentaux
-- **Partie 2** : Vous avez appris à interroger et manipuler les données efficacement
+- **Partie 1** : Vous avez compris l'architecture PostgreSQL et maîtrisé les fondamentaux  
+- **Partie 2** : Vous avez appris à interroger et manipuler les données efficacement  
 - **Partie 3** : Vous avez découvert les techniques SQL avancées et la modélisation experte
 
 Vous savez maintenant **écrire du SQL de qualité professionnelle** et **concevoir des schémas de données robustes**. Mais une question cruciale demeure : **comment transformer cette expertise en systèmes qui fonctionnent de manière fiable, performante et sécurisée en production ?**
 
-C'est précisément l'objet de cette quatrième et dernière partie.
+C'est précisément l'objet de cette quatrième partie.
 
 ---
 
@@ -23,23 +23,23 @@ C'est précisément l'objet de cette quatrième et dernière partie.
 Dans le monde professionnel, la différence entre un système qui fonctionne "sur votre machine" et un système qui fonctionne **en production à grande échelle** est immense. Voici ce qui change :
 
 #### Le Facteur Échelle
-- **Développement** : 1000 lignes dans une table de test
+- **Développement** : 1000 lignes dans une table de test  
 - **Production** : 500 millions de lignes, avec 10 000 insertions par minute
 
 #### Le Facteur Concurrence
-- **Développement** : Vous êtes seul à utiliser la base
+- **Développement** : Vous êtes seul à utiliser la base  
 - **Production** : 500 utilisateurs simultanés, 2000 transactions par seconde
 
 #### Le Facteur Disponibilité
-- **Développement** : Vous pouvez redémarrer quand vous voulez
+- **Développement** : Vous pouvez redémarrer quand vous voulez  
 - **Production** : Le système doit tourner 24/7, avec un SLA de 99.95% (4h20 d'arrêt maximum par an)
 
 #### Le Facteur Sécurité
-- **Développement** : Vous êtes l'administrateur avec tous les droits
+- **Développement** : Vous êtes l'administrateur avec tous les droits  
 - **Production** : Principe du moindre privilège, authentification forte, audit, conformité RGPD
 
 #### Le Facteur Coût
-- **Développement** : Une requête lente de 30 secondes ? Pas grave
+- **Développement** : Une requête lente de 30 secondes ? Pas grave  
 - **Production** : Une requête mal optimisée peut coûter des milliers d'euros en ressources cloud par mois
 
 **Cette partie vous apprendra à naviguer dans cette réalité.**
@@ -50,17 +50,17 @@ Dans le monde professionnel, la différence entre un système qui fonctionne "su
 
 Les statistiques parlent d'elles-mêmes :
 
-- **80% des pannes** en production sont liées à des problèmes de base de données (verrous, saturation de connexions, queries lentes)
-- **60% des violations de sécurité** exploitent des bases mal configurées
-- **90% des problèmes de performance** peuvent être résolus par une meilleure indexation et optimisation
+- **80% des pannes** en production sont liées à des problèmes de base de données (verrous, saturation de connexions, queries lentes)  
+- **60% des violations de sécurité** exploitent des bases mal configurées  
+- **90% des problèmes de performance** peuvent être résolus par une meilleure indexation et optimisation  
 - **70% des pertes de données** auraient pu être évitées avec une stratégie de backup appropriée
 
 En maîtrisant les concepts de cette partie, vous serez capable de :
 
-- ✅ **Éviter les pannes** avant qu'elles ne se produisent
-- ✅ **Résoudre rapidement** les incidents quand ils surviennent
-- ✅ **Optimiser les coûts** d'infrastructure
-- ✅ **Garantir la sécurité** et la conformité
+- ✅ **Éviter les pannes** avant qu'elles ne se produisent  
+- ✅ **Résoudre rapidement** les incidents quand ils surviennent  
+- ✅ **Optimiser les coûts** d'infrastructure  
+- ✅ **Garantir la sécurité** et la conformité  
 - ✅ **Assurer la disponibilité** 24/7
 
 ---
@@ -70,44 +70,44 @@ En maîtrisant les concepts de cette partie, vous serez capable de :
 À l'issue de cette partie, vous serez capable de :
 
 #### Comprendre les Mécanismes Internes
-- ✅ Maîtriser le **MVCC** (Multiversion Concurrency Control), le cœur de PostgreSQL
-- ✅ Comprendre les **niveaux d'isolation** et les anomalies transactionnelles
-- ✅ Gérer les **verrous et deadlocks** de manière proactive
+- ✅ Maîtriser le **MVCC** (Multiversion Concurrency Control), le cœur de PostgreSQL  
+- ✅ Comprendre les **niveaux d'isolation** et les anomalies transactionnelles  
+- ✅ Gérer les **verrous et deadlocks** de manière proactive  
 - ✅ Exploiter les nouvelles capacités **I/O asynchrones de PostgreSQL 18**
 
 #### Optimiser les Performances
-- ✅ Concevoir une **stratégie d'indexation** optimale (B-Tree, GIN, GiST, BRIN)
-- ✅ Exploiter le **Skip Scan** de PostgreSQL 18 pour les index multi-colonnes
-- ✅ Lire et interpréter un plan d'exécution (**EXPLAIN ANALYZE**)
-- ✅ Identifier et corriger les requêtes problématiques
+- ✅ Concevoir une **stratégie d'indexation** optimale (B-Tree, GIN, GiST, BRIN)  
+- ✅ Exploiter le **Skip Scan** de PostgreSQL 18 pour les index multi-colonnes  
+- ✅ Lire et interpréter un plan d'exécution (**EXPLAIN ANALYZE**)  
+- ✅ Identifier et corriger les requêtes problématiques  
 - ✅ Configurer PostgreSQL pour différents workloads (OLTP vs OLAP)
 
 #### Assurer l'Observabilité
-- ✅ Mettre en place un **monitoring complet** (pg_stat_statements, métriques système)
-- ✅ Exploiter les **nouvelles statistiques I/O et WAL** de PostgreSQL 18
-- ✅ Créer des dashboards et des alertes pertinentes
-- ✅ Diagnostiquer rapidement les problèmes en production
+- ✅ Mettre en place un **monitoring complet** (pg_stat_statements, métriques système)  
+- ✅ Exploiter les **nouvelles statistiques I/O et WAL** de PostgreSQL 18  
+- ✅ Créer des dashboards et des alertes pertinentes  
+- ✅ Diagnostiquer rapidement les problèmes en production  
 - ✅ Utiliser les outils professionnels (Prometheus, Grafana, pgBadger)
 
 #### Administrer Professionnellement
-- ✅ Configurer l'**authentification sécurisée** (SCRAM-SHA-256, OAuth 2.0 avec PG 18)
-- ✅ Implémenter le **chiffrement TLS 1.3** et le mode FIPS (PostgreSQL 18)
-- ✅ Gérer les **autorisations** avec le principe du moindre privilège
-- ✅ Maîtriser **VACUUM et ANALYZE** avec les optimisations de PG 18
-- ✅ Mettre en place des **sauvegardes robustes** (logiques, physiques, PITR)
+- ✅ Configurer l'**authentification sécurisée** (SCRAM-SHA-256, OAuth 2.0 avec PG 18)  
+- ✅ Implémenter le **chiffrement TLS 1.3** et le mode FIPS (PostgreSQL 18)  
+- ✅ Gérer les **autorisations** avec le principe du moindre privilège  
+- ✅ Maîtriser **VACUUM et ANALYZE** avec les optimisations de PG 18  
+- ✅ Mettre en place des **sauvegardes robustes** (logiques, physiques, PITR)  
 - ✅ Utiliser **pg_upgrade optimisé** de PostgreSQL 18
 
 #### Garantir la Haute Disponibilité
-- ✅ Configurer la **réplication physique** (synchrone/asynchrone)
-- ✅ Mettre en place la **réplication logique** pour des cas d'usage avancés
-- ✅ Automatiser le **failover** avec Patroni
-- ✅ Concevoir des architectures **géo-distribuées**
+- ✅ Configurer la **réplication physique** (synchrone/asynchrone)  
+- ✅ Mettre en place la **réplication logique** pour des cas d'usage avancés  
+- ✅ Automatiser le **failover** avec Patroni  
+- ✅ Concevoir des architectures **géo-distribuées**  
 - ✅ Implémenter des stratégies de **disaster recovery**
 
 #### Programmer Côté Serveur
-- ✅ Écrire des **fonctions et procédures** en PL/pgSQL
-- ✅ Créer des **triggers** pour automatiser la logique métier
-- ✅ Gérer les **exceptions** et les transactions dans les procédures
+- ✅ Écrire des **fonctions et procédures** en PL/pgSQL  
+- ✅ Créer des **triggers** pour automatiser la logique métier  
+- ✅ Gérer les **exceptions** et les transactions dans les procédures  
 - ✅ Comprendre les concepts de **volatilité** (VOLATILE, STABLE, IMMUTABLE)
 
 ---
@@ -220,10 +220,10 @@ Cette partie s'adresse à différents profils avec des besoins spécifiques :
 ### Prérequis et Niveau Attendu
 
 **Cette partie suppose que vous :**
-- ✓ Maîtrisez SQL (SELECT, JOIN, GROUP BY, sous-requêtes)
-- ✓ Avez une expérience pratique avec PostgreSQL (minimum 6 mois)
-- ✓ Comprenez les concepts systèmes de base (processus, mémoire, I/O)
-- ✓ Êtes à l'aise avec la ligne de commande Linux/Unix
+- ✓ Maîtrisez SQL (SELECT, JOIN, GROUP BY, sous-requêtes)  
+- ✓ Avez une expérience pratique avec PostgreSQL (minimum 6 mois)  
+- ✓ Comprenez les concepts systèmes de base (processus, mémoire, I/O)  
+- ✓ Êtes à l'aise avec la ligne de commande Linux/Unix  
 - ✓ Avez des notions de réseau (TCP/IP, ports, SSL)
 
 **Si vous manquez certains prérequis :**
@@ -267,31 +267,29 @@ Recommandations professionnelles éprouvées
 PostgreSQL 18 (septembre 2025) apporte des améliorations majeures pour la production :
 
 #### **Performance et I/O**
-- ✨ Sous-système **I/O asynchrone (AIO)** : jusqu'à 3× plus rapide
-- ✨ **Skip Scan** pour index multi-colonnes
+- ✨ Sous-système **I/O asynchrone (AIO)** : jusqu'à 3× plus rapide  
+- ✨ **Skip Scan** pour index multi-colonnes  
 - ✨ Optimisations du planificateur (self-join elimination, OR-to-ANY)
 
 #### **Observabilité**
-- ✨ Statistiques **I/O et WAL par backend**
-- ✨ Statistiques **VACUUM et ANALYZE** enrichies
+- ✨ Statistiques **I/O et WAL par backend**  
+- ✨ Statistiques **VACUUM et ANALYZE** enrichies  
 - ✨ Affichage automatique des buffers dans EXPLAIN
 
 #### **Sécurité**
-- ✨ **Authentification OAuth 2.0** native
-- ✨ **Mode FIPS** et configuration TLS 1.3
+- ✨ **Authentification OAuth 2.0** native  
+- ✨ **Mode FIPS** et configuration TLS 1.3  
 - ✨ **SCRAM passthrough** pour postgres_fdw et dblink
 
 #### **Administration**
-- ✨ **Data Checksums** activés par défaut
-- ✨ **pg_upgrade** avec préservation des statistiques et option --swap
-- ✨ Vérifications parallèles (--jobs)
+- ✨ **Data Checksums** activés par défaut  
+- ✨ **pg_upgrade** avec préservation des statistiques et option --swap  
+- ✨ Vérifications parallèles (--jobs)  
 - ✨ Autovacuum optimisé avec nouveaux paramètres
 
-#### **Modélisation**
-- ✨ **Contraintes temporelles** pour validation basée sur le temps
-- ✨ Support **OLD/NEW** dans RETURNING et MERGE
-
 Ces innovations seront signalées tout au long de la partie avec l'annotation **"Nouveauté PG 18"**.
+
+> 💡 D'autres nouveautés PG 18 (contraintes temporelles, OLD/NEW dans RETURNING, colonnes virtuelles) ont été couvertes dans les Parties 2 et 3.
 
 ---
 
@@ -312,21 +310,21 @@ Mais surtout, vous aurez acquis **l'expertise nécessaire pour faire fonctionner
 ### Conseils pour Tirer le Meilleur de Cette Partie
 
 #### 📚 **Pour l'Apprentissage**
-1. **Lisez de manière séquentielle** : Chaque chapitre s'appuie sur les précédents
-2. **Prenez des notes** : Cette partie contient beaucoup d'informations techniques
-3. **Expérimentez mentalement** : Visualisez comment vous appliqueriez ces concepts
+1. **Lisez de manière séquentielle** : Chaque chapitre s'appuie sur les précédents  
+2. **Prenez des notes** : Cette partie contient beaucoup d'informations techniques  
+3. **Expérimentez mentalement** : Visualisez comment vous appliqueriez ces concepts  
 4. **Créez des checklists** : Transformez les best practices en listes vérifiables
 
 #### 🔍 **Pour l'Application Pratique**
-1. **Commencez par l'observabilité** (chapitre 14) : on ne peut pas optimiser sans mesurer
-2. **Auditez votre configuration actuelle** avec les recommandations du chapitre 16
-3. **Identifiez les requêtes lentes** avec les techniques du chapitre 13
+1. **Commencez par l'observabilité** (chapitre 14) : on ne peut pas optimiser sans mesurer  
+2. **Auditez votre configuration actuelle** avec les recommandations du chapitre 16  
+3. **Identifiez les requêtes lentes** avec les techniques du chapitre 13  
 4. **Documentez vos décisions** architecturales et leurs justifications
 
 #### 💡 **Pour la Montée en Compétence**
-1. **Relisez certaines sections** après expérience pratique : elles prendront un nouveau sens
-2. **Partagez vos apprentissages** avec votre équipe
-3. **Créez un runbook** avec les procédures essentielles
+1. **Relisez certaines sections** après expérience pratique : elles prendront un nouveau sens  
+2. **Partagez vos apprentissages** avec votre équipe  
+3. **Créez un runbook** avec les procédures essentielles  
 4. **Suivez les blogs techniques** recommandés en Partie 5
 
 ---

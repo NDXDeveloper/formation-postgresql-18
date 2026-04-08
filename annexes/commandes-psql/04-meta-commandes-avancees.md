@@ -10,11 +10,11 @@ Ces méta-commandes sont souvent méconnues, même par des utilisateurs expérim
 
 ### Qu'allez-vous apprendre ?
 
-- 🔄 **Exécuter des requêtes répétées** automatiquement
-- ✏️ **Éditer du code SQL** directement dans votre éditeur favori
-- 🔍 **Visualiser le code source** de fonctions et vues
-- 📊 **Manipuler les résultats** de requêtes de manière créative
-- 🕒 **Gérer l'historique** efficacement
+- 🔄 **Exécuter des requêtes répétées** automatiquement  
+- ✏️ **Éditer du code SQL** directement dans votre éditeur favori  
+- 🔍 **Visualiser le code source** de fonctions et vues  
+- 📊 **Manipuler les résultats** de requêtes de manière créative  
+- 🕒 **Gérer l'historique** efficacement  
 - 🛠️ **Automatiser** des tâches complexes
 
 ---
@@ -41,9 +41,9 @@ Ces méta-commandes sont souvent méconnues, même par des utilisateurs expérim
 
 ```sql
 -- Surveiller le nombre de connexions actives
-SELECT COUNT(*) as connexions_actives
-FROM pg_stat_activity
-WHERE state = 'active';
+SELECT COUNT(*) as connexions_actives  
+FROM pg_stat_activity  
+WHERE state = 'active';  
 
 \watch
 
@@ -69,8 +69,8 @@ WHERE state = 'active';
 
 ```sql
 -- Surveiller toutes les 5 secondes
-SELECT NOW() as heure, COUNT(*) as nb_clients
-FROM clients;
+SELECT NOW() as heure, COUNT(*) as nb_clients  
+FROM clients;  
 
 \watch 5
 ```
@@ -86,8 +86,8 @@ SELECT
     usename,
     LEFT(query, 50) as query_preview,
     NOW() - query_start as duree
-FROM pg_stat_activity
-WHERE state = 'active'
+FROM pg_stat_activity  
+WHERE state = 'active'  
   AND query NOT LIKE '%pg_stat_activity%'
 ORDER BY duree DESC;
 
@@ -102,8 +102,8 @@ ORDER BY duree DESC;
 
 ```sql
 -- Terminal 1 : Lancer l'insertion
-INSERT INTO logs
-SELECT generate_series(1, 1000000), 'message', NOW();
+INSERT INTO logs  
+SELECT generate_series(1, 1000000), 'message', NOW();  
 
 -- Terminal 2 : Surveiller la progression
 SELECT
@@ -111,8 +111,8 @@ SELECT
     tablename,
     n_tup_ins as insertions,
     n_tup_upd as updates
-FROM pg_stat_user_tables
-WHERE tablename = 'logs';
+FROM pg_stat_user_tables  
+WHERE tablename = 'logs';  
 
 \watch 1
 ```
@@ -128,8 +128,8 @@ SELECT
     usename,
     pg_blocking_pids(pid) as blocking_pids,
     query
-FROM pg_stat_activity
-WHERE cardinality(pg_blocking_pids(pid)) > 0;
+FROM pg_stat_activity  
+WHERE cardinality(pg_blocking_pids(pid)) > 0;  
 
 \watch 2
 ```
@@ -210,11 +210,11 @@ SELECT * FROM clients WHERE id = 1;
 SELECT * FROM clients WHERE id = 1 \gx
 
 -[ RECORD 1 ]----------------
-id     | 1
-nom    | Dupont
-prenom | Alice
-email  | alice.dupont@mail.fr
-ville  | Paris
+id     | 1  
+nom    | Dupont  
+prenom | Alice  
+email  | alice.dupont@mail.fr  
+ville  | Paris  
 
 -- La requête suivante revient à l'affichage normal
 SELECT * FROM clients WHERE id = 2;
@@ -269,8 +269,8 @@ SELECT
     n_tup_ins as insertions,
     n_tup_upd as updates,
     n_tup_del as deletions
-FROM pg_stat_user_tables
-WHERE tablename = 'clients'
+FROM pg_stat_user_tables  
+WHERE tablename = 'clients'  
 \gset stats_
 
 -- Variables créées : stats_insertions, stats_updates, stats_deletions
@@ -300,8 +300,8 @@ SELECT * FROM clients WHERE id > :max_id - 10;
 
 ```sql
 -- Calculer une statistique
-SELECT COUNT(*) * 0.1 as sample_size
-FROM huge_table
+SELECT COUNT(*) * 0.1 as sample_size  
+FROM huge_table  
 \gset
 
 -- Utiliser pour un échantillon
@@ -324,9 +324,9 @@ SELECT * FROM huge_table LIMIT :sample_size;
 
 ```sql
 -- Générer des commandes VACUUM pour toutes les tables
-SELECT 'VACUUM ANALYZE ' || tablename || ';'
-FROM pg_tables
-WHERE schemaname = 'public'
+SELECT 'VACUUM ANALYZE ' || tablename || ';'  
+FROM pg_tables  
+WHERE schemaname = 'public'  
 \gexec
 
 # Résultat : Exécute
@@ -345,8 +345,8 @@ WHERE schemaname = 'public'
 SELECT
     'CREATE INDEX idx_' || tablename || '_created_at ON ' ||
     tablename || '(created_at);'
-FROM information_schema.columns
-WHERE column_name = 'created_at'
+FROM information_schema.columns  
+WHERE column_name = 'created_at'  
   AND table_schema = 'public'
 \gexec
 ```
@@ -357,9 +357,9 @@ WHERE column_name = 'created_at'
 
 ```sql
 -- Donner SELECT sur toutes les tables à un utilisateur
-SELECT 'GRANT SELECT ON ' || tablename || ' TO readonly_user;'
-FROM pg_tables
-WHERE schemaname = 'public'
+SELECT 'GRANT SELECT ON ' || tablename || ' TO readonly_user;'  
+FROM pg_tables  
+WHERE schemaname = 'public'  
 \gexec
 ```
 
@@ -369,9 +369,9 @@ WHERE schemaname = 'public'
 
 ```sql
 -- Nettoyer toutes les tables temp_*
-SELECT 'DROP TABLE IF EXISTS ' || tablename || ' CASCADE;'
-FROM pg_tables
-WHERE tablename LIKE 'temp_%'
+SELECT 'DROP TABLE IF EXISTS ' || tablename || ' CASCADE;'  
+FROM pg_tables  
+WHERE tablename LIKE 'temp_%'  
   AND schemaname = 'public'
 \gexec
 ```
@@ -382,15 +382,15 @@ WHERE tablename LIKE 'temp_%'
 
 ```sql
 -- 1. Afficher d'abord (sans \gexec)
-SELECT 'DROP TABLE ' || tablename || ';'
-FROM pg_tables
-WHERE tablename LIKE 'old_%';
+SELECT 'DROP TABLE ' || tablename || ';'  
+FROM pg_tables  
+WHERE tablename LIKE 'old_%';  
 
 -- 2. Vérifier que c'est bien ce que vous voulez
 -- 3. Seulement alors, exécuter avec \gexec
-SELECT 'DROP TABLE ' || tablename || ';'
-FROM pg_tables
-WHERE tablename LIKE 'old_%'
+SELECT 'DROP TABLE ' || tablename || ';'  
+FROM pg_tables  
+WHERE tablename LIKE 'old_%'  
 \gexec;
 ```
 
@@ -408,9 +408,9 @@ WHERE tablename LIKE 'old_%'
 
 ```sql
 -- Créer une fonction d'exemple
-CREATE OR REPLACE FUNCTION calculer_total(commande_id INTEGER)
-RETURNS NUMERIC AS $$
-DECLARE
+CREATE OR REPLACE FUNCTION calculer_total(commande_id INTEGER)  
+RETURNS NUMERIC AS $$  
+DECLARE  
     total NUMERIC;
 BEGIN
     SELECT SUM(prix * quantite) INTO total
@@ -462,14 +462,14 @@ $$ LANGUAGE plpgsql;
 
 ```sql
 -- Créer une vue
-CREATE VIEW ventes_recentes AS
-SELECT
+CREATE VIEW ventes_recentes AS  
+SELECT  
     c.nom AS client,
     o.date_commande,
     o.montant_total
-FROM clients c
-JOIN commandes o ON c.id = o.client_id
-WHERE o.date_commande >= NOW() - INTERVAL '30 days';
+FROM clients c  
+JOIN commandes o ON c.id = o.client_id  
+WHERE o.date_commande >= NOW() - INTERVAL '30 days';  
 
 -- Voir la définition
 \sv ventes_recentes
@@ -493,9 +493,9 @@ WHERE o.date_commande >= NOW() - INTERVAL '30 days';
 **Description** : Ouvre votre éditeur (défini par `EDITOR` ou `PSQL_EDITOR`) pour éditer une fonction.
 
 **Workflow** :
-1. `\ef ma_fonction` ouvre l'éditeur avec le code actuel
-2. Vous modifiez le code
-3. Sauvegardez et quittez l'éditeur
+1. `\ef ma_fonction` ouvre l'éditeur avec le code actuel  
+2. Vous modifiez le code  
+3. Sauvegardez et quittez l'éditeur  
 4. psql exécute automatiquement le `CREATE OR REPLACE FUNCTION`
 
 **Exemples** :
@@ -512,9 +512,9 @@ WHERE o.date_commande >= NOW() - INTERVAL '30 days';
 
 ```bash
 # Dans votre shell
-export PSQL_EDITOR=nano
-export PSQL_EDITOR=vim
-export PSQL_EDITOR="code --wait"  # VS Code
+export PSQL_EDITOR=nano  
+export PSQL_EDITOR=vim  
+export PSQL_EDITOR="code --wait"  # VS Code  
 
 # Ou dans .psqlrc
 \setenv PSQL_EDITOR nano
@@ -560,8 +560,8 @@ Le **buffer** est la zone de mémoire où psql stocke votre requête en cours de
 
 ```sql
 -- Taper une requête (mais ne pas l'exécuter)
-SELECT * FROM clients
-WHERE ville = 'Paris'
+SELECT * FROM clients  
+WHERE ville = 'Paris'  
 
 -- Ouvrir dans l'éditeur pour modification
 \e
@@ -604,13 +604,13 @@ SELECT
     c.nom,
     COUNT(o.id) as nb_commandes,
     SUM(o.montant_total) as total_achats
-FROM clients c
-LEFT JOIN commandes o ON c.id = o.client_id
-WHERE o.date_commande >= NOW() - INTERVAL '1 year'
-GROUP BY c.id, c.nom
-HAVING COUNT(o.id) > 5
-ORDER BY total_achats DESC
-LIMIT 20;
+FROM clients c  
+LEFT JOIN commandes o ON c.id = o.client_id  
+WHERE o.date_commande >= NOW() - INTERVAL '1 year'  
+GROUP BY c.id, c.nom  
+HAVING COUNT(o.id) > 5  
+ORDER BY total_achats DESC  
+LIMIT 20;  
 
 -- Sauvegardez et quittez, puis exécutez
 ;
@@ -677,10 +677,10 @@ SELECT
     DATE_TRUNC('month', date_commande) AS mois,
     COUNT(*) AS nb_commandes,
     SUM(montant_total) AS total
-FROM commandes
-WHERE date_commande >= '2024-01-01'
-GROUP BY 1
-ORDER BY 1;
+FROM commandes  
+WHERE date_commande >= '2024-01-01'  
+GROUP BY 1  
+ORDER BY 1;  
 
 -- Sauvegarder dans un fichier
 \w /tmp/rapport_mensuel.sql
@@ -1038,9 +1038,9 @@ SELECT * FROM produits LIMIT :ma_limite;
 SELECT * FROM clients WHERE ville = :'ma_ville';
 
 -- Utiliser dans une requête complexe
-SELECT * FROM commandes
-WHERE date_commande >= :'date_debut'::date
-LIMIT :ma_limite;
+SELECT * FROM commandes  
+WHERE date_commande >= :'date_debut'::date  
+LIMIT :ma_limite;  
 ```
 
 ---
@@ -1190,18 +1190,18 @@ SELECT EXISTS (
 
 ```sql
 -- Créer 10 tables de test
-SELECT 'CREATE TABLE test_' || i || ' (id SERIAL, data TEXT);'
-FROM generate_series(1, 10) as i
+SELECT 'CREATE TABLE test_' || i || ' (id SERIAL, data TEXT);'  
+FROM generate_series(1, 10) as i  
 \gexec
 
 -- Les remplir avec des données
-SELECT 'INSERT INTO test_' || i || ' (data) SELECT md5(random()::text) FROM generate_series(1, 1000);'
-FROM generate_series(1, 10) as i
+SELECT 'INSERT INTO test_' || i || ' (data) SELECT md5(random()::text) FROM generate_series(1, 1000);'  
+FROM generate_series(1, 10) as i  
 \gexec
 
 -- Les analyser
-SELECT 'ANALYZE test_' || i || ';'
-FROM generate_series(1, 10) as i
+SELECT 'ANALYZE test_' || i || ';'  
+FROM generate_series(1, 10) as i  
 \gexec
 ```
 
@@ -1235,11 +1235,11 @@ SELECT
     c.nom,
     COUNT(o.id) as nb_commandes,
     SUM(o.montant_total) as total
-FROM clients c
-JOIN commandes o ON c.id = o.client_id
-GROUP BY c.id, c.nom
-ORDER BY total DESC
-LIMIT 10;
+FROM clients c  
+JOIN commandes o ON c.id = o.client_id  
+GROUP BY c.id, c.nom  
+ORDER BY total DESC  
+LIMIT 10;  
 
 \echo ''
 \echo '=== PERFORMANCE BASE ==='
@@ -1412,17 +1412,17 @@ SELECT COUNT(*) FROM clients \gset nb_
 \set current_page 0
 
 -- Page 1
-SELECT * FROM produits
-ORDER BY id
-LIMIT :page_size
-OFFSET :current_page * :page_size;
+SELECT * FROM produits  
+ORDER BY id  
+LIMIT :page_size  
+OFFSET :current_page * :page_size;  
 
 -- Page suivante
 \set current_page 1
-SELECT * FROM produits
-ORDER BY id
-LIMIT :page_size
-OFFSET :current_page * :page_size;
+SELECT * FROM produits  
+ORDER BY id  
+LIMIT :page_size  
+OFFSET :current_page * :page_size;  
 ```
 
 ---
@@ -1555,18 +1555,18 @@ ROLLBACK;
 
 Les méta-commandes avancées de psql transforment votre productivité. Points clés :
 
-🎯 **Surveillance** :
+🎯 **Surveillance** :  
 - `\watch` pour monitoring en temps réel
 - Parfait pour développement et debugging
 
-⚡ **Automatisation** :
-- `\gexec` pour générer et exécuter du SQL
+⚡ **Automatisation** :  
+- `\gexec` pour générer et exécuter du SQL  
 - `\gset` pour scripts dynamiques
 - Variables pour scripts réutilisables
 
-✏️ **Édition** :
-- `\ef` et `\ev` pour éditer fonctions/vues
-- `\e` pour requêtes complexes
+✏️ **Édition** :  
+- `\ef` et `\ev` pour éditer fonctions/vues  
+- `\e` pour requêtes complexes  
 - `\sf` et `\sv` pour apprendre
 
 📊 **Scripts** :
@@ -1585,10 +1585,10 @@ Les méta-commandes avancées de psql transforment votre productivité. Points c
 **Vous avez maintenant une boîte à outils complète pour psql !**
 
 Les 5 guides psql :
-1. ✅ Introduction et glossaire
-2. ✅ Navigation
-3. ✅ Configuration
-4. ✅ Export/Import
+1. ✅ Introduction et glossaire  
+2. ✅ Navigation  
+3. ✅ Configuration  
+4. ✅ Export/Import  
 5. ✅ Méta-commandes avancées (celui-ci)
 
 ---

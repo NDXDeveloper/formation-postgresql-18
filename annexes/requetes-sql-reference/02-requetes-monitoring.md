@@ -7,12 +7,12 @@
 
 ## Table des Matières
 
-1. [Introduction au Monitoring PostgreSQL](#1-introduction-au-monitoring-postgresql)
-2. [Cache Hit Ratio : Comprendre et Optimiser](#2-cache-hit-ratio--comprendre-et-optimiser)
-3. [Slow Queries : Identifier et Corriger](#3-slow-queries--identifier-et-corriger)
-4. [Métriques Complémentaires Essentielles](#4-m%C3%A9triques-compl%C3%A9mentaires-essentielles)
-5. [Mise en Pratique : Diagnostic de Performance](#5-mise-en-pratique--diagnostic-de-performance)
-6. [Automatisation et Alerting](#6-automatisation-et-alerting)
+1. [Introduction au Monitoring PostgreSQL](#1-introduction-au-monitoring-postgresql)  
+2. [Cache Hit Ratio : Comprendre et Optimiser](#2-cache-hit-ratio--comprendre-et-optimiser)  
+3. [Slow Queries : Identifier et Corriger](#3-slow-queries--identifier-et-corriger)  
+4. [Métriques Complémentaires Essentielles](#4-m%C3%A9triques-compl%C3%A9mentaires-essentielles)  
+5. [Mise en Pratique : Diagnostic de Performance](#5-mise-en-pratique--diagnostic-de-performance)  
+6. [Automatisation et Alerting](#6-automatisation-et-alerting)  
 7. [Bonnes Pratiques de Monitoring](#7-bonnes-pratiques-de-monitoring)
 
 ---
@@ -99,9 +99,9 @@ CREATE EXTENSION IF NOT EXISTS pg_stat_statements;
 shared_preload_libraries = 'pg_stat_statements'
 
 # Configuration recommandée
-pg_stat_statements.max = 10000          # Nombre de requêtes trackées
-pg_stat_statements.track = all          # Tracker toutes les requêtes
-pg_stat_statements.track_utility = on   # Inclure DDL (CREATE, ALTER, etc.)
+pg_stat_statements.max = 10000          # Nombre de requêtes trackées  
+pg_stat_statements.track = all          # Tracker toutes les requêtes  
+pg_stat_statements.track_utility = on   # Inclure DDL (CREATE, ALTER, etc.)  
 ```
 
 **Redémarrage requis** après modification de `shared_preload_libraries`.
@@ -124,8 +124,8 @@ PostgreSQL utilise une zone de mémoire RAM appelée **Shared Buffers** pour met
 
 #### Fonctionnement en Détail
 
-1. **Première lecture** : Données lues depuis le disque → Copiées dans le buffer cache
-2. **Lectures suivantes** : Si les données sont encore en cache → Lecture instantanée
+1. **Première lecture** : Données lues depuis le disque → Copiées dans le buffer cache  
+2. **Lectures suivantes** : Si les données sont encore en cache → Lecture instantanée  
 3. **Cache plein** : Algorithme LRU (Least Recently Used) évince les données anciennes
 
 **Configuration** : Le paramètre `shared_buffers` dans `postgresql.conf`
@@ -145,7 +145,7 @@ Cache Hit Ratio = (blks_hit / (blks_hit + blks_read)) × 100
 ```
 
 Où :
-- **blks_hit** : Nombre de blocs lus depuis le cache (RAM)
+- **blks_hit** : Nombre de blocs lus depuis le cache (RAM)  
 - **blks_read** : Nombre de blocs lus depuis le disque
 
 **Interprétation** :
@@ -219,8 +219,8 @@ LIMIT 20;
 
 **Analyse** :
 
-- **Table avec ratio < 90%** : Candidate à l'optimisation ou au partitionnement
-- **Grosse table avec ratio < 90%** : Critique, action immédiate
+- **Table avec ratio < 90%** : Candidate à l'optimisation ou au partitionnement  
+- **Grosse table avec ratio < 90%** : Critique, action immédiate  
 - **Petite table avec ratio < 90%** : Moins grave mais à surveiller
 
 **Exemple de résultat** :
@@ -228,8 +228,8 @@ LIMIT 20;
 ```
 table_name | cache_hits | disk_reads | cache_hit_ratio_pct | total_size
 -----------+------------+------------+---------------------+-----------
-orders     | 1234       | 5678       | 17.85               | 45 GB
-products   | 89012      | 123        | 99.86               | 2 GB
+orders     | 1234       | 5678       | 17.85               | 45 GB  
+products   | 89012      | 123        | 99.86               | 2 GB  
 ```
 
 → La table `orders` a un ratio catastrophique : **17.85%**. Il faut agir.
@@ -295,9 +295,9 @@ Juste après un redémarrage, le cache est vide. C'est normal d'avoir un ratio b
 Si votre base de données fait 500 GB et que vous avez 16 GB de RAM, vous ne pourrez **jamais** tout mettre en cache.
 
 **Solutions** :
-1. Ajouter plus de RAM
-2. Partitionner les tables pour réduire la surface de scan
-3. Archiver les données anciennes
+1. Ajouter plus de RAM  
+2. Partitionner les tables pour réduire la surface de scan  
+3. Archiver les données anciennes  
 4. Utiliser un réplica en lecture seule pour répartir la charge
 
 #### Cause 4 : Requêtes Inefficaces (Scan Séquentiels)
@@ -326,7 +326,7 @@ SELECT
 
 **Interprétation** :
 
-- **cache_coverage_pct > 50%** : Excellent, une grande partie de la DB peut tenir en cache
+- **cache_coverage_pct > 50%** : Excellent, une grande partie de la DB peut tenir en cache  
 - **cache_coverage_pct < 10%** : Très peu de données en cache, augmentez shared_buffers si possible
 
 ### 2.8. Nouveauté PostgreSQL 18 : Statistiques I/O par Backend
@@ -375,8 +375,8 @@ Une **slow query (requête lente)** est une requête SQL qui prend plus de temps
 
 **Impact** :
 
-- **Utilisateur** : Timeouts, frustration
-- **Serveur** : Consommation CPU/RAM excessive
+- **Utilisateur** : Timeouts, frustration  
+- **Serveur** : Consommation CPU/RAM excessive  
 - **Base de données** : Verrous prolongés, congestion
 
 ### 3.2. Installation et Configuration de pg_stat_statements
@@ -409,15 +409,15 @@ LIMIT 20;
 
 **Colonnes importantes** :
 
-- **total_time_ms** : Temps cumulé total (si une requête s'exécute 1000× pendant 10ms = 10 000ms)
-- **calls** : Nombre d'exécutions
-- **avg_time_ms** : Temps moyen par exécution
-- **max_time_ms** : Temps maximum enregistré (pic)
+- **total_time_ms** : Temps cumulé total (si une requête s'exécute 1000× pendant 10ms = 10 000ms)  
+- **calls** : Nombre d'exécutions  
+- **avg_time_ms** : Temps moyen par exécution  
+- **max_time_ms** : Temps maximum enregistré (pic)  
 - **pct_total_time** : Pourcentage du temps total de toutes les requêtes
 
 **Analyse** :
 
-- **Requête avec total_time élevé + avg_time faible** : Requête fréquente, optimiser réduira beaucoup la charge
+- **Requête avec total_time élevé + avg_time faible** : Requête fréquente, optimiser réduira beaucoup la charge  
 - **Requête avec avg_time très élevé** : Requête lente, même si rare
 
 **Exemple de résultat** :
@@ -455,7 +455,7 @@ LIMIT 20;
 
 **Analyse** :
 
-- **avg_time_ms > 1000ms (1s)** : Très lent, optimisation urgente
+- **avg_time_ms > 1000ms (1s)** : Très lent, optimisation urgente  
 - **stddev_time_ms élevé** : Performance instable, peut indiquer des verrous ou de la contention
 
 ### 3.5. Requête : Requêtes Avec le Plus de Lectures Disque
@@ -484,7 +484,7 @@ LIMIT 20;
 
 **Analyse** :
 
-- **disk_reads élevé** : La requête lit beaucoup depuis le disque
+- **disk_reads élevé** : La requête lit beaucoup depuis le disque  
 - **cache_hit_ratio_pct < 90%** : Mauvais taux de cache pour cette requête
 
 **Solution** : Ajouter un index ou augmenter shared_buffers.
@@ -517,8 +517,8 @@ ORDER BY
 
 **Colonnes importantes** :
 
-- **duration** : Depuis combien de temps la requête tourne
-- **wait_event_type** / **wait_event** : Ce que la requête attend (Lock, I/O, etc.)
+- **duration** : Depuis combien de temps la requête tourne  
+- **wait_event_type** / **wait_event** : Ce que la requête attend (Lock, I/O, etc.)  
 - **query** : La requête SQL en cours
 
 **Si duration > 5 minutes** : Requête probablement bloquée ou très lente.
@@ -530,10 +530,10 @@ Une fois qu'une requête lente est identifiée, il faut comprendre **pourquoi** 
 **Outil** : `EXPLAIN ANALYZE`
 
 ```sql
-EXPLAIN ANALYZE
-SELECT * FROM orders
-WHERE user_id = 12345
-AND created_at > '2024-01-01';
+EXPLAIN ANALYZE  
+SELECT * FROM orders  
+WHERE user_id = 12345  
+AND created_at > '2024-01-01';  
 ```
 
 **Résultat typique** :
@@ -543,22 +543,22 @@ Seq Scan on orders  (cost=0.00..125678.45 rows=123 width=200)
                     (actual time=0.234..2345.678 rows=123 loops=1)
   Filter: (user_id = 12345 AND created_at > '2024-01-01'::date)
   Rows Removed by Filter: 4567890
-Planning Time: 0.123 ms
-Execution Time: 2345.789 ms
+Planning Time: 0.123 ms  
+Execution Time: 2345.789 ms  
 ```
 
 **Ce qu'il faut chercher** :
 
-1. **Seq Scan (Scan Séquentiel)** : PostgreSQL lit toute la table
+1. **Seq Scan (Scan Séquentiel)** : PostgreSQL lit toute la table  
    - **Solution** : Créer un index
 
-2. **Rows Removed by Filter élevé** : Beaucoup de lignes lues pour rien
+2. **Rows Removed by Filter élevé** : Beaucoup de lignes lues pour rien  
    - **Solution** : Index plus sélectif
 
-3. **Nested Loop avec grosse table** : Jointure inefficace
+3. **Nested Loop avec grosse table** : Jointure inefficace  
    - **Solution** : Revoir la jointure ou ajouter un index
 
-4. **Sort + High Memory** : Tri coûteux
+4. **Sort + High Memory** : Tri coûteux  
    - **Solution** : Index sur la colonne de tri
 
 ### 3.8. Exemple Concret : Optimiser une Slow Query
@@ -566,10 +566,10 @@ Execution Time: 2345.789 ms
 **Requête lente identifiée** :
 
 ```sql
-SELECT * FROM orders
-WHERE status = 'pending'
-ORDER BY created_at DESC
-LIMIT 20;
+SELECT * FROM orders  
+WHERE status = 'pending'  
+ORDER BY created_at DESC  
+LIMIT 20;  
 ```
 
 **EXPLAIN ANALYZE** montre :
@@ -581,8 +581,8 @@ Sort  (cost=5678.90..5679.15 rows=100 width=200) (actual time=1234.567..1234.890
   ->  Seq Scan on orders  (cost=0.00..5675.00 rows=100 width=200) (actual time=0.123..1234.000 rows=100 loops=1)
         Filter: (status = 'pending'::text)
         Rows Removed by Filter: 5000000
-Planning Time: 0.234 ms
-Execution Time: 1234.987 ms
+Planning Time: 0.234 ms  
+Execution Time: 1234.987 ms  
 ```
 
 **Problème** : Scan séquentiel sur 5 millions de lignes.
@@ -590,8 +590,8 @@ Execution Time: 1234.987 ms
 **Solution** : Créer un index :
 
 ```sql
-CREATE INDEX idx_orders_status_created_at
-ON orders(status, created_at DESC);
+CREATE INDEX idx_orders_status_created_at  
+ON orders(status, created_at DESC);  
 ```
 
 **Après création de l'index** :
@@ -600,8 +600,8 @@ ON orders(status, created_at DESC);
 Index Scan using idx_orders_status_created_at on orders
   (cost=0.43..25.67 rows=20 width=200) (actual time=0.012..0.034 rows=20 loops=1)
   Index Cond: (status = 'pending'::text)
-Planning Time: 0.123 ms
-Execution Time: 0.045 ms
+Planning Time: 0.123 ms  
+Execution Time: 0.045 ms  
 ```
 
 **Résultat** : De **1234ms à 0.045ms** → **27 000× plus rapide** ! 🚀
@@ -615,10 +615,10 @@ PostgreSQL 18 apporte plusieurs optimisations automatiques :
 **Avant PostgreSQL 18** :
 
 ```sql
-SELECT o1.*
-FROM orders o1
-JOIN orders o2 ON o1.id = o2.id
-WHERE o1.status = 'pending';
+SELECT o1.*  
+FROM orders o1  
+JOIN orders o2 ON o1.id = o2.id  
+WHERE o1.status = 'pending';  
 ```
 
 PostgreSQL devait exécuter la jointure même si redondante.
@@ -630,15 +630,15 @@ PostgreSQL devait exécuter la jointure même si redondante.
 **Avant** :
 
 ```sql
-SELECT * FROM users
-WHERE status = 'active' OR status = 'pending' OR status = 'trial';
+SELECT * FROM users  
+WHERE status = 'active' OR status = 'pending' OR status = 'trial';  
 ```
 
 **PostgreSQL 18** réécrit automatiquement en :
 
 ```sql
-SELECT * FROM users
-WHERE status = ANY(ARRAY['active', 'pending', 'trial']);
+SELECT * FROM users  
+WHERE status = ANY(ARRAY['active', 'pending', 'trial']);  
 ```
 
 Plus efficace pour l'utilisation d'index.
@@ -688,7 +688,7 @@ FROM
 
 **Seuils d'alerte** :
 
-- **usage_pct > 80%** : Proche de la saturation
+- **usage_pct > 80%** : Proche de la saturation  
 - **idle_in_transaction élevé** : Transactions ouvertes inutilement (fuites de connexions)
 
 **Solution** : Utiliser un connection pooler (PgBouncer).
@@ -738,15 +738,15 @@ FROM
 
 **Analyse** :
 
-- **checkpoints_req > checkpoints_timed** : Checkpoints forcés, augmentez `max_wal_size`
+- **checkpoints_req > checkpoints_timed** : Checkpoints forcés, augmentez `max_wal_size`  
 - **checkpoint_write_time élevé** : Disque lent ou surcharge I/O
 
 **Configuration recommandée** :
 
 ```conf
-max_wal_size = 4GB  # Plus haut si écriture intensive
-checkpoint_timeout = 15min
-checkpoint_completion_target = 0.9
+max_wal_size = 4GB  # Plus haut si écriture intensive  
+checkpoint_timeout = 15min  
+checkpoint_completion_target = 0.9  
 ```
 
 ### 4.4. Transaction ID (XID) Wraparound Risk
@@ -767,8 +767,8 @@ ORDER BY
 
 **Seuils critiques** :
 
-- **xid_age > 1 000 000 000** : Surveiller
-- **xid_age > 1 500 000 000** : Action recommandée (VACUUM FREEZE)
+- **xid_age > 1 000 000 000** : Surveiller  
+- **xid_age > 1 500 000 000** : Action recommandée (VACUUM FREEZE)  
 - **xid_age > 2 000 000 000** : **URGENT**, risque de wraparound
 
 **Solution** :
@@ -797,7 +797,7 @@ FROM
 
 **Seuils** :
 
-- **replay_lag_mb < 100 MB** : Bon
+- **replay_lag_mb < 100 MB** : Bon  
 - **replay_lag_mb > 1 GB** : Le standby est en retard, enquêter
 
 ### 4.6. Nouveauté PostgreSQL 18 : Statistiques VACUUM et ANALYZE
@@ -850,10 +850,10 @@ SELECT count(*), state FROM pg_stat_activity GROUP BY state;
 #### Étape 2 : Identifier les Requêtes Lentes en Cours
 
 ```sql
-SELECT pid, usename, query_start, now() - query_start AS duration, query
-FROM pg_stat_activity
-WHERE state = 'active' AND now() - query_start > interval '30 seconds'
-ORDER BY duration DESC;
+SELECT pid, usename, query_start, now() - query_start AS duration, query  
+FROM pg_stat_activity  
+WHERE state = 'active' AND now() - query_start > interval '30 seconds'  
+ORDER BY duration DESC;  
 ```
 
 - Requêtes tournant depuis > 30s ? → Analyser avec EXPLAIN ANALYZE
@@ -861,9 +861,9 @@ ORDER BY duration DESC;
 #### Étape 3 : Vérifier le Cache Hit Ratio
 
 ```sql
-SELECT round(100.0 * blks_hit / NULLIF(blks_hit + blks_read, 0), 2) AS cache_hit_ratio
-FROM pg_stat_database
-WHERE datname = current_database();
+SELECT round(100.0 * blks_hit / NULLIF(blks_hit + blks_read, 0), 2) AS cache_hit_ratio  
+FROM pg_stat_database  
+WHERE datname = current_database();  
 ```
 
 - Ratio < 95% ? → Augmenter shared_buffers ou optimiser requêtes
@@ -871,11 +871,11 @@ WHERE datname = current_database();
 #### Étape 4 : Identifier les Top Slow Queries
 
 ```sql
-SELECT round(mean_exec_time::numeric, 2) AS avg_ms, calls, query
-FROM pg_stat_statements
-WHERE calls > 100
-ORDER BY mean_exec_time DESC
-LIMIT 10;
+SELECT round(mean_exec_time::numeric, 2) AS avg_ms, calls, query  
+FROM pg_stat_statements  
+WHERE calls > 100  
+ORDER BY mean_exec_time DESC  
+LIMIT 10;  
 ```
 
 - Optimiser les requêtes identifiées
@@ -889,10 +889,10 @@ LIMIT 10;
 #### Étape 1 : Filtrer par Application Name
 
 ```sql
-SELECT query, round(mean_exec_time::numeric, 2) AS avg_ms, calls
-FROM pg_stat_statements
-WHERE query ILIKE '%orders%'  -- Mots-clés de votre endpoint
-ORDER BY mean_exec_time DESC;
+SELECT query, round(mean_exec_time::numeric, 2) AS avg_ms, calls  
+FROM pg_stat_statements  
+WHERE query ILIKE '%orders%'  -- Mots-clés de votre endpoint  
+ORDER BY mean_exec_time DESC;  
 ```
 
 #### Étape 2 : Analyser la Requête avec EXPLAIN
@@ -904,8 +904,8 @@ EXPLAIN (ANALYZE, BUFFERS, VERBOSE)
 
 #### Étape 3 : Identifier le Goulot
 
-- **Seq Scan** → Créer index
-- **Nested Loop** coûteux → Revoir jointure
+- **Seq Scan** → Créer index  
+- **Nested Loop** coûteux → Revoir jointure  
 - **Sort** coûteux → Index sur colonne de tri
 
 ### Scénario 3 : Disque Saturé (I/O Wait Élevé)
@@ -917,10 +917,10 @@ EXPLAIN (ANALYZE, BUFFERS, VERBOSE)
 #### Étape 1 : Trouver les Requêtes Gourmandes en I/O
 
 ```sql
-SELECT query, shared_blks_read, shared_blks_hit
-FROM pg_stat_statements
-ORDER BY shared_blks_read DESC
-LIMIT 10;
+SELECT query, shared_blks_read, shared_blks_hit  
+FROM pg_stat_statements  
+ORDER BY shared_blks_read DESC  
+LIMIT 10;  
 ```
 
 #### Étape 2 : Vérifier le Cache Hit Ratio par Table
@@ -928,17 +928,17 @@ LIMIT 10;
 ```sql
 SELECT relname, heap_blks_read, heap_blks_hit,
        round(100.0 * heap_blks_hit / NULLIF(heap_blks_hit + heap_blks_read, 0), 2) AS ratio
-FROM pg_statio_user_tables
-WHERE (heap_blks_hit + heap_blks_read) > 0
-ORDER BY heap_blks_read DESC
-LIMIT 10;
+FROM pg_statio_user_tables  
+WHERE (heap_blks_hit + heap_blks_read) > 0  
+ORDER BY heap_blks_read DESC  
+LIMIT 10;  
 ```
 
 **Solutions** :
 
-1. Augmenter `shared_buffers`
-2. Passer à un SSD si HDD
-3. Partitionner les grosses tables
+1. Augmenter `shared_buffers`  
+2. Passer à un SSD si HDD  
+3. Partitionner les grosses tables  
 4. Archiver les données anciennes
 
 ### Scénario 4 : Pic de Charge Soudain
@@ -954,11 +954,11 @@ Si vous avez des snapshots réguliers de `pg_stat_statements` (via un outil de m
 #### Étape 2 : Identifier les Nouvelles Requêtes
 
 ```sql
-SELECT query, calls, round(mean_exec_time::numeric, 2) AS avg_ms
-FROM pg_stat_statements
-WHERE calls > 1000  -- Requêtes fréquentes
-ORDER BY calls DESC
-LIMIT 20;
+SELECT query, calls, round(mean_exec_time::numeric, 2) AS avg_ms  
+FROM pg_stat_statements  
+WHERE calls > 1000  -- Requêtes fréquentes  
+ORDER BY calls DESC  
+LIMIT 20;  
 ```
 
 - Une nouvelle requête avec beaucoup d'appels ? → Optimiser en priorité
@@ -979,8 +979,8 @@ SELECT * FROM pg_stat_activity WHERE wait_event_type = 'Lock';
 
 Vous ne pouvez pas rester 24/7 devant votre terminal à exécuter ces requêtes. Il faut :
 
-1. **Collecter automatiquement** les métriques
-2. **Stocker l'historique** pour analyser les tendances
+1. **Collecter automatiquement** les métriques  
+2. **Stocker l'historique** pour analyser les tendances  
 3. **Alerter** quand un seuil est dépassé
 
 ### 6.2. Stack de Monitoring Recommandée
@@ -1031,8 +1031,8 @@ pgbadger /var/log/postgresql/postgresql.log -o report.html
 
 #### Option 3 : Solutions Cloud Natives
 
-- **AWS RDS** : CloudWatch Metrics automatiques
-- **Azure Database for PostgreSQL** : Azure Monitor
+- **AWS RDS** : CloudWatch Metrics automatiques  
+- **Azure Database for PostgreSQL** : Azure Monitor  
 - **GCP Cloud SQL** : Cloud Monitoring
 
 ### 6.3. Configurer les Alertes
@@ -1070,29 +1070,29 @@ Plutôt que de retaper les requêtes complexes, créez des vues :
 
 ```sql
 -- Vue pour le cache hit ratio
-CREATE VIEW monitoring.cache_hit_ratio AS
-SELECT
+CREATE VIEW monitoring.cache_hit_ratio AS  
+SELECT  
     datname,
     round(100.0 * blks_hit / NULLIF(blks_hit + blks_read, 0), 2) AS ratio
 FROM pg_stat_database;
 
 -- Vue pour les slow queries
-CREATE VIEW monitoring.slow_queries AS
-SELECT
+CREATE VIEW monitoring.slow_queries AS  
+SELECT  
     round(mean_exec_time::numeric, 2) AS avg_ms,
     calls,
     query
-FROM pg_stat_statements
-WHERE mean_exec_time > 100
-ORDER BY mean_exec_time DESC;
+FROM pg_stat_statements  
+WHERE mean_exec_time > 100  
+ORDER BY mean_exec_time DESC;  
 ```
 
 **Utilisation** :
 
 ```sql
 -- Simple à requêter ensuite
-SELECT * FROM monitoring.cache_hit_ratio;
-SELECT * FROM monitoring.slow_queries;
+SELECT * FROM monitoring.cache_hit_ratio;  
+SELECT * FROM monitoring.slow_queries;  
 ```
 
 ---
@@ -1103,7 +1103,7 @@ SELECT * FROM monitoring.slow_queries;
 
 Avant d'optimiser, mesurez d'abord l'état actuel :
 
-1. **Prendre des snapshots réguliers** de `pg_stat_statements`
+1. **Prendre des snapshots réguliers** de `pg_stat_statements`  
 2. **Documenter les métriques normales** :
    - Cache hit ratio typique
    - Temps de réponse moyen
@@ -1135,21 +1135,21 @@ log_min_duration_statement = 200  # Log toute requête > 200ms
 log_line_prefix = '%t [%p]: [%l-1] user=%u,db=%d,app=%a,client=%h '
 
 # Durée des verrous
-log_lock_waits = on
-deadlock_timeout = 1s
+log_lock_waits = on  
+deadlock_timeout = 1s  
 
 # Checkpoints
 log_checkpoints = on
 
 # Connexions/Déconnexions (peut être verbeux)
-log_connections = off
-log_disconnections = off
+log_connections = off  
+log_disconnections = off  
 
 # Auto-explain pour les requêtes lentes (extension)
-shared_preload_libraries = 'pg_stat_statements,auto_explain'
-auto_explain.log_min_duration = 1000  # EXPLAIN si > 1s
-auto_explain.log_analyze = on
-auto_explain.log_buffers = on
+shared_preload_libraries = 'pg_stat_statements,auto_explain'  
+auto_explain.log_min_duration = 1000  # EXPLAIN si > 1s  
+auto_explain.log_analyze = on  
+auto_explain.log_buffers = on  
 ```
 
 ### 7.4. Rotation et Archivage des Logs
@@ -1228,32 +1228,32 @@ pgbench -c 10 -t 1000 test_db
 
 ### Cache Hit Ratio
 
-- ✅ **Objectif** : > 95%
-- ✅ **Requête principale** : Section 2.3 (cache hit ratio global)
-- ✅ **Action si < 95%** : Augmenter shared_buffers, optimiser requêtes
+- ✅ **Objectif** : > 95%  
+- ✅ **Requête principale** : Section 2.3 (cache hit ratio global)  
+- ✅ **Action si < 95%** : Augmenter shared_buffers, optimiser requêtes  
 - ✅ **PostgreSQL 18** : Nouvelles statistiques I/O par backend
 
 ### Slow Queries
 
-- ✅ **Outil indispensable** : pg_stat_statements
-- ✅ **Requête principale** : Section 3.3 (top 20 slow queries)
-- ✅ **Diagnostic** : EXPLAIN ANALYZE
-- ✅ **Solution** : Index, réécriture SQL, partitionnement
+- ✅ **Outil indispensable** : pg_stat_statements  
+- ✅ **Requête principale** : Section 3.3 (top 20 slow queries)  
+- ✅ **Diagnostic** : EXPLAIN ANALYZE  
+- ✅ **Solution** : Index, réécriture SQL, partitionnement  
 - ✅ **PostgreSQL 18** : Optimisations automatiques (skip scan, OR → ANY)
 
 ### Métriques Complémentaires
 
-- ✅ Connexions actives (section 4.1)
-- ✅ Taille des tables (section 4.2)
-- ✅ Checkpoints et WAL (section 4.3)
-- ✅ XID wraparound risk (section 4.4)
+- ✅ Connexions actives (section 4.1)  
+- ✅ Taille des tables (section 4.2)  
+- ✅ Checkpoints et WAL (section 4.3)  
+- ✅ XID wraparound risk (section 4.4)  
 - ✅ PostgreSQL 18 : Statistiques VACUUM/ANALYZE enrichies
 
 ### Automatisation
 
-- ✅ Prometheus + Grafana pour monitoring temps réel
-- ✅ Alertes sur seuils critiques
-- ✅ Vues personnalisées pour simplifier
+- ✅ Prometheus + Grafana pour monitoring temps réel  
+- ✅ Alertes sur seuils critiques  
+- ✅ Vues personnalisées pour simplifier  
 - ✅ Runbooks pour incident response
 
 ---
@@ -1262,22 +1262,22 @@ pgbench -c 10 -t 1000 test_db
 
 ### Documentation Officielle PostgreSQL
 
-- [Monitoring Database Activity](https://www.postgresql.org/docs/18/monitoring.html)
-- [pg_stat_statements](https://www.postgresql.org/docs/18/pgstatstatements.html)
+- [Monitoring Database Activity](https://www.postgresql.org/docs/18/monitoring.html)  
+- [pg_stat_statements](https://www.postgresql.org/docs/18/pgstatstatements.html)  
 - [EXPLAIN Documentation](https://www.postgresql.org/docs/18/sql-explain.html)
 
 ### Outils de Monitoring
 
-- **pg_stat_statements** : Extension officielle
-- **Prometheus + postgres_exporter** : Monitoring temps réel
-- **Grafana** : Dashboards visuels (Dashboard ID 9628 recommandé)
-- **pgBadger** : Analyse de logs
-- **pgAdmin 4** : Interface graphique avec monitoring intégré
+- **pg_stat_statements** : Extension officielle  
+- **Prometheus + postgres_exporter** : Monitoring temps réel  
+- **Grafana** : Dashboards visuels (Dashboard ID 9628 recommandé)  
+- **pgBadger** : Analyse de logs  
+- **pgAdmin 4** : Interface graphique avec monitoring intégré  
 - **Datadog, New Relic** : Solutions commerciales
 
 ### Articles et Guides
 
-- [Explain Analyze Visualizer](https://explain.dalibo.com/) : Visualiser les plans d'exécution
+- [Explain Analyze Visualizer](https://explain.dalibo.com/) : Visualiser les plans d'exécution  
 - [PostgreSQL Explain](https://www.postgresql.org/docs/current/using-explain.html)
 - Blog Percona PostgreSQL : Articles d'experts
 - 2ndQuadrant Blog : Astuces avancées

@@ -366,7 +366,7 @@ PostgreSQL est bien plus qu'une base de données. C'est un écosystème vivant, 
 
 En maîtrisant PostgreSQL, vous avez acquis une compétence **durable** et **transférable**. Que vous travailliez sur une startup innovante, une grande entreprise, ou vos projets personnels, PostgreSQL sera un allié fiable.
 
-> *"PostgreSQL est la base de données open source la plus avancée au monde."*
+> *"PostgreSQL est la base de données open source la plus avancée au monde."*  
 > — Mission statement du projet PostgreSQL
 
 Cette affirmation n'est pas qu'un slogan marketing. C'est le résultat de décennies de travail d'une communauté mondiale dédiée à l'excellence technique et à l'ouverture.
@@ -377,7 +377,7 @@ Cette affirmation n'est pas qu'un slogan marketing. C'est le résultat de décen
 
 *Les sections suivantes détaillent :*
 
-- **21.1** — Résumé des concepts clés par niveau
+- **21.1** — Résumé des concepts clés par niveau  
 - **21.2** — L'avenir de PostgreSQL : Tendances et évolutions
 
 ---

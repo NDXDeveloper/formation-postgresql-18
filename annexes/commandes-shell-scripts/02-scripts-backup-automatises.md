@@ -7,15 +7,15 @@
 
 ## Table des Matières
 
-1. [Introduction aux Backups Automatisés](#1-introduction-aux-backups-automatis%C3%A9s)
-2. [Stratégies de Backup](#2-strat%C3%A9gies-de-backup)
-3. [Scripts de Base](#3-scripts-de-base)
-4. [Scripts Avancés pour Production](#4-scripts-avanc%C3%A9s-pour-production)
-5. [Automatisation avec Cron](#5-automatisation-avec-cron)
-6. [Rotation des Backups](#6-rotation-des-backups)
-7. [Destinations de Sauvegarde](#7-destinations-de-sauvegarde)
-8. [Monitoring et Alertes](#8-monitoring-et-alertes)
-9. [Scripts de Vérification](#9-scripts-de-v%C3%A9rification)
+1. [Introduction aux Backups Automatisés](#1-introduction-aux-backups-automatis%C3%A9s)  
+2. [Stratégies de Backup](#2-strat%C3%A9gies-de-backup)  
+3. [Scripts de Base](#3-scripts-de-base)  
+4. [Scripts Avancés pour Production](#4-scripts-avanc%C3%A9s-pour-production)  
+5. [Automatisation avec Cron](#5-automatisation-avec-cron)  
+6. [Rotation des Backups](#6-rotation-des-backups)  
+7. [Destinations de Sauvegarde](#7-destinations-de-sauvegarde)  
+8. [Monitoring et Alertes](#8-monitoring-et-alertes)  
+9. [Scripts de Vérification](#9-scripts-de-v%C3%A9rification)  
 10. [Bonnes Pratiques](#10-bonnes-pratiques)
 
 ---
@@ -25,29 +25,29 @@
 ### 1.1. Pourquoi Automatiser les Backups ?
 
 **Les backups manuels sont risqués :**
-- ❌ Oublis fréquents
-- ❌ Incohérences dans le processus
-- ❌ Erreurs humaines
-- ❌ Pas d'historique fiable
+- ❌ Oublis fréquents  
+- ❌ Incohérences dans le processus  
+- ❌ Erreurs humaines  
+- ❌ Pas d'historique fiable  
 - ❌ Impossible à grande échelle
 
 **Les backups automatisés offrent :**
-- ✅ Fiabilité : Exécution régulière garantie
-- ✅ Cohérence : Processus identique à chaque fois
-- ✅ Traçabilité : Logs et historique complets
-- ✅ Sérénité : Dormez tranquille !
+- ✅ Fiabilité : Exécution régulière garantie  
+- ✅ Cohérence : Processus identique à chaque fois  
+- ✅ Traçabilité : Logs et historique complets  
+- ✅ Sérénité : Dormez tranquille !  
 - ✅ Conformité : Respect des politiques de sauvegarde
 
 ### 1.2. Qu'est-ce qu'un Script de Backup ?
 
 Un **script de backup** est un programme (généralement en Bash) qui :
-1. Se connecte à PostgreSQL
-2. Exporte les données (pg_dump)
-3. Compresse le résultat
-4. Nomme le fichier avec un timestamp
-5. Stocke le backup dans un emplacement sûr
-6. Nettoie les anciens backups (rotation)
-7. Vérifie l'intégrité
+1. Se connecte à PostgreSQL  
+2. Exporte les données (pg_dump)  
+3. Compresse le résultat  
+4. Nomme le fichier avec un timestamp  
+5. Stocke le backup dans un emplacement sûr  
+6. Nettoie les anciens backups (rotation)  
+7. Vérifie l'intégrité  
 8. Envoie des alertes en cas de problème
 
 **Exemple de workflow automatisé :**
@@ -72,13 +72,13 @@ Un **script de backup** est un programme (généralement en Bash) qui :
 
 Un système de backup professionnel comprend :
 
-1. **Script principal** : Effectue le backup
-2. **Configuration** : Paramètres centralisés
-3. **Rotation** : Gestion de l'historique
-4. **Vérification** : Validation de l'intégrité
-5. **Stockage** : Multiple destinations (local, distant, cloud)
-6. **Monitoring** : Surveillance et alertes
-7. **Logs** : Traçabilité complète
+1. **Script principal** : Effectue le backup  
+2. **Configuration** : Paramètres centralisés  
+3. **Rotation** : Gestion de l'historique  
+4. **Vérification** : Validation de l'intégrité  
+5. **Stockage** : Multiple destinations (local, distant, cloud)  
+6. **Monitoring** : Surveillance et alertes  
+7. **Logs** : Traçabilité complète  
 8. **Restauration** : Tests réguliers
 
 ### 1.4. Prérequis
@@ -113,8 +113,8 @@ Un système de backup professionnel comprend :
 **RPO = Recovery Point Objective : Perte de données maximale acceptable*
 
 **💡 Recommandation standard :**
-- **Production** : Backup quotidien + WAL archiving continu (RPO quasi-nul)
-- **Staging** : Backup quotidien
+- **Production** : Backup quotidien + WAL archiving continu (RPO quasi-nul)  
+- **Staging** : Backup quotidien  
 - **Développement** : Backup hebdomadaire
 
 ### 2.2. Stratégie 3-2-1 (La Règle d'Or)
@@ -137,9 +137,9 @@ Un système de backup professionnel comprend :
 ```
 
 **Pourquoi c'est crucial ?**
-- **Disque dur défaillant** → Copie sur NAS disponible
-- **Incendie datacenter** → Copie cloud disponible
-- **Ransomware** → Copie hors site intacte
+- **Disque dur défaillant** → Copie sur NAS disponible  
+- **Incendie datacenter** → Copie cloud disponible  
+- **Ransomware** → Copie hors site intacte  
 - **Erreur humaine** → Plusieurs points de restauration
 
 ### 2.3. Stratégie de Rétention (Combien de Temps Garder ?)
@@ -168,13 +168,13 @@ Un système de backup professionnel comprend :
 **Définition :** Sauvegarde intégrale de toute la base de données.
 
 **Avantages :**
-- ✅ Restauration simple (1 seul fichier)
-- ✅ Autonome et indépendant
+- ✅ Restauration simple (1 seul fichier)  
+- ✅ Autonome et indépendant  
 - ✅ Facile à gérer
 
 **Inconvénients :**
-- ❌ Consomme beaucoup d'espace
-- ❌ Temps de backup long
+- ❌ Consomme beaucoup d'espace  
+- ❌ Temps de backup long  
 - ❌ Bande passante réseau importante
 
 **Quand utiliser :**
@@ -187,13 +187,13 @@ Un système de backup professionnel comprend :
 **Définition :** Sauvegarde uniquement les modifications depuis le dernier backup.
 
 **Avantages :**
-- ✅ Rapide à exécuter
-- ✅ Consomme peu d'espace
+- ✅ Rapide à exécuter  
+- ✅ Consomme peu d'espace  
 - ✅ Peut être exécuté fréquemment
 
 **Inconvénients :**
-- ❌ Restauration complexe (chaîne de backups)
-- ❌ Dépendance entre fichiers
+- ❌ Restauration complexe (chaîne de backups)  
+- ❌ Dépendance entre fichiers  
 - ❌ Nécessite WAL archiving
 
 **Quand utiliser :**
@@ -207,12 +207,12 @@ Un système de backup professionnel comprend :
 
 **Avant de créer vos scripts, répondez à ces questions :**
 
-- [ ] Quelle perte de données maximale est acceptable ? (RPO)
-- [ ] Combien de temps peut durer une restauration ? (RTO)
-- [ ] Quelle est la taille de vos bases de données ?
-- [ ] Combien d'espace disque avez-vous ?
-- [ ] Avez-vous accès à un stockage distant/cloud ?
-- [ ] Qui doit être alerté en cas de problème ?
+- [ ] Quelle perte de données maximale est acceptable ? (RPO)  
+- [ ] Combien de temps peut durer une restauration ? (RTO)  
+- [ ] Quelle est la taille de vos bases de données ?  
+- [ ] Combien d'espace disque avez-vous ?  
+- [ ] Avez-vous accès à un stockage distant/cloud ?  
+- [ ] Qui doit être alerté en cas de problème ?  
 - [ ] Quelle est votre politique de rétention ?
 
 **Exemple de stratégie définie :**
@@ -239,9 +239,9 @@ Application E-commerce "MonShop"
 #!/bin/bash
 # backup_minimal.sh
 
-DATABASE="mabase"
-BACKUP_DIR="/var/backups/postgresql"
-TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+DATABASE="mabase"  
+BACKUP_DIR="/var/backups/postgresql"  
+TIMESTAMP=$(date +%Y%m%d_%H%M%S)  
 
 # Créer le répertoire si nécessaire
 mkdir -p "$BACKUP_DIR"
@@ -253,11 +253,11 @@ echo "Backup terminé : $BACKUP_DIR/${DATABASE}_${TIMESTAMP}.dump"
 ```
 
 **Ce que fait ce script :**
-1. Définit la base à sauvegarder (`mabase`)
-2. Définit le répertoire de destination
-3. Génère un timestamp (ex: `20251121_143000`)
-4. Crée le répertoire si besoin
-5. Exécute `pg_dump` en format custom compressé
+1. Définit la base à sauvegarder (`mabase`)  
+2. Définit le répertoire de destination  
+3. Génère un timestamp (ex: `20251121_143000`)  
+4. Crée le répertoire si besoin  
+5. Exécute `pg_dump` en format custom compressé  
 6. Affiche le chemin du backup créé
 
 **Utilisation :**
@@ -287,10 +287,10 @@ chmod +x backup_minimal.sh
 # ========================================
 # Configuration
 # ========================================
-DATABASE="mabase"
-BACKUP_DIR="/var/backups/postgresql"
-TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-BACKUP_FILE="$BACKUP_DIR/${DATABASE}_${TIMESTAMP}.dump"
+DATABASE="mabase"  
+BACKUP_DIR="/var/backups/postgresql"  
+TIMESTAMP=$(date +%Y%m%d_%H%M%S)  
+BACKUP_FILE="$BACKUP_DIR/${DATABASE}_${TIMESTAMP}.dump"  
 
 # ========================================
 # Fonctions
@@ -319,21 +319,21 @@ check_success() {
 log "=== Début du backup de $DATABASE ==="
 
 # Étape 1 : Créer le répertoire
-mkdir -p "$BACKUP_DIR"
-check_success "Création du répertoire"
+mkdir -p "$BACKUP_DIR"  
+check_success "Création du répertoire"  
 
 # Étape 2 : Vérifier que PostgreSQL est accessible
-log "Vérification de la connexion à PostgreSQL..."
-if ! pg_isready -d "$DATABASE" > /dev/null 2>&1; then
+log "Vérification de la connexion à PostgreSQL..."  
+if ! pg_isready -d "$DATABASE" > /dev/null 2>&1; then  
     log "❌ ERREUR : Impossible de se connecter à PostgreSQL"
     exit 1
-fi
-log "✅ Connexion PostgreSQL OK"
+fi  
+log "✅ Connexion PostgreSQL OK"  
 
 # Étape 3 : Effectuer le backup
-log "Début de l'export de $DATABASE..."
-pg_dump -F c -Z 9 "$DATABASE" -f "$BACKUP_FILE"
-check_success "Export de la base"
+log "Début de l'export de $DATABASE..."  
+pg_dump -F c -Z 9 "$DATABASE" -f "$BACKUP_FILE"  
+check_success "Export de la base"  
 
 # Étape 4 : Vérifier que le fichier existe et n'est pas vide
 if [ -f "$BACKUP_FILE" ] && [ -s "$BACKUP_FILE" ]; then
@@ -345,24 +345,24 @@ else
 fi
 
 # Étape 5 : Vérifier l'intégrité du backup
-log "Vérification de l'intégrité du backup..."
-if pg_restore --list "$BACKUP_FILE" > /dev/null 2>&1; then
+log "Vérification de l'intégrité du backup..."  
+if pg_restore --list "$BACKUP_FILE" > /dev/null 2>&1; then  
     log "✅ Backup valide"
 else
     log "❌ ATTENTION : Le backup semble corrompu !"
     exit 1
 fi
 
-log "=== Backup terminé avec succès ==="
-exit 0
+log "=== Backup terminé avec succès ==="  
+exit 0  
 ```
 
 **Améliorations apportées :**
-- ✅ Fonction `log()` pour horodater les messages
-- ✅ Vérification de la connectivité PostgreSQL (`pg_isready`)
-- ✅ Vérification de l'existence et taille du fichier
-- ✅ Validation de l'intégrité (`pg_restore --list`)
-- ✅ Codes de retour appropriés (exit 0/1)
+- ✅ Fonction `log()` pour horodater les messages  
+- ✅ Vérification de la connectivité PostgreSQL (`pg_isready`)  
+- ✅ Vérification de l'existence et taille du fichier  
+- ✅ Validation de l'intégrité (`pg_restore --list`)  
+- ✅ Codes de retour appropriés (exit 0/1)  
 - ✅ Messages clairs et informatifs
 
 ### 3.3. Script avec Rotation (Nettoyage Automatique)
@@ -376,11 +376,11 @@ exit 0
 # ========================================
 # Configuration
 # ========================================
-DATABASE="mabase"
-BACKUP_DIR="/var/backups/postgresql"
-RETENTION_DAYS=7  # Nombre de jours à conserver
-TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-BACKUP_FILE="$BACKUP_DIR/${DATABASE}_${TIMESTAMP}.dump"
+DATABASE="mabase"  
+BACKUP_DIR="/var/backups/postgresql"  
+RETENTION_DAYS=7  # Nombre de jours à conserver  
+TIMESTAMP=$(date +%Y%m%d_%H%M%S)  
+BACKUP_FILE="$BACKUP_DIR/${DATABASE}_${TIMESTAMP}.dump"  
 
 # ========================================
 # Fonctions
@@ -406,8 +406,8 @@ if ! pg_isready -d "$DATABASE" > /dev/null 2>&1; then
 fi
 
 # Effectuer le backup
-log "Création du backup..."
-pg_dump -F c -Z 9 "$DATABASE" -f "$BACKUP_FILE"
+log "Création du backup..."  
+pg_dump -F c -Z 9 "$DATABASE" -f "$BACKUP_FILE"  
 
 if [ $? -eq 0 ]; then
     SIZE=$(du -h "$BACKUP_FILE" | cut -f1)
@@ -425,19 +425,19 @@ else
 fi
 
 # Rotation : Supprimer les backups plus anciens que RETENTION_DAYS
-log "Nettoyage des anciens backups (> $RETENTION_DAYS jours)..."
-BEFORE_COUNT=$(find "$BACKUP_DIR" -name "${DATABASE}_*.dump" | wc -l)
+log "Nettoyage des anciens backups (> $RETENTION_DAYS jours)..."  
+BEFORE_COUNT=$(find "$BACKUP_DIR" -name "${DATABASE}_*.dump" | wc -l)  
 
 find "$BACKUP_DIR" -name "${DATABASE}_*.dump" -type f -mtime +$RETENTION_DAYS -delete
 
-AFTER_COUNT=$(find "$BACKUP_DIR" -name "${DATABASE}_*.dump" | wc -l)
-DELETED=$((BEFORE_COUNT - AFTER_COUNT))
+AFTER_COUNT=$(find "$BACKUP_DIR" -name "${DATABASE}_*.dump" | wc -l)  
+DELETED=$((BEFORE_COUNT - AFTER_COUNT))  
 
-log "🗑️  $DELETED ancien(s) backup(s) supprimé(s)"
-log "📦 Backups restants : $AFTER_COUNT"
+log "🗑️  $DELETED ancien(s) backup(s) supprimé(s)"  
+log "📦 Backups restants : $AFTER_COUNT"  
 
-log "=== Backup terminé ==="
-exit 0
+log "=== Backup terminé ==="  
+exit 0  
 ```
 
 **Fonctionnement de la rotation :**
@@ -447,20 +447,20 @@ find "$BACKUP_DIR" -name "${DATABASE}_*.dump" -type f -mtime +$RETENTION_DAYS -d
 ```
 
 **Explication :**
-- `find "$BACKUP_DIR"` : Cherche dans le répertoire de backup
-- `-name "${DATABASE}_*.dump"` : Fichiers correspondant au pattern (ex: `mabase_*.dump`)
-- `-type f` : Uniquement les fichiers (pas les répertoires)
-- `-mtime +$RETENTION_DAYS` : Modifiés il y a plus de N jours
+- `find "$BACKUP_DIR"` : Cherche dans le répertoire de backup  
+- `-name "${DATABASE}_*.dump"` : Fichiers correspondant au pattern (ex: `mabase_*.dump`)  
+- `-type f` : Uniquement les fichiers (pas les répertoires)  
+- `-mtime +$RETENTION_DAYS` : Modifiés il y a plus de N jours  
 - `-delete` : Supprimer les fichiers trouvés
 
 **Exemple avec RETENTION_DAYS=7 :**
 
 ```
-Jour 1 : mabase_20251115.dump  ← Créé
-Jour 2 : mabase_20251116.dump  ← Créé
+Jour 1 : mabase_20251115.dump  ← Créé  
+Jour 2 : mabase_20251116.dump  ← Créé  
 ...
-Jour 7 : mabase_20251121.dump  ← Créé
-Jour 8 : mabase_20251122.dump  ← Créé
+Jour 7 : mabase_20251121.dump  ← Créé  
+Jour 8 : mabase_20251122.dump  ← Créé  
          mabase_20251115.dump  ← Supprimé (> 7 jours)
 ```
 
@@ -475,9 +475,9 @@ Jour 8 : mabase_20251122.dump  ← Créé
 # ========================================
 # Configuration
 # ========================================
-BACKUP_DIR="/var/backups/postgresql"
-RETENTION_DAYS=7
-TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+BACKUP_DIR="/var/backups/postgresql"  
+RETENTION_DAYS=7  
+TIMESTAMP=$(date +%Y%m%d_%H%M%S)  
 
 # Liste des bases à sauvegarder
 DATABASES=(
@@ -526,8 +526,8 @@ log "=== Backup de ${#DATABASES[@]} base(s) de données ==="
 mkdir -p "$BACKUP_DIR"
 
 # Sauvegarder chaque base
-SUCCESS_COUNT=0
-FAIL_COUNT=0
+SUCCESS_COUNT=0  
+FAIL_COUNT=0  
 
 for db in "${DATABASES[@]}"; do
     if backup_database "$db"; then
@@ -540,8 +540,8 @@ done
 log "📊 Résumé : $SUCCESS_COUNT succès, $FAIL_COUNT échec(s)"
 
 # Rotation globale
-log "Nettoyage des anciens backups..."
-for db in "${DATABASES[@]}"; do
+log "Nettoyage des anciens backups..."  
+for db in "${DATABASES[@]}"; do  
     deleted=$(find "$BACKUP_DIR" -name "${db}_*.dump" -type f -mtime +$RETENTION_DAYS -delete -print | wc -l)
     if [ $deleted -gt 0 ]; then
         log "🗑️  $db : $deleted ancien(s) backup(s) supprimé(s)"
@@ -559,9 +559,9 @@ fi
 ```
 
 **Avantages :**
-- ✅ Sauvegarde plusieurs bases en une seule exécution
-- ✅ Comptabilisation des succès/échecs
-- ✅ Rotation indépendante par base
+- ✅ Sauvegarde plusieurs bases en une seule exécution  
+- ✅ Comptabilisation des succès/échecs  
+- ✅ Rotation indépendante par base  
 - ✅ Facile à étendre (ajouter des bases dans le tableau)
 
 ---
@@ -587,9 +587,9 @@ BACKUP_DIR="/var/backups/postgresql"
 LOG_DIR="/var/log/postgresql_backup"
 
 # Rétention (jours)
-RETENTION_DAILY=7
-RETENTION_WEEKLY=28
-RETENTION_MONTHLY=365
+RETENTION_DAILY=7  
+RETENTION_WEEKLY=28  
+RETENTION_MONTHLY=365  
 
 # Compression (0-9)
 COMPRESSION_LEVEL=9
@@ -598,19 +598,19 @@ COMPRESSION_LEVEL=9
 PARALLEL_JOBS=4
 
 # Stockage distant
-ENABLE_REMOTE_BACKUP=true
-REMOTE_BACKUP_DIR="/mnt/nas/postgresql_backups"
-S3_BUCKET="s3://my-company-backups/postgresql"
+ENABLE_REMOTE_BACKUP=true  
+REMOTE_BACKUP_DIR="/mnt/nas/postgresql_backups"  
+S3_BUCKET="s3://my-company-backups/postgresql"  
 
 # Alertes
-ENABLE_EMAIL_ALERTS=true
-ALERT_EMAIL="admin@example.com"
-SMTP_SERVER="smtp.example.com"
+ENABLE_EMAIL_ALERTS=true  
+ALERT_EMAIL="admin@example.com"  
+SMTP_SERVER="smtp.example.com"  
 
 # Options avancées
-ENABLE_INTEGRITY_CHECK=true
-ENABLE_SIZE_MONITORING=true
-MAX_BACKUP_SIZE_GB=100
+ENABLE_INTEGRITY_CHECK=true  
+ENABLE_SIZE_MONITORING=true  
+MAX_BACKUP_SIZE_GB=100  
 ```
 
 **Script : `backup_production.sh`**
@@ -637,9 +637,9 @@ source "$CONFIG_FILE"
 # Variables Globales
 # ========================================
 
-TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-DATE_SHORT=$(date +%Y%m%d)
-LOG_FILE="$LOG_DIR/backup_${TIMESTAMP}.log"
+TIMESTAMP=$(date +%Y%m%d_%H%M%S)  
+DATE_SHORT=$(date +%Y%m%d)  
+LOG_FILE="$LOG_DIR/backup_${TIMESTAMP}.log"  
 
 # Créer les répertoires nécessaires
 mkdir -p "$BACKUP_DIR" "$LOG_DIR"
@@ -805,12 +805,12 @@ backup_to_remote() {
 # Script Principal
 # ========================================
 
-log "=========================================="
-log "🚀 Démarrage du backup PostgreSQL"
-log "=========================================="
-log "Configuration : $CONFIG_FILE"
-log "Timestamp : $TIMESTAMP"
-log ""
+log "=========================================="  
+log "🚀 Démarrage du backup PostgreSQL"  
+log "=========================================="  
+log "Configuration : $CONFIG_FILE"  
+log "Timestamp : $TIMESTAMP"  
+log ""  
 
 # Vérifier l'espace disque
 if ! check_disk_space; then
@@ -819,20 +819,20 @@ if ! check_disk_space; then
 fi
 
 # Sauvegarder les objets globaux (rôles, tablespaces)
-log "=========================================="
-log "👥 Backup des objets globaux"
-log "=========================================="
+log "=========================================="  
+log "👥 Backup des objets globaux"  
+log "=========================================="  
 
-GLOBALS_FILE="$BACKUP_DIR/globals_${TIMESTAMP}.sql"
-if pg_dumpall --globals-only > "$GLOBALS_FILE" 2>> "$LOG_FILE"; then
+GLOBALS_FILE="$BACKUP_DIR/globals_${TIMESTAMP}.sql"  
+if pg_dumpall --globals-only > "$GLOBALS_FILE" 2>> "$LOG_FILE"; then  
     log "✅ Objets globaux sauvegardés : $GLOBALS_FILE"
 else
     log_error "Échec du backup des objets globaux"
 fi
 
 # Backup de chaque base
-SUCCESS_COUNT=0
-FAIL_COUNT=0
+SUCCESS_COUNT=0  
+FAIL_COUNT=0  
 
 for db in $DATABASES; do
     if backup_database "$db"; then
@@ -851,17 +851,17 @@ backup_to_remote
 # Résumé et Alertes
 # ========================================
 
-log "=========================================="
-log "📊 RÉSUMÉ"
-log "=========================================="
-log "Bases sauvegardées : $SUCCESS_COUNT"
-log "Échecs : $FAIL_COUNT"
-log "Durée totale : $SECONDS secondes"
-log "Log complet : $LOG_FILE"
+log "=========================================="  
+log "📊 RÉSUMÉ"  
+log "=========================================="  
+log "Bases sauvegardées : $SUCCESS_COUNT"  
+log "Échecs : $FAIL_COUNT"  
+log "Durée totale : $SECONDS secondes"  
+log "Log complet : $LOG_FILE"  
 
 # Taille totale des backups
-TOTAL_SIZE=$(du -sh "$BACKUP_DIR" | cut -f1)
-log "💾 Taille totale des backups : $TOTAL_SIZE"
+TOTAL_SIZE=$(du -sh "$BACKUP_DIR" | cut -f1)  
+log "💾 Taille totale des backups : $TOTAL_SIZE"  
 
 # Envoyer une alerte si des échecs
 if [ $FAIL_COUNT -gt 0 ]; then
@@ -877,14 +877,14 @@ fi
 ```
 
 **Avantages de cette approche :**
-- ✅ Configuration centralisée et facilement modifiable
-- ✅ Gestion complète des erreurs
-- ✅ Monitoring et alertes
-- ✅ Logs détaillés
-- ✅ Copie vers stockage distant (NAS, S3)
-- ✅ Vérification d'intégrité
-- ✅ Monitoring de la taille des backups
-- ✅ Backup des objets globaux (rôles)
+- ✅ Configuration centralisée et facilement modifiable  
+- ✅ Gestion complète des erreurs  
+- ✅ Monitoring et alertes  
+- ✅ Logs détaillés  
+- ✅ Copie vers stockage distant (NAS, S3)  
+- ✅ Vérification d'intégrité  
+- ✅ Monitoring de la taille des backups  
+- ✅ Backup des objets globaux (rôles)  
 - ✅ Prêt pour la production
 
 ### 4.2. Script avec Politique GFS (Grand-Père Père Fils)
@@ -899,23 +899,23 @@ fi
 # Configuration
 # ========================================
 
-DATABASE="production"
-BACKUP_DIR="/var/backups/postgresql"
-DAILY_DIR="$BACKUP_DIR/daily"
-WEEKLY_DIR="$BACKUP_DIR/weekly"
-MONTHLY_DIR="$BACKUP_DIR/monthly"
-YEARLY_DIR="$BACKUP_DIR/yearly"
+DATABASE="production"  
+BACKUP_DIR="/var/backups/postgresql"  
+DAILY_DIR="$BACKUP_DIR/daily"  
+WEEKLY_DIR="$BACKUP_DIR/weekly"  
+MONTHLY_DIR="$BACKUP_DIR/monthly"  
+YEARLY_DIR="$BACKUP_DIR/yearly"  
 
-TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-DAY_OF_WEEK=$(date +%u)    # 1=Lundi, 7=Dimanche
-DAY_OF_MONTH=$(date +%d)   # 01-31
-DAY_OF_YEAR=$(date +%j)    # 001-365
+TIMESTAMP=$(date +%Y%m%d_%H%M%S)  
+DAY_OF_WEEK=$(date +%u)    # 1=Lundi, 7=Dimanche  
+DAY_OF_MONTH=$(date +%d)   # 01-31  
+DAY_OF_YEAR=$(date +%j)    # 001-365  
 
 # Rétentions
-RETENTION_DAILY=7      # 7 jours
-RETENTION_WEEKLY=28    # 4 semaines
-RETENTION_MONTHLY=365  # 12 mois
-RETENTION_YEARLY=2555  # 7 ans
+RETENTION_DAILY=7      # 7 jours  
+RETENTION_WEEKLY=28    # 4 semaines  
+RETENTION_MONTHLY=365  # 12 mois  
+RETENTION_YEARLY=2555  # 7 ans  
 
 # ========================================
 # Fonctions
@@ -968,13 +968,13 @@ rotate_directory() {
 # Script Principal
 # ========================================
 
-log "=========================================="
-log "🔄 Backup GFS de $DATABASE"
-log "=========================================="
-log "Date : $(date '+%Y-%m-%d %H:%M:%S')"
-log "Jour de la semaine : $DAY_OF_WEEK"
-log "Jour du mois : $DAY_OF_MONTH"
-log ""
+log "=========================================="  
+log "🔄 Backup GFS de $DATABASE"  
+log "=========================================="  
+log "Date : $(date '+%Y-%m-%d %H:%M:%S')"  
+log "Jour de la semaine : $DAY_OF_WEEK"  
+log "Jour du mois : $DAY_OF_MONTH"  
+log ""  
 
 # Déterminer le type de backup selon la date
 BACKUP_CREATED=false
@@ -1006,60 +1006,60 @@ if [ "$BACKUP_CREATED" = false ]; then
     create_backup "$DAILY_DIR" "daily"
 fi
 
-log ""
-log "=========================================="
-log "🗑️  Rotation des anciens backups"
-log "=========================================="
+log ""  
+log "=========================================="  
+log "🗑️  Rotation des anciens backups"  
+log "=========================================="  
 
 # Rotation de chaque niveau
-rotate_directory "$DAILY_DIR" $RETENTION_DAILY "Quotidiens"
-rotate_directory "$WEEKLY_DIR" $RETENTION_WEEKLY "Hebdomadaires"
-rotate_directory "$MONTHLY_DIR" $RETENTION_MONTHLY "Mensuels"
-rotate_directory "$YEARLY_DIR" $RETENTION_YEARLY "Annuels"
+rotate_directory "$DAILY_DIR" $RETENTION_DAILY "Quotidiens"  
+rotate_directory "$WEEKLY_DIR" $RETENTION_WEEKLY "Hebdomadaires"  
+rotate_directory "$MONTHLY_DIR" $RETENTION_MONTHLY "Mensuels"  
+rotate_directory "$YEARLY_DIR" $RETENTION_YEARLY "Annuels"  
 
-log ""
-log "=========================================="
-log "📊 Résumé des backups"
-log "=========================================="
+log ""  
+log "=========================================="  
+log "📊 Résumé des backups"  
+log "=========================================="  
 
 # Compter les backups par catégorie
-DAILY_COUNT=$(find "$DAILY_DIR" -name "*.dump" 2>/dev/null | wc -l)
-WEEKLY_COUNT=$(find "$WEEKLY_DIR" -name "*.dump" 2>/dev/null | wc -l)
-MONTHLY_COUNT=$(find "$MONTHLY_DIR" -name "*.dump" 2>/dev/null | wc -l)
-YEARLY_COUNT=$(find "$YEARLY_DIR" -name "*.dump" 2>/dev/null | wc -l)
-TOTAL_COUNT=$((DAILY_COUNT + WEEKLY_COUNT + MONTHLY_COUNT + YEARLY_COUNT))
+DAILY_COUNT=$(find "$DAILY_DIR" -name "*.dump" 2>/dev/null | wc -l)  
+WEEKLY_COUNT=$(find "$WEEKLY_DIR" -name "*.dump" 2>/dev/null | wc -l)  
+MONTHLY_COUNT=$(find "$MONTHLY_DIR" -name "*.dump" 2>/dev/null | wc -l)  
+YEARLY_COUNT=$(find "$YEARLY_DIR" -name "*.dump" 2>/dev/null | wc -l)  
+TOTAL_COUNT=$((DAILY_COUNT + WEEKLY_COUNT + MONTHLY_COUNT + YEARLY_COUNT))  
 
-log "📦 Quotidiens : $DAILY_COUNT"
-log "📦 Hebdomadaires : $WEEKLY_COUNT"
-log "📦 Mensuels : $MONTHLY_COUNT"
-log "📦 Annuels : $YEARLY_COUNT"
-log "📦 TOTAL : $TOTAL_COUNT backups"
+log "📦 Quotidiens : $DAILY_COUNT"  
+log "📦 Hebdomadaires : $WEEKLY_COUNT"  
+log "📦 Mensuels : $MONTHLY_COUNT"  
+log "📦 Annuels : $YEARLY_COUNT"  
+log "📦 TOTAL : $TOTAL_COUNT backups"  
 
 # Taille totale
-TOTAL_SIZE=$(du -sh "$BACKUP_DIR" 2>/dev/null | cut -f1)
-log "💾 Espace utilisé : $TOTAL_SIZE"
+TOTAL_SIZE=$(du -sh "$BACKUP_DIR" 2>/dev/null | cut -f1)  
+log "💾 Espace utilisé : $TOTAL_SIZE"  
 
-log "=========================================="
-log "✅ Backup GFS terminé"
-log "=========================================="
+log "=========================================="  
+log "✅ Backup GFS terminé"  
+log "=========================================="  
 ```
 
 **Avantages de la stratégie GFS :**
-- ✅ Historique long sans exploser l'espace disque
-- ✅ Points de restauration fréquents (7 jours)
-- ✅ Archivage à long terme (jusqu'à 7 ans)
+- ✅ Historique long sans exploser l'espace disque  
+- ✅ Points de restauration fréquents (7 jours)  
+- ✅ Archivage à long terme (jusqu'à 7 ans)  
 - ✅ Équilibre optimal coût/protection
 
 **Exemple de répartition sur un an :**
 
 ```
-Janvier 1  : Backup annuel   → yearly/
-Janvier 7  : Backup hebdo    → weekly/
-Janvier 8  : Backup quotidien → daily/
-Janvier 9  : Backup quotidien → daily/
+Janvier 1  : Backup annuel   → yearly/  
+Janvier 7  : Backup hebdo    → weekly/  
+Janvier 8  : Backup quotidien → daily/  
+Janvier 9  : Backup quotidien → daily/  
 ...
-Février 1  : Backup mensuel  → monthly/
-Février 7  : Backup hebdo    → weekly/
+Février 1  : Backup mensuel  → monthly/  
+Février 7  : Backup hebdo    → weekly/  
 ...
 ```
 
@@ -1097,9 +1097,9 @@ Une ligne cron (crontab) suit ce format :
 ```
 
 **Caractères spéciaux :**
-- `*` : Toutes les valeurs (chaque minute, chaque heure, etc.)
-- `,` : Liste de valeurs (ex: `1,15,30` = 1er, 15e et 30e)
-- `-` : Plage de valeurs (ex: `1-5` = de 1 à 5)
+- `*` : Toutes les valeurs (chaque minute, chaque heure, etc.)  
+- `,` : Liste de valeurs (ex: `1,15,30` = 1er, 15e et 30e)  
+- `-` : Plage de valeurs (ex: `1-5` = de 1 à 5)  
 - `/` : Intervalle (ex: `*/15` = toutes les 15 minutes)
 
 ### 5.3. Exemples de Syntaxe Cron
@@ -1171,9 +1171,9 @@ crontab -e
 # ========================================
 
 # Variables d'environnement
-MAILTO=admin@example.com
-PATH=/usr/local/bin:/usr/bin:/bin
-PGDATA=/var/lib/postgresql/data
+MAILTO=admin@example.com  
+PATH=/usr/local/bin:/usr/bin:/bin  
+PGDATA=/var/lib/postgresql/data  
 
 # Backup quotidien à 2h du matin
 0 2 * * * /usr/local/bin/backup_production.sh >> /var/log/postgresql_backup/cron.log 2>&1
@@ -1192,9 +1192,9 @@ PGDATA=/var/lib/postgresql/data
 ```
 
 **Explication :**
-- `MAILTO` : Envoie les erreurs par email
-- `PATH` : Chemins pour trouver les commandes
-- `>> fichier.log 2>&1` : Redirige sortie standard et erreurs vers un fichier log
+- `MAILTO` : Envoie les erreurs par email  
+- `PATH` : Chemins pour trouver les commandes  
+- `>> fichier.log 2>&1` : Redirige sortie standard et erreurs vers un fichier log  
 - `-mtime +30` : Supprime les logs de plus de 30 jours
 
 #### 5.4.3. Vérifier les Tâches Cron
@@ -1207,8 +1207,8 @@ crontab -l
 sudo crontab -u postgres -l
 
 # Lister toutes les tâches cron système
-cat /etc/crontab
-ls -la /etc/cron.d/
+cat /etc/crontab  
+ls -la /etc/cron.d/  
 ```
 
 #### 5.4.4. Logs de Cron
@@ -1240,22 +1240,22 @@ sudo nano /usr/local/bin/backup_daily.sh
 #!/bin/bash
 # backup_daily.sh - Backup quotidien automatisé
 
-DATABASE="production"
-BACKUP_DIR="/var/backups/postgresql/daily"
-LOG_FILE="/var/log/postgresql_backup/daily_$(date +%Y%m%d).log"
-TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+DATABASE="production"  
+BACKUP_DIR="/var/backups/postgresql/daily"  
+LOG_FILE="/var/log/postgresql_backup/daily_$(date +%Y%m%d).log"  
+TIMESTAMP=$(date +%Y%m%d_%H%M%S)  
 
 # Créer les répertoires
 mkdir -p "$BACKUP_DIR" "$(dirname "$LOG_FILE")"
 
 # Rediriger toute la sortie vers le log
-exec > >(tee -a "$LOG_FILE")
-exec 2>&1
+exec > >(tee -a "$LOG_FILE")  
+exec 2>&1  
 
-echo "=========================================="
-echo "Backup quotidien de $DATABASE"
-echo "Date : $(date)"
-echo "=========================================="
+echo "=========================================="  
+echo "Backup quotidien de $DATABASE"  
+echo "Date : $(date)"  
+echo "=========================================="  
 
 # Backup
 pg_dump -F c -Z 9 "$DATABASE" -f "$BACKUP_DIR/${DATABASE}_${TIMESTAMP}.dump"
@@ -1272,9 +1272,9 @@ else
     exit 1
 fi
 
-echo "=========================================="
-echo "Backup terminé"
-echo "=========================================="
+echo "=========================================="  
+echo "Backup terminé"  
+echo "=========================================="  
 ```
 
 **Étape 2 : Rendre le script exécutable**
@@ -1306,8 +1306,8 @@ sudo crontab -e
 
 ```bash
 # Après le premier run (le lendemain à 2h), vérifier :
-ls -lh /var/backups/postgresql/daily/
-cat /var/log/postgresql_backup/daily_*.log
+ls -lh /var/backups/postgresql/daily/  
+cat /var/log/postgresql_backup/daily_*.log  
 ```
 
 ### 5.6. Bonnes Pratiques pour Cron
@@ -1407,11 +1407,11 @@ find /var/backups/postgresql -name "*.dump" -mtime +7 -delete
 ```
 
 **Avantages :**
-- ✅ Simple à implémenter
+- ✅ Simple à implémenter  
 - ✅ Prévisible
 
 **Inconvénients :**
-- ❌ Tous les backups ont la même importance
+- ❌ Tous les backups ont la même importance  
 - ❌ Pas d'historique long terme
 
 #### 6.2.2. Rotation par Nombre de Fichiers
@@ -1422,8 +1422,8 @@ find /var/backups/postgresql -name "*.dump" -mtime +7 -delete
 #!/bin/bash
 # keep_last_n.sh
 
-BACKUP_DIR="/var/backups/postgresql"
-KEEP_COUNT=10
+BACKUP_DIR="/var/backups/postgresql"  
+KEEP_COUNT=10  
 
 # Lister les fichiers par date (plus récent en premier)
 # Supprimer tout sauf les N premiers
@@ -1431,7 +1431,7 @@ ls -t "$BACKUP_DIR"/*.dump | tail -n +$((KEEP_COUNT + 1)) | xargs -r rm
 ```
 
 **Avantages :**
-- ✅ Contrôle précis du nombre de fichiers
+- ✅ Contrôle précis du nombre de fichiers  
 - ✅ Prévisible en espace disque
 
 **Inconvénients :**
@@ -1442,15 +1442,15 @@ ls -t "$BACKUP_DIR"/*.dump | tail -n +$((KEEP_COUNT + 1)) | xargs -r rm
 **Déjà vu en section 4.2 - Résumé :**
 
 ```
-Quotidiens   : 7 derniers jours
-Hebdomadaires: 4 dernières semaines
-Mensuels     : 12 derniers mois
-Annuels      : 5-7 dernières années
+Quotidiens   : 7 derniers jours  
+Hebdomadaires: 4 dernières semaines  
+Mensuels     : 12 derniers mois  
+Annuels      : 5-7 dernières années  
 ```
 
 **Avantages :**
-- ✅ Historique long sans exploser l'espace
-- ✅ Adapté aux besoins métier
+- ✅ Historique long sans exploser l'espace  
+- ✅ Adapté aux besoins métier  
 - ✅ Équilibre optimal
 
 **Inconvénients :**
@@ -1464,8 +1464,8 @@ Annuels      : 5-7 dernières années
 #!/bin/bash
 # rotate_by_size.sh
 
-BACKUP_DIR="/var/backups/postgresql"
-MAX_SIZE_GB=100  # Taille maximale en GB
+BACKUP_DIR="/var/backups/postgresql"  
+MAX_SIZE_GB=100  # Taille maximale en GB  
 
 # Calculer la taille actuelle
 CURRENT_SIZE_GB=$(du -s -BG "$BACKUP_DIR" | cut -f1 | sed 's/G//')
@@ -1496,11 +1496,11 @@ fi
 ```
 
 **Avantages :**
-- ✅ Garantit de ne jamais saturer le disque
+- ✅ Garantit de ne jamais saturer le disque  
 - ✅ S'adapte à la croissance de la base
 
 **Inconvénients :**
-- ❌ Nombre de backups variable
+- ❌ Nombre de backups variable  
 - ❌ Peut supprimer beaucoup de backups d'un coup
 
 ### 6.3. Script de Rotation Avancé
@@ -1511,29 +1511,29 @@ fi
 #!/bin/bash
 # rotate_advanced.sh
 
-BACKUP_DIR="/var/backups/postgresql"
-LOG_FILE="/var/log/postgresql_backup/rotation.log"
+BACKUP_DIR="/var/backups/postgresql"  
+LOG_FILE="/var/log/postgresql_backup/rotation.log"  
 
 log() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" | tee -a "$LOG_FILE"
 }
 
-log "=========================================="
-log "🗑️ Rotation des backups PostgreSQL"
-log "=========================================="
+log "=========================================="  
+log "🗑️ Rotation des backups PostgreSQL"  
+log "=========================================="  
 
 # Compter les backups avant rotation
-BEFORE_COUNT=$(find "$BACKUP_DIR" -name "*.dump" | wc -l)
-BEFORE_SIZE=$(du -sh "$BACKUP_DIR" | cut -f1)
+BEFORE_COUNT=$(find "$BACKUP_DIR" -name "*.dump" | wc -l)  
+BEFORE_SIZE=$(du -sh "$BACKUP_DIR" | cut -f1)  
 
-log "📊 Avant rotation :"
-log "  Fichiers : $BEFORE_COUNT"
-log "  Taille : $BEFORE_SIZE"
-log ""
+log "📊 Avant rotation :"  
+log "  Fichiers : $BEFORE_COUNT"  
+log "  Taille : $BEFORE_SIZE"  
+log ""  
 
 # Stratégie 1 : Supprimer backups corrompus
-log "🔍 Recherche de backups corrompus..."
-CORRUPTED_COUNT=0
+log "🔍 Recherche de backups corrompus..."  
+CORRUPTED_COUNT=0  
 
 for dump_file in "$BACKUP_DIR"/*.dump; do
     if [ -f "$dump_file" ]; then
@@ -1549,18 +1549,18 @@ if [ $CORRUPTED_COUNT -gt 0 ]; then
     log "🗑️ $CORRUPTED_COUNT backup(s) corrompu(s) supprimé(s)"
 else
     log "✅ Aucun backup corrompu"
-fi
-log ""
+fi  
+log ""  
 
 # Stratégie 2 : Rotation par âge (quotidiens > 7 jours)
-log "📅 Rotation des backups quotidiens (> 7 jours)..."
-DAILY_DELETED=$(find "$BACKUP_DIR" -name "*daily*.dump" -mtime +7 -delete -print | wc -l)
-log "🗑️ $DAILY_DELETED quotidien(s) supprimé(s)"
-log ""
+log "📅 Rotation des backups quotidiens (> 7 jours)..."  
+DAILY_DELETED=$(find "$BACKUP_DIR" -name "*daily*.dump" -mtime +7 -delete -print | wc -l)  
+log "🗑️ $DAILY_DELETED quotidien(s) supprimé(s)"  
+log ""  
 
 # Stratégie 3 : Garder maximum 10 backups hebdomadaires
-log "📅 Rotation des backups hebdomadaires (garder 10 max)..."
-WEEKLY_COUNT=$(ls -t "$BACKUP_DIR"/*weekly*.dump 2>/dev/null | wc -l)
+log "📅 Rotation des backups hebdomadaires (garder 10 max)..."  
+WEEKLY_COUNT=$(ls -t "$BACKUP_DIR"/*weekly*.dump 2>/dev/null | wc -l)  
 
 if [ "$WEEKLY_COUNT" -gt 10 ]; then
     WEEKLY_TO_DELETE=$((WEEKLY_COUNT - 10))
@@ -1568,18 +1568,18 @@ if [ "$WEEKLY_COUNT" -gt 10 ]; then
     log "🗑️ $WEEKLY_TO_DELETE hebdomadaire(s) supprimé(s)"
 else
     log "✅ Hebdomadaires OK ($WEEKLY_COUNT/10)"
-fi
-log ""
+fi  
+log ""  
 
 # Stratégie 4 : Rotation des mensuels (> 1 an)
-log "📅 Rotation des backups mensuels (> 365 jours)..."
-MONTHLY_DELETED=$(find "$BACKUP_DIR" -name "*monthly*.dump" -mtime +365 -delete -print | wc -l)
-log "🗑️ $MONTHLY_DELETED mensuel(s) supprimé(s)"
-log ""
+log "📅 Rotation des backups mensuels (> 365 jours)..."  
+MONTHLY_DELETED=$(find "$BACKUP_DIR" -name "*monthly*.dump" -mtime +365 -delete -print | wc -l)  
+log "🗑️ $MONTHLY_DELETED mensuel(s) supprimé(s)"  
+log ""  
 
 # Stratégie 5 : Vérifier l'espace disque
-log "💾 Vérification de l'espace disque..."
-DISK_USAGE=$(df -h "$BACKUP_DIR" | tail -1 | awk '{print $5}' | sed 's/%//')
+log "💾 Vérification de l'espace disque..."  
+DISK_USAGE=$(df -h "$BACKUP_DIR" | tail -1 | awk '{print $5}' | sed 's/%//')  
 
 if [ "$DISK_USAGE" -gt 90 ]; then
     log "⚠️ ALERTE : Espace disque critique ($DISK_USAGE%)"
@@ -1590,28 +1590,28 @@ if [ "$DISK_USAGE" -gt 90 ]; then
     log "🗑️ 5 backups supprimés en urgence"
 else
     log "✅ Espace disque OK ($DISK_USAGE%)"
-fi
-log ""
+fi  
+log ""  
 
 # Résumé après rotation
-AFTER_COUNT=$(find "$BACKUP_DIR" -name "*.dump" | wc -l)
-AFTER_SIZE=$(du -sh "$BACKUP_DIR" | cut -f1)
-DELETED=$((BEFORE_COUNT - AFTER_COUNT))
+AFTER_COUNT=$(find "$BACKUP_DIR" -name "*.dump" | wc -l)  
+AFTER_SIZE=$(du -sh "$BACKUP_DIR" | cut -f1)  
+DELETED=$((BEFORE_COUNT - AFTER_COUNT))  
 
-log "=========================================="
-log "📊 Après rotation :"
-log "  Fichiers : $AFTER_COUNT (- $DELETED)"
-log "  Taille : $AFTER_SIZE"
-log "=========================================="
-log "✅ Rotation terminée"
-log ""
+log "=========================================="  
+log "📊 Après rotation :"  
+log "  Fichiers : $AFTER_COUNT (- $DELETED)"  
+log "  Taille : $AFTER_SIZE"  
+log "=========================================="  
+log "✅ Rotation terminée"  
+log ""  
 ```
 
 **Ce script :**
-- ✅ Détecte et supprime les backups corrompus
-- ✅ Applique différentes politiques de rétention
-- ✅ Gère les alertes d'espace disque
-- ✅ Log toutes les actions
+- ✅ Détecte et supprime les backups corrompus  
+- ✅ Applique différentes politiques de rétention  
+- ✅ Gère les alertes d'espace disque  
+- ✅ Log toutes les actions  
 - ✅ Affiche un résumé clair
 
 ### 6.4. Automatiser la Rotation avec Cron
@@ -1633,13 +1633,13 @@ log ""
 ### 7.1. Stockage Local
 
 **Avantages :**
-- ✅ Rapide (accès disque)
-- ✅ Gratuit (pas de coût cloud)
+- ✅ Rapide (accès disque)  
+- ✅ Gratuit (pas de coût cloud)  
 - ✅ Contrôle total
 
 **Inconvénients :**
-- ❌ Vulnérable aux pannes matérielles
-- ❌ Pas de protection contre incendie/désastre
+- ❌ Vulnérable aux pannes matérielles  
+- ❌ Pas de protection contre incendie/désastre  
 - ❌ Limité en espace
 
 **Configuration :**
@@ -1653,13 +1653,13 @@ BACKUP_DIR="/var/backups/postgresql"
 **Principe :** Sauvegarder vers un serveur de fichiers réseau.
 
 **Avantages :**
-- ✅ Séparation physique du serveur de production
-- ✅ Capacité extensible
-- ✅ Redondance RAID
+- ✅ Séparation physique du serveur de production  
+- ✅ Capacité extensible  
+- ✅ Redondance RAID  
 - ✅ Accessible depuis plusieurs serveurs
 
 **Inconvénients :**
-- ❌ Dépend du réseau local
+- ❌ Dépend du réseau local  
 - ❌ Coût matériel initial
 
 **Script de copie vers NAS :**
@@ -1668,17 +1668,17 @@ BACKUP_DIR="/var/backups/postgresql"
 #!/bin/bash
 # backup_to_nas.sh
 
-LOCAL_BACKUP_DIR="/var/backups/postgresql"
-NAS_MOUNT_POINT="/mnt/nas"
-NAS_BACKUP_DIR="$NAS_MOUNT_POINT/postgresql_backups"
+LOCAL_BACKUP_DIR="/var/backups/postgresql"  
+NAS_MOUNT_POINT="/mnt/nas"  
+NAS_BACKUP_DIR="$NAS_MOUNT_POINT/postgresql_backups"  
 
 log() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1"
 }
 
-log "=========================================="
-log "📡 Copie vers NAS"
-log "=========================================="
+log "=========================================="  
+log "📡 Copie vers NAS"  
+log "=========================================="  
 
 # Vérifier que le NAS est monté
 if ! mountpoint -q "$NAS_MOUNT_POINT"; then
@@ -1700,8 +1700,8 @@ fi
 mkdir -p "$NAS_BACKUP_DIR"
 
 # Synchroniser avec rsync
-log "Synchronisation en cours..."
-rsync -av --progress \
+log "Synchronisation en cours..."  
+rsync -av --progress \  
     --exclude="*.log" \
     "$LOCAL_BACKUP_DIR/" \
     "$NAS_BACKUP_DIR/"
@@ -1719,9 +1719,9 @@ else
     exit 1
 fi
 
-log "=========================================="
-log "✅ Copie NAS terminée"
-log "=========================================="
+log "=========================================="  
+log "✅ Copie NAS terminée"  
+log "=========================================="  
 ```
 
 **Montage NFS (exemple) :**
@@ -1751,15 +1751,15 @@ mount /mnt/nas
 ### 7.3. Stockage Cloud (AWS S3)
 
 **Avantages :**
-- ✅ Stockage illimité
-- ✅ Haute disponibilité (99.999999999%)
-- ✅ Protection géographique
-- ✅ Versioning intégré
+- ✅ Stockage illimité  
+- ✅ Haute disponibilité (99.999999999%)  
+- ✅ Protection géographique  
+- ✅ Versioning intégré  
 - ✅ Lifecycle policies automatiques
 
 **Inconvénients :**
-- ❌ Coûts récurrents
-- ❌ Dépend d'Internet
+- ❌ Coûts récurrents  
+- ❌ Dépend d'Internet  
 - ❌ Transferts lents pour gros backups
 
 **Prérequis : Installer AWS CLI**
@@ -1782,20 +1782,20 @@ aws configure
 #!/bin/bash
 # backup_to_s3.sh
 
-LOCAL_BACKUP_DIR="/var/backups/postgresql"
-S3_BUCKET="s3://my-company-backups/postgresql"
-LOG_FILE="/var/log/postgresql_backup/s3_sync.log"
+LOCAL_BACKUP_DIR="/var/backups/postgresql"  
+S3_BUCKET="s3://my-company-backups/postgresql"  
+LOG_FILE="/var/log/postgresql_backup/s3_sync.log"  
 
 log() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" | tee -a "$LOG_FILE"
 }
 
-log "=========================================="
-log "☁️ Upload vers AWS S3"
-log "=========================================="
-log "Source : $LOCAL_BACKUP_DIR"
-log "Destination : $S3_BUCKET"
-log ""
+log "=========================================="  
+log "☁️ Upload vers AWS S3"  
+log "=========================================="  
+log "Source : $LOCAL_BACKUP_DIR"  
+log "Destination : $S3_BUCKET"  
+log ""  
 
 # Vérifier AWS CLI
 if ! command -v aws > /dev/null 2>&1; then
@@ -1809,12 +1809,12 @@ if ! aws sts get-caller-identity > /dev/null 2>&1; then
     exit 1
 fi
 
-log "✅ Credentials AWS valides"
-log ""
+log "✅ Credentials AWS valides"  
+log ""  
 
 # Synchroniser vers S3
-log "Upload en cours..."
-START_TIME=$(date +%s)
+log "Upload en cours..."  
+START_TIME=$(date +%s)  
 
 aws s3 sync "$LOCAL_BACKUP_DIR" "$S3_BUCKET" \
     --storage-class STANDARD_IA \
@@ -1837,14 +1837,14 @@ else
     exit 1
 fi
 
-log "=========================================="
-log "✅ Backup S3 terminé"
-log "=========================================="
+log "=========================================="  
+log "✅ Backup S3 terminé"  
+log "=========================================="  
 ```
 
 **Classe de stockage S3 :**
-- `STANDARD` : Accès fréquent (cher)
-- `STANDARD_IA` : Accès peu fréquent (recommandé pour backups)
+- `STANDARD` : Accès fréquent (cher)  
+- `STANDARD_IA` : Accès peu fréquent (recommandé pour backups)  
 - `GLACIER` : Archivage long terme (très peu cher, retrieval lent)
 
 **Lifecycle Policy S3 (optionnel) :**
@@ -1877,13 +1877,13 @@ log "=========================================="
 #!/bin/bash
 # backup_multi_destinations.sh
 
-DATABASE="production"
-TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+DATABASE="production"  
+TIMESTAMP=$(date +%Y%m%d_%H%M%S)  
 
 # Destinations
-LOCAL_DIR="/var/backups/postgresql"
-NAS_DIR="/mnt/nas/postgresql_backups"
-S3_BUCKET="s3://my-backups/postgresql"
+LOCAL_DIR="/var/backups/postgresql"  
+NAS_DIR="/mnt/nas/postgresql_backups"  
+S3_BUCKET="s3://my-backups/postgresql"  
 
 BACKUP_FILE="$LOCAL_DIR/${DATABASE}_${TIMESTAMP}.dump"
 
@@ -1891,14 +1891,14 @@ log() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1"
 }
 
-log "=========================================="
-log "🌐 Backup Multi-Destinations"
-log "=========================================="
+log "=========================================="  
+log "🌐 Backup Multi-Destinations"  
+log "=========================================="  
 
 # Étape 1 : Backup local
-log "1️⃣ Création du backup local..."
-mkdir -p "$LOCAL_DIR"
-pg_dump -F c -Z 9 "$DATABASE" -f "$BACKUP_FILE"
+log "1️⃣ Création du backup local..."  
+mkdir -p "$LOCAL_DIR"  
+pg_dump -F c -Z 9 "$DATABASE" -f "$BACKUP_FILE"  
 
 if [ $? -eq 0 ]; then
     SIZE=$(du -h "$BACKUP_FILE" | cut -f1)
@@ -1909,8 +1909,8 @@ else
 fi
 
 # Étape 2 : Copie vers NAS
-log ""
-log "2️⃣ Copie vers NAS..."
+log ""  
+log "2️⃣ Copie vers NAS..."  
 
 if mountpoint -q "/mnt/nas"; then
     mkdir -p "$NAS_DIR"
@@ -1926,8 +1926,8 @@ else
 fi
 
 # Étape 3 : Upload vers S3
-log ""
-log "3️⃣ Upload vers S3..."
+log ""  
+log "3️⃣ Upload vers S3..."  
 
 if command -v aws > /dev/null 2>&1; then
     aws s3 cp "$BACKUP_FILE" "$S3_BUCKET/$(basename "$BACKUP_FILE")" \
@@ -1943,11 +1943,11 @@ else
 fi
 
 # Résumé
-log ""
-log "=========================================="
-log "📊 Résumé"
-log "=========================================="
-log "✅ Local : $BACKUP_FILE"
+log ""  
+log "=========================================="  
+log "📊 Résumé"  
+log "=========================================="  
+log "✅ Local : $BACKUP_FILE"  
 
 if [ -f "$NAS_DIR/$(basename "$BACKUP_FILE")" ]; then
     log "✅ NAS : Copié"
@@ -1961,14 +1961,14 @@ else
     log "❌ S3 : Échec"
 fi
 
-log "=========================================="
-log "✅ Backup multi-destinations terminé"
-log "=========================================="
+log "=========================================="  
+log "✅ Backup multi-destinations terminé"  
+log "=========================================="  
 ```
 
 **Principe 3-2-1 respecté :**
-- ✅ 3 copies (local + NAS + S3)
-- ✅ 2 supports (disque local + cloud)
+- ✅ 3 copies (local + NAS + S3)  
+- ✅ 2 supports (disque local + cloud)  
 - ✅ 1 hors site (S3)
 
 ---
@@ -2002,10 +2002,10 @@ log "=========================================="
 #!/bin/bash
 # monitor_backups.sh
 
-BACKUP_DIR="/var/backups/postgresql"
-ALERT_EMAIL="admin@example.com"
-MAX_AGE_HOURS=36  # Alerte si dernier backup > 36h
-MIN_DISK_SPACE=15  # GB minimum
+BACKUP_DIR="/var/backups/postgresql"  
+ALERT_EMAIL="admin@example.com"  
+MAX_AGE_HOURS=36  # Alerte si dernier backup > 36h  
+MIN_DISK_SPACE=15  # GB minimum  
 
 log() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1"
@@ -2018,15 +2018,15 @@ send_alert() {
     log "📧 Alerte envoyée : $subject"
 }
 
-log "=========================================="
-log "🔍 Monitoring des Backups PostgreSQL"
-log "=========================================="
+log "=========================================="  
+log "🔍 Monitoring des Backups PostgreSQL"  
+log "=========================================="  
 
 ALERTS=()
 
 # Vérification 1 : Dernier backup
-log "Vérification du dernier backup..."
-LATEST_BACKUP=$(find "$BACKUP_DIR" -name "*.dump" -type f -printf '%T@ %p\n' | sort -rn | head -1 | cut -d' ' -f2)
+log "Vérification du dernier backup..."  
+LATEST_BACKUP=$(find "$BACKUP_DIR" -name "*.dump" -type f -printf '%T@ %p\n' | sort -rn | head -1 | cut -d' ' -f2)  
 
 if [ -z "$LATEST_BACKUP" ]; then
     ALERTS+=("❌ AUCUN BACKUP TROUVÉ")
@@ -2044,10 +2044,10 @@ else
 fi
 
 # Vérification 2 : Espace disque
-log ""
-log "Vérification de l'espace disque..."
-AVAILABLE_GB=$(df -BG "$BACKUP_DIR" | tail -1 | awk '{print $4}' | sed 's/G//')
-USAGE_PCT=$(df -h "$BACKUP_DIR" | tail -1 | awk '{print $5}' | sed 's/%//')
+log ""  
+log "Vérification de l'espace disque..."  
+AVAILABLE_GB=$(df -BG "$BACKUP_DIR" | tail -1 | awk '{print $4}' | sed 's/G//')  
+USAGE_PCT=$(df -h "$BACKUP_DIR" | tail -1 | awk '{print $5}' | sed 's/%//')  
 
 log "Espace disponible : ${AVAILABLE_GB}GB (${USAGE_PCT}% utilisé)"
 
@@ -2062,9 +2062,9 @@ else
 fi
 
 # Vérification 3 : Intégrité des backups récents
-log ""
-log "Vérification de l'intégrité..."
-CORRUPTED=0
+log ""  
+log "Vérification de l'intégrité..."  
+CORRUPTED=0  
 
 # Vérifier les 3 derniers backups
 for dump_file in $(find "$BACKUP_DIR" -name "*.dump" -type f -printf '%T@ %p\n' | sort -rn | head -3 | cut -d' ' -f2); do
@@ -2082,10 +2082,10 @@ else
 fi
 
 # Vérification 4 : Nombre de backups
-log ""
-log "Vérification du nombre de backups..."
-BACKUP_COUNT=$(find "$BACKUP_DIR" -name "*.dump" -type f | wc -l)
-log "Nombre de backups : $BACKUP_COUNT"
+log ""  
+log "Vérification du nombre de backups..."  
+BACKUP_COUNT=$(find "$BACKUP_DIR" -name "*.dump" -type f | wc -l)  
+log "Nombre de backups : $BACKUP_COUNT"  
 
 if [ "$BACKUP_COUNT" -lt 3 ]; then
     ALERTS+=("⚠️ Trop peu de backups : $BACKUP_COUNT (min recommandé: 7)")
@@ -2095,10 +2095,10 @@ else
 fi
 
 # Résumé et envoi d'alertes
-log ""
-log "=========================================="
-log "📊 RÉSUMÉ"
-log "=========================================="
+log ""  
+log "=========================================="  
+log "📊 RÉSUMÉ"  
+log "=========================================="  
 
 if [ ${#ALERTS[@]} -eq 0 ]; then
     log "✅ Tous les contrôles passés avec succès"
@@ -2134,26 +2134,26 @@ fi
 
 BACKUP_DIR="/var/backups/postgresql"
 
-echo "=========================================="
-echo "📊 DASHBOARD BACKUPS POSTGRESQL"
-echo "=========================================="
-echo "Date : $(date '+%Y-%m-%d %H:%M:%S')"
-echo ""
+echo "=========================================="  
+echo "📊 DASHBOARD BACKUPS POSTGRESQL"  
+echo "=========================================="  
+echo "Date : $(date '+%Y-%m-%d %H:%M:%S')"  
+echo ""  
 
 # Section 1 : Statistiques générales
-echo "📦 STATISTIQUES GÉNÉRALES"
-echo "=========================================="
-TOTAL_BACKUPS=$(find "$BACKUP_DIR" -name "*.dump" | wc -l)
-TOTAL_SIZE=$(du -sh "$BACKUP_DIR" | cut -f1)
-echo "Nombre total de backups : $TOTAL_BACKUPS"
-echo "Espace utilisé : $TOTAL_SIZE"
-echo ""
+echo "📦 STATISTIQUES GÉNÉRALES"  
+echo "=========================================="  
+TOTAL_BACKUPS=$(find "$BACKUP_DIR" -name "*.dump" | wc -l)  
+TOTAL_SIZE=$(du -sh "$BACKUP_DIR" | cut -f1)  
+echo "Nombre total de backups : $TOTAL_BACKUPS"  
+echo "Espace utilisé : $TOTAL_SIZE"  
+echo ""  
 
 # Section 2 : Dernier backup
-echo "🕒 DERNIER BACKUP"
-echo "=========================================="
-LATEST=$(find "$BACKUP_DIR" -name "*.dump" -type f -printf '%T@ %p\n' | sort -rn | head -1)
-if [ -n "$LATEST" ]; then
+echo "🕒 DERNIER BACKUP"  
+echo "=========================================="  
+LATEST=$(find "$BACKUP_DIR" -name "*.dump" -type f -printf '%T@ %p\n' | sort -rn | head -1)  
+if [ -n "$LATEST" ]; then  
     LATEST_FILE=$(echo "$LATEST" | cut -d' ' -f2)
     LATEST_DATE=$(stat -c %y "$LATEST_FILE" | cut -d. -f1)
     LATEST_SIZE=$(du -h "$LATEST_FILE" | cut -f1)
@@ -2164,47 +2164,47 @@ if [ -n "$LATEST" ]; then
     echo "Taille : $LATEST_SIZE"
 else
     echo "❌ Aucun backup trouvé"
-fi
-echo ""
+fi  
+echo ""  
 
 # Section 3 : Répartition par type (si GFS)
-echo "📅 RÉPARTITION PAR TYPE"
-echo "=========================================="
-DAILY=$(find "$BACKUP_DIR" -name "*daily*.dump" | wc -l)
-WEEKLY=$(find "$BACKUP_DIR" -name "*weekly*.dump" | wc -l)
-MONTHLY=$(find "$BACKUP_DIR" -name "*monthly*.dump" | wc -l)
-YEARLY=$(find "$BACKUP_DIR" -name "*yearly*.dump" | wc -l)
+echo "📅 RÉPARTITION PAR TYPE"  
+echo "=========================================="  
+DAILY=$(find "$BACKUP_DIR" -name "*daily*.dump" | wc -l)  
+WEEKLY=$(find "$BACKUP_DIR" -name "*weekly*.dump" | wc -l)  
+MONTHLY=$(find "$BACKUP_DIR" -name "*monthly*.dump" | wc -l)  
+YEARLY=$(find "$BACKUP_DIR" -name "*yearly*.dump" | wc -l)  
 
-echo "Quotidiens : $DAILY"
-echo "Hebdomadaires : $WEEKLY"
-echo "Mensuels : $MONTHLY"
-echo "Annuels : $YEARLY"
-echo ""
+echo "Quotidiens : $DAILY"  
+echo "Hebdomadaires : $WEEKLY"  
+echo "Mensuels : $MONTHLY"  
+echo "Annuels : $YEARLY"  
+echo ""  
 
 # Section 4 : Espace disque
-echo "💾 ESPACE DISQUE"
-echo "=========================================="
-df -h "$BACKUP_DIR" | tail -1 | awk '{print "Partition : "$1"\nTaille : "$2"\nUtilisé : "$3" ("$5")\nDisponible : "$4}'
-echo ""
+echo "💾 ESPACE DISQUE"  
+echo "=========================================="  
+df -h "$BACKUP_DIR" | tail -1 | awk '{print "Partition : "$1"\nTaille : "$2"\nUtilisé : "$3" ("$5")\nDisponible : "$4}'  
+echo ""  
 
 # Section 5 : Les 5 backups les plus récents
-echo "📋 5 BACKUPS LES PLUS RÉCENTS"
-echo "=========================================="
-find "$BACKUP_DIR" -name "*.dump" -type f -printf '%T@ %p\n' | sort -rn | head -5 | while read timestamp file; do
+echo "📋 5 BACKUPS LES PLUS RÉCENTS"  
+echo "=========================================="  
+find "$BACKUP_DIR" -name "*.dump" -type f -printf '%T@ %p\n' | sort -rn | head -5 | while read timestamp file; do  
     filename=$(basename "$file")
     size=$(du -h "$file" | cut -f1)
     date=$(date -d @"${timestamp%.*}" '+%Y-%m-%d %H:%M:%S')
     echo "• $filename - $size - $date"
-done
-echo ""
+done  
+echo ""  
 
 # Section 6 : Santé
-echo "🏥 SANTÉ DES BACKUPS"
-echo "=========================================="
+echo "🏥 SANTÉ DES BACKUPS"  
+echo "=========================================="  
 
 # Vérifier les 3 derniers
-RECENT_BACKUPS=$(find "$BACKUP_DIR" -name "*.dump" -type f -printf '%T@ %p\n' | sort -rn | head -3 | cut -d' ' -f2)
-CORRUPTED_COUNT=0
+RECENT_BACKUPS=$(find "$BACKUP_DIR" -name "*.dump" -type f -printf '%T@ %p\n' | sort -rn | head -3 | cut -d' ' -f2)  
+CORRUPTED_COUNT=0  
 
 for backup in $RECENT_BACKUPS; do
     if pg_restore --list "$backup" > /dev/null 2>&1; then
@@ -2223,10 +2223,10 @@ else
     echo "⚠️ $CORRUPTED_COUNT backup(s) corrompu(s) détecté(s) !"
 fi
 
-echo ""
-echo "=========================================="
-echo "Fin du rapport"
-echo "=========================================="
+echo ""  
+echo "=========================================="  
+echo "Fin du rapport"  
+echo "=========================================="  
 ```
 
 **Générer un rapport quotidien :**
@@ -2246,14 +2246,14 @@ echo "=========================================="
 #!/bin/bash
 # export_prometheus_metrics.sh
 
-BACKUP_DIR="/var/backups/postgresql"
-METRICS_FILE="/var/lib/node_exporter/textfile_collector/postgresql_backup.prom"
+BACKUP_DIR="/var/backups/postgresql"  
+METRICS_FILE="/var/lib/node_exporter/textfile_collector/postgresql_backup.prom"  
 
 # Calculer les métriques
-BACKUP_COUNT=$(find "$BACKUP_DIR" -name "*.dump" | wc -l)
-TOTAL_SIZE_BYTES=$(du -sb "$BACKUP_DIR" | cut -f1)
-LATEST_TIMESTAMP=$(find "$BACKUP_DIR" -name "*.dump" -type f -printf '%T@\n' | sort -rn | head -1)
-LATEST_AGE_SECONDS=$(( $(date +%s) - ${LATEST_TIMESTAMP%.*} ))
+BACKUP_COUNT=$(find "$BACKUP_DIR" -name "*.dump" | wc -l)  
+TOTAL_SIZE_BYTES=$(du -sb "$BACKUP_DIR" | cut -f1)  
+LATEST_TIMESTAMP=$(find "$BACKUP_DIR" -name "*.dump" -type f -printf '%T@\n' | sort -rn | head -1)  
+LATEST_AGE_SECONDS=$(( $(date +%s) - ${LATEST_TIMESTAMP%.*} ))  
 
 # Générer le fichier de métriques Prometheus
 cat > "$METRICS_FILE" << EOF
@@ -2267,8 +2267,8 @@ postgresql_backup_size_bytes $TOTAL_SIZE_BYTES
 
 # HELP postgresql_backup_age_seconds Age of the latest backup in seconds
 # TYPE postgresql_backup_age_seconds gauge
-postgresql_backup_age_seconds $LATEST_AGE_SECONDS
-EOF
+postgresql_backup_age_seconds $LATEST_AGE_SECONDS  
+EOF  
 ```
 
 **Automatiser l'export :**
@@ -2325,8 +2325,8 @@ fi
 #!/bin/bash
 # test_restore.sh
 
-BACKUP_FILE="$1"
-TEST_DB="test_restore_$(date +%s)"
+BACKUP_FILE="$1"  
+TEST_DB="test_restore_$(date +%s)"  
 
 if [ -z "$BACKUP_FILE" ]; then
     echo "Usage: $0 <backup_file>"
@@ -2337,12 +2337,12 @@ log() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1"
 }
 
-log "=========================================="
-log "🧪 Test de Restauration"
-log "=========================================="
-log "Backup : $BACKUP_FILE"
-log "Base de test : $TEST_DB"
-log ""
+log "=========================================="  
+log "🧪 Test de Restauration"  
+log "=========================================="  
+log "Backup : $BACKUP_FILE"  
+log "Base de test : $TEST_DB"  
+log ""  
 
 # Vérifier que le backup existe
 if [ ! -f "$BACKUP_FILE" ]; then
@@ -2351,8 +2351,8 @@ if [ ! -f "$BACKUP_FILE" ]; then
 fi
 
 # Vérifier l'intégrité
-log "1️⃣ Vérification de l'intégrité..."
-if pg_restore --list "$BACKUP_FILE" > /dev/null 2>&1; then
+log "1️⃣ Vérification de l'intégrité..."  
+if pg_restore --list "$BACKUP_FILE" > /dev/null 2>&1; then  
     log "✅ Backup valide"
 else
     log "❌ Backup corrompu"
@@ -2360,26 +2360,26 @@ else
 fi
 
 # Créer une base de test
-log ""
-log "2️⃣ Création de la base de test..."
-createdb "$TEST_DB"
+log ""  
+log "2️⃣ Création de la base de test..."  
+createdb "$TEST_DB"  
 
 if [ $? -ne 0 ]; then
     log "❌ Impossible de créer la base de test"
     exit 1
-fi
-log "✅ Base créée"
+fi  
+log "✅ Base créée"  
 
 # Restaurer
-log ""
-log "3️⃣ Restauration en cours..."
-START_TIME=$(date +%s)
+log ""  
+log "3️⃣ Restauration en cours..."  
+START_TIME=$(date +%s)  
 
 pg_restore -d "$TEST_DB" -j 4 --no-owner --no-acl "$BACKUP_FILE" 2>&1 | grep -i error
 
-RESTORE_STATUS=${PIPESTATUS[0]}
-END_TIME=$(date +%s)
-DURATION=$((END_TIME - START_TIME))
+RESTORE_STATUS=${PIPESTATUS[0]}  
+END_TIME=$(date +%s)  
+DURATION=$((END_TIME - START_TIME))  
 
 if [ $RESTORE_STATUS -eq 0 ]; then
     log "✅ Restauration réussie en ${DURATION}s"
@@ -2388,24 +2388,24 @@ else
 fi
 
 # Vérifier la base restaurée
-log ""
-log "4️⃣ Vérification de la base restaurée..."
+log ""  
+log "4️⃣ Vérification de la base restaurée..."  
 
 # Compter les tables
-TABLE_COUNT=$(psql -t -d "$TEST_DB" -c "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public'" | xargs)
-log "Nombre de tables : $TABLE_COUNT"
+TABLE_COUNT=$(psql -t -d "$TEST_DB" -c "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public'" | xargs)  
+log "Nombre de tables : $TABLE_COUNT"  
 
 # Taille de la base
-DB_SIZE=$(psql -t -d "$TEST_DB" -c "SELECT pg_size_pretty(pg_database_size('$TEST_DB'))" | xargs)
-log "Taille de la base : $DB_SIZE"
+DB_SIZE=$(psql -t -d "$TEST_DB" -c "SELECT pg_size_pretty(pg_database_size('$TEST_DB'))" | xargs)  
+log "Taille de la base : $DB_SIZE"  
 
 # Vérifier qu'il y a des données
-TOTAL_ROWS=0
-for table in $(psql -t -d "$TEST_DB" -c "SELECT tablename FROM pg_tables WHERE schemaname = 'public'"); do
+TOTAL_ROWS=0  
+for table in $(psql -t -d "$TEST_DB" -c "SELECT tablename FROM pg_tables WHERE schemaname = 'public'"); do  
     ROW_COUNT=$(psql -t -d "$TEST_DB" -c "SELECT COUNT(*) FROM $table" 2>/dev/null | xargs)
     TOTAL_ROWS=$((TOTAL_ROWS + ROW_COUNT))
-done
-log "Nombre total de lignes : $TOTAL_ROWS"
+done  
+log "Nombre total de lignes : $TOTAL_ROWS"  
 
 if [ $TOTAL_ROWS -gt 0 ]; then
     log "✅ Données présentes"
@@ -2414,21 +2414,21 @@ else
 fi
 
 # Nettoyage
-log ""
-log "5️⃣ Nettoyage..."
-dropdb "$TEST_DB"
-log "✅ Base de test supprimée"
+log ""  
+log "5️⃣ Nettoyage..."  
+dropdb "$TEST_DB"  
+log "✅ Base de test supprimée"  
 
-log ""
-log "=========================================="
-log "✅ Test de restauration terminé avec succès"
-log "=========================================="
-log "Résumé :"
-log "  • Durée restauration : ${DURATION}s"
-log "  • Tables : $TABLE_COUNT"
-log "  • Lignes : $TOTAL_ROWS"
-log "  • Taille : $DB_SIZE"
-log "=========================================="
+log ""  
+log "=========================================="  
+log "✅ Test de restauration terminé avec succès"  
+log "=========================================="  
+log "Résumé :"  
+log "  • Durée restauration : ${DURATION}s"  
+log "  • Tables : $TABLE_COUNT"  
+log "  • Lignes : $TOTAL_ROWS"  
+log "  • Taille : $DB_SIZE"  
+log "=========================================="  
 ```
 
 **Automatiser les tests mensuels :**
@@ -2444,8 +2444,8 @@ log "=========================================="
 #!/bin/bash
 # compare_sizes.sh
 
-DATABASE="production"
-BACKUP_FILE="$1"
+DATABASE="production"  
+BACKUP_FILE="$1"  
 
 if [ -z "$BACKUP_FILE" ]; then
     echo "Usage: $0 <backup_file>"
@@ -2456,24 +2456,24 @@ log() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1"
 }
 
-log "=========================================="
-log "📊 Comparaison Taille Source vs Backup"
-log "=========================================="
+log "=========================================="  
+log "📊 Comparaison Taille Source vs Backup"  
+log "=========================================="  
 
 # Taille de la base source
-SOURCE_SIZE_BYTES=$(psql -t -d "$DATABASE" -c "SELECT pg_database_size('$DATABASE')" | xargs)
-SOURCE_SIZE_PRETTY=$(psql -t -d "$DATABASE" -c "SELECT pg_size_pretty(pg_database_size('$DATABASE'))" | xargs)
+SOURCE_SIZE_BYTES=$(psql -t -d "$DATABASE" -c "SELECT pg_database_size('$DATABASE')" | xargs)  
+SOURCE_SIZE_PRETTY=$(psql -t -d "$DATABASE" -c "SELECT pg_size_pretty(pg_database_size('$DATABASE'))" | xargs)  
 
 # Taille du backup
-BACKUP_SIZE_BYTES=$(stat -c %s "$BACKUP_FILE")
-BACKUP_SIZE_PRETTY=$(du -h "$BACKUP_FILE" | cut -f1)
+BACKUP_SIZE_BYTES=$(stat -c %s "$BACKUP_FILE")  
+BACKUP_SIZE_PRETTY=$(du -h "$BACKUP_FILE" | cut -f1)  
 
 # Ratio de compression
 RATIO=$(echo "scale=2; $BACKUP_SIZE_BYTES * 100 / $SOURCE_SIZE_BYTES" | bc)
 
-log "Base source : $SOURCE_SIZE_PRETTY ($SOURCE_SIZE_BYTES bytes)"
-log "Backup : $BACKUP_SIZE_PRETTY ($BACKUP_SIZE_BYTES bytes)"
-log "Ratio compression : ${RATIO}%"
+log "Base source : $SOURCE_SIZE_PRETTY ($SOURCE_SIZE_BYTES bytes)"  
+log "Backup : $BACKUP_SIZE_PRETTY ($BACKUP_SIZE_BYTES bytes)"  
+log "Ratio compression : ${RATIO}%"  
 
 # Alertes
 if (( $(echo "$RATIO > 150" | bc -l) )); then
@@ -2493,21 +2493,21 @@ log "=========================================="
 #!/bin/bash
 # verify_all_backups.sh
 
-BACKUP_DIR="/var/backups/postgresql"
-LOG_FILE="/var/log/postgresql_backup/integrity_$(date +%Y%m%d).log"
+BACKUP_DIR="/var/backups/postgresql"  
+LOG_FILE="/var/log/postgresql_backup/integrity_$(date +%Y%m%d).log"  
 
 log() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" | tee -a "$LOG_FILE"
 }
 
-log "=========================================="
-log "🔍 Vérification Intégrité de TOUS les Backups"
-log "=========================================="
+log "=========================================="  
+log "🔍 Vérification Intégrité de TOUS les Backups"  
+log "=========================================="  
 
-TOTAL=0
-VALID=0
-CORRUPTED=0
-ERRORS=()
+TOTAL=0  
+VALID=0  
+CORRUPTED=0  
+ERRORS=()  
 
 # Parcourir tous les backups
 while IFS= read -r dump_file; do
@@ -2527,13 +2527,13 @@ while IFS= read -r dump_file; do
 done < <(find "$BACKUP_DIR" -name "*.dump" -type f)
 
 # Résumé
-log ""
-log "=========================================="
-log "📊 RÉSUMÉ"
-log "=========================================="
-log "Total vérifié : $TOTAL"
-log "Valides : $VALID"
-log "Corrompus : $CORRUPTED"
+log ""  
+log "=========================================="  
+log "📊 RÉSUMÉ"  
+log "=========================================="  
+log "Total vérifié : $TOTAL"  
+log "Valides : $VALID"  
+log "Corrompus : $CORRUPTED"  
 
 if [ $CORRUPTED -gt 0 ]; then
     log ""
@@ -2559,18 +2559,18 @@ fi
 
 **Avant de mettre en production :**
 
-- [ ] **Scripts testés** manuellement plusieurs fois
-- [ ] **Logs configurés** et centralisés
-- [ ] **Rotation mise en place** (éviter saturation disque)
-- [ ] **Alertes configurées** (email, Slack, etc.)
-- [ ] **Monitoring actif** (dashboard, métriques)
-- [ ] **Stockage distant** configuré (NAS, Cloud)
-- [ ] **Tests de restauration** réguliers automatisés
-- [ ] **Documentation** à jour (runbook)
-- [ ] **Credentials sécurisés** (.pgpass avec chmod 600)
-- [ ] **Politique de rétention** définie (GFS recommandé)
-- [ ] **Backup des objets globaux** (rôles, tablespaces)
-- [ ] **Cron configuré** et vérifié
+- [ ] **Scripts testés** manuellement plusieurs fois  
+- [ ] **Logs configurés** et centralisés  
+- [ ] **Rotation mise en place** (éviter saturation disque)  
+- [ ] **Alertes configurées** (email, Slack, etc.)  
+- [ ] **Monitoring actif** (dashboard, métriques)  
+- [ ] **Stockage distant** configuré (NAS, Cloud)  
+- [ ] **Tests de restauration** réguliers automatisés  
+- [ ] **Documentation** à jour (runbook)  
+- [ ] **Credentials sécurisés** (.pgpass avec chmod 600)  
+- [ ] **Politique de rétention** définie (GFS recommandé)  
+- [ ] **Backup des objets globaux** (rôles, tablespaces)  
+- [ ] **Cron configuré** et vérifié  
 - [ ] **Espace disque suffisant** (minimum 2× taille base)
 
 ### 10.2. Architecture Recommandée
@@ -2600,8 +2600,8 @@ Production PostgreSQL Server
 
 ```bash
 # Permissions strictes
-chmod 700 /var/backups/postgresql
-chmod 600 /var/backups/postgresql/*.dump
+chmod 700 /var/backups/postgresql  
+chmod 600 /var/backups/postgresql/*.dump  
 
 # Propriétaire postgres uniquement
 chown -R postgres:postgres /var/backups/postgresql
@@ -2614,8 +2614,8 @@ gpg --encrypt --recipient admin@example.com backup.dump
 
 ```bash
 # Fichier .pgpass
-chmod 600 ~/.pgpass
-chown postgres:postgres ~/.pgpass
+chmod 600 ~/.pgpass  
+chown postgres:postgres ~/.pgpass  
 
 # Ne JAMAIS mettre de mots de passe dans les scripts
 # Utiliser .pgpass ou variables d'environnement
@@ -2708,13 +2708,13 @@ sudo /usr/local/bin/backup_production.sh
 
 ### Ce que vous avez appris
 
-- ✅ **Stratégies de backup** : Fréquence, rétention, GFS
-- ✅ **Scripts de base à avancés** : Du minimal au production-ready
-- ✅ **Automatisation avec Cron** : Planification et surveillance
-- ✅ **Rotation intelligente** : Gérer l'historique sans saturer
-- ✅ **Destinations multiples** : Local, NAS, Cloud (règle 3-2-1)
-- ✅ **Monitoring et alertes** : Détecter les problèmes avant la catastrophe
-- ✅ **Tests de restauration** : Valider que les backups fonctionnent
+- ✅ **Stratégies de backup** : Fréquence, rétention, GFS  
+- ✅ **Scripts de base à avancés** : Du minimal au production-ready  
+- ✅ **Automatisation avec Cron** : Planification et surveillance  
+- ✅ **Rotation intelligente** : Gérer l'historique sans saturer  
+- ✅ **Destinations multiples** : Local, NAS, Cloud (règle 3-2-1)  
+- ✅ **Monitoring et alertes** : Détecter les problèmes avant la catastrophe  
+- ✅ **Tests de restauration** : Valider que les backups fonctionnent  
 - ✅ **Bonnes pratiques** : Sécurité, performance, documentation
 
 ### Points Clés à Retenir
@@ -2736,12 +2736,12 @@ sudo /usr/local/bin/backup_production.sh
 
 ### Prochaines Étapes
 
-1. **Implémenter un script simple** pour votre environnement
-2. **Ajouter la rotation** pour ne pas saturer le disque
-3. **Configurer Cron** pour automatiser
-4. **Mettre en place les alertes** (email minimum)
-5. **Tester une restauration** manuelle
-6. **Étendre vers le cloud** (S3, etc.)
+1. **Implémenter un script simple** pour votre environnement  
+2. **Ajouter la rotation** pour ne pas saturer le disque  
+3. **Configurer Cron** pour automatiser  
+4. **Mettre en place les alertes** (email minimum)  
+5. **Tester une restauration** manuelle  
+6. **Étendre vers le cloud** (S3, etc.)  
 7. **Automatiser les tests** mensuels
 
 ### Ressources Complémentaires
@@ -2752,8 +2752,8 @@ sudo /usr/local/bin/backup_production.sh
 - Backup & Restore : https://www.postgresql.org/docs/18/backup.html
 
 **Outils tiers recommandés :**
-- **pgBackRest** : https://pgbackrest.org/
-- **Barman** : https://www.pgbarman.org/
+- **pgBackRest** : https://pgbackrest.org/  
+- **Barman** : https://www.pgbarman.org/  
 - **WAL-G** : https://github.com/wal-g/wal-g
 
 **Générateur Cron :**
@@ -2761,9 +2761,9 @@ sudo /usr/local/bin/backup_production.sh
 
 ---
 
-**Version :** 1.0 - Novembre 2025
-**PostgreSQL :** Version 18
-**Auteur :** Formation PostgreSQL pour Développeurs et DevOps
+**Version :** 1.0 - Novembre 2025  
+**PostgreSQL :** Version 18  
+**Auteur :** Formation PostgreSQL pour Développeurs et DevOps  
 
 ---
 

@@ -8,9 +8,9 @@
 
 Vous voici arrivé à la dernière partie de cette formation complète sur PostgreSQL 18. Faisons un bref retour sur le chemin parcouru :
 
-- **Partie 1** : Vous avez découvert l'architecture et les fondamentaux de PostgreSQL
-- **Partie 2** : Vous avez maîtrisé le langage SQL pour interroger et manipuler les données
-- **Partie 3** : Vous avez exploré les techniques SQL avancées et la modélisation experte
+- **Partie 1** : Vous avez découvert l'architecture et les fondamentaux de PostgreSQL  
+- **Partie 2** : Vous avez maîtrisé le langage SQL pour interroger et manipuler les données  
+- **Partie 3** : Vous avez exploré les techniques SQL avancées et la modélisation experte  
 - **Partie 4** : Vous avez acquis l'expertise nécessaire pour administrer PostgreSQL en production
 
 Vous possédez maintenant une expertise solide et complète de PostgreSQL en tant que **système de gestion de base de données**. Mais PostgreSQL n'existe jamais de manière isolée dans le monde réel.
@@ -94,40 +94,40 @@ Les équipes en production font face à des questions comme :
 À l'issue de cette dernière partie, vous serez capable de :
 
 #### Exploiter l'Écosystème d'Extensions
-- ✅ Choisir et configurer les extensions appropriées à vos besoins
-- ✅ Maîtriser **PostGIS** pour les données géospatiales
-- ✅ Implémenter une recherche full-text sophistiquée
-- ✅ Utiliser **pgvector** pour l'IA et la recherche sémantique
-- ✅ Fédérer des sources de données avec les **Foreign Data Wrappers**
+- ✅ Choisir et configurer les extensions appropriées à vos besoins  
+- ✅ Maîtriser **PostGIS** pour les données géospatiales  
+- ✅ Implémenter une recherche full-text sophistiquée  
+- ✅ Utiliser **pgvector** pour l'IA et la recherche sémantique  
+- ✅ Fédérer des sources de données avec les **Foreign Data Wrappers**  
 - ✅ Exploiter **TimescaleDB** pour les séries temporelles
 
 #### Déployer et Opérer en Production
-- ✅ Choisir la stratégie de déploiement optimale (bare metal, VM, conteneurs, K8s)
-- ✅ Comprendre les **trade-offs managed vs self-hosted**
-- ✅ Exploiter les services cloud (RDS, Azure Database, Cloud SQL)
-- ✅ Orchestrer PostgreSQL sur **Kubernetes** avec les operators modernes
-- ✅ Réaliser des **migrations majeures** avec les outils PG 18 optimisés
+- ✅ Choisir la stratégie de déploiement optimale (bare metal, VM, conteneurs, K8s)  
+- ✅ Comprendre les **trade-offs managed vs self-hosted**  
+- ✅ Exploiter les services cloud (RDS, Azure Database, Cloud SQL)  
+- ✅ Orchestrer PostgreSQL sur **Kubernetes** avec les operators modernes  
+- ✅ Réaliser des **migrations majeures** avec les outils PG 18 optimisés  
 - ✅ Diagnostiquer et résoudre les **incidents de production**
 
 #### Intégrer PostgreSQL dans vos Applications
-- ✅ Choisir le bon **driver** pour votre langage (Python, Node.js, Java, Go, .NET)
-- ✅ Implémenter le **connection pooling** correctement
-- ✅ Éviter les anti-patterns (N+1 queries, connection leaks)
-- ✅ Gérer les **migrations de schéma** (Flyway, Liquibase, Alembic)
+- ✅ Choisir le bon **driver** pour votre langage (Python, Node.js, Java, Go, .NET)  
+- ✅ Implémenter le **connection pooling** correctement  
+- ✅ Éviter les anti-patterns (N+1 queries, connection leaks)  
+- ✅ Gérer les **migrations de schéma** (Flyway, Liquibase, Alembic)  
 - ✅ Concevoir des APIs robustes avec PostgreSQL
 
 #### Adopter les Architectures Modernes
-- ✅ Intégrer PostgreSQL dans des architectures **microservices**
-- ✅ Implémenter **event sourcing et CQRS** avec PostgreSQL
-- ✅ Exploiter **NOTIFY/LISTEN** et le Change Data Capture
-- ✅ Adapter PostgreSQL aux contraintes **serverless**
+- ✅ Intégrer PostgreSQL dans des architectures **microservices**  
+- ✅ Implémenter **event sourcing et CQRS** avec PostgreSQL  
+- ✅ Exploiter **NOTIFY/LISTEN** et le Change Data Capture  
+- ✅ Adapter PostgreSQL aux contraintes **serverless**  
 - ✅ Orchestrer PostgreSQL sur **Kubernetes** en production
 
 #### Maîtriser le Cycle de Vie Complet
-- ✅ Planifier et exécuter des migrations complexes
-- ✅ Réaliser un troubleshooting efficace
-- ✅ Implémenter une stratégie de disaster recovery robuste
-- ✅ Suivre les best practices de mise en production
+- ✅ Planifier et exécuter des migrations complexes  
+- ✅ Réaliser un troubleshooting efficace  
+- ✅ Implémenter une stratégie de disaster recovery robuste  
+- ✅ Suivre les best practices de mise en production  
 - ✅ Documenter et maintenir votre infrastructure
 
 ---
@@ -139,10 +139,10 @@ Cette cinquième et dernière partie contient **5 chapitres** qui couvrent l'ens
 #### **Chapitre 18 : Extensions et Intégrations**
 Le catalogue des super-pouvoirs de PostgreSQL. Vous découvrirez :
 - Le système d'extensions et comment l'exploiter
-- **PostGIS** : la référence mondiale pour les données spatiales
-- **Full-Text Search** avancé avec ranking et multi-langues
-- **Foreign Data Wrappers** pour fédérer des sources de données
-- **TimescaleDB** pour les séries temporelles
+- **PostGIS** : la référence mondiale pour les données spatiales  
+- **Full-Text Search** avancé avec ranking et multi-langues  
+- **Foreign Data Wrappers** pour fédérer des sources de données  
+- **TimescaleDB** pour les séries temporelles  
 - **pgvector** pour l'IA et la recherche vectorielle
 - D'autres extensions essentielles (pg_cron, pg_partman, pg_repack, HypoPG)
 
@@ -172,7 +172,7 @@ Le pont entre PostgreSQL et vos applications. Vous apprendrez :
 #### **Chapitre 20bis : PostgreSQL et Architectures Modernes**
 PostgreSQL dans le paysage technologique actuel. Vous explorerez :
 - PostgreSQL dans les **microservices** (database per service vs shared)
-- **Event Sourcing et CQRS** avec PostgreSQL
+- **Event Sourcing et CQRS** avec PostgreSQL  
 - **NOTIFY/LISTEN** et Change Data Capture (Debezium)
 - PostgreSQL en architecture **serverless** (Neon, Supabase)
 - Orchestration sur **Kubernetes** (Operators, StatefulSets)
@@ -242,22 +242,22 @@ Cette partie finale s'adresse à tous les profils, avec des focus différents :
 PostgreSQL 18 (septembre 2025) apporte des améliorations qui facilitent son intégration écosystémique :
 
 #### **Performance et Scalabilité**
-- ✨ **I/O asynchrone** : meilleures performances pour les workloads cloud
-- ✨ **Skip Scan** : optimisation pour les requêtes analytiques
+- ✨ **I/O asynchrone** : meilleures performances pour les workloads cloud  
+- ✨ **Skip Scan** : optimisation pour les requêtes analytiques  
 - ✨ Optimisations du planificateur : requêtes plus rapides out-of-the-box
 
 #### **Migration et Opérations**
-- ✨ **pg_upgrade optimisé** : migrations simplifiées avec préservation des statistiques
-- ✨ Option **--swap** : upgrade rapide sans copie complète
+- ✨ **pg_upgrade optimisé** : migrations simplifiées avec préservation des statistiques  
+- ✨ Option **--swap** : upgrade rapide sans copie complète  
 - ✨ Vérifications parallèles : migrations plus rapides
 
 #### **Sécurité et Compliance**
-- ✨ **OAuth 2.0** : intégration moderne avec les systèmes d'authentification
-- ✨ **Mode FIPS** : conformité réglementaire facilitée
+- ✨ **OAuth 2.0** : intégration moderne avec les systèmes d'authentification  
+- ✨ **Mode FIPS** : conformité réglementaire facilitée  
 - ✨ **Data Checksums** par défaut : intégrité des données renforcée
 
 #### **Observabilité**
-- ✨ Statistiques I/O et WAL enrichies : meilleur monitoring
+- ✨ Statistiques I/O et WAL enrichies : meilleur monitoring  
 - ✨ Améliorations EXPLAIN : debugging facilité
 
 Ces nouveautés rendent PostgreSQL 18 encore plus adapté aux **environnements de production modernes** et aux **architectures cloud-native**.
@@ -267,10 +267,10 @@ Ces nouveautés rendent PostgreSQL 18 encore plus adapté aux **environnements d
 ### Prérequis et Niveau Attendu
 
 **Cette partie suppose que vous :**
-- ✓ Avez terminé les parties 1 à 4 (ou possédez une expertise équivalente)
-- ✓ Comprenez les concepts d'administration PostgreSQL
-- ✓ Avez une expérience de développement d'applications
-- ✓ Êtes familier avec les concepts cloud et conteneurs (notions de base)
+- ✓ Avez terminé les parties 1 à 4 (ou possédez une expertise équivalente)  
+- ✓ Comprenez les concepts d'administration PostgreSQL  
+- ✓ Avez une expérience de développement d'applications  
+- ✓ Êtes familier avec les concepts cloud et conteneurs (notions de base)  
 - ✓ Connaissez les principes d'architecture logicielle
 
 **Si vous venez directement à cette partie :**

@@ -143,7 +143,7 @@
     - 13.5.4 [Index sur colonnes JSONB (GIN avec jsonb_path_ops)](13-indexation-et-optimisation/05.4-index-sur-colonnes-jsonb.md)
 - 13.6 [Le planificateur de requêtes et les statistiques (pg_stats)](13-indexation-et-optimisation/06-planificateur-et-statistiques.md)
 - 13.7 [Lecture et analyse d'un EXPLAIN (ANALYZE, BUFFERS, VERBOSE, FORMAT JSON)](13-indexation-et-optimisation/07-lecture-analyse-explain.md)
-- **13.8 [Nouveauté PG 18 : Améliorations d'EXPLAIN avec affichage automatique des buffers](13-indexation-et-optimisation/08-ameliorations-explain-pg18.md)** 🆕
+- **13.8 [Nouveauté PG 18 : Améliorations d'EXPLAIN avec affichage automatique des buffers](13-indexation-et-optimisation/08-ameliorations-explain-pg18.md)** 🆕  
 - **13.9 [Nouveauté PG 18 : Optimisations du planificateur](13-indexation-et-optimisation/09-optimisations-planificateur-pg18.md)** 🆕
     - 13.9.1 [Auto-élimination des self-joins](13-indexation-et-optimisation/09.1-auto-elimination-self-joins.md)
     - 13.9.2 [Réorganisation automatique des colonnes DISTINCT](13-indexation-et-optimisation/09.2-reorganisation-colonnes-distinct.md)
@@ -159,7 +159,7 @@
     - 14.2.3 [pg_stat_user_tables : Statistiques de tables](14-observabilite-et-monitoring/02.3-pg-stat-user-tables.md)
     - 14.2.4 [pg_locks : Verrous actifs](14-observabilite-et-monitoring/02.4-pg-locks.md)
     - 14.2.5 [pg_catalog : Métadonnées système](14-observabilite-et-monitoring/02.5-pg-catalog.md)
-- **14.3 [Nouveauté PG 18 : Statistiques de VACUUM et ANALYZE dans pg_stat_all_tables](14-observabilite-et-monitoring/03-statistiques-vacuum-analyze-pg18.md)** 🆕
+- **14.3 [Nouveauté PG 18 : Statistiques de VACUUM et ANALYZE dans pg_stat_all_tables](14-observabilite-et-monitoring/03-statistiques-vacuum-analyze-pg18.md)** 🆕  
 - **14.4 [Nouveauté PG 18 : Statistiques I/O et WAL par backend](14-observabilite-et-monitoring/04-statistiques-io-wal-backend-pg18.md)** 🆕
 - 14.5 [Analyse des logs : Configuration et interprétation (log_line_prefix, auto_explain)](14-observabilite-et-monitoring/05-analyse-des-logs.md)
 - 14.6 [Métriques vitales](14-observabilite-et-monitoring/06-metriques-vitales.md)
@@ -193,7 +193,7 @@
 - 16.1 [Authentification vs Autorisation : Concepts fondamentaux](16-administration-configuration-securite/01-authentification-vs-autorisation.md)
 - 16.2 [Configuration de l'authentification (pg_hba.conf)](16-administration-configuration-securite/02-configuration-authentification.md)
     - 16.2.1 [Méthodes : trust, password, md5, scram-sha-256, cert, ldap](16-administration-configuration-securite/02.1-methodes-authentification.md)
-    - **16.2.2 [Nouveauté PG 18 : Authentification OAuth 2.0](16-administration-configuration-securite/02.2-authentification-oauth-pg18.md)** 🆕
+    - **16.2.2 [Nouveauté PG 18 : Authentification OAuth 2.0](16-administration-configuration-securite/02.2-authentification-oauth-pg18.md)** 🆕  
     - **16.2.3 [Nouveauté PG 18 : SCRAM passthrough avec postgres_fdw et dblink](16-administration-configuration-securite/02.3-scram-passthrough-pg18.md)** 🆕
 - 16.3 [Dépréciation de MD5 et migration vers SCRAM-SHA-256](16-administration-configuration-securite/03-depreciation-md5-migration-scram.md)
 - 16.4 [Gestion des autorisations (GRANT/REVOKE)](16-administration-configuration-securite/04-gestion-des-autorisations.md)
@@ -208,7 +208,7 @@
 - 16.10 [Maintenance vitale](16-administration-configuration-securite/10-maintenance-vitale.md)
     - 16.10.1 [VACUUM : Récupération d'espace et prévention XID wraparound](16-administration-configuration-securite/10.1-vacuum.md)
     - 16.10.2 [ANALYZE : Mise à jour des statistiques du planificateur](16-administration-configuration-securite/10.2-analyze.md)
-    - **16.10.3 [Nouveauté PG 18 : Autovacuum et ajustements dynamiques (autovacuum_worker_slots)](16-administration-configuration-securite/10.3-autovacuum-ajustements-pg18.md)** 🆕
+    - **16.10.3 [Nouveauté PG 18 : Autovacuum et ajustements dynamiques (autovacuum_worker_slots)](16-administration-configuration-securite/10.3-autovacuum-ajustements-pg18.md)** 🆕  
     - **16.10.4 [Nouveauté PG 18 : Nouveau paramètre autovacuum_vacuum_max_threshold](16-administration-configuration-securite/10.4-autovacuum-vacuum-max-threshold-pg18.md)** 🆕
 - 16.11 [Sauvegardes et restauration](16-administration-configuration-securite/11-sauvegardes-et-restauration.md)
     - 16.11.1 [Sauvegardes logiques (pg_dump, pg_dumpall)](16-administration-configuration-securite/11.1-sauvegardes-logiques.md)
@@ -218,7 +218,7 @@
 - **16.12 [Nouveauté PG 18 : Data Checksums activés par défaut (--no-data-checksums pour désactiver)](16-administration-configuration-securite/12-data-checksums-pg18.md)** 🆕
 - 16.13 [Tuning et Configuration](16-administration-configuration-securite/13-tuning-et-configuration.md)
     - 16.13.1 [Paramètres critiques (shared_buffers, work_mem, maintenance_work_mem, effective_cache_size)](16-administration-configuration-securite/13.1-parametres-critiques.md)
-    - **16.13.2 [Nouveauté PG 18 : Configuration du sous-système I/O (io_method='sync' vs 'async')](16-administration-configuration-securite/13.2-configuration-io-pg18.md)** 🆕
+    - **16.13.2 [Nouveauté PG 18 : Configuration du sous-système I/O (io_method='sync' vs 'worker' vs 'io_uring')](16-administration-configuration-securite/13.2-configuration-io-pg18.md)** 🆕
     - 16.13.3 [Configuration WAL (wal_level, max_wal_size, checkpoint_timeout)](16-administration-configuration-securite/13.3-configuration-wal.md)
     - 16.13.4 [Configuration autovacuum](16-administration-configuration-securite/13.4-configuration-autovacuum.md)
     - 16.13.5 [PGTune et outils d'aide à la configuration](16-administration-configuration-securite/13.5-pgtune-outils-aide.md)
@@ -287,8 +287,8 @@
     - 19.2.3 [Google Cloud SQL et AlloyDB](19-postgresql-en-production/02.3-google-cloud-sql-alloydb.md)
     - 19.2.4 [Managed vs Self-Hosted : Trade-offs](19-postgresql-en-production/02.4-managed-vs-self-hosted.md)
 - 19.3 [Migrations majeures](19-postgresql-en-production/03-migrations-majeures.md)
-    - **19.3.1 [Nouveauté PG 18 : pg_upgrade amélioré et préservation des statistiques](19-postgresql-en-production/03.1-pg-upgrade-ameliore-pg18.md)** 🆕
-    - **19.3.2 [Nouveauté PG 18 : Option --swap pour upgrade rapide](19-postgresql-en-production/03.2-option-swap-pg18.md)** 🆕
+    - **19.3.1 [Nouveauté PG 18 : pg_upgrade amélioré et préservation des statistiques](19-postgresql-en-production/03.1-pg-upgrade-ameliore-pg18.md)** 🆕  
+    - **19.3.2 [Nouveauté PG 18 : Option --swap pour upgrade rapide](19-postgresql-en-production/03.2-option-swap-pg18.md)** 🆕  
     - **19.3.3 [Nouveauté PG 18 : Vérifications parallèles (--jobs)](19-postgresql-en-production/03.3-verifications-paralleles-pg18.md)** 🆕
     - 19.3.4 [Stratégies Blue/Green et Logical Replication](19-postgresql-en-production/03.4-strategies-blue-green.md)
     - 19.3.5 [Tests de migration et validation](19-postgresql-en-production/03.5-tests-migration-validation.md)
@@ -425,19 +425,19 @@
 
 ## **Points Forts de Cette Formation**
 
-- ✅ **Progressive** : Parcours structuré du débutant à l'expert
-- ✅ **Complète** : 21 chapitres + 1 chapitre bonus couvrant tous les aspects
-- ✅ **À jour** : Intégration complète des nouveautés PostgreSQL 18 🆕
-- ✅ **Professionnelle** : Production, monitoring, HA, architectures modernes
-- ✅ **Moderne** : Cloud, Kubernetes, IA, architectures distribuées
+- ✅ **Progressive** : Parcours structuré du débutant à l'expert  
+- ✅ **Complète** : 21 chapitres + 1 chapitre bonus couvrant tous les aspects  
+- ✅ **À jour** : Intégration complète des nouveautés PostgreSQL 18 🆕  
+- ✅ **Professionnelle** : Production, monitoring, HA, architectures modernes  
+- ✅ **Moderne** : Cloud, Kubernetes, IA, architectures distribuées  
 - ✅ **Pratique** : Annexes et références techniques détaillées
 
-**Durée estimée** : 40-60 heures de formation théorique
-**Public** : Développeurs, DevOps, DBAs débutants à avancés
-**Prérequis** : Bases en SQL et systèmes Unix/Linux
+**Durée estimée** : 40-60 heures de formation théorique  
+**Public** : Développeurs, DevOps, DBAs débutants à avancés  
+**Prérequis** : Bases en SQL et systèmes Unix/Linux  
 
 ---
 
-**Version** : 1.0 - Novembre 2025
-**PostgreSQL** : Version 18 (Septembre 2025)
-**Licence** : Creative Commons BY-NC-SA 4.0
+**Version** : 1.0 - Novembre 2025  
+**PostgreSQL** : Version 18 (Septembre 2025)  
+**Licence** : Creative Commons BY-NC-SA 4.0  

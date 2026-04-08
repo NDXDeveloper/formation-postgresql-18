@@ -94,7 +94,7 @@ PostgreSQL 18 modernise considérablement les aspects de sécurité.
 - Support natif **OAuth 2.0**
 - **Mode FIPS** pour la conformité gouvernementale
 - Configuration **TLS 1.3** dédiée
-- **SCRAM passthrough** pour les connexions distantes
+- **SCRAM passthrough** pour les connexions distantes  
 - **Data checksums activés par défaut**
 
 **Impact pour vous :**
@@ -109,7 +109,7 @@ PostgreSQL 18 modernise considérablement les aspects de sécurité.
 De nouvelles fonctionnalités rendent le SQL plus expressif et puissant.
 
 **Améliorations principales :**
-- **OLD et NEW** dans les clauses RETURNING
+- **OLD et NEW** dans les clauses RETURNING  
 - **OLD et NEW** dans les opérations MERGE
 - Améliorations de l'import **COPY**
 - **Contraintes temporelles** pour valider des périodes
@@ -182,12 +182,12 @@ Un nouveau système qui permet à PostgreSQL de continuer à travailler pendant 
 
 **Analogie simple :**
 ```
-Avant (I/O synchrone) :
-Vous → Demandez un café → Attendez debout → Recevez le café
+Avant (I/O synchrone) :  
+Vous → Demandez un café → Attendez debout → Recevez le café  
       ⏱️ Temps perdu : 5 minutes d'attente
 
-Après (I/O asynchrone) :
-Vous → Commandez un café → Faites autre chose → Café prêt !
+Après (I/O asynchrone) :  
+Vous → Commandez un café → Faites autre chose → Café prêt !  
       ⏱️ Temps perdu : 0 minute, vous avez été productif
 ```
 
@@ -207,22 +207,22 @@ L'outil qui permet de passer d'une version PostgreSQL à une autre sans réinsta
 
 **A. Préservation des statistiques**
 ```
-Avant PG18 :
-Migration → Statistiques perdues → Plans d'exécution sous-optimaux
+Avant PG18 :  
+Migration → Statistiques perdues → Plans d'exécution sous-optimaux  
          → Attendre plusieurs jours pour retrouver les performances
 
-Avec PG18 :
-Migration → Statistiques préservées → Plans optimaux immédiatement
+Avec PG18 :  
+Migration → Statistiques préservées → Plans optimaux immédiatement  
          → Performances maximales dès le premier jour
 ```
 
 **B. Option --swap (pour très grandes bases)**
 ```
-Avant :
-Base de 1 TB → Copie complète → 8 heures de downtime
+Avant :  
+Base de 1 TB → Copie complète → 8 heures de downtime  
 
-Avec --swap :
-Base de 1 TB → Échange de répertoires → 5 minutes de downtime
+Avec --swap :  
+Base de 1 TB → Échange de répertoires → 5 minutes de downtime  
 ```
 
 **Exemple concret :**
@@ -319,7 +319,7 @@ Cette annexe F est organisée en **3 sections complémentaires** :
 - Les pièges à éviter lors de votre apprentissage
 
 **Sections recommandées :**
-1. ✅ Tableau récapitulatif (vue d'ensemble)
+1. ✅ Tableau récapitulatif (vue d'ensemble)  
 2. ✅ Recommandations d'adoption (section "Nouveaux projets")
 
 ---
@@ -333,8 +333,8 @@ Cette annexe F est organisée en **3 sections complémentaires** :
 - Les bonnes pratiques avec PostgreSQL 18
 
 **Sections recommandées :**
-1. ✅ Tableau récapitulatif (focus "Manipulation de données")
-2. ✅ Recommandations d'adoption (section "Développeurs")
+1. ✅ Tableau récapitulatif (focus "Manipulation de données")  
+2. ✅ Recommandations d'adoption (section "Développeurs")  
 3. ⚠️ Impact migration (pour projets existants)
 
 ---
@@ -348,8 +348,8 @@ Cette annexe F est organisée en **3 sections complémentaires** :
 - La configuration optimale pour PostgreSQL 18
 
 **Sections recommandées :**
-1. ✅ Tableau récapitulatif (focus "Administration")
-2. ✅ Impact sur migration (toutes les stratégies)
+1. ✅ Tableau récapitulatif (focus "Administration")  
+2. ✅ Impact sur migration (toutes les stratégies)  
 3. ✅ Recommandations d'adoption (section "DevOps")
 
 ---
@@ -363,7 +363,7 @@ Cette annexe F est organisée en **3 sections complémentaires** :
 - Les considérations de haute disponibilité
 
 **Sections recommandées :**
-1. ✅ Les 3 sections complètes
+1. ✅ Les 3 sections complètes  
 2. ✅ Focus particulier sur "Administration et Maintenance"
 
 ---
@@ -373,8 +373,8 @@ Cette annexe F est organisée en **3 sections complémentaires** :
 ### Lecture Rapide (15 minutes)
 
 **Pour avoir une vue d'ensemble :**
-1. Lire cette introduction ✓ (vous êtes ici)
-2. Parcourir le tableau récapitulatif
+1. Lire cette introduction ✓ (vous êtes ici)  
+2. Parcourir le tableau récapitulatif  
 3. Regarder les "Top 5 fonctionnalités à retenir"
 
 **Vous saurez :** Les grandes lignes de PostgreSQL 18
@@ -384,9 +384,9 @@ Cette annexe F est organisée en **3 sections complémentaires** :
 ### Lecture Standard (1 heure)
 
 **Pour comprendre en profondeur :**
-1. Lire l'introduction complète ✓
-2. Étudier le tableau récapitulatif par catégorie
-3. Lire la section migration (si applicable)
+1. Lire l'introduction complète ✓  
+2. Étudier le tableau récapitulatif par catégorie  
+3. Lire la section migration (si applicable)  
 4. Consulter les recommandations d'adoption
 
 **Vous saurez :** Comment PostgreSQL 18 s'applique à votre contexte
@@ -396,9 +396,9 @@ Cette annexe F est organisée en **3 sections complémentaires** :
 ### Lecture Exhaustive (3-4 heures)
 
 **Pour devenir expert :**
-1. Lire toutes les sections de l'annexe F
-2. Consulter les chapitres détaillés référencés
-3. Tester les exemples de code fournis
+1. Lire toutes les sections de l'annexe F  
+2. Consulter les chapitres détaillés référencés  
+3. Tester les exemples de code fournis  
 4. Créer un plan d'action personnalisé
 
 **Vous saurez :** Tout ce qu'il faut pour maîtriser PostgreSQL 18
@@ -479,9 +479,9 @@ Cette annexe F est organisée en **3 sections complémentaires** :
 
 Vous avez maintenant une vue d'ensemble de ce qui vous attend dans PostgreSQL 18. Cette version représente :
 
-- ✅ Un **bond en avant** en termes de performances
-- ✅ Une **modernisation** de la sécurité
-- ✅ Une **simplification** de la migration
+- ✅ Un **bond en avant** en termes de performances  
+- ✅ Une **modernisation** de la sécurité  
+- ✅ Une **simplification** de la migration  
 - ✅ Une **amélioration** de l'observabilité
 
 **La suite de cette annexe vous guidera** dans la découverte détaillée de toutes ces nouveautés, avec des tableaux récapitulatifs, des guides de migration pratiques, et des recommandations adaptées à votre situation.

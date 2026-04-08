@@ -10,11 +10,11 @@ Bienvenue dans le guide complet de **psql**, l'interface en ligne de commande (C
 
 **psql** (PostgreSQL interactive terminal) est le client officiel en ligne de commande de PostgreSQL. C'est un programme qui vous permet de :
 
-- 🔍 **Explorer** la structure de vos bases de données
-- 📝 **Écrire et exécuter** des requêtes SQL
-- 📊 **Analyser** les résultats et les performances
-- 💾 **Importer et exporter** des données
-- ⚙️ **Administrer** vos serveurs PostgreSQL
+- 🔍 **Explorer** la structure de vos bases de données  
+- 📝 **Écrire et exécuter** des requêtes SQL  
+- 📊 **Analyser** les résultats et les performances  
+- 💾 **Importer et exporter** des données  
+- ⚙️ **Administrer** vos serveurs PostgreSQL  
 - 🔧 **Automatiser** des tâches via des scripts
 
 **Analogie** : Si PostgreSQL était une voiture, psql serait votre tableau de bord principal. Certes, il existe des interfaces graphiques (GUI) plus jolies, mais psql est :
@@ -30,10 +30,10 @@ Bienvenue dans le guide complet de **psql**, l'interface en ligne de commande (C
 
 ### Pour les Développeurs
 
-- ✅ **Productivité** : Les méta-commandes de psql sont plus rapides que n'importe quelle GUI
-- ✅ **Debugging** : Exécution précise et contrôle total sur vos requêtes
-- ✅ **Portabilité** : Fonctionne partout, même sur des serveurs distants sans interface graphique
-- ✅ **Scripts** : Automatisation de tâches répétitives (migrations, tests, backups)
+- ✅ **Productivité** : Les méta-commandes de psql sont plus rapides que n'importe quelle GUI  
+- ✅ **Debugging** : Exécution précise et contrôle total sur vos requêtes  
+- ✅ **Portabilité** : Fonctionne partout, même sur des serveurs distants sans interface graphique  
+- ✅ **Scripts** : Automatisation de tâches répétitives (migrations, tests, backups)  
 - ✅ **Compréhension** : Voir exactement ce qui se passe, sans abstraction
 
 **Exemple concret** : Besoin de voir rapidement toutes les tables d'une base ? En GUI, clic-clic-clic dans les menus. Avec psql : `\dt` ✅
@@ -42,10 +42,10 @@ Bienvenue dans le guide complet de **psql**, l'interface en ligne de commande (C
 
 ### Pour les DevOps et SRE
 
-- ✅ **SSH** : Administrez vos serveurs PostgreSQL via SSH, aucune GUI nécessaire
-- ✅ **Monitoring** : Surveillez en temps réel avec `\watch`
-- ✅ **Automatisation** : Intégrez psql dans vos scripts shell, CI/CD, Ansible, etc.
-- ✅ **Troubleshooting** : Diagnostiquez rapidement les problèmes de production
+- ✅ **SSH** : Administrez vos serveurs PostgreSQL via SSH, aucune GUI nécessaire  
+- ✅ **Monitoring** : Surveillez en temps réel avec `\watch`  
+- ✅ **Automatisation** : Intégrez psql dans vos scripts shell, CI/CD, Ansible, etc.  
+- ✅ **Troubleshooting** : Diagnostiquez rapidement les problèmes de production  
 - ✅ **Backups** : Export/import de données avec `\copy`
 
 **Exemple concret** : Serveur de production lent à 3h du matin ? Connectez-vous en SSH, lancez psql, et diagnostiquez avec quelques méta-commandes. Pas besoin d'installer quoi que ce soit.
@@ -54,10 +54,10 @@ Bienvenue dans le guide complet de **psql**, l'interface en ligne de commande (C
 
 ### Pour les DBAs
 
-- ✅ **Inspection** : Exploration complète du schéma, index, statistiques
-- ✅ **Maintenance** : VACUUM, ANALYZE, REINDEX directement
-- ✅ **Sécurité** : Gestion fine des permissions et rôles
-- ✅ **Performance** : EXPLAIN détaillé, pg_stat_statements, métriques
+- ✅ **Inspection** : Exploration complète du schéma, index, statistiques  
+- ✅ **Maintenance** : VACUUM, ANALYZE, REINDEX directement  
+- ✅ **Sécurité** : Gestion fine des permissions et rôles  
+- ✅ **Performance** : EXPLAIN détaillé, pg_stat_statements, métriques  
 - ✅ **Documentation** : Génération de rapports et exports
 
 ---
@@ -90,9 +90,9 @@ SELECT
     schemaname,
     tablename,
     tableowner
-FROM pg_tables
-WHERE schemaname NOT IN ('pg_catalog', 'information_schema')
-ORDER BY schemaname, tablename;
+FROM pg_tables  
+WHERE schemaname NOT IN ('pg_catalog', 'information_schema')  
+ORDER BY schemaname, tablename;  
 
 -- Avec méta-commande (simple et rapide)
 \dt
@@ -104,10 +104,10 @@ ORDER BY schemaname, tablename;
 
 ### Caractéristiques des Méta-commandes
 
-1. **Préfixe backslash** : Toutes commencent par `\`
-2. **Pas de point-virgule** : Exécutées immédiatement, pas besoin de `;`
-3. **Insensibles à la casse** : `\DT`, `\dt`, et `\Dt` font la même chose
-4. **Variante détaillée** : Ajoutez `+` pour plus d'informations (ex: `\dt+`)
+1. **Préfixe backslash** : Toutes commencent par `\`  
+2. **Pas de point-virgule** : Exécutées immédiatement, pas besoin de `;`  
+3. **Insensibles à la casse** : `\DT`, `\dt`, et `\Dt` font la même chose  
+4. **Variante détaillée** : Ajoutez `+` pour plus d'informations (ex: `\dt+`)  
 5. **Patterns** : Acceptent des wildcards `*` et `?` pour filtrer
 
 **Exemples** :
@@ -130,19 +130,19 @@ Ce guide est organisé en **5 sections progressives**, de la navigation de base 
 **Objectif** : Apprendre à explorer et comprendre la structure de vos bases de données.
 
 **Commandes clés** :
-- `\l` : Lister les bases de données
-- `\c` : Se connecter à une base
-- `\dt` : Lister les tables
-- `\d` : Décrire un objet (table, vue, index...)
-- `\di` : Lister les index
-- `\dv` : Lister les vues
-- `\du` : Lister les utilisateurs
+- `\l` : Lister les bases de données  
+- `\c` : Se connecter à une base  
+- `\dt` : Lister les tables  
+- `\d` : Décrire un objet (table, vue, index...)  
+- `\di` : Lister les index  
+- `\dv` : Lister les vues  
+- `\du` : Lister les utilisateurs  
 - `\df` : Lister les fonctions
 - Et bien d'autres...
 
-**Pour qui** : Débutants et intermédiaires
-**Durée de lecture** : 30-45 minutes
-**Niveau de difficulté** : 🟢 Facile
+**Pour qui** : Débutants et intermédiaires  
+**Durée de lecture** : 30-45 minutes  
+**Niveau de difficulté** : 🟢 Facile  
 
 **Vous apprendrez à** :
 - Explorer une base de données inconnue
@@ -158,17 +158,17 @@ Ce guide est organisé en **5 sections progressives**, de la navigation de base 
 **Objectif** : Personnaliser psql pour améliorer votre confort et votre productivité.
 
 **Commandes clés** :
-- `\x` : Affichage étendu (vertical)
-- `\timing` : Mesurer le temps d'exécution
-- `\pset` : Formatter l'affichage (bordures, null, séparateurs...)
-- `\set` : Définir des variables
+- `\x` : Affichage étendu (vertical)  
+- `\timing` : Mesurer le temps d'exécution  
+- `\pset` : Formatter l'affichage (bordures, null, séparateurs...)  
+- `\set` : Définir des variables  
 - `\echo` : Afficher des messages
 - Configuration du prompt
 - Fichier `.psqlrc`
 
-**Pour qui** : Tous niveaux
-**Durée de lecture** : 45-60 minutes
-**Niveau de difficulté** : 🟡 Intermédiaire
+**Pour qui** : Tous niveaux  
+**Durée de lecture** : 45-60 minutes  
+**Niveau de difficulté** : 🟡 Intermédiaire  
 
 **Vous apprendrez à** :
 - Rendre les résultats plus lisibles
@@ -184,14 +184,14 @@ Ce guide est organisé en **5 sections progressives**, de la navigation de base 
 **Objectif** : Maîtriser l'import et l'export de données entre fichiers et PostgreSQL.
 
 **Commandes clés** :
-- `\copy` : Importer/exporter des données (CSV, TSV...)
-- `\o` : Rediriger la sortie vers un fichier
-- `\i` : Exécuter un script SQL
+- `\copy` : Importer/exporter des données (CSV, TSV...)  
+- `\o` : Rediriger la sortie vers un fichier  
+- `\i` : Exécuter un script SQL  
 - `\ir` : Exécuter avec chemin relatif
 
-**Pour qui** : Tous niveaux
-**Durée de lecture** : 60-75 minutes
-**Niveau de difficulté** : 🟡 Intermédiaire
+**Pour qui** : Tous niveaux  
+**Durée de lecture** : 60-75 minutes  
+**Niveau de difficulté** : 🟡 Intermédiaire  
 
 **Vous apprendrez à** :
 - Exporter des données vers Excel ou d'autres outils
@@ -208,17 +208,17 @@ Ce guide est organisé en **5 sections progressives**, de la navigation de base 
 **Objectif** : Découvrir les techniques de pro pour la productivité maximale.
 
 **Commandes clés** :
-- `\watch` : Exécution répétée (monitoring temps réel)
-- `\gx`, `\gset`, `\gexec` : Variantes d'exécution avancées
-- `\sf`, `\sv` : Visualiser le code source
-- `\ef`, `\ev` : Éditer fonctions et vues
-- `\e` : Éditer dans un éditeur externe
+- `\watch` : Exécution répétée (monitoring temps réel)  
+- `\gx`, `\gset`, `\gexec` : Variantes d'exécution avancées  
+- `\sf`, `\sv` : Visualiser le code source  
+- `\ef`, `\ev` : Éditer fonctions et vues  
+- `\e` : Éditer dans un éditeur externe  
 - `\s` : Gestion de l'historique
 - Variables et scripts conditionnels
 
-**Pour qui** : Intermédiaires et avancés
-**Durée de lecture** : 75-90 minutes
-**Niveau de difficulté** : 🔴 Avancé
+**Pour qui** : Intermédiaires et avancés  
+**Durée de lecture** : 75-90 minutes  
+**Niveau de difficulté** : 🔴 Avancé  
 
 **Vous apprendrez à** :
 - Surveiller votre base en temps réel
@@ -235,23 +235,23 @@ Ce guide est organisé en **5 sections progressives**, de la navigation de base 
 ### 🎯 Approche Progressive (Recommandé pour Débutants)
 
 **Semaine 1 : Les Bases**
-1. Lisez la **Section 1 : Navigation**
-2. Pratiquez sur une base de test : créez des tables, explorez-les avec `\dt`, `\d`, etc.
+1. Lisez la **Section 1 : Navigation**  
+2. Pratiquez sur une base de test : créez des tables, explorez-les avec `\dt`, `\d`, etc.  
 3. Testez toutes les commandes de navigation
 
 **Semaine 2 : Le Confort**
-1. Lisez la **Section 2 : Configuration**
-2. Créez votre fichier `.psqlrc` avec vos préférences
+1. Lisez la **Section 2 : Configuration**  
+2. Créez votre fichier `.psqlrc` avec vos préférences  
 3. Activez `\timing` et `\x auto` par défaut
 
 **Semaine 3 : Les Données**
-1. Lisez la **Section 3 : Export/Import**
-2. Exportez une table vers CSV
+1. Lisez la **Section 3 : Export/Import**  
+2. Exportez une table vers CSV  
 3. Créez votre premier script SQL avec `\i`
 
 **Semaine 4 : La Maîtrise**
-1. Lisez la **Section 4 : Méta-commandes Avancées**
-2. Testez `\watch` pour surveiller une requête
+1. Lisez la **Section 4 : Méta-commandes Avancées**  
+2. Testez `\watch` pour surveiller une requête  
 3. Créez un script avec variables et conditions
 
 ---
@@ -275,9 +275,9 @@ Ce guide est organisé en **5 sections progressives**, de la navigation de base 
 ### 📚 Approche Référence (Consultation Ponctuelle)
 
 Chaque section est autonome et peut servir de référence :
-- **Table des matières détaillée** au début de chaque section
-- **Exemples concrets** pour chaque commande
-- **Tableaux récapitulatifs** pour référence rapide
+- **Table des matières détaillée** au début de chaque section  
+- **Exemples concrets** pour chaque commande  
+- **Tableaux récapitulatifs** pour référence rapide  
 - **Index des commandes** à la fin
 
 **Usage** : Gardez ce guide ouvert à côté de votre terminal et consultez-le au besoin.
@@ -289,19 +289,19 @@ Chaque section est autonome et peut servir de référence :
 ### Ce Que Vous Devez Savoir
 
 **Minimum requis** :
-- ✅ PostgreSQL installé (version 12+, idéalement 18)
-- ✅ Connaissance de base de SQL (SELECT, INSERT, UPDATE, DELETE)
-- ✅ Accès à un terminal (Linux, macOS, ou Windows avec PowerShell/WSL)
+- ✅ PostgreSQL installé (version 12+, idéalement 18)  
+- ✅ Connaissance de base de SQL (SELECT, INSERT, UPDATE, DELETE)  
+- ✅ Accès à un terminal (Linux, macOS, ou Windows avec PowerShell/WSL)  
 - ✅ Une base de données de test (même vide)
 
 **Recommandé** :
-- 📖 Avoir lu les parties 1-3 du tutoriel principal (concepts fondamentaux)
-- 📖 Comprendre les notions de table, schéma, index
+- 📖 Avoir lu les parties 1-3 du tutoriel principal (concepts fondamentaux)  
+- 📖 Comprendre les notions de table, schéma, index  
 - 🖥️ Être à l'aise avec la ligne de commande
 
 **Pas nécessaire** :
-- ❌ Expertise en SQL avancé
-- ❌ Connaissance d'administration système
+- ❌ Expertise en SQL avancé  
+- ❌ Connaissance d'administration système  
 - ❌ Expérience avec d'autres SGBD
 
 ---
@@ -347,10 +347,10 @@ psql -h localhost -p 5432 -U postgres -d ma_base
 ```
 
 **Paramètres de connexion** :
-- `-U` : Utilisateur (username)
-- `-d` : Base de données (database)
-- `-h` : Hôte (host)
-- `-p` : Port (par défaut 5432)
+- `-U` : Utilisateur (username)  
+- `-d` : Base de données (database)  
+- `-h` : Hôte (host)  
+- `-p` : Port (par défaut 5432)  
 - `-W` : Demander le mot de passe (force password prompt)
 
 ---
@@ -364,8 +364,8 @@ Si vous n'avez pas de base de données, créez-en une pour pratiquer :
 createdb test_psql
 
 # Ou depuis psql
-psql -U postgres
-CREATE DATABASE test_psql;
+psql -U postgres  
+CREATE DATABASE test_psql;  
 \c test_psql
 
 # Créer quelques tables de test
@@ -420,14 +420,14 @@ $ psql -U postgres
 
 ### Symboles Utilisés
 
-- 🟢 **Niveau débutant** : Concepts de base, essentiels
-- 🟡 **Niveau intermédiaire** : Utilisation quotidienne, productivité
+- 🟢 **Niveau débutant** : Concepts de base, essentiels  
+- 🟡 **Niveau intermédiaire** : Utilisation quotidienne, productivité  
 - 🔴 **Niveau avancé** : Techniques expertes, automatisation
 
-- ✅ **À faire** : Bonne pratique recommandée
-- ❌ **À éviter** : Erreur courante ou mauvaise pratique
-- ⚠️ **Attention** : Point important, piège potentiel
-- 💡 **Astuce** : Conseil pour gagner du temps
+- ✅ **À faire** : Bonne pratique recommandée  
+- ❌ **À éviter** : Erreur courante ou mauvaise pratique  
+- ⚠️ **Attention** : Point important, piège potentiel  
+- 💡 **Astuce** : Conseil pour gagner du temps  
 - 🔒 **Sécurité** : Considération de sécurité importante
 
 ---
@@ -464,13 +464,13 @@ Tous les exemples suivent cette structure :
 
 Chaque section suit une structure cohérente pour faciliter l'apprentissage :
 
-1. **Introduction** : Contexte et objectifs
-2. **Concepts fondamentaux** : Théorie nécessaire
-3. **Commandes de base** : Syntaxe et exemples simples
-4. **Cas d'usage pratiques** : Exemples réels et concrets
-5. **Techniques avancées** : Astuces de pro
-6. **Bonnes pratiques** : Recommandations et pièges à éviter
-7. **Dépannage** : Erreurs courantes et solutions
+1. **Introduction** : Contexte et objectifs  
+2. **Concepts fondamentaux** : Théorie nécessaire  
+3. **Commandes de base** : Syntaxe et exemples simples  
+4. **Cas d'usage pratiques** : Exemples réels et concrets  
+5. **Techniques avancées** : Astuces de pro  
+6. **Bonnes pratiques** : Recommandations et pièges à éviter  
+7. **Dépannage** : Erreurs courantes et solutions  
 8. **Résumé** : Tableau récapitulatif et points clés
 
 ---
@@ -524,21 +524,21 @@ psql intègre une aide complète accessible directement :
 
 ### ✅ À Faire
 
-1. **Créez une base de test** pour expérimenter sans risque
-2. **Pratiquez chaque commande** en la tapant vous-même
-3. **Créez votre .psqlrc** dès que possible
-4. **Gardez ce guide ouvert** à côté de votre terminal
-5. **Testez les exemples** - ne vous contentez pas de lire
+1. **Créez une base de test** pour expérimenter sans risque  
+2. **Pratiquez chaque commande** en la tapant vous-même  
+3. **Créez votre .psqlrc** dès que possible  
+4. **Gardez ce guide ouvert** à côté de votre terminal  
+5. **Testez les exemples** - ne vous contentez pas de lire  
 6. **Expérimentez** - les variantes et combinaisons
 
 ---
 
 ### ❌ À Éviter
 
-1. **Ne pas tester sur la production** sans backup !
-2. **Ne pas sauter les bases** - commencez par la navigation
-3. **Ne pas mémoriser tout** - comprenez les concepts, le reste viendra
-4. **Ne pas avoir peur** de faire des erreurs - c'est comme ça qu'on apprend
+1. **Ne pas tester sur la production** sans backup !  
+2. **Ne pas sauter les bases** - commencez par la navigation  
+3. **Ne pas mémoriser tout** - comprenez les concepts, le reste viendra  
+4. **Ne pas avoir peur** de faire des erreurs - c'est comme ça qu'on apprend  
 5. **Ne pas négliger .psqlrc** - il change vraiment la vie
 
 ---
@@ -620,31 +620,31 @@ SELECT COUNT(*) FROM clients;
 ### 🎯 Objectif : Maîtrise de psql en 4 Semaines
 
 #### Semaine 1 : Les Fondamentaux
-- ✅ Installer et configurer psql
-- ✅ Maîtriser les commandes de navigation (`\l`, `\c`, `\dt`, `\d`)
-- ✅ Comprendre la différence SQL vs méta-commandes
-- ✅ Pratiquer sur une base de test
+- ✅ Installer et configurer psql  
+- ✅ Maîtriser les commandes de navigation (`\l`, `\c`, `\dt`, `\d`)  
+- ✅ Comprendre la différence SQL vs méta-commandes  
+- ✅ Pratiquer sur une base de test  
 - 📊 **Objectif mesurable** : Explorer une base inconnue en < 5 minutes
 
 #### Semaine 2 : La Productivité
-- ✅ Créer votre `.psqlrc` personnalisé
-- ✅ Activer `\timing`, configurer `\x auto`, `\pset null`
-- ✅ Personnaliser votre prompt
-- ✅ Maîtriser les raccourcis clavier
+- ✅ Créer votre `.psqlrc` personnalisé  
+- ✅ Activer `\timing`, configurer `\x auto`, `\pset null`  
+- ✅ Personnaliser votre prompt  
+- ✅ Maîtriser les raccourcis clavier  
 - 📊 **Objectif mesurable** : Environnement confortable et rapide
 
 #### Semaine 3 : Les Données
-- ✅ Exporter une table vers CSV avec `\copy`
-- ✅ Importer des données depuis un fichier
-- ✅ Créer votre premier script SQL avec `\i`
-- ✅ Rediriger des résultats avec `\o`
+- ✅ Exporter une table vers CSV avec `\copy`  
+- ✅ Importer des données depuis un fichier  
+- ✅ Créer votre premier script SQL avec `\i`  
+- ✅ Rediriger des résultats avec `\o`  
 - 📊 **Objectif mesurable** : Migration de données entre environnements
 
 #### Semaine 4 : L'Excellence
-- ✅ Utiliser `\watch` pour du monitoring
-- ✅ Générer du SQL avec `\gexec`
-- ✅ Créer des scripts avec variables et conditions
-- ✅ Automatiser une tâche récurrente
+- ✅ Utiliser `\watch` pour du monitoring  
+- ✅ Générer du SQL avec `\gexec`  
+- ✅ Créer des scripts avec variables et conditions  
+- ✅ Automatiser une tâche récurrente  
 - 📊 **Objectif mesurable** : Script de backup automatisé fonctionnel
 
 ---
@@ -654,24 +654,24 @@ SELECT COUNT(*) FROM clients;
 Après avoir parcouru ce guide, vous devriez être capable de :
 
 **Niveau Débutant** :
-- [ ] Vous connecter à une base PostgreSQL
-- [ ] Lister et explorer les tables (`\dt`, `\d`)
-- [ ] Exécuter des requêtes SQL de base
-- [ ] Naviguer entre les bases (`\l`, `\c`)
+- [ ] Vous connecter à une base PostgreSQL  
+- [ ] Lister et explorer les tables (`\dt`, `\d`)  
+- [ ] Exécuter des requêtes SQL de base  
+- [ ] Naviguer entre les bases (`\l`, `\c`)  
 - [ ] Comprendre la sortie des commandes
 
 **Niveau Intermédiaire** :
-- [ ] Configurer un environnement psql personnalisé (`.psqlrc`)
-- [ ] Exporter et importer des données (`\copy`)
-- [ ] Mesurer les performances (`\timing`, `EXPLAIN`)
-- [ ] Créer et exécuter des scripts SQL (`\i`)
+- [ ] Configurer un environnement psql personnalisé (`.psqlrc`)  
+- [ ] Exporter et importer des données (`\copy`)  
+- [ ] Mesurer les performances (`\timing`, `EXPLAIN`)  
+- [ ] Créer et exécuter des scripts SQL (`\i`)  
 - [ ] Utiliser des variables et des conditions
 
 **Niveau Avancé** :
-- [ ] Surveiller la base en temps réel (`\watch`)
-- [ ] Générer et exécuter du SQL dynamiquement (`\gexec`)
-- [ ] Éditer du code dans un éditeur externe (`\ef`, `\ev`)
-- [ ] Automatiser des tâches complexes avec scripts
+- [ ] Surveiller la base en temps réel (`\watch`)  
+- [ ] Générer et exécuter du SQL dynamiquement (`\gexec`)  
+- [ ] Éditer du code dans un éditeur externe (`\ef`, `\ev`)  
+- [ ] Automatiser des tâches complexes avec scripts  
 - [ ] Déboguer efficacement avec les outils psql
 
 ---
@@ -680,9 +680,9 @@ Après avoir parcouru ce guide, vous devriez être capable de :
 
 Après avoir maîtrisé psql, vous serez prêt pour :
 
-- **PostgreSQL Avancé** : Optimisation, indexation, réplication
-- **Administration** : Maintenance, monitoring, haute disponibilité
-- **Scripts Shell** : Intégration de psql dans vos workflows DevOps
+- **PostgreSQL Avancé** : Optimisation, indexation, réplication  
+- **Administration** : Maintenance, monitoring, haute disponibilité  
+- **Scripts Shell** : Intégration de psql dans vos workflows DevOps  
 - **CI/CD** : Automatisation de migrations et tests de base de données
 
 ---
@@ -712,43 +712,43 @@ psql est un outil extraordinairement puissant qui peut sembler intimidant au dé
 ## Table des Matières Générale
 
 ### 📘 Section 1 : Navigation
-1. Se Connecter à une Base de Données
-2. Explorer les Bases de Données
-3. Explorer les Schémas
-4. Explorer les Tables
-5. Explorer les Index
-6. Explorer les Vues
-7. Explorer les Séquences
-8. Explorer les Fonctions et Procédures
-9. Navigation Entre Schémas
+1. Se Connecter à une Base de Données  
+2. Explorer les Bases de Données  
+3. Explorer les Schémas  
+4. Explorer les Tables  
+5. Explorer les Index  
+6. Explorer les Vues  
+7. Explorer les Séquences  
+8. Explorer les Fonctions et Procédures  
+9. Navigation Entre Schémas  
 10. Astuces de Navigation
 
 ### 📘 Section 2 : Configuration
-1. Affichage Étendu (\x)
-2. Mesurer le Temps (\timing)
-3. Formatage avec \pset
-4. Autres Commandes de Configuration
-5. Configuration du Prompt
-6. Le Fichier .psqlrc
-7. Variables d'Environnement Système
+1. Affichage Étendu (\x)  
+2. Mesurer le Temps (\timing)  
+3. Formatage avec \pset  
+4. Autres Commandes de Configuration  
+5. Configuration du Prompt  
+6. Le Fichier .psqlrc  
+7. Variables d'Environnement Système  
 8. Commandes Avancées de Configuration
 
 ### 📘 Section 3 : Export/Import
-1. Redirection de Sortie (\o)
-2. Import/Export de Données (\copy)
-3. Exécution de Scripts (\i)
-4. Combinaison \o et \copy
-5. Cas d'Usage Réels
+1. Redirection de Sortie (\o)  
+2. Import/Export de Données (\copy)  
+3. Exécution de Scripts (\i)  
+4. Combinaison \o et \copy  
+5. Cas d'Usage Réels  
 6. Bonnes Pratiques
 
 ### 📘 Section 4 : Méta-commandes Avancées
-1. Exécution Répétée (\watch)
-2. Variantes d'Exécution (\gx, \gset, \gexec)
-3. Édition et Visualisation de Code
-4. Édition du Buffer de Requête
-5. Gestion de l'Historique
-6. Variables psql Avancées
-7. Large Objects
+1. Exécution Répétée (\watch)  
+2. Variantes d'Exécution (\gx, \gset, \gexec)  
+3. Édition et Visualisation de Code  
+4. Édition du Buffer de Requête  
+5. Gestion de l'Historique  
+6. Variables psql Avancées  
+7. Large Objects  
 8. Techniques Avancées de Scripting
 
 ---

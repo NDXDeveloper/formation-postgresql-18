@@ -10,15 +10,15 @@ Après avoir appris à naviguer dans PostgreSQL avec psql, il est temps de perso
 
 Une bonne configuration vous permet de :
 
-- ✅ **Améliorer la lisibilité** des résultats de requêtes
-- ✅ **Mesurer les performances** de vos requêtes
-- ✅ **Adapter l'affichage** selon le type de données
-- ✅ **Automatiser** vos préférences au démarrage
+- ✅ **Améliorer la lisibilité** des résultats de requêtes  
+- ✅ **Mesurer les performances** de vos requêtes  
+- ✅ **Adapter l'affichage** selon le type de données  
+- ✅ **Automatiser** vos préférences au démarrage  
 - ✅ **Gagner du temps** avec des raccourcis
 
 ### Types de configuration
 
-- **Temporaire** : Active pour la session en cours uniquement
+- **Temporaire** : Active pour la session en cours uniquement  
 - **Permanente** : Sauvegardée dans `.psqlrc`, active à chaque démarrage
 
 ---
@@ -60,13 +60,13 @@ SELECT id, nom, prenom, email, telephone, adresse, ville FROM clients WHERE id =
 
 # Résultat (beaucoup plus lisible) :
 -[ RECORD 1 ]------------------
-id        | 1
-nom       | Dupont
-prenom    | Alice
-email     | alice.dupont@mail.fr
-telephone | 06 12 34 56 78
-adresse   | 15 rue de la Paix
-ville     | Paris
+id        | 1  
+nom       | Dupont  
+prenom    | Alice  
+email     | alice.dupont@mail.fr  
+telephone | 06 12 34 56 78  
+adresse   | 15 rue de la Paix  
+ville     | Paris  
 ```
 
 ### Options de \x
@@ -117,15 +117,15 @@ SELECT * FROM commandes WHERE id = 100;
 SELECT * FROM commandes WHERE id = 100;
 
 -[ RECORD 1 ]--------+----------------------
-id                   | 100
-client_id            | 42
-date_commande        | 2024-11-15 14:23:45
-montant_total        | 1599.99
-statut               | livree
-adresse_livraison    | 12 avenue des Champs Elysées
-commentaires         | Livraison rapide demandée
-created_at           | 2024-11-15 14:23:45.123456
-updated_at           | 2024-11-18 10:15:32.789012
+id                   | 100  
+client_id            | 42  
+date_commande        | 2024-11-15 14:23:45  
+montant_total        | 1599.99  
+statut               | livree  
+adresse_livraison    | 12 avenue des Champs Elysées  
+commentaires         | Livraison rapide demandée  
+created_at           | 2024-11-15 14:23:45.123456  
+updated_at           | 2024-11-18 10:15:32.789012  
 ```
 
 **Astuce** 💡 : Je recommande `\x auto` dans votre `.psqlrc` pour avoir le meilleur des deux mondes !
@@ -162,9 +162,9 @@ SELECT COUNT(*) FROM clients;
 Time: 45.234 ms
 
 # Requête plus lente
-SELECT * FROM commandes
-WHERE date_commande >= NOW() - INTERVAL '1 year'
-ORDER BY montant_total DESC;
+SELECT * FROM commandes  
+WHERE date_commande >= NOW() - INTERVAL '1 year'  
+ORDER BY montant_total DESC;  
 
 # Résultat : ... données ...
 Time: 1234.567 ms (00:01.235)
@@ -183,12 +183,12 @@ Time: 1234.567 ms (00:01.235)
 ### Interpréter les résultats
 
 Le temps affiché inclut :
-- ⏱️ Le temps d'exécution côté serveur
-- 🌐 Le temps de transfert réseau
+- ⏱️ Le temps d'exécution côté serveur  
+- 🌐 Le temps de transfert réseau  
 - 📊 Le temps de formatage côté client
 
 **Unités** :
-- `ms` : millisecondes (< 1 seconde)
+- `ms` : millisecondes (< 1 seconde)  
 - `s` : secondes (format `00:01.234` pour lisibilité)
 
 ### Quand utiliser \timing ?
@@ -251,15 +251,15 @@ Sérieusement, activez-le par défaut dans votre `.psqlrc`. Cela vous aide à :
 \pset
 
 # Résultat :
-border                   1
-columns                  0
-expanded                 off
-fieldsep                 '|'
-fieldsep_zero            off
-footer                   on
-format                   aligned
-linestyle                ascii
-null                     ''
+border                   1  
+columns                  0  
+expanded                 off  
+fieldsep                 '|'  
+fieldsep_zero            off  
+footer                   on  
+format                   aligned  
+linestyle                ascii  
+null                     ''  
 ...
 ```
 
@@ -273,9 +273,9 @@ null                     ''
 ```
 
 **Valeurs** :
-- `0` : Aucune bordure
-- `1` : Bordures internes (défaut)
-- `2` : Bordures complètes
+- `0` : Aucune bordure  
+- `1` : Bordures internes (défaut)  
+- `2` : Bordures complètes  
 - `3` : Bordures doubles (style Unicode)
 
 **Exemples** :
@@ -464,15 +464,15 @@ SELECT id, nom, email FROM clients WHERE id IN (1, 2);
 
 # Séparateur pipe (défaut)
 \pset fieldsep '|'
-SELECT id, nom, prix FROM produits LIMIT 2;
-id|nom|prix
+SELECT id, nom, prix FROM produits LIMIT 2;  
+id|nom|prix  
 1|Ordinateur|999.99
 2|Souris|29.99
 
 # Séparateur virgule (CSV)
 \pset fieldsep ','
-SELECT id, nom, prix FROM produits LIMIT 2;
-id,nom,prix
+SELECT id, nom, prix FROM produits LIMIT 2;  
+id,nom,prix  
 1,Ordinateur,999.99
 2,Souris,29.99
 
@@ -859,17 +859,17 @@ SELECT * FROM produits WHERE nom LIKE '%' || :'search_term' || '%';
 \set
 
 # Résultat :
-AUTOCOMMIT = 'on'
-COMP_KEYWORD_CASE = 'preserve-upper'
+AUTOCOMMIT = 'on'  
+COMP_KEYWORD_CASE = 'preserve-upper'  
 ...
-limit_value = '10'
-search_term = 'Ordinateur'
+limit_value = '10'  
+search_term = 'Ordinateur'  
 ```
 
 **Variables spéciales** :
-- `AUTOCOMMIT` : Mode auto-commit (on/off)
-- `ECHO` : Afficher les commandes exécutées
-- `ON_ERROR_STOP` : Arrêter sur erreur
+- `AUTOCOMMIT` : Mode auto-commit (on/off)  
+- `ECHO` : Afficher les commandes exécutées  
+- `ON_ERROR_STOP` : Arrêter sur erreur  
 - `QUIET` : Mode silencieux
 
 ---
@@ -927,8 +927,8 @@ search_term = 'Ordinateur'
 
 psql a trois niveaux de prompts configurables :
 
-- **PROMPT1** : Prompt principal (quand psql attend une commande)
-- **PROMPT2** : Prompt de continuation (quand une commande est incomplète)
+- **PROMPT1** : Prompt principal (quand psql attend une commande)  
+- **PROMPT2** : Prompt de continuation (quand une commande est incomplète)  
 - **PROMPT3** : Prompt lors d'un COPY FROM STDIN
 
 **Variables de prompt disponibles** :
@@ -975,12 +975,12 @@ postgres@localhost:5432 ma_boutique =#
 postgres@ma_boutique =#
 
 # Dans une transaction
-BEGIN;
-postgres@ma_boutique *=#
+BEGIN;  
+postgres@ma_boutique *=#  
 
 # Après erreur
-SELECT * FROM table_inexistante;
-postgres@ma_boutique !=#
+SELECT * FROM table_inexistante;  
+postgres@ma_boutique !=#  
 ```
 
 #### Mon prompt recommandé
@@ -998,7 +998,7 @@ postgres@ma_boutique !=#
 `.psqlrc` est un fichier de configuration qui s'exécute automatiquement à chaque démarrage de psql. C'est l'équivalent du `.bashrc` pour psql.
 
 **Emplacement** :
-- **Linux/Mac** : `~/.psqlrc` (home directory)
+- **Linux/Mac** : `~/.psqlrc` (home directory)  
 - **Windows** : `%APPDATA%\postgresql\psqlrc.conf`
 
 ### Créer votre .psqlrc
@@ -1149,9 +1149,9 @@ export PAGER=more
 
 ```bash
 # Définir l'éditeur pour \e
-export PSQL_EDITOR=nano
-export PSQL_EDITOR=vim
-export PSQL_EDITOR=code  # VS Code
+export PSQL_EDITOR=nano  
+export PSQL_EDITOR=vim  
+export PSQL_EDITOR=code  # VS Code  
 ```
 
 ---
@@ -1286,8 +1286,8 @@ COMMIT;
 ```
 
 **Valeurs** :
-- `all` : Affiche tout (commandes et méta-commandes)
-- `errors` : Affiche uniquement les commandes qui échouent
+- `all` : Affiche tout (commandes et méta-commandes)  
+- `errors` : Affiche uniquement les commandes qui échouent  
 - `queries` : Affiche uniquement les requêtes SQL
 
 **Exemples** :
@@ -1316,8 +1316,8 @@ SELECT * FROM clients WHERE id = 1;
 **Description** : En cas d'erreur dans une transaction, effectue automatiquement un ROLLBACK.
 
 **Valeurs** :
-- `on` : Toujours rollback sur erreur
-- `off` : Jamais (défaut)
+- `on` : Toujours rollback sur erreur  
+- `off` : Jamais (défaut)  
 - `interactive` : Uniquement en mode interactif
 
 **Exemples** :
@@ -1503,9 +1503,9 @@ Si vous avez fait des modifications et voulez revenir à la normale :
 
 La configuration de psql est essentielle pour une expérience optimale. Les points clés à retenir :
 
-🎯 **Essentiels** :
-- `\timing` pour mesurer les performances
-- `\x auto` pour un affichage adaptatif
+🎯 **Essentiels** :  
+- `\timing` pour mesurer les performances  
+- `\x auto` pour un affichage adaptatif  
 - `\pset null '(null)'` pour voir les NULL
 
 🎨 **Confort** :

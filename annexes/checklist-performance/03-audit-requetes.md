@@ -7,22 +7,22 @@
 
 ## Table des Matières
 
-1. [Introduction à l'Audit de Requêtes](#1-introduction-%C3%A0-laudit-de-requ%C3%AAtes)
-2. [Pourquoi Auditer les Requêtes ?](#2-pourquoi-auditer-les-requ%C3%AAtes-)
-3. [Le Cycle de Vie d'une Requête](#3-le-cycle-de-vie-dune-requ%C3%AAte)
-4. [Outils d'Audit de Requêtes](#4-outils-daudit-de-requ%C3%AAtes)
-5. [EXPLAIN : Comprendre les Plans d'Exécution](#5-explain--comprendre-les-plans-dex%C3%A9cution)
-6. [Identification des Requêtes Lentes](#6-identification-des-requ%C3%AAtes-lentes)
-7. [Analyse des Patterns de Performance](#7-analyse-des-patterns-de-performance)
-8. [Problèmes Courants et Solutions](#8-probl%C3%A8mes-courants-et-solutions)
-9. [Optimisation des Requêtes](#9-optimisation-des-requ%C3%AAtes)
-10. [Anti-Patterns N+1](#10-anti-patterns-n1)
-11. [Requêtes Complexes et Jointures](#11-requ%C3%AAtes-complexes-et-jointures)
-12. [Agrégations et Performances](#12-agr%C3%A9gations-et-performances)
-13. [PostgreSQL 18 : Nouveautés d'Optimisation](#13-postgresql-18--nouveaut%C3%A9s-doptimisation)
-14. [Monitoring en Production](#14-monitoring-en-production)
-15. [Checklist d'Audit Complète](#15-checklist-daudit-compl%C3%A8te)
-16. [Cas Pratiques d'Optimisation](#16-cas-pratiques-doptimisation)
+1. [Introduction à l'Audit de Requêtes](#1-introduction-%C3%A0-laudit-de-requ%C3%AAtes)  
+2. [Pourquoi Auditer les Requêtes ?](#2-pourquoi-auditer-les-requ%C3%AAtes-)  
+3. [Le Cycle de Vie d'une Requête](#3-le-cycle-de-vie-dune-requ%C3%AAte)  
+4. [Outils d'Audit de Requêtes](#4-outils-daudit-de-requ%C3%AAtes)  
+5. [EXPLAIN : Comprendre les Plans d'Exécution](#5-explain--comprendre-les-plans-dex%C3%A9cution)  
+6. [Identification des Requêtes Lentes](#6-identification-des-requ%C3%AAtes-lentes)  
+7. [Analyse des Patterns de Performance](#7-analyse-des-patterns-de-performance)  
+8. [Problèmes Courants et Solutions](#8-probl%C3%A8mes-courants-et-solutions)  
+9. [Optimisation des Requêtes](#9-optimisation-des-requ%C3%AAtes)  
+10. [Anti-Patterns N+1](#10-anti-patterns-n1)  
+11. [Requêtes Complexes et Jointures](#11-requ%C3%AAtes-complexes-et-jointures)  
+12. [Agrégations et Performances](#12-agr%C3%A9gations-et-performances)  
+13. [PostgreSQL 18 : Nouveautés d'Optimisation](#13-postgresql-18--nouveaut%C3%A9s-doptimisation)  
+14. [Monitoring en Production](#14-monitoring-en-production)  
+15. [Checklist d'Audit Complète](#15-checklist-daudit-compl%C3%A8te)  
+16. [Cas Pratiques d'Optimisation](#16-cas-pratiques-doptimisation)  
 17. [Conclusion et Bonnes Pratiques](#17-conclusion-et-bonnes-pratiques)
 
 ---
@@ -33,9 +33,9 @@
 
 Un **audit de requêtes** est un processus systématique d'analyse et d'évaluation des requêtes SQL exécutées sur une base de données PostgreSQL pour :
 
-- **Identifier** les requêtes lentes ou problématiques
-- **Comprendre** comment PostgreSQL exécute chaque requête
-- **Optimiser** les performances en modifiant les requêtes ou la structure de la base
+- **Identifier** les requêtes lentes ou problématiques  
+- **Comprendre** comment PostgreSQL exécute chaque requête  
+- **Optimiser** les performances en modifiant les requêtes ou la structure de la base  
 - **Prévenir** les dégradations futures de performance
 
 ### 1.2. Différence avec l'Audit d'Indexation
@@ -51,19 +51,19 @@ Un **audit de requêtes** est un processus systématique d'analyse et d'évaluat
 
 ### 1.3. À Qui s'Adresse cet Audit ?
 
-- **Développeurs** : Qui écrivent les requêtes SQL
-- **DevOps/SRE** : Qui maintiennent les systèmes en production
-- **DBA** : Qui optimisent les performances de la base
+- **Développeurs** : Qui écrivent les requêtes SQL  
+- **DevOps/SRE** : Qui maintiennent les systèmes en production  
+- **DBA** : Qui optimisent les performances de la base  
 - **Product Owners** : Qui veulent comprendre les causes des lenteurs
 
 ### 1.4. Quand Effectuer un Audit de Requêtes ?
 
 **Déclencheurs d'audit** :
-- ✅ Application lente ou temps de réponse dégradé
-- ✅ Pics de charge CPU/Mémoire inexpliqués
-- ✅ Plaintes utilisateurs sur la lenteur
-- ✅ Avant une mise en production majeure
-- ✅ Après ajout de nouvelles fonctionnalités
+- ✅ Application lente ou temps de réponse dégradé  
+- ✅ Pics de charge CPU/Mémoire inexpliqués  
+- ✅ Plaintes utilisateurs sur la lenteur  
+- ✅ Avant une mise en production majeure  
+- ✅ Après ajout de nouvelles fonctionnalités  
 - ✅ Périodiquement (mensuel/trimestriel)
 
 ---
@@ -88,10 +88,10 @@ SELECT * FROM commandes WHERE client_id IN (
 );
 
 -- Après optimisation : 0.2 secondes (225× plus rapide)
-SELECT c.*
-FROM commandes c
-JOIN clients cl ON c.client_id = cl.id
-WHERE cl.ville = 'Paris';
+SELECT c.*  
+FROM commandes c  
+JOIN clients cl ON c.client_id = cl.id  
+WHERE cl.ville = 'Paris';  
 ```
 
 #### Impact sur les Ressources
@@ -107,9 +107,9 @@ Une requête mal optimisée peut coûter **10× plus cher** en ressources cloud.
 
 #### Impact sur l'Expérience Utilisateur
 
-- ❌ Utilisateurs frustrés
-- ❌ Abandon de paniers d'achat
-- ❌ Perte de clients
+- ❌ Utilisateurs frustrés  
+- ❌ Abandon de paniers d'achat  
+- ❌ Perte de clients  
 - ❌ Mauvaise réputation
 
 **Règle d'or** :
@@ -121,26 +121,26 @@ Une requête mal optimisée peut coûter **10× plus cher** en ressources cloud.
 
 #### Amélioration des Performances
 
-- ✅ Réduction des temps de réponse de **10× à 100×**
-- ✅ Meilleure utilisation des ressources
+- ✅ Réduction des temps de réponse de **10× à 100×**  
+- ✅ Meilleure utilisation des ressources  
 - ✅ Scalabilité améliorée
 
 #### Réduction des Coûts
 
-- ✅ Moins de serveurs nécessaires
-- ✅ Factures cloud réduites
+- ✅ Moins de serveurs nécessaires  
+- ✅ Factures cloud réduites  
 - ✅ Moins d'incidents de production
 
 #### Qualité du Code
 
-- ✅ Code SQL plus maintenable
-- ✅ Patterns de requêtes documentés
+- ✅ Code SQL plus maintenable  
+- ✅ Patterns de requêtes documentés  
 - ✅ Standards d'équipe établis
 
 #### Connaissance Approfondie
 
-- ✅ Compréhension du planificateur PostgreSQL
-- ✅ Expertise en optimisation
+- ✅ Compréhension du planificateur PostgreSQL  
+- ✅ Expertise en optimisation  
 - ✅ Capacité à prévoir les problèmes
 
 ---
@@ -173,8 +173,8 @@ SELECT nom FORM employes WHERE id = 1;
 **Exemple** :
 ```sql
 -- Vue définie
-CREATE VIEW employes_actifs AS
-SELECT * FROM employes WHERE actif = true;
+CREATE VIEW employes_actifs AS  
+SELECT * FROM employes WHERE actif = true;  
 
 -- Requête utilisateur
 SELECT * FROM employes_actifs WHERE salaire > 50000;
@@ -239,8 +239,8 @@ Client Application
 ### 3.3. Où se Concentrer pour l'Audit ?
 
 **Priorités** :
-1. **Planning** (Phase 3) : Le planificateur choisit-il le bon plan ?
-2. **Execution** (Phase 4) : Les opérations sont-elles efficaces ?
+1. **Planning** (Phase 3) : Le planificateur choisit-il le bon plan ?  
+2. **Execution** (Phase 4) : Les opérations sont-elles efficaces ?  
 3. **Result** (Phase 5) : Retourne-t-on trop de données ?
 
 Les phases 1 et 2 sont rarement problématiques.
@@ -274,9 +274,9 @@ SELECT
     calls,
     ROUND(mean_exec_time::numeric, 2) AS avg_ms,
     ROUND(total_exec_time::numeric, 2) AS total_ms
-FROM pg_stat_statements
-ORDER BY mean_exec_time DESC
-LIMIT 20;
+FROM pg_stat_statements  
+ORDER BY mean_exec_time DESC  
+LIMIT 20;  
 ```
 
 **Requêtes les plus coûteuses (par temps total)** :
@@ -286,9 +286,9 @@ SELECT
     calls,
     ROUND(total_exec_time::numeric, 2) AS total_ms,
     ROUND(100.0 * total_exec_time / SUM(total_exec_time) OVER (), 2) AS pct_total
-FROM pg_stat_statements
-ORDER BY total_exec_time DESC
-LIMIT 20;
+FROM pg_stat_statements  
+ORDER BY total_exec_time DESC  
+LIMIT 20;  
 ```
 
 **Requêtes les plus fréquentes** :
@@ -297,9 +297,9 @@ SELECT
     substring(query, 1, 100) AS query_short,
     calls,
     ROUND(mean_exec_time::numeric, 2) AS avg_ms
-FROM pg_stat_statements
-ORDER BY calls DESC
-LIMIT 20;
+FROM pg_stat_statements  
+ORDER BY calls DESC  
+LIMIT 20;  
 ```
 
 #### Configuration Recommandée
@@ -337,11 +337,11 @@ EXPLAIN SELECT * FROM employes WHERE nom = 'Dupont';
 **Résultat** : Plan d'exécution **estimé** (sans exécuter réellement).
 
 **Avantages** :
-- ✅ Rapide (pas d'exécution)
+- ✅ Rapide (pas d'exécution)  
 - ✅ Sans risque (pas de modification)
 
 **Inconvénients** :
-- ❌ Estimations peuvent être inexactes
+- ❌ Estimations peuvent être inexactes  
 - ❌ Ne montre pas les temps réels
 
 #### EXPLAIN ANALYZE (Exécution Réelle)
@@ -353,11 +353,11 @@ EXPLAIN ANALYZE SELECT * FROM employes WHERE nom = 'Dupont';
 **Résultat** : Plan d'exécution avec **temps réels d'exécution**.
 
 **Avantages** :
-- ✅ Temps réels mesurés
+- ✅ Temps réels mesurés  
 - ✅ Détecte les écarts estimation vs réalité
 
 **Inconvénients** :
-- ❌ Exécute réellement la requête (attention aux DELETE/UPDATE)
+- ❌ Exécute réellement la requête (attention aux DELETE/UPDATE)  
 - ❌ Plus lent
 
 #### Options d'EXPLAIN
@@ -400,8 +400,8 @@ SELECT
     query,
     query_start,
     state_change
-FROM pg_stat_activity
-WHERE state = 'active'
+FROM pg_stat_activity  
+WHERE state = 'active'  
   AND query NOT LIKE '%pg_stat_activity%'
 ORDER BY query_start;
 ```
@@ -436,11 +436,11 @@ ALTER SYSTEM SET shared_preload_libraries = 'pg_stat_statements,auto_explain';
 -- Redémarrer PostgreSQL
 
 -- Configurer auto_explain
-ALTER SYSTEM SET auto_explain.log_min_duration = 1000;  -- 1 seconde
-ALTER SYSTEM SET auto_explain.log_analyze = on;
-ALTER SYSTEM SET auto_explain.log_buffers = on;
-ALTER SYSTEM SET auto_explain.log_timing = on;
-ALTER SYSTEM SET auto_explain.log_nested_statements = on;
+ALTER SYSTEM SET auto_explain.log_min_duration = 1000;  -- 1 seconde  
+ALTER SYSTEM SET auto_explain.log_analyze = on;  
+ALTER SYSTEM SET auto_explain.log_buffers = on;  
+ALTER SYSTEM SET auto_explain.log_timing = on;  
+ALTER SYSTEM SET auto_explain.log_nested_statements = on;  
 
 -- Recharger la configuration
 SELECT pg_reload_conf();
@@ -468,14 +468,14 @@ cpan App::pgBadger
 
 ```sql
 -- Configuration pour pgBadger
-ALTER SYSTEM SET log_min_duration_statement = 0;  -- Tout logger (ou 1000 pour > 1s)
-ALTER SYSTEM SET log_line_prefix = '%t [%p]: user=%u,db=%d,app=%a,client=%h ';
-ALTER SYSTEM SET log_checkpoints = on;
-ALTER SYSTEM SET log_connections = on;
-ALTER SYSTEM SET log_disconnections = on;
-ALTER SYSTEM SET log_lock_waits = on;
-ALTER SYSTEM SET log_temp_files = 0;
-ALTER SYSTEM SET log_autovacuum_min_duration = 0;
+ALTER SYSTEM SET log_min_duration_statement = 0;  -- Tout logger (ou 1000 pour > 1s)  
+ALTER SYSTEM SET log_line_prefix = '%t [%p]: user=%u,db=%d,app=%a,client=%h ';  
+ALTER SYSTEM SET log_checkpoints = on;  
+ALTER SYSTEM SET log_connections = on;  
+ALTER SYSTEM SET log_disconnections = on;  
+ALTER SYSTEM SET log_lock_waits = on;  
+ALTER SYSTEM SET log_temp_files = 0;  
+ALTER SYSTEM SET log_autovacuum_min_duration = 0;  
 
 SELECT pg_reload_conf();
 ```
@@ -519,8 +519,8 @@ Un plan d'exécution est un **arbre d'opérations** que PostgreSQL va effectuer 
 #### Exemple Simple
 
 ```sql
-EXPLAIN ANALYZE
-SELECT * FROM employes WHERE nom = 'Dupont';
+EXPLAIN ANALYZE  
+SELECT * FROM employes WHERE nom = 'Dupont';  
 ```
 
 **Résultat** :
@@ -529,8 +529,8 @@ Index Scan using idx_employes_nom on employes
   (cost=0.42..8.44 rows=1 width=128)
   (actual time=0.023..0.024 rows=1 loops=1)
   Index Cond: (nom = 'Dupont'::text)
-Planning Time: 0.123 ms
-Execution Time: 0.045 ms
+Planning Time: 0.123 ms  
+Execution Time: 0.045 ms  
 ```
 
 ### 5.2. Décryptage des Éléments
@@ -538,12 +538,12 @@ Execution Time: 0.045 ms
 #### Type de Scan
 
 **Types courants** :
-- `Seq Scan` : Balayage séquentiel (lit toute la table)
-- `Index Scan` : Utilise un index
-- `Index Only Scan` : Lit uniquement l'index (optimal)
-- `Bitmap Heap Scan` : Combine plusieurs index
-- `Nested Loop` : Jointure en boucles imbriquées
-- `Hash Join` : Jointure avec table de hachage
+- `Seq Scan` : Balayage séquentiel (lit toute la table)  
+- `Index Scan` : Utilise un index  
+- `Index Only Scan` : Lit uniquement l'index (optimal)  
+- `Bitmap Heap Scan` : Combine plusieurs index  
+- `Nested Loop` : Jointure en boucles imbriquées  
+- `Hash Join` : Jointure avec table de hachage  
 - `Merge Join` : Jointure par fusion (données triées)
 
 #### Cost (Coût Estimé)
@@ -555,8 +555,8 @@ cost=0.42..8.44
 ```
 
 **Interprétation** :
-- `start` : Coût avant de retourner la première ligne
-- `end` : Coût total pour toutes les lignes
+- `start` : Coût avant de retourner la première ligne  
+- `end` : Coût total pour toutes les lignes  
 - **Unité arbitraire** : Compare des coûts relatifs, pas des temps absolus
 
 **Règle** : Plus le coût est bas, mieux c'est.
@@ -639,11 +639,11 @@ Index Scan using idx_employes_nom on employes  (cost=0.42..8.44 rows=1 width=128
 ```
 
 **Avantages** :
-- ✅ Rapide pour retrouver peu de lignes
+- ✅ Rapide pour retrouver peu de lignes  
 - ✅ Utilise l'index efficacement
 
 **Inconvénients** :
-- ❌ Doit lire l'index **puis** la table
+- ❌ Doit lire l'index **puis** la table  
 - ❌ Peut être lent si beaucoup de lignes à retourner
 
 #### Index Only Scan
@@ -662,7 +662,7 @@ Index Only Scan using idx_employes_nom_include on employes
 - Visibility Map à jour (via VACUUM)
 
 **Avantages** :
-- ✅ Le plus rapide
+- ✅ Le plus rapide  
 - ✅ Minimal I/O
 
 **Solution** : Utiliser `INCLUDE` dans les index.
@@ -691,7 +691,7 @@ Bitmap Heap Scan on employes  (cost=12.34..234.56 rows=50 width=128)
 - Nombre modéré de lignes à retourner
 
 **Avantages** :
-- ✅ Combine efficacement plusieurs index
+- ✅ Combine efficacement plusieurs index  
 - ✅ Réduit les accès disque aléatoires
 
 ### 5.4. Types de Jointures
@@ -715,7 +715,7 @@ Nested Loop  (cost=0.42..234.56 rows=100 width=256)
 **Complexité** : O(n × m) où n et m sont les tailles des tables.
 
 **Avantages** :
-- ✅ Efficace pour petits datasets
+- ✅ Efficace pour petits datasets  
 - ✅ Commence à retourner des lignes immédiatement
 
 **Inconvénients** :
@@ -741,11 +741,11 @@ Hash Join  (cost=123.45..567.89 rows=1000 width=256)
 **Complexité** : O(n + m)
 
 **Avantages** :
-- ✅ Très efficace pour grandes tables
+- ✅ Très efficace pour grandes tables  
 - ✅ Linéaire
 
 **Inconvénients** :
-- ❌ Nécessite assez de mémoire (`work_mem`)
+- ❌ Nécessite assez de mémoire (`work_mem`)  
 - ❌ Ne retourne pas de lignes avant la fin de la construction du hash
 
 #### Merge Join
@@ -770,7 +770,7 @@ Merge Join  (cost=123.45..567.89 rows=1000 width=256)
 **Complexité** : O(n log n + m log m) pour les tris, puis O(n + m) pour la fusion
 
 **Avantages** :
-- ✅ Efficace si données déjà triées
+- ✅ Efficace si données déjà triées  
 - ✅ Pas de mémoire supplémentaire nécessaire
 
 **Inconvénients** :
@@ -788,8 +788,8 @@ Sort  (cost=123.45..126.78 rows=1000 width=128)
 ```
 
 **Méthodes de tri** :
-- `quicksort` : En mémoire (rapide)
-- `top-N heapsort` : Tri partiel (LIMIT)
+- `quicksort` : En mémoire (rapide)  
+- `top-N heapsort` : Tri partiel (LIMIT)  
 - `external merge` : Sur disque (lent, si dépassement de `work_mem`)
 
 **Si "external merge"** :
@@ -810,9 +810,9 @@ Buffers: shared hit=123 read=45 dirtied=10 written=5
 ```
 
 **Signification** :
-- `shared hit=123` : 123 pages lues depuis le **cache** (RAM) ✅
-- `read=45` : 45 pages lues depuis le **disque** ❌
-- `dirtied=10` : 10 pages modifiées
+- `shared hit=123` : 123 pages lues depuis le **cache** (RAM) ✅  
+- `read=45` : 45 pages lues depuis le **disque** ❌  
+- `dirtied=10` : 10 pages modifiées  
 - `written=5` : 5 pages écrites sur disque
 
 **Objectif** : Maximiser `hit`, minimiser `read`.
@@ -870,10 +870,10 @@ SELECT
     ROUND(mean_exec_time::numeric, 2) AS avg_ms,
     ROUND(stddev_exec_time::numeric, 2) AS stddev_ms,
     ROUND(total_exec_time::numeric, 2) AS total_ms
-FROM pg_stat_statements
-WHERE mean_exec_time > 100  -- Plus de 100 ms
-ORDER BY mean_exec_time DESC
-LIMIT 20;
+FROM pg_stat_statements  
+WHERE mean_exec_time > 100  -- Plus de 100 ms  
+ORDER BY mean_exec_time DESC  
+LIMIT 20;  
 ```
 
 **Top 20 requêtes les plus coûteuses (temps cumulé)** :
@@ -885,9 +885,9 @@ SELECT
     ROUND(mean_exec_time::numeric, 2) AS avg_ms,
     ROUND(total_exec_time::numeric, 2) AS total_ms,
     ROUND(100.0 * total_exec_time / SUM(total_exec_time) OVER (), 2) AS pct_total_time
-FROM pg_stat_statements
-ORDER BY total_exec_time DESC
-LIMIT 20;
+FROM pg_stat_statements  
+ORDER BY total_exec_time DESC  
+LIMIT 20;  
 ```
 
 **Requêtes avec forte variabilité** :
@@ -899,11 +899,11 @@ SELECT
     ROUND(mean_exec_time::numeric, 2) AS avg_ms,
     ROUND(stddev_exec_time::numeric, 2) AS stddev_ms,
     ROUND(stddev_exec_time / NULLIF(mean_exec_time, 0), 2) AS coefficient_variation
-FROM pg_stat_statements
-WHERE calls > 100
+FROM pg_stat_statements  
+WHERE calls > 100  
   AND stddev_exec_time > mean_exec_time  -- Variabilité élevée
-ORDER BY coefficient_variation DESC
-LIMIT 20;
+ORDER BY coefficient_variation DESC  
+LIMIT 20;  
 ```
 
 **Interprétation** : Variabilité élevée peut indiquer :
@@ -939,9 +939,9 @@ grep "duration:" /var/log/postgresql/postgresql-*.log | sort -t: -k2 -n
 
 **Configuration** (déjà vue) :
 ```sql
-ALTER SYSTEM SET auto_explain.log_min_duration = 1000;  -- 1 sec
-ALTER SYSTEM SET auto_explain.log_analyze = on;
-ALTER SYSTEM SET auto_explain.log_buffers = on;
+ALTER SYSTEM SET auto_explain.log_min_duration = 1000;  -- 1 sec  
+ALTER SYSTEM SET auto_explain.log_analyze = on;  
+ALTER SYSTEM SET auto_explain.log_buffers = on;  
 ```
 
 **Résultat** : Plans d'exécution des requêtes lentes dans les logs.
@@ -960,8 +960,8 @@ SELECT
     wait_event_type,
     wait_event,
     substring(query, 1, 100) AS query_short
-FROM pg_stat_activity
-WHERE state = 'active'
+FROM pg_stat_activity  
+WHERE state = 'active'  
   AND query_start < NOW() - INTERVAL '5 seconds'
   AND query NOT LIKE '%pg_stat_activity%'
 ORDER BY query_start;
@@ -996,8 +996,8 @@ Seq Scan on large_table  (cost=0.00..123456.78 rows=1000000 width=128)
 - Statistiques obsolètes
 
 **Solutions** :
-1. Créer un index approprié
-2. Mettre à jour les statistiques (`ANALYZE`)
+1. Créer un index approprié  
+2. Mettre à jour les statistiques (`ANALYZE`)  
 3. Vérifier `random_page_cost`
 
 **Exemple** :
@@ -1044,9 +1044,9 @@ WITH avg_by_client AS (
     FROM commandes
     GROUP BY client_id
 )
-SELECT c.id, c.total, abc.avg_total AS avg_client
-FROM commandes c
-JOIN avg_by_client abc ON abc.client_id = c.client_id;
+SELECT c.id, c.total, abc.avg_total AS avg_client  
+FROM commandes c  
+JOIN avg_by_client abc ON abc.client_id = c.client_id;  
 ```
 
 ### 7.3. Pattern 3 : Sorts avec External Merge (Disque)
@@ -1063,9 +1063,9 @@ Sort  (cost=123.45..126.78 rows=100000 width=128)
 **Cause** : `work_mem` trop faible.
 
 **Solutions** :
-1. Augmenter `work_mem` globalement
-2. Augmenter `work_mem` pour cette session
-3. Limiter les résultats (LIMIT)
+1. Augmenter `work_mem` globalement  
+2. Augmenter `work_mem` pour cette session  
+3. Limiter les résultats (LIMIT)  
 4. Utiliser un index pour éviter le tri
 
 **Exemple** :
@@ -1113,8 +1113,8 @@ SET enable_nestloop = on;
 **Problème** : L'application récupère **toutes les lignes** alors qu'elle n'en a besoin que d'une partie.
 
 **Solutions** :
-1. Ajouter un `LIMIT`
-2. Paginer les résultats
+1. Ajouter un `LIMIT`  
+2. Paginer les résultats  
 3. Filtrer davantage avec `WHERE`
 
 **Exemple** :
@@ -1123,9 +1123,9 @@ SET enable_nestloop = on;
 SELECT * FROM logs;
 
 -- Bon : Pagination
-SELECT * FROM logs
-ORDER BY timestamp DESC
-LIMIT 100 OFFSET 0;
+SELECT * FROM logs  
+ORDER BY timestamp DESC  
+LIMIT 100 OFFSET 0;  
 ```
 
 ### 7.6. Pattern 6 : Fonctions Non Indexées
@@ -1175,8 +1175,8 @@ SELECT
     tablename,
     last_analyze,
     last_autoanalyze
-FROM pg_stat_user_tables
-WHERE tablename = 'commandes';
+FROM pg_stat_user_tables  
+WHERE tablename = 'commandes';  
 ```
 
 ---
@@ -1199,8 +1199,8 @@ ANALYZE table_name;
 -- Pour SSD
 SHOW random_page_cost;  -- Si 4.0, trop haut
 
-ALTER SYSTEM SET random_page_cost = 1.1;
-SELECT pg_reload_conf();
+ALTER SYSTEM SET random_page_cost = 1.1;  
+SELECT pg_reload_conf();  
 ```
 
 #### Cause 1c : Requête Retourne > 10% de la Table
@@ -1229,7 +1229,7 @@ SELECT * FROM commandes WHERE id = 123;  -- integer
 **Causes possibles** :
 
 #### Cause 2a : Cache Froid vs Cache Chaud
-- **Cache froid** : Première exécution, données sur disque (lent)
+- **Cache froid** : Première exécution, données sur disque (lent)  
 - **Cache chaud** : Données en mémoire (rapide)
 
 **Solution** : Augmenter `shared_buffers` ou accepter cette variabilité.
@@ -1246,9 +1246,9 @@ SELECT
     blocking_activity.usename AS blocking_user,
     blocked_activity.query AS blocked_statement,
     blocking_activity.query AS blocking_statement
-FROM pg_catalog.pg_locks blocked_locks
-JOIN pg_catalog.pg_stat_activity blocked_activity ON blocked_activity.pid = blocked_locks.pid
-JOIN pg_catalog.pg_locks blocking_locks
+FROM pg_catalog.pg_locks blocked_locks  
+JOIN pg_catalog.pg_stat_activity blocked_activity ON blocked_activity.pid = blocked_locks.pid  
+JOIN pg_catalog.pg_locks blocking_locks  
     ON blocking_locks.locktype = blocked_locks.locktype
     AND blocking_locks.database IS NOT DISTINCT FROM blocked_locks.database
     AND blocking_locks.relation IS NOT DISTINCT FROM blocked_locks.relation
@@ -1260,8 +1260,8 @@ JOIN pg_catalog.pg_locks blocking_locks
     AND blocking_locks.objid IS NOT DISTINCT FROM blocked_locks.objid
     AND blocking_locks.objsubid IS NOT DISTINCT FROM blocked_locks.objsubid
     AND blocking_locks.pid != blocked_locks.pid
-JOIN pg_catalog.pg_stat_activity blocking_activity ON blocking_activity.pid = blocking_locks.pid
-WHERE NOT blocked_locks.granted;
+JOIN pg_catalog.pg_stat_activity blocking_activity ON blocking_activity.pid = blocking_locks.pid  
+WHERE NOT blocked_locks.granted;  
 ```
 
 **Solution** : Optimiser les transactions concurrentes ou réduire les locks.
@@ -1313,22 +1313,22 @@ SELECT * FROM huge_table ORDER BY random();  -- Très coûteux
 
 **Exemple** :
 ```
-Transaction 1:
-BEGIN;
-UPDATE commandes SET total = 100 WHERE id = 1;  -- Lock commandes(1)
-UPDATE clients SET credit = 50 WHERE id = 10;   -- Attend lock clients(10)
+Transaction 1:  
+BEGIN;  
+UPDATE commandes SET total = 100 WHERE id = 1;  -- Lock commandes(1)  
+UPDATE clients SET credit = 50 WHERE id = 10;   -- Attend lock clients(10)  
 
-Transaction 2:
-BEGIN;
-UPDATE clients SET credit = 50 WHERE id = 10;   -- Lock clients(10)
-UPDATE commandes SET total = 100 WHERE id = 1;  -- Attend lock commandes(1)
+Transaction 2:  
+BEGIN;  
+UPDATE clients SET credit = 50 WHERE id = 10;   -- Lock clients(10)  
+UPDATE commandes SET total = 100 WHERE id = 1;  -- Attend lock commandes(1)  
 
 → DEADLOCK
 ```
 
 **Solutions** :
-1. **Ordonner les verrous** : Toujours acquérir les locks dans le même ordre
-2. **Transactions courtes** : Réduire la durée des transactions
+1. **Ordonner les verrous** : Toujours acquérir les locks dans le même ordre  
+2. **Transactions courtes** : Réduire la durée des transactions  
 3. **Isolation niveau** : Ajuster le niveau d'isolation si approprié
 
 ### 8.5. Problème 5 : Planificateur Choisit le Mauvais Plan
@@ -1340,8 +1340,8 @@ UPDATE commandes SET total = 100 WHERE id = 1;  -- Attend lock commandes(1)
 #### Cause 5a : Coûts Mal Configurés
 ```sql
 -- Vérifier random_page_cost, seq_page_cost
-SHOW random_page_cost;
-SHOW seq_page_cost;
+SHOW random_page_cost;  
+SHOW seq_page_cost;  
 ```
 
 #### Cause 5b : Statistiques Incorrectes
@@ -1352,10 +1352,10 @@ ANALYZE table_name;
 #### Cause 5c : Paramètres de Planification
 ```sql
 -- Augmenter les ressources allouées au planificateur
-SET random_page_cost = 1.1;  -- SSD
-SET cpu_tuple_cost = 0.01;
-SET cpu_index_tuple_cost = 0.005;
-SET cpu_operator_cost = 0.0025;
+SET random_page_cost = 1.1;  -- SSD  
+SET cpu_tuple_cost = 0.01;  
+SET cpu_index_tuple_cost = 0.005;  
+SET cpu_operator_cost = 0.0025;  
 ```
 
 **Solution de dernier recours** : Hints (non natif dans PostgreSQL, mais extensions existent comme `pg_hint_plan`).
@@ -1367,10 +1367,10 @@ SET cpu_operator_cost = 0.0025;
 ### 9.1. Principe Général d'Optimisation
 
 **Ordre de priorité** :
-1. **Réduire les données scannées** : Filtrer tôt avec WHERE
-2. **Utiliser les index** : Créer index appropriés
-3. **Éviter les opérations coûteuses** : Sous-requêtes corrélées, fonctions non indexées
-4. **Simplifier les jointures** : Moins de tables jointes = plus rapide
+1. **Réduire les données scannées** : Filtrer tôt avec WHERE  
+2. **Utiliser les index** : Créer index appropriés  
+3. **Éviter les opérations coûteuses** : Sous-requêtes corrélées, fonctions non indexées  
+4. **Simplifier les jointures** : Moins de tables jointes = plus rapide  
 5. **Limiter les résultats** : LIMIT, pagination
 
 ### 9.2. Technique 1 : Réécrire les Sous-Requêtes
@@ -1398,8 +1398,8 @@ SELECT
     c.id,
     c.nom,
     COALESCE(cmd_counts.nb_commandes, 0) AS nb_commandes
-FROM clients c
-LEFT JOIN (
+FROM clients c  
+LEFT JOIN (  
     SELECT client_id, COUNT(*) AS nb_commandes
     FROM commandes
     GROUP BY client_id
@@ -1414,8 +1414,8 @@ LEFT JOIN (
 
 ```sql
 -- Potentiellement lent
-SELECT * FROM clients
-WHERE id IN (SELECT client_id FROM commandes WHERE total > 1000);
+SELECT * FROM clients  
+WHERE id IN (SELECT client_id FROM commandes WHERE total > 1000);  
 ```
 
 **Problème** : Si la sous-requête retourne beaucoup de lignes, `IN` peut être lent.
@@ -1424,8 +1424,8 @@ WHERE id IN (SELECT client_id FROM commandes WHERE total > 1000);
 
 ```sql
 -- Souvent plus rapide
-SELECT * FROM clients c
-WHERE EXISTS (
+SELECT * FROM clients c  
+WHERE EXISTS (  
     SELECT 1 FROM commandes cmd
     WHERE cmd.client_id = c.id AND cmd.total > 1000
 );
@@ -1437,10 +1437,10 @@ WHERE EXISTS (
 
 ```sql
 -- Équivalent avec JOIN
-SELECT DISTINCT c.*
-FROM clients c
-JOIN commandes cmd ON cmd.client_id = c.id
-WHERE cmd.total > 1000;
+SELECT DISTINCT c.*  
+FROM clients c  
+JOIN commandes cmd ON cmd.client_id = c.id  
+WHERE cmd.total > 1000;  
 ```
 
 **Note** : Le `DISTINCT` est nécessaire pour éviter les doublons.
@@ -1465,14 +1465,14 @@ WITH commandes_recentes AS (
     WHERE date_commande > CURRENT_DATE - INTERVAL '30 days'
     GROUP BY client_id
 )
-SELECT c.nom, cr.nb
-FROM clients c
-JOIN commandes_recentes cr ON cr.client_id = c.id;
+SELECT c.nom, cr.nb  
+FROM clients c  
+JOIN commandes_recentes cr ON cr.client_id = c.id;  
 ```
 
 **Avantages** :
-- ✅ Plus lisible
-- ✅ Peut être référencé plusieurs fois
+- ✅ Plus lisible  
+- ✅ Peut être référencé plusieurs fois  
 - ✅ Facilite la maintenance
 
 #### CTE MATERIALIZED (PostgreSQL 12+)
@@ -1520,8 +1520,8 @@ SELECT id, nom, prenom FROM employes WHERE id = 123;
 ```
 
 **Avantages** :
-- ✅ Moins de données transférées
-- ✅ Permet Index Only Scan si covering index
+- ✅ Moins de données transférées  
+- ✅ Permet Index Only Scan si covering index  
 - ✅ Plus rapide
 
 ### 9.6. Technique 5 : Utiliser LIMIT et Pagination
@@ -1539,14 +1539,14 @@ SELECT * FROM logs ORDER BY timestamp DESC;
 
 ```sql
 -- Page 1
-SELECT * FROM logs
-ORDER BY timestamp DESC
-LIMIT 100 OFFSET 0;
+SELECT * FROM logs  
+ORDER BY timestamp DESC  
+LIMIT 100 OFFSET 0;  
 
 -- Page 2
-SELECT * FROM logs
-ORDER BY timestamp DESC
-LIMIT 100 OFFSET 100;
+SELECT * FROM logs  
+ORDER BY timestamp DESC  
+LIMIT 100 OFFSET 100;  
 ```
 
 **Limite de OFFSET** : Sur grandes offsets (OFFSET 1000000), devient lent.
@@ -1555,21 +1555,21 @@ LIMIT 100 OFFSET 100;
 
 ```sql
 -- Page 1
-SELECT * FROM logs
-ORDER BY timestamp DESC
-LIMIT 100;
+SELECT * FROM logs  
+ORDER BY timestamp DESC  
+LIMIT 100;  
 
 -- Récupérer le dernier timestamp (ex: 2025-11-21 10:00:00)
 
 -- Page 2
-SELECT * FROM logs
-WHERE timestamp < '2025-11-21 10:00:00'
-ORDER BY timestamp DESC
-LIMIT 100;
+SELECT * FROM logs  
+WHERE timestamp < '2025-11-21 10:00:00'  
+ORDER BY timestamp DESC  
+LIMIT 100;  
 ```
 
 **Avantages** :
-- ✅ Performances constantes même sur grandes pages
+- ✅ Performances constantes même sur grandes pages  
 - ✅ Utilise l'index efficacement
 
 ### 9.7. Technique 6 : Batching (Lots)
@@ -1598,8 +1598,8 @@ SELECT * FROM produits WHERE id = ANY(ARRAY[1, 2, 3, ..., 1000]);
 #### Problème : Parsing Répété
 
 Chaque exécution de requête :
-1. Parse la requête
-2. Planifie
+1. Parse la requête  
+2. Planifie  
 3. Exécute
 
 **Pour des requêtes répétées**, le parsing est du gaspillage.
@@ -1612,17 +1612,17 @@ PREPARE get_employe (int) AS
     SELECT * FROM employes WHERE id = $1;
 
 -- Exécuter (pas de parsing)
-EXECUTE get_employe(123);
-EXECUTE get_employe(456);
-EXECUTE get_employe(789);
+EXECUTE get_employe(123);  
+EXECUTE get_employe(456);  
+EXECUTE get_employe(789);  
 
 -- Libérer
 DEALLOCATE get_employe;
 ```
 
 **Avantages** :
-- ✅ Pas de parsing répété
-- ✅ Plan d'exécution réutilisé (parfois)
+- ✅ Pas de parsing répété  
+- ✅ Plan d'exécution réutilisé (parfois)  
 - ✅ Plus rapide
 
 **Utilisation typique** : Dans les drivers (psycopg3, pg pour Node.js, etc.).
@@ -1657,9 +1657,9 @@ for client in clients:
 SELECT * FROM clients;  -- Retourne 1000 clients
 
 -- Requêtes 2 à 1001
-SELECT * FROM commandes WHERE client_id = 1;
-SELECT * FROM commandes WHERE client_id = 2;
-SELECT * FROM commandes WHERE client_id = 3;
+SELECT * FROM commandes WHERE client_id = 1;  
+SELECT * FROM commandes WHERE client_id = 2;  
+SELECT * FROM commandes WHERE client_id = 3;  
 ...
 SELECT * FROM commandes WHERE client_id = 1000;
 ```
@@ -1675,15 +1675,15 @@ Beaucoup d'appels de la même requête avec paramètres différents :
 SELECT
     query,
     calls
-FROM pg_stat_statements
-WHERE calls > 1000
-ORDER BY calls DESC;
+FROM pg_stat_statements  
+WHERE calls > 1000  
+ORDER BY calls DESC;  
 ```
 
 Si vous voyez :
 ```
-query: SELECT * FROM commandes WHERE client_id = $1
-calls: 10000
+query: SELECT * FROM commandes WHERE client_id = $1  
+calls: 10000  
 ```
 
 **Suspect de N+1**.
@@ -1691,9 +1691,9 @@ calls: 10000
 #### Dans les Logs
 
 ```
-SELECT * FROM commandes WHERE client_id = 1;
-SELECT * FROM commandes WHERE client_id = 2;
-SELECT * FROM commandes WHERE client_id = 3;
+SELECT * FROM commandes WHERE client_id = 1;  
+SELECT * FROM commandes WHERE client_id = 2;  
+SELECT * FROM commandes WHERE client_id = 3;  
 ...
 ```
 
@@ -1716,9 +1716,9 @@ for client in clients:
 **SQL généré** :
 ```sql
 -- 1 seule requête avec JOIN
-SELECT clients.*, commandes.*
-FROM clients
-LEFT JOIN commandes ON commandes.client_id = clients.id;
+SELECT clients.*, commandes.*  
+FROM clients  
+LEFT JOIN commandes ON commandes.client_id = clients.id;  
 ```
 
 **Résultat** : **1 requête** au lieu de 1001.
@@ -1727,15 +1727,15 @@ LEFT JOIN commandes ON commandes.client_id = clients.id;
 
 ```python
 # 1. Récupérer les clients
-clients = Client.query.all()
-client_ids = [c.id for c in clients]
+clients = Client.query.all()  
+client_ids = [c.id for c in clients]  
 
 # 2. Récupérer toutes les commandes en une seule fois
 commandes = Commande.query.filter(Commande.client_id.in_(client_ids)).all()
 
 # 3. Grouper en mémoire
-commandes_by_client = {}
-for cmd in commandes:
+commandes_by_client = {}  
+for cmd in commandes:  
     commandes_by_client.setdefault(cmd.client_id, []).append(cmd)
 
 # 4. Utiliser
@@ -1763,8 +1763,8 @@ SELECT
     c.id,
     c.nom,
     cmd.*
-FROM clients c
-LEFT JOIN LATERAL (
+FROM clients c  
+LEFT JOIN LATERAL (  
     SELECT *
     FROM commandes
     WHERE client_id = c.id
@@ -1806,19 +1806,19 @@ Le planificateur PostgreSQL essaie de choisir le meilleur ordre, mais comprendre
 -- produits : 100,000 lignes
 
 -- Requête
-SELECT *
-FROM clients c
-JOIN commandes cmd ON cmd.client_id = c.id
-JOIN produits p ON p.id = cmd.produit_id
-WHERE c.pays = 'France'       -- Réduit à 100,000 clients
+SELECT *  
+FROM clients c  
+JOIN commandes cmd ON cmd.client_id = c.id  
+JOIN produits p ON p.id = cmd.produit_id  
+WHERE c.pays = 'France'       -- Réduit à 100,000 clients  
   AND cmd.statut = 'validé'   -- Réduit à 1,000,000 commandes
   AND p.categorie = 'A';      -- Réduit à 10,000 produits
 ```
 
 **Ordre optimal** :
-1. Filtrer `produits` (100,000 → 10,000)
-2. Filtrer `commandes` (10,000,000 → 1,000,000)
-3. Joindre avec `clients` filtrés (1,000,000 → 100,000)
+1. Filtrer `produits` (100,000 → 10,000)  
+2. Filtrer `commandes` (10,000,000 → 1,000,000)  
+3. Joindre avec `clients` filtrés (1,000,000 → 100,000)  
 4. Joindre les résultats
 
 **Planificateur PostgreSQL** : Calcule automatiquement l'ordre optimal (généralement).
@@ -1829,9 +1829,9 @@ WHERE c.pays = 'France'       -- Réduit à 100,000 clients
 
 ```sql
 -- ERREUR : Oubli de condition de jointure
-SELECT *
-FROM clients, commandes
-WHERE clients.pays = 'France';
+SELECT *  
+FROM clients, commandes  
+WHERE clients.pays = 'France';  
 ```
 
 **Résultat** : Produit cartésien = 1,000,000 clients × 10,000,000 commandes = 10,000,000,000,000 lignes ! 💥
@@ -1840,10 +1840,10 @@ WHERE clients.pays = 'France';
 
 ```sql
 -- CORRECT
-SELECT *
-FROM clients c
-JOIN commandes cmd ON cmd.client_id = c.id
-WHERE c.pays = 'France';
+SELECT *  
+FROM clients c  
+JOIN commandes cmd ON cmd.client_id = c.id  
+WHERE c.pays = 'France';  
 ```
 
 ### 11.3. Utiliser les Bons Types de Jointures
@@ -1852,14 +1852,14 @@ WHERE c.pays = 'France';
 
 ```sql
 -- INNER JOIN : Uniquement les clients avec commandes
-SELECT c.nom, cmd.total
-FROM clients c
-INNER JOIN commandes cmd ON cmd.client_id = c.id;
+SELECT c.nom, cmd.total  
+FROM clients c  
+INNER JOIN commandes cmd ON cmd.client_id = c.id;  
 
 -- LEFT JOIN : Tous les clients, même sans commandes
-SELECT c.nom, COALESCE(cmd.total, 0) AS total
-FROM clients c
-LEFT JOIN commandes cmd ON cmd.client_id = c.id;
+SELECT c.nom, COALESCE(cmd.total, 0) AS total  
+FROM clients c  
+LEFT JOIN commandes cmd ON cmd.client_id = c.id;  
 ```
 
 **Performance** : `INNER JOIN` est souvent plus rapide (moins de lignes).
@@ -1872,9 +1872,9 @@ LEFT JOIN commandes cmd ON cmd.client_id = c.id;
 
 ```sql
 -- Jointure sur client_id
-SELECT *
-FROM commandes cmd
-JOIN clients c ON c.id = cmd.client_id;
+SELECT *  
+FROM commandes cmd  
+JOIN clients c ON c.id = cmd.client_id;  
 
 -- Index nécessaires :
 -- clients.id → PRIMARY KEY (auto-indexé)
@@ -1891,10 +1891,10 @@ CREATE INDEX idx_commandes_client ON commandes(client_id);
 
 ```sql
 -- Jointure puis filtrage
-SELECT c.nom, cmd.total
-FROM clients c
-JOIN commandes cmd ON cmd.client_id = c.id
-WHERE c.pays = 'France'
+SELECT c.nom, cmd.total  
+FROM clients c  
+JOIN commandes cmd ON cmd.client_id = c.id  
+WHERE c.pays = 'France'  
   AND cmd.date_commande > '2025-01-01';
 ```
 
@@ -1904,8 +1904,8 @@ WHERE c.pays = 'France'
 
 ```sql
 -- Filtrage puis jointure
-SELECT c.nom, cmd.total
-FROM (
+SELECT c.nom, cmd.total  
+FROM (  
     SELECT * FROM clients WHERE pays = 'France'
 ) c
 JOIN (
@@ -1926,8 +1926,8 @@ SELECT
     c.nom,
     cmd.date_commande,
     cmd.total
-FROM clients c
-LEFT JOIN LATERAL (
+FROM clients c  
+LEFT JOIN LATERAL (  
     SELECT *
     FROM commandes
     WHERE client_id = c.id
@@ -1948,9 +1948,9 @@ LEFT JOIN LATERAL (
 
 ```sql
 -- Agrégation sur colonne non indexée
-SELECT client_id, SUM(total)
-FROM commandes
-GROUP BY client_id;
+SELECT client_id, SUM(total)  
+FROM commandes  
+GROUP BY client_id;  
 ```
 
 **EXPLAIN peut montrer** :
@@ -1976,14 +1976,14 @@ Pour des agrégations **très coûteuses** et **peu changeantes** :
 
 ```sql
 -- Vue matérialisée
-CREATE MATERIALIZED VIEW stats_clients AS
-SELECT
+CREATE MATERIALIZED VIEW stats_clients AS  
+SELECT  
     client_id,
     COUNT(*) AS nb_commandes,
     SUM(total) AS total_depense,
     AVG(total) AS moyenne_commande
-FROM commandes
-GROUP BY client_id;
+FROM commandes  
+GROUP BY client_id;  
 
 -- Index sur la vue
 CREATE INDEX idx_stats_clients ON stats_clients(client_id);
@@ -1996,11 +1996,11 @@ REFRESH MATERIALIZED VIEW CONCURRENTLY stats_clients;
 ```
 
 **Avantages** :
-- ✅ Requête instantanée (données pré-calculées)
+- ✅ Requête instantanée (données pré-calculées)  
 - ✅ Pas de recalcul à chaque fois
 
 **Inconvénients** :
-- ❌ Données pas en temps réel
+- ❌ Données pas en temps réel  
 - ❌ Nécessite rafraîchissement manuel ou planifié
 
 ### 12.3. Utiliser FILTER pour Agrégations Conditionnelles
@@ -2012,8 +2012,8 @@ SELECT
     client_id,
     SUM(CASE WHEN statut = 'validé' THEN total ELSE 0 END) AS total_valide,
     SUM(CASE WHEN statut = 'annulé' THEN total ELSE 0 END) AS total_annule
-FROM commandes
-GROUP BY client_id;
+FROM commandes  
+GROUP BY client_id;  
 ```
 
 #### Optimal : FILTER Clause
@@ -2023,12 +2023,12 @@ SELECT
     client_id,
     SUM(total) FILTER (WHERE statut = 'validé') AS total_valide,
     SUM(total) FILTER (WHERE statut = 'annulé') AS total_annule
-FROM commandes
-GROUP BY client_id;
+FROM commandes  
+GROUP BY client_id;  
 ```
 
 **Avantages** :
-- ✅ Plus lisible
+- ✅ Plus lisible  
 - ✅ Légèrement plus performant
 
 ### 12.4. Window Functions vs Sous-Requêtes
@@ -2058,17 +2058,17 @@ FROM commandes;
 ```
 
 **Avantages** :
-- ✅ Un seul scan de la table
+- ✅ Un seul scan de la table  
 - ✅ Plus efficace
 
 ### 12.5. Limiter les Agrégations avec HAVING
 
 ```sql
 -- Agrégation puis filtrage
-SELECT client_id, COUNT(*) AS nb
-FROM commandes
-GROUP BY client_id
-HAVING COUNT(*) > 10;
+SELECT client_id, COUNT(*) AS nb  
+FROM commandes  
+GROUP BY client_id  
+HAVING COUNT(*) > 10;  
 ```
 
 **Optimal** : Le planificateur filtre efficacement après l'agrégation.
@@ -2129,10 +2129,10 @@ SELECT * FROM produits WHERE id = ANY(ARRAY[1, 2, 3]);
 **Exemple** :
 ```sql
 -- Requête avec self-join redondant
-SELECT e1.nom, e1.salaire
-FROM employes e1
-JOIN employes e2 ON e1.id = e2.id
-WHERE e1.salaire > 50000;
+SELECT e1.nom, e1.salaire  
+FROM employes e1  
+JOIN employes e2 ON e1.id = e2.id  
+WHERE e1.salaire > 50000;  
 ```
 
 **PostgreSQL 18** : Simplifie automatiquement en :
@@ -2152,9 +2152,9 @@ SELECT nom, salaire FROM employes WHERE salaire > 50000;
 
 **Exemple** :
 ```sql
-SELECT DISTINCT ON (client_id, produit_id) *
-FROM ventes
-ORDER BY client_id, produit_id, date_vente DESC;
+SELECT DISTINCT ON (client_id, produit_id) *  
+FROM ventes  
+ORDER BY client_id, produit_id, date_vente DESC;  
 ```
 
 **PostgreSQL 18** : Réorganise automatiquement pour utiliser les index efficacement.
@@ -2189,10 +2189,10 @@ EXPLAIN (ANALYZE) SELECT ...;
 ```sql
 SELECT
     ROUND(mean_exec_time::numeric, 2) AS avg_response_ms
-FROM pg_stat_statements
-WHERE query LIKE '%SELECT%'
-ORDER BY mean_exec_time DESC
-LIMIT 1;
+FROM pg_stat_statements  
+WHERE query LIKE '%SELECT%'  
+ORDER BY mean_exec_time DESC  
+LIMIT 1;  
 ```
 
 **Alerte** : Si > 100 ms pour requêtes simples.
@@ -2200,9 +2200,9 @@ LIMIT 1;
 #### Métrique 2 : Requêtes Lentes (> 1 sec)
 
 ```sql
-SELECT COUNT(*)
-FROM pg_stat_statements
-WHERE mean_exec_time > 1000;
+SELECT COUNT(*)  
+FROM pg_stat_statements  
+WHERE mean_exec_time > 1000;  
 ```
 
 **Alerte** : Si > 10 requêtes lentes.
@@ -2220,9 +2220,9 @@ FROM pg_stat_statements;
 #### Métrique 4 : Requêtes Actives
 
 ```sql
-SELECT COUNT(*)
-FROM pg_stat_activity
-WHERE state = 'active'
+SELECT COUNT(*)  
+FROM pg_stat_activity  
+WHERE state = 'active'  
   AND query NOT LIKE '%pg_stat_activity%';
 ```
 
@@ -2231,9 +2231,9 @@ WHERE state = 'active'
 #### Métrique 5 : Requêtes Bloquées
 
 ```sql
-SELECT COUNT(*)
-FROM pg_stat_activity
-WHERE wait_event_type IS NOT NULL
+SELECT COUNT(*)  
+FROM pg_stat_activity  
+WHERE wait_event_type IS NOT NULL  
   AND state = 'active';
 ```
 
@@ -2275,9 +2275,9 @@ WHERE wait_event_type IS NOT NULL
 
 **Configuration logs** :
 ```sql
-ALTER SYSTEM SET log_min_duration_statement = 1000;  -- 1 sec
-ALTER SYSTEM SET log_line_prefix = '%t [%p]: user=%u,db=%d,app=%a ';
-ALTER SYSTEM SET log_lock_waits = on;
+ALTER SYSTEM SET log_min_duration_statement = 1000;  -- 1 sec  
+ALTER SYSTEM SET log_line_prefix = '%t [%p]: user=%u,db=%d,app=%a ';  
+ALTER SYSTEM SET log_lock_waits = on;  
 ```
 
 **Analyse quotidienne avec pgBadger** :
@@ -2293,67 +2293,67 @@ pgbadger /var/log/postgresql/postgresql-$(date -d yesterday +%Y-%m-%d).log \
 
 ### 15.1. Phase 1 : Préparation
 
-- [ ] Installer `pg_stat_statements`
-- [ ] Configurer `auto_explain`
-- [ ] Activer logs avec `log_min_duration_statement`
-- [ ] Configurer monitoring (Prometheus/Grafana)
+- [ ] Installer `pg_stat_statements`  
+- [ ] Configurer `auto_explain`  
+- [ ] Activer logs avec `log_min_duration_statement`  
+- [ ] Configurer monitoring (Prometheus/Grafana)  
 - [ ] Documenter l'architecture et les tables principales
 
 ### 15.2. Phase 2 : Collecte de Données
 
-- [ ] Collecter statistiques pendant 1-7 jours (`pg_stat_statements`)
-- [ ] Générer rapport pgBadger
-- [ ] Exporter les métriques de performance
+- [ ] Collecter statistiques pendant 1-7 jours (`pg_stat_statements`)  
+- [ ] Générer rapport pgBadger  
+- [ ] Exporter les métriques de performance  
 - [ ] Identifier les heures de pointe
 
 ### 15.3. Phase 3 : Identification des Requêtes Problématiques
 
-- [ ] Top 20 requêtes les plus lentes (moyenne)
-- [ ] Top 20 requêtes les plus coûteuses (temps total)
-- [ ] Requêtes avec forte variabilité
-- [ ] Requêtes générant beaucoup de WAL
+- [ ] Top 20 requêtes les plus lentes (moyenne)  
+- [ ] Top 20 requêtes les plus coûteuses (temps total)  
+- [ ] Requêtes avec forte variabilité  
+- [ ] Requêtes générant beaucoup de WAL  
 - [ ] Requêtes avec locks fréquents
 
 ### 15.4. Phase 4 : Analyse Détaillée
 
 Pour chaque requête problématique :
 
-- [ ] Exécuter `EXPLAIN (ANALYZE, BUFFERS)`
-- [ ] Identifier le type de scan (Seq Scan sur grande table ?)
-- [ ] Vérifier utilisation des index
-- [ ] Mesurer cache hit ratio
-- [ ] Détecter sous-requêtes corrélées
+- [ ] Exécuter `EXPLAIN (ANALYZE, BUFFERS)`  
+- [ ] Identifier le type de scan (Seq Scan sur grande table ?)  
+- [ ] Vérifier utilisation des index  
+- [ ] Mesurer cache hit ratio  
+- [ ] Détecter sous-requêtes corrélées  
 - [ ] Rechercher N+1 patterns
 
 ### 15.5. Phase 5 : Optimisation
 
-- [ ] Créer index manquants
-- [ ] Réécrire requêtes inefficaces
-- [ ] Implémenter eager loading (anti N+1)
-- [ ] Ajouter LIMIT/pagination
-- [ ] Optimiser jointures
+- [ ] Créer index manquants  
+- [ ] Réécrire requêtes inefficaces  
+- [ ] Implémenter eager loading (anti N+1)  
+- [ ] Ajouter LIMIT/pagination  
+- [ ] Optimiser jointures  
 - [ ] Remplacer sous-requêtes par CTE/JOIN
 
 ### 15.6. Phase 6 : Validation
 
-- [ ] Mesurer performances avant/après
-- [ ] Vérifier plans d'exécution (EXPLAIN)
-- [ ] Tester en environnement de staging
-- [ ] Valider sous charge (load testing)
+- [ ] Mesurer performances avant/après  
+- [ ] Vérifier plans d'exécution (EXPLAIN)  
+- [ ] Tester en environnement de staging  
+- [ ] Valider sous charge (load testing)  
 - [ ] Vérifier pas de régression sur autres requêtes
 
 ### 15.7. Phase 7 : Documentation
 
-- [ ] Documenter chaque optimisation
-- [ ] Créer runbook pour requêtes critiques
-- [ ] Définir SLA par type de requête
+- [ ] Documenter chaque optimisation  
+- [ ] Créer runbook pour requêtes critiques  
+- [ ] Définir SLA par type de requête  
 - [ ] Partager best practices avec l'équipe
 
 ### 15.8. Phase 8 : Monitoring Continu
 
-- [ ] Mettre en place alertes
-- [ ] Planifier audits réguliers (mensuel/trimestriel)
-- [ ] Suivre évolution des métriques
+- [ ] Mettre en place alertes  
+- [ ] Planifier audits réguliers (mensuel/trimestriel)  
+- [ ] Suivre évolution des métriques  
 - [ ] Réviser stratégie selon croissance
 
 ---
@@ -2371,16 +2371,16 @@ SELECT
     c.nom,
     COUNT(cmd.id) AS nb_commandes,
     SUM(cmd.total) AS total_depense
-FROM clients c
-LEFT JOIN commandes cmd ON cmd.client_id = c.id
-WHERE cmd.date_commande > CURRENT_DATE - INTERVAL '30 days'
-GROUP BY c.id, c.nom
-ORDER BY total_depense DESC
-LIMIT 10;
+FROM clients c  
+LEFT JOIN commandes cmd ON cmd.client_id = c.id  
+WHERE cmd.date_commande > CURRENT_DATE - INTERVAL '30 days'  
+GROUP BY c.id, c.nom  
+ORDER BY total_depense DESC  
+LIMIT 10;  
 ```
 
 **EXPLAIN montre** :
-- `Seq Scan` sur `commandes`
+- `Seq Scan` sur `commandes`  
 - `HashAggregate` coûteux
 - Tri (`Sort`) sur disque (external merge)
 
@@ -2404,11 +2404,11 @@ WITH recent_sales AS (
     WHERE date_commande > CURRENT_DATE - INTERVAL '30 days'
     GROUP BY client_id
 )
-SELECT c.nom, rs.nb AS nb_commandes, rs.total AS total_depense
-FROM recent_sales rs
-JOIN clients c ON c.id = rs.client_id
-ORDER BY rs.total DESC
-LIMIT 10;
+SELECT c.nom, rs.nb AS nb_commandes, rs.total AS total_depense  
+FROM recent_sales rs  
+JOIN clients c ON c.id = rs.client_id  
+ORDER BY rs.total DESC  
+LIMIT 10;  
 ```
 
 **4. Augmenter work_mem** (si tri sur disque) :
@@ -2427,9 +2427,9 @@ SET work_mem = '256MB';
 **Requête** :
 ```sql
 -- Temps : 5 secondes
-SELECT *
-FROM produits
-WHERE lower(nom) LIKE '%postgresql%'
+SELECT *  
+FROM produits  
+WHERE lower(nom) LIKE '%postgresql%'  
    OR lower(description) LIKE '%postgresql%';
 ```
 
@@ -2452,17 +2452,17 @@ UPDATE produits SET search_vector =
 CREATE INDEX idx_produits_search ON produits USING gin(search_vector);
 
 -- Trigger pour maintenir à jour
-CREATE TRIGGER produits_search_update
-BEFORE INSERT OR UPDATE ON produits
-FOR EACH ROW EXECUTE FUNCTION
+CREATE TRIGGER produits_search_update  
+BEFORE INSERT OR UPDATE ON produits  
+FOR EACH ROW EXECUTE FUNCTION  
     tsvector_update_trigger(search_vector, 'pg_catalog.french', nom, description);
 ```
 
 **2. Requête optimisée** :
 ```sql
-SELECT *
-FROM produits
-WHERE search_vector @@ to_tsquery('french', 'postgresql');
+SELECT *  
+FROM produits  
+WHERE search_vector @@ to_tsquery('french', 'postgresql');  
 ```
 
 #### Résultat
@@ -2481,11 +2481,11 @@ SELECT
     COUNT(*) AS nb_commandes,
     SUM(total) AS chiffre_affaire,
     AVG(total) AS panier_moyen
-FROM commandes
-WHERE date_commande >= '2025-01-01'
+FROM commandes  
+WHERE date_commande >= '2025-01-01'  
   AND date_commande < '2025-02-01'
-GROUP BY DATE_TRUNC('day', date_commande)
-ORDER BY jour;
+GROUP BY DATE_TRUNC('day', date_commande)  
+ORDER BY jour;  
 ```
 
 **EXPLAIN montre** :
@@ -2501,14 +2501,14 @@ CREATE INDEX idx_commandes_date_brin ON commandes USING brin(date_commande);
 
 **2. Vue matérialisée pour statistiques quotidiennes** :
 ```sql
-CREATE MATERIALIZED VIEW stats_quotidiennes AS
-SELECT
+CREATE MATERIALIZED VIEW stats_quotidiennes AS  
+SELECT  
     DATE_TRUNC('day', date_commande) AS jour,
     COUNT(*) AS nb_commandes,
     SUM(total) AS chiffre_affaire,
     AVG(total) AS panier_moyen
-FROM commandes
-GROUP BY DATE_TRUNC('day', date_commande);
+FROM commandes  
+GROUP BY DATE_TRUNC('day', date_commande);  
 
 CREATE INDEX idx_stats_jour ON stats_quotidiennes(jour);
 
@@ -2519,9 +2519,9 @@ REFRESH MATERIALIZED VIEW CONCURRENTLY stats_quotidiennes;
 **3. Requête sur la vue** :
 ```sql
 -- Temps : 0.01 secondes
-SELECT * FROM stats_quotidiennes
-WHERE jour >= '2025-01-01' AND jour < '2025-02-01'
-ORDER BY jour;
+SELECT * FROM stats_quotidiennes  
+WHERE jour >= '2025-01-01' AND jour < '2025-02-01'  
+ORDER BY jour;  
 ```
 
 #### Résultat
@@ -2676,33 +2676,33 @@ def get_clients():
 ### 17.2. Checklist Rapide
 
 **Avant de déployer une nouvelle fonctionnalité** :
-- [ ] Testez les nouvelles requêtes avec `EXPLAIN ANALYZE`
-- [ ] Vérifiez l'absence de N+1
-- [ ] Validez la présence des index nécessaires
-- [ ] Testez sous charge (load testing)
+- [ ] Testez les nouvelles requêtes avec `EXPLAIN ANALYZE`  
+- [ ] Vérifiez l'absence de N+1  
+- [ ] Validez la présence des index nécessaires  
+- [ ] Testez sous charge (load testing)  
 - [ ] Configurez monitoring et alertes
 
 **Audit mensuel** :
-- [ ] Top 20 requêtes les plus lentes
-- [ ] Identifier nouveaux patterns N+1
-- [ ] Vérifier croissance des temps de réponse
-- [ ] Analyser rapport pgBadger
+- [ ] Top 20 requêtes les plus lentes  
+- [ ] Identifier nouveaux patterns N+1  
+- [ ] Vérifier croissance des temps de réponse  
+- [ ] Analyser rapport pgBadger  
 - [ ] Mettre à jour documentation
 
 **Investigation d'un problème de performance** :
-- [ ] Identifier la requête problématique (`pg_stat_activity`)
-- [ ] Analyser le plan (`EXPLAIN ANALYZE`)
-- [ ] Vérifier les statistiques (`ANALYZE`)
-- [ ] Tester optimisations en staging
+- [ ] Identifier la requête problématique (`pg_stat_activity`)  
+- [ ] Analyser le plan (`EXPLAIN ANALYZE`)  
+- [ ] Vérifier les statistiques (`ANALYZE`)  
+- [ ] Tester optimisations en staging  
 - [ ] Déployer et mesurer
 
 ### 17.3. PostgreSQL 18 : Points Clés
 
 Les nouveautés PostgreSQL 18 facilitent l'optimisation :
 
-1. **Skip Scan** : Moins d'index redondants nécessaires
-2. **Optimisation OR→ANY** : Requêtes avec OR automatiquement optimisées
-3. **Auto-élimination self-joins** : Simplification automatique
+1. **Skip Scan** : Moins d'index redondants nécessaires  
+2. **Optimisation OR→ANY** : Requêtes avec OR automatiquement optimisées  
+3. **Auto-élimination self-joins** : Simplification automatique  
 4. **EXPLAIN enrichi** : Meilleure observabilité
 
 **Action** : Auditez vos requêtes après migration vers PostgreSQL 18 pour bénéficier des optimisations automatiques.
@@ -2726,11 +2726,11 @@ Les nouveautés PostgreSQL 18 facilitent l'optimisation :
 ### 17.5. Ressources Complémentaires
 
 #### Documentation
-- **PostgreSQL 18 Performance** : https://www.postgresql.org/docs/18/performance-tips.html
+- **PostgreSQL 18 Performance** : https://www.postgresql.org/docs/18/performance-tips.html  
 - **EXPLAIN** : https://www.postgresql.org/docs/18/using-explain.html
 
 #### Livres
-- *PostgreSQL Query Performance Tuning* par Henrietta Dombrovskaya
+- *PostgreSQL Query Performance Tuning* par Henrietta Dombrovskaya  
 - *High Performance PostgreSQL for Rails* par Andrew Atkinson
 
 #### Communautés
@@ -2743,9 +2743,9 @@ Les nouveautés PostgreSQL 18 facilitent l'optimisation :
 ## Conclusion Finale
 
 L'audit de requêtes est un **processus continu** qui nécessite :
-- **Discipline** : Audits réguliers
-- **Outils** : pg_stat_statements, EXPLAIN, monitoring
-- **Expertise** : Compréhension du planificateur PostgreSQL
+- **Discipline** : Audits réguliers  
+- **Outils** : pg_stat_statements, EXPLAIN, monitoring  
+- **Expertise** : Compréhension du planificateur PostgreSQL  
 - **Collaboration** : Entre développeurs et DBAs
 
 **Les requêtes optimisées** sont la clé de la performance d'une application PostgreSQL. Investissez du temps dans l'audit et l'optimisation, les gains sont souvent **spectaculaires** (10× à 1000× plus rapide).

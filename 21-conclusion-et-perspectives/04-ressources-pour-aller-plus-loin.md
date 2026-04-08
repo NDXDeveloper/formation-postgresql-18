@@ -14,10 +14,10 @@ Cette section vous présente les ressources essentielles pour poursuivre votre a
 
 PostgreSQL évolue rapidement. Chaque année, une nouvelle version majeure apporte son lot de fonctionnalités, d'améliorations de performance et de corrections. Pour tirer le meilleur parti de PostgreSQL, il est important de :
 
-- **Suivre les évolutions** : comprendre les nouvelles fonctionnalités et savoir quand les utiliser
-- **Approfondir ses connaissances** : maîtriser les concepts avancés comme l'optimisation, la réplication ou la sécurité
-- **Apprendre des autres** : profiter de l'expérience de la communauté mondiale PostgreSQL
-- **Résoudre des problèmes** : savoir où trouver de l'aide quand on rencontre des difficultés
+- **Suivre les évolutions** : comprendre les nouvelles fonctionnalités et savoir quand les utiliser  
+- **Approfondir ses connaissances** : maîtriser les concepts avancés comme l'optimisation, la réplication ou la sécurité  
+- **Apprendre des autres** : profiter de l'expérience de la communauté mondiale PostgreSQL  
+- **Résoudre des problèmes** : savoir où trouver de l'aide quand on rencontre des difficultés  
 - **Réseauter** : échanger avec d'autres utilisateurs et professionnels PostgreSQL
 
 ---
@@ -59,27 +59,27 @@ Les entreprises spécialisées en PostgreSQL et les experts individuels partagen
 
 Si vous débutez avec PostgreSQL, nous vous recommandons cette approche progressive :
 
-1. **Commencez par la documentation officielle** : le tutoriel d'introduction est excellent
-2. **Choisissez un livre adapté** : un ouvrage pour débutants vous guidera pas à pas
-3. **Rejoignez une communauté** : Discord ou Reddit sont accessibles et accueillants
+1. **Commencez par la documentation officielle** : le tutoriel d'introduction est excellent  
+2. **Choisissez un livre adapté** : un ouvrage pour débutants vous guidera pas à pas  
+3. **Rejoignez une communauté** : Discord ou Reddit sont accessibles et accueillants  
 4. **Suivez quelques blogs** : pour découvrir des cas d'usage concrets
 
 ### Pour les utilisateurs intermédiaires
 
 Si vous avez déjà de l'expérience avec PostgreSQL :
 
-1. **Approfondissez avec des livres spécialisés** : performance, administration, SQL avancé
-2. **Participez aux discussions** : mailing lists et forums techniques
-3. **Assistez à une conférence** : commencez par un PGDay local
+1. **Approfondissez avec des livres spécialisés** : performance, administration, SQL avancé  
+2. **Participez aux discussions** : mailing lists et forums techniques  
+3. **Assistez à une conférence** : commencez par un PGDay local  
 4. **Contribuez** : répondez aux questions des débutants, partagez vos retours d'expérience
 
 ### Pour les experts
 
 Si vous maîtrisez déjà PostgreSQL :
 
-1. **Explorez les internals** : livres et articles sur l'architecture interne
-2. **Suivez pgsql-hackers** : la liste de diffusion des développeurs
-3. **Participez aux conférences majeures** : PGConf.EU, PGConf.dev
+1. **Explorez les internals** : livres et articles sur l'architecture interne  
+2. **Suivez pgsql-hackers** : la liste de diffusion des développeurs  
+3. **Participez aux conférences majeures** : PGConf.EU, PGConf.dev  
 4. **Contribuez au projet** : code, documentation, tests, traductions
 
 ---
@@ -106,10 +106,10 @@ Ce qui distingue PostgreSQL de nombreux autres logiciels, c'est la qualité de s
 
 Cette communauté se caractérise par :
 
-- **L'ouverture** : tout le monde est le bienvenu, quel que soit son niveau
-- **La bienveillance** : les questions des débutants sont traitées avec respect
-- **Le partage** : les connaissances sont partagées librement
-- **La méritocratie** : les contributions sont évaluées sur leur qualité, pas sur leur origine
+- **L'ouverture** : tout le monde est le bienvenu, quel que soit son niveau  
+- **La bienveillance** : les questions des débutants sont traitées avec respect  
+- **Le partage** : les connaissances sont partagées librement  
+- **La méritocratie** : les contributions sont évaluées sur leur qualité, pas sur leur origine  
 - **La transparence** : les décisions sont prises ouvertement sur les listes de diffusion
 
 Un Code de Conduite officiel encadre les interactions au sein de la communauté, garantissant un environnement respectueux et inclusif pour tous.

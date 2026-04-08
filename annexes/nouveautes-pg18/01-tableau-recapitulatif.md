@@ -79,8 +79,8 @@ PostgreSQL 18, sorti en septembre 2025, apporte des améliorations significative
 
 ## 📖 Légende des Niveaux d'Impact
 
-- ⭐⭐⭐⭐⭐ **Critique** : Fonctionnalité majeure qui change significativement l'utilisation ou les performances
-- ⭐⭐⭐⭐ **Important** : Amélioration notable qui mérite attention
+- ⭐⭐⭐⭐⭐ **Critique** : Fonctionnalité majeure qui change significativement l'utilisation ou les performances  
+- ⭐⭐⭐⭐ **Important** : Amélioration notable qui mérite attention  
 - ⭐⭐⭐ **Utile** : Amélioration appréciable dans certains contextes
 
 ---
@@ -130,13 +130,13 @@ Si vous devez retenir seulement les fonctionnalités les plus impactantes de Pos
 ✅ **Excellente rétrocompatibilité** : Vos applications fonctionnant sur PostgreSQL 15, 16 ou 17 continueront de fonctionner sans modification.
 
 ### Considérations de Migration
-- **Data Checksums** : Si vous migrez depuis une version plus ancienne sans checksums, cette fonctionnalité sera activée par défaut sur les nouvelles installations
-- **Dépréciation MD5** : Continuer à migrer vers SCRAM-SHA-256 pour l'authentification
+- **Data Checksums** : Si vous migrez depuis une version plus ancienne sans checksums, cette fonctionnalité sera activée par défaut sur les nouvelles installations  
+- **Dépréciation MD5** : Continuer à migrer vers SCRAM-SHA-256 pour l'authentification  
 - **Configuration I/O** : Le mode asynchrone est activé automatiquement quand le système le supporte
 
 ### Recommandations d'Adoption
-- ✅ **Nouveaux projets** : Utiliser PostgreSQL 18 sans hésitation
-- ✅ **Production existante** : Planifier la migration dans les 6-12 mois pour bénéficier des gains de performance
+- ✅ **Nouveaux projets** : Utiliser PostgreSQL 18 sans hésitation  
+- ✅ **Production existante** : Planifier la migration dans les 6-12 mois pour bénéficier des gains de performance  
 - ⚠️ **Tests préalables** : Toujours tester en environnement de développement/staging avant la production
 
 ---
@@ -144,9 +144,9 @@ Si vous devez retenir seulement les fonctionnalités les plus impactantes de Pos
 ## 📚 Pour Aller Plus Loin
 
 Pour approfondir ces fonctionnalités, consultez :
-- **Chapitre 3.5** : I/O Asynchrone en détail
-- **Chapitre 16.2** : Authentification OAuth 2.0
-- **Chapitre 11.6** : Colonnes Générées Virtuelles
+- **Chapitre 3.5** : I/O Asynchrone en détail  
+- **Chapitre 16.2** : Authentification OAuth 2.0  
+- **Chapitre 11.6** : Colonnes Générées Virtuelles  
 - **Chapitre 19.3** : pg_upgrade et stratégies de migration
 
 ---

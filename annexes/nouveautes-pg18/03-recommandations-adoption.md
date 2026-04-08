@@ -20,10 +20,10 @@ L'adoption de PostgreSQL 18 est une décision importante qui doit être adaptée
 
 #### Pourquoi ?
 
-- ✅ **Aucune migration nécessaire** : Vous partez de zéro, profitez des dernières fonctionnalités
-- ✅ **Performances optimales** : Bénéficiez des améliorations I/O dès le départ
-- ✅ **Sécurité moderne** : Data checksums et SCRAM-SHA-256 activés par défaut
-- ✅ **Pérennité** : Support long terme garanti (au moins 5 ans)
+- ✅ **Aucune migration nécessaire** : Vous partez de zéro, profitez des dernières fonctionnalités  
+- ✅ **Performances optimales** : Bénéficiez des améliorations I/O dès le départ  
+- ✅ **Sécurité moderne** : Data checksums et SCRAM-SHA-256 activés par défaut  
+- ✅ **Pérennité** : Support long terme garanti (au moins 5 ans)  
 - ✅ **Écosystème à jour** : Tous les outils supportent déjà PostgreSQL 18
 
 #### Actions à Prendre
@@ -49,16 +49,16 @@ psql -d mon_projet -c "SELECT version();"
 max_connections = 100
 
 # Mémoire (adapter selon votre RAM)
-shared_buffers = 256MB          # 25% de la RAM
-work_mem = 4MB
-maintenance_work_mem = 64MB
+shared_buffers = 256MB          # 25% de la RAM  
+work_mem = 4MB  
+maintenance_work_mem = 64MB  
 
 # I/O (Laissez en automatique)
-io_method = 'async'             # Nouveau ! Plus rapide
+io_method = 'worker'             # Nouveau ! Plus rapide
 
 # Sécurité
-ssl = on
-password_encryption = scram-sha-256  # Moderne et sécurisé
+ssl = on  
+password_encryption = scram-sha-256  # Moderne et sécurisé  
 
 # Data checksums (automatique dans PG18)
 # Rien à faire, c'est activé par défaut !
@@ -86,9 +86,9 @@ password_encryption = scram-sha-256  # Moderne et sécurisé
 
 #### Pourquoi ?
 
-- ✅ **Fenêtre d'opportunité** : Pas d'utilisateurs finaux impactés
-- ✅ **Tests facilités** : Temps de tester avant la mise en production
-- ✅ **Éviter une double migration** : Ne pas avoir à migrer juste après la mise en prod
+- ✅ **Fenêtre d'opportunité** : Pas d'utilisateurs finaux impactés  
+- ✅ **Tests facilités** : Temps de tester avant la mise en production  
+- ✅ **Éviter une double migration** : Ne pas avoir à migrer juste après la mise en prod  
 - ✅ **Équipe formée** : L'équipe sera déjà familière avec PG18 au lancement
 
 #### Actions à Prendre
@@ -160,9 +160,9 @@ SELECT * FROM pg_extension;
 
 #### Pourquoi ?
 
-- ✅ **Gains de performance** : Amélioration des temps de réponse
-- ✅ **Maturité suffisante** : PostgreSQL 18 est stable (sorti depuis plusieurs mois)
-- ✅ **Fenêtre de migration** : Possibilité de choisir le meilleur moment
+- ✅ **Gains de performance** : Amélioration des temps de réponse  
+- ✅ **Maturité suffisante** : PostgreSQL 18 est stable (sorti depuis plusieurs mois)  
+- ✅ **Fenêtre de migration** : Possibilité de choisir le meilleur moment  
 - ⚠️ **Risque modéré** : Impact limité en cas de problème
 
 #### Plan d'Adoption Progressif
@@ -201,25 +201,25 @@ pg_upgrade \
 #### Critères de GO/NO-GO pour la Production
 
 **Conditions pour MIGRER (GO) :**
-- ✅ Tests staging concluants pendant 2+ semaines
-- ✅ Aucun bug bloquant détecté
-- ✅ Performances égales ou meilleures
-- ✅ Équipe formée et disponible
+- ✅ Tests staging concluants pendant 2+ semaines  
+- ✅ Aucun bug bloquant détecté  
+- ✅ Performances égales ou meilleures  
+- ✅ Équipe formée et disponible  
 - ✅ Procédure de rollback validée
 
 **Conditions pour ATTENDRE (NO-GO) :**
-- ❌ Bugs détectés en staging
-- ❌ Extensions critiques non compatibles
-- ❌ Période de forte activité (Black Friday, etc.)
+- ❌ Bugs détectés en staging  
+- ❌ Extensions critiques non compatibles  
+- ❌ Période de forte activité (Black Friday, etc.)  
 - ❌ Équipe réduite (vacances, etc.)
 
 #### Timeline Recommandée
 
 ```
-Mois 1     : Audit et planification
-Mois 2     : Tests et préparation
-Mois 3-4   : Migration staging et validation
-Mois 5-6   : Migration production
+Mois 1     : Audit et planification  
+Mois 2     : Tests et préparation  
+Mois 3-4   : Migration staging et validation  
+Mois 5-6   : Migration production  
 ```
 
 **Risque : MODÉRÉ** 🟡
@@ -236,9 +236,9 @@ Mois 5-6   : Migration production
 
 #### Pourquoi ATTENDRE un Peu ?
 
-⏰ **Maturité de l'écosystème** : Laisser le temps aux outils tierces de se stabiliser
-⏰ **Retours d'expérience** : Bénéficier de l'expérience des early adopters
-⏰ **Patches de stabilité** : PostgreSQL 18.1, 18.2 corrigent des bugs mineurs
+⏰ **Maturité de l'écosystème** : Laisser le temps aux outils tierces de se stabiliser  
+⏰ **Retours d'expérience** : Bénéficier de l'expérience des early adopters  
+⏰ **Patches de stabilité** : PostgreSQL 18.1, 18.2 corrigent des bugs mineurs  
 ✅ **Gains significatifs** : Les améliorations justifient l'attente
 
 #### Stratégie d'Adoption Prudente
@@ -264,8 +264,8 @@ Mois 5-6   : Migration production
 
 **Option A : Blue-Green Deployment**
 ```
-Infrastructure Actuelle (Blue) : PostgreSQL 16/17
-Infrastructure Nouvelle (Green) : PostgreSQL 18
+Infrastructure Actuelle (Blue) : PostgreSQL 16/17  
+Infrastructure Nouvelle (Green) : PostgreSQL 18  
 
 → Bascule progressive du trafic : 10% → 25% → 50% → 100%
 → Possibilité de rollback instantané
@@ -326,47 +326,47 @@ SELECT
 FROM pg_stat_database;
 
 -- 2. Temps de réponse moyen
-SELECT mean_exec_time, query
-FROM pg_stat_statements
-ORDER BY mean_exec_time DESC
-LIMIT 10;
+SELECT mean_exec_time, query  
+FROM pg_stat_statements  
+ORDER BY mean_exec_time DESC  
+LIMIT 10;  
 
 -- 3. Connexions actives
-SELECT COUNT(*)
-FROM pg_stat_activity
-WHERE state = 'active';
+SELECT COUNT(*)  
+FROM pg_stat_activity  
+WHERE state = 'active';  
 
 -- 4. Bloat des tables
 SELECT schemaname, tablename,
   pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename))
-FROM pg_tables
-ORDER BY pg_total_relation_size(schemaname||'.'||tablename) DESC;
+FROM pg_tables  
+ORDER BY pg_total_relation_size(schemaname||'.'||tablename) DESC;  
 ```
 
 #### Critères de GO/NO-GO Stricts
 
 **GO (Migration autorisée) :**
-- ✅ Tests de charge > 30 jours sans incident
-- ✅ Performances > 100% de la version actuelle
-- ✅ Tests de disaster recovery validés
-- ✅ Procédure de rollback testée 3× minimum
-- ✅ Équipe on-call disponible 24/7
+- ✅ Tests de charge > 30 jours sans incident  
+- ✅ Performances > 100% de la version actuelle  
+- ✅ Tests de disaster recovery validés  
+- ✅ Procédure de rollback testée 3× minimum  
+- ✅ Équipe on-call disponible 24/7  
 - ✅ Fenêtre de migration de minimum 8 heures
 
 **NO-GO (Reporter la migration) :**
-- ❌ Moindre bug critique détecté
-- ❌ Période de forte activité business
-- ❌ Indisponibilité d'un membre clé de l'équipe
-- ❌ Extension critique non compatible
+- ❌ Moindre bug critique détecté  
+- ❌ Période de forte activité business  
+- ❌ Indisponibilité d'un membre clé de l'équipe  
+- ❌ Extension critique non compatible  
 - ❌ Doute sur la procédure de rollback
 
 #### Timeline Recommandée
 
 ```
-Mois 1-3   : Observation et veille technologique
-Mois 4-6   : Tests approfondis et validation
-Mois 7-9   : Déploiement progressif
-Mois 10-12 : Stabilisation et optimisation
+Mois 1-3   : Observation et veille technologique  
+Mois 4-6   : Tests approfondis et validation  
+Mois 7-9   : Déploiement progressif  
+Mois 10-12 : Stabilisation et optimisation  
 ```
 
 **Risque : MODÉRÉ (bien géré)** 🟡
@@ -383,9 +383,9 @@ Mois 10-12 : Stabilisation et optimisation
 
 #### Pourquoi ATTENDRE Plus Longtemps ?
 
-- ⏰ **Audits de sécurité** : Certification et validation par des tiers
-- ⏰ **Conformité réglementaire** : Validation des organismes de contrôle
-- ⏰ **Stabilité prouvée** : Plusieurs versions mineures (18.1, 18.2, 18.3)
+- ⏰ **Audits de sécurité** : Certification et validation par des tiers  
+- ⏰ **Conformité réglementaire** : Validation des organismes de contrôle  
+- ⏰ **Stabilité prouvée** : Plusieurs versions mineures (18.1, 18.2, 18.3)  
 - ⏰ **Documentation complète** : Guides de conformité et best practices
 
 #### Étapes Spécifiques
@@ -426,8 +426,8 @@ Mois 10-12 : Stabilisation et optimisation
 ALTER SYSTEM SET password_encryption = 'scram-sha-256';
 
 -- 2. SSL/TLS obligatoire
-ALTER SYSTEM SET ssl = on;
-ALTER SYSTEM SET ssl_min_protocol_version = 'TLSv1.3';
+ALTER SYSTEM SET ssl = on;  
+ALTER SYSTEM SET ssl_min_protocol_version = 'TLSv1.3';  
 
 -- 3. Row-Level Security (selon besoins)
 ALTER TABLE donnees_sensibles ENABLE ROW LEVEL SECURITY;
@@ -436,30 +436,30 @@ CREATE POLICY politique_acces ON donnees_sensibles
   USING (utilisateur_id = current_user_id());
 
 -- 4. Audit logging
-ALTER SYSTEM SET log_statement = 'all';
-ALTER SYSTEM SET log_connections = on;
-ALTER SYSTEM SET log_disconnections = on;
+ALTER SYSTEM SET log_statement = 'all';  
+ALTER SYSTEM SET log_connections = on;  
+ALTER SYSTEM SET log_disconnections = on;  
 ```
 
 #### Checklist de Conformité
 
 **Sécurité :**
-- [ ] Chiffrement en transit (TLS 1.3)
-- [ ] Chiffrement au repos (TDE si requis)
-- [ ] Authentification forte (SCRAM ou OAuth)
-- [ ] Row-Level Security configuré
+- [ ] Chiffrement en transit (TLS 1.3)  
+- [ ] Chiffrement au repos (TDE si requis)  
+- [ ] Authentification forte (SCRAM ou OAuth)  
+- [ ] Row-Level Security configuré  
 - [ ] Audit trail complet activé
 
 **Intégrité des Données :**
-- [ ] Data checksums activés
-- [ ] Sauvegardes chiffrées
-- [ ] Tests de restauration mensuels
+- [ ] Data checksums activés  
+- [ ] Sauvegardes chiffrées  
+- [ ] Tests de restauration mensuels  
 - [ ] PITR (Point-In-Time Recovery) configuré
 
 **Conformité RGPD (exemple) :**
-- [ ] Anonymisation des données de test
-- [ ] Capacité de suppression des données (Droit à l'oubli)
-- [ ] Logs d'accès aux données personnelles
+- [ ] Anonymisation des données de test  
+- [ ] Capacité de suppression des données (Droit à l'oubli)  
+- [ ] Logs d'accès aux données personnelles  
 - [ ] Procédures d'export des données (Portabilité)
 
 **Risque : CONTRÔLÉ** 🟡
@@ -483,7 +483,7 @@ ALTER SYSTEM SET log_disconnections = on;
 ### Pour les Développeurs 👨‍💻
 
 #### Quand adopter ?
-- **Nouveaux projets** : Tout de suite
+- **Nouveaux projets** : Tout de suite  
 - **Projets existants** : Après tests en dev (1-2 mois)
 
 #### Actions immédiates :
@@ -498,14 +498,14 @@ docker run -d --name pg18-local \
 psql -h localhost -U postgres -d postgres
 
 # 3. Mettre à jour les drivers
-pip install psycopg[binary]  # Python
-npm install pg@latest        # Node.js
+pip install psycopg[binary]  # Python  
+npm install pg@latest        # Node.js  
 ```
 
 #### Fonctionnalités à Découvrir :
-1. **UUIDv7** : IDs uniques triables
-2. **Colonnes virtuelles** : Calculs automatiques
-3. **OLD/NEW dans RETURNING** : Suivi des modifications
+1. **UUIDv7** : IDs uniques triables  
+2. **Colonnes virtuelles** : Calculs automatiques  
+3. **OLD/NEW dans RETURNING** : Suivi des modifications  
 4. **Contraintes temporelles** : Validation de dates
 
 ---
@@ -513,14 +513,14 @@ npm install pg@latest        # Node.js
 ### Pour les DevOps/SRE 🔧
 
 #### Quand adopter ?
-- **Nouveaux déploiements** : Tout de suite
+- **Nouveaux déploiements** : Tout de suite  
 - **Infrastructures existantes** : Après tests de charge (3-6 mois)
 
 #### Actions prioritaires :
 ```bash
 # 1. Benchmarking
-pgbench -i -s 100 database_test
-pgbench -c 10 -j 2 -t 10000 database_test
+pgbench -i -s 100 database_test  
+pgbench -c 10 -j 2 -t 10000 database_test  
 
 # 2. Configuration optimale
 # Utiliser PGTune : pgtune.leopard.in.ua
@@ -534,9 +534,9 @@ docker run -d \
 ```
 
 #### Points de vigilance :
-- ✅ I/O asynchrone : Vérifier les gains de performance
-- ✅ Autovacuum : Surveiller la consommation CPU
-- ✅ Monitoring : Configurer les alertes
+- ✅ I/O asynchrone : Vérifier les gains de performance  
+- ✅ Autovacuum : Surveiller la consommation CPU  
+- ✅ Monitoring : Configurer les alertes  
 - ✅ Backup : Valider les procédures de restauration
 
 ---
@@ -544,7 +544,7 @@ docker run -d \
 ### Pour les DBA 👨‍🔬
 
 #### Quand adopter ?
-- **Nouvelles bases** : Immédiatement
+- **Nouvelles bases** : Immédiatement  
 - **Bases existantes** : Après audit complet (6-12 mois)
 
 #### Actions essentielles :
@@ -554,26 +554,26 @@ SELECT
   schemaname,
   tablename,
   pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename)) as size
-FROM pg_tables
-ORDER BY pg_total_relation_size(schemaname||'.'||tablename) DESC
-LIMIT 20;
+FROM pg_tables  
+ORDER BY pg_total_relation_size(schemaname||'.'||tablename) DESC  
+LIMIT 20;  
 
 -- 2. Vérifier les index
-SELECT schemaname, tablename, indexname, idx_scan, idx_tup_read, idx_tup_fetch
-FROM pg_stat_user_indexes
-ORDER BY idx_scan ASC;
+SELECT schemaname, tablename, indexname, idx_scan, idx_tup_read, idx_tup_fetch  
+FROM pg_stat_user_indexes  
+ORDER BY idx_scan ASC;  
 
 -- 3. Identifier les requêtes lentes
-SELECT query, mean_exec_time, calls
-FROM pg_stat_statements
-ORDER BY mean_exec_time DESC
-LIMIT 20;
+SELECT query, mean_exec_time, calls  
+FROM pg_stat_statements  
+ORDER BY mean_exec_time DESC  
+LIMIT 20;  
 ```
 
 #### Stratégies recommandées :
-1. **Nouvelles installations** : PostgreSQL 18 avec data checksums
-2. **Migrations** : pg_upgrade avec option --swap pour grosses bases
-3. **Haute disponibilité** : Réplication logique pour migration zero-downtime
+1. **Nouvelles installations** : PostgreSQL 18 avec data checksums  
+2. **Migrations** : pg_upgrade avec option --swap pour grosses bases  
+3. **Haute disponibilité** : Réplication logique pour migration zero-downtime  
 4. **Sécurité** : Migrer vers SCRAM-SHA-256 progressivement
 
 ---
@@ -581,21 +581,21 @@ LIMIT 20;
 ### Pour les Architectes/CTO 🏗️
 
 #### Quand adopter ?
-- **Nouveaux produits** : Immédiatement
+- **Nouveaux produits** : Immédiatement  
 - **Produits existants** : Selon criticité (6-12 mois)
 
 #### Critères de décision :
 
 **Arguments POUR l'adoption rapide :**
-- 💰 **ROI des performances** : Jusqu'à 3× plus rapide = économies serveur
-- 🔐 **Sécurité moderne** : OAuth, FIPS, TLS 1.3
-- 🚀 **Compétitivité** : Nouvelles fonctionnalités = avantage concurrentiel
+- 💰 **ROI des performances** : Jusqu'à 3× plus rapide = économies serveur  
+- 🔐 **Sécurité moderne** : OAuth, FIPS, TLS 1.3  
+- 🚀 **Compétitivité** : Nouvelles fonctionnalités = avantage concurrentiel  
 - 🛠️ **Facilité de migration** : pg_upgrade amélioré = coûts réduits
 
 **Arguments pour ATTENDRE :**
-- ⏰ **Maturité** : Laisser l'écosystème se stabiliser
-- 💼 **Priorités business** : Autres projets plus urgents
-- 👥 **Formation** : Temps nécessaire pour former les équipes
+- ⏰ **Maturité** : Laisser l'écosystème se stabiliser  
+- 💼 **Priorités business** : Autres projets plus urgents  
+- 👥 **Formation** : Temps nécessaire pour former les équipes  
 - 🔒 **Conformité** : Validation réglementaire en cours
 
 #### Tableau de Décision Stratégique
@@ -619,10 +619,10 @@ LIMIT 20;
 ### 🟢 FEU VERT : Adoptez Maintenant
 
 **Vous êtes dans ces situations :**
-- ✅ Nouveau projet sans contraintes
-- ✅ Application en développement
-- ✅ Équipe technique compétente
-- ✅ Infrastructure moderne (Kubernetes, Cloud)
+- ✅ Nouveau projet sans contraintes  
+- ✅ Application en développement  
+- ✅ Équipe technique compétente  
+- ✅ Infrastructure moderne (Kubernetes, Cloud)  
 - ✅ Besoin de performances optimales
 
 **Action : GO ! Commencez la migration dès que possible.**
@@ -632,9 +632,9 @@ LIMIT 20;
 ### 🟡 FEU ORANGE : Adoptez Progressivement
 
 **Vous êtes dans ces situations :**
-- ⚠️ Production stable mais non-critique
-- ⚠️ Équipe partiellement formée
-- ⚠️ Infrastructure traditionnelle (VM, Bare Metal)
+- ⚠️ Production stable mais non-critique  
+- ⚠️ Équipe partiellement formée  
+- ⚠️ Infrastructure traditionnelle (VM, Bare Metal)  
 - ⚠️ Besoin de validation approfondie
 
 **Action : PLANIFIER. Préparez une migration sur 3-6 mois.**
@@ -644,10 +644,10 @@ LIMIT 20;
 ### 🔴 FEU ROUGE : Attendez Encore
 
 **Vous êtes dans ces situations :**
-- ❌ Production ultra-critique sans plan de rollback
-- ❌ Période de forte activité business (Black Friday, etc.)
-- ❌ Extensions critiques non encore compatibles
-- ❌ Équipe non formée ou surchargée
+- ❌ Production ultra-critique sans plan de rollback  
+- ❌ Période de forte activité business (Black Friday, etc.)  
+- ❌ Extensions critiques non encore compatibles  
+- ❌ Équipe non formée ou surchargée  
 - ❌ Conformité réglementaire non validée
 
 **Action : ATTENDRE. Reporter de 6-12 mois et réévaluer.**
@@ -693,11 +693,11 @@ Contribuer à la communauté en partageant votre expérience.
 ### Pour Startups/PME
 
 ```
-T0 (Maintenant)     : Veille et formation
-T+1 mois            : Tests en dev
-T+2 mois            : Migration staging
-T+3 mois            : Migration production
-T+6 mois            : Optimisation et stabilisation
+T0 (Maintenant)     : Veille et formation  
+T+1 mois            : Tests en dev  
+T+2 mois            : Migration staging  
+T+3 mois            : Migration production  
+T+6 mois            : Optimisation et stabilisation  
 ```
 
 **Budget estimé : 20-40 jours/homme**
@@ -707,12 +707,12 @@ T+6 mois            : Optimisation et stabilisation
 ### Pour Grandes Entreprises
 
 ```
-T0 (Maintenant)     : Audit et planification
-T+3 mois            : POC (Proof of Concept)
-T+6 mois            : Tests approfondis
-T+9 mois            : Migration environnements non-prod
-T+12 mois           : Migration production (pilote)
-T+18 mois           : Déploiement généralisé
+T0 (Maintenant)     : Audit et planification  
+T+3 mois            : POC (Proof of Concept)  
+T+6 mois            : Tests approfondis  
+T+9 mois            : Migration environnements non-prod  
+T+12 mois           : Migration production (pilote)  
+T+18 mois           : Déploiement généralisé  
 ```
 
 **Budget estimé : 100-300 jours/homme**
@@ -722,11 +722,11 @@ T+18 mois           : Déploiement généralisé
 ### Pour Secteur Réglementé
 
 ```
-T0 (Maintenant)     : Analyse de conformité
-T+6 mois            : Audits de sécurité
-T+12 mois           : Tests et certifications
-T+18 mois           : Migration contrôlée
-T+24 mois           : Audit post-migration
+T0 (Maintenant)     : Analyse de conformité  
+T+6 mois            : Audits de sécurité  
+T+12 mois           : Tests et certifications  
+T+18 mois           : Migration contrôlée  
+T+24 mois           : Audit post-migration  
 ```
 
 **Budget estimé : 200-500 jours/homme**
@@ -740,16 +740,16 @@ T+24 mois           : Audit post-migration
 **Verdict : RECOMMANDÉ**
 
 PostgreSQL 18 représente une **évolution majeure** avec :
-- 🚀 Gains de performance significatifs (I/O asynchrone)
-- 🔐 Sécurité moderne (OAuth, FIPS, TLS 1.3)
-- 🛠️ Outils de migration améliorés (pg_upgrade)
+- 🚀 Gains de performance significatifs (I/O asynchrone)  
+- 🔐 Sécurité moderne (OAuth, FIPS, TLS 1.3)  
+- 🛠️ Outils de migration améliorés (pg_upgrade)  
 - ✅ Excellente rétrocompatibilité
 
 ### Timeline Recommandée par Défaut
 
 **Adoption progressive sur 6 mois :**
-1. Mois 1-2 : Préparation et tests
-2. Mois 3-4 : Migration non-prod
+1. Mois 1-2 : Préparation et tests  
+2. Mois 3-4 : Migration non-prod  
 3. Mois 5-6 : Migration production
 
 ### Cas Particuliers (20%)
@@ -765,24 +765,24 @@ PostgreSQL 18 représente une **évolution majeure** avec :
 ## 📚 Ressources pour Aller Plus Loin
 
 ### Documentation Officielle
-- **Release Notes** : [postgresql.org/docs/18/release-18.html](https://www.postgresql.org/docs/18/release-18.html)
+- **Release Notes** : [postgresql.org/docs/18/release-18.html](https://www.postgresql.org/docs/18/release-18.html)  
 - **Guide de Migration** : [postgresql.org/docs/18/upgrading.html](https://www.postgresql.org/docs/18/upgrading.html)
 
 ### Chapitres du Tutoriel
-- **Chapitre 3.5** : Architecture I/O asynchrone
-- **Chapitre 16** : Administration et configuration
-- **Chapitre 19** : PostgreSQL en production
+- **Chapitre 3.5** : Architecture I/O asynchrone  
+- **Chapitre 16** : Administration et configuration  
+- **Chapitre 19** : PostgreSQL en production  
 - **Annexe F** : Nouveautés et migration
 
 ### Communauté
-- **PostgreSQL Mailing Lists** : pgsql-general@postgresql.org
-- **Reddit** : r/PostgreSQL
-- **Stack Overflow** : Tag [postgresql]
+- **PostgreSQL Mailing Lists** : pgsql-general@postgresql.org  
+- **Reddit** : r/PostgreSQL  
+- **Stack Overflow** : Tag [postgresql]  
 - **Discord** : PostgreSQL Community Server
 
 ### Outils Utiles
-- **PGTune** : Configuration automatique (pgtune.leopard.in.ua)
-- **pgBadger** : Analyse de logs (github.com/darold/pgbadger)
+- **PGTune** : Configuration automatique (pgtune.leopard.in.ua)  
+- **pgBadger** : Analyse de logs (github.com/darold/pgbadger)  
 - **pg_upgrade Check** : Validation pré-migration
 
 ---
@@ -792,24 +792,24 @@ PostgreSQL 18 représente une **évolution majeure** avec :
 Utilisez cette checklist pour confirmer votre décision :
 
 ### Checklist Technique
-- [ ] Version actuelle identifiée
-- [ ] Extensions tierces vérifiées
-- [ ] Tests de compatibilité effectués
-- [ ] Stratégie de migration choisie
+- [ ] Version actuelle identifiée  
+- [ ] Extensions tierces vérifiées  
+- [ ] Tests de compatibilité effectués  
+- [ ] Stratégie de migration choisie  
 - [ ] Procédure de rollback préparée
 
 ### Checklist Organisationnelle
-- [ ] Budget validé
-- [ ] Équipe formée
-- [ ] Timeline approuvée
-- [ ] Communication planifiée
+- [ ] Budget validé  
+- [ ] Équipe formée  
+- [ ] Timeline approuvée  
+- [ ] Communication planifiée  
 - [ ] Support disponible
 
 ### Checklist Business
-- [ ] ROI évalué
-- [ ] Risques identifiés
-- [ ] Sponsors identifiés
-- [ ] KPI définis
+- [ ] ROI évalué  
+- [ ] Risques identifiés  
+- [ ] Sponsors identifiés  
+- [ ] KPI définis  
 - [ ] Plan de succès établi
 
 ---

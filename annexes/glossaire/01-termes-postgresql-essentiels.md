@@ -56,9 +56,9 @@ COMMIT;
 ```
 
 **États d'une transaction** :
-- `BEGIN` : Démarre la transaction
-- `COMMIT` : Valide définitivement les modifications
-- `ROLLBACK` : Annule toutes les modifications depuis le BEGIN
+- `BEGIN` : Démarre la transaction  
+- `COMMIT` : Valide définitivement les modifications  
+- `ROLLBACK` : Annule toutes les modifications depuis le BEGIN  
 - `SAVEPOINT` : Crée un point de sauvegarde intermédiaire
 
 **En cas d'erreur**, toute la transaction est automatiquement annulée (rollback automatique).
@@ -74,8 +74,8 @@ Le **WAL** est un journal qui enregistre TOUTES les modifications avant qu'elles
 **Principe** : "Écrire d'abord dans le journal, appliquer ensuite"
 
 **Pourquoi c'est important** :
-1. **Durabilité** : En cas de crash, PostgreSQL peut rejouer le WAL pour récupérer les données
-2. **Performance** : Écrire séquentiellement dans un journal est plus rapide qu'écrire aléatoirement dans les tables
+1. **Durabilité** : En cas de crash, PostgreSQL peut rejouer le WAL pour récupérer les données  
+2. **Performance** : Écrire séquentiellement dans un journal est plus rapide qu'écrire aléatoirement dans les tables  
 3. **Réplication** : Le WAL peut être envoyé à d'autres serveurs pour créer des copies en temps réel
 
 **Analogie** : Le WAL est comme un brouillon où vous notez tout ce que vous faites. Si vous renversez votre café sur votre travail final, vous pouvez tout reconstituer grâce à votre brouillon.
@@ -96,9 +96,9 @@ Le **WAL** est un journal qui enregistre TOUTES les modifications avant qu'elles
 - Tout cela est transparent pour l'utilisateur
 
 **Stratégies TOAST** :
-- `PLAIN` : Pas de compression ni de stockage externe
-- `EXTENDED` : Compression + stockage externe (défaut)
-- `EXTERNAL` : Stockage externe sans compression (pour données déjà compressées)
+- `PLAIN` : Pas de compression ni de stockage externe  
+- `EXTENDED` : Compression + stockage externe (défaut)  
+- `EXTERNAL` : Stockage externe sans compression (pour données déjà compressées)  
 - `MAIN` : Compression prioritaire, mais évite le stockage externe
 
 **Types concernés** : TEXT, VARCHAR, BYTEA, JSON, JSONB, ARRAY
@@ -200,8 +200,8 @@ Les **Shared Buffers** constituent le cache mémoire partagé par tous les proce
 - Elles ralentissent les requêtes
 
 **Actions d'Autovacuum** :
-1. **VACUUM** : Récupère l'espace des lignes mortes
-2. **ANALYZE** : Met à jour les statistiques pour l'optimiseur de requêtes
+1. **VACUUM** : Récupère l'espace des lignes mortes  
+2. **ANALYZE** : Met à jour les statistiques pour l'optimiseur de requêtes  
 3. Prévient le "XID wraparound" (problème critique)
 
 **Configuration** : Activé par défaut. Ne JAMAIS le désactiver en production !
@@ -231,8 +231,8 @@ Le **B-Tree** est le type d'index par défaut et le plus utilisé dans PostgreSQ
 Le **GIN** est un index spécialisé pour les recherches dans des structures complexes.
 
 **Cas d'usage principaux** :
-- **Full-Text Search** : Recherche dans du texte
-- **JSONB** : Recherche dans des documents JSON
+- **Full-Text Search** : Recherche dans du texte  
+- **JSONB** : Recherche dans des documents JSON  
 - **Arrays** : Recherche dans des tableaux
 
 **Exemple** :
@@ -253,9 +253,9 @@ CREATE INDEX idx_data_gin ON table USING GIN(data);
 Le **GiST** est un framework d'index flexible pour des types de données non-standards.
 
 **Cas d'usage** :
-- **Données géométriques** (PostGIS) : Points, polygones, lignes
-- **Full-Text Search** (alternative à GIN)
-- **Plages** (Range types) : `int4range`, `tstzrange`
+- **Données géométriques** (PostGIS) : Points, polygones, lignes  
+- **Full-Text Search** (alternative à GIN)  
+- **Plages** (Range types) : `int4range`, `tstzrange`  
 - **Hiérarchies** (ltree) : Structures arborescentes
 
 **Exemple spatial** :
@@ -298,12 +298,12 @@ CREATE INDEX idx_logs_date ON logs USING BRIN(timestamp);
 Un **lock** (verrou) empêche des opérations conflictuelles de s'exécuter simultanément.
 
 **Types principaux** :
-- **Row-level locks** : Verrouillent des lignes spécifiques
-  - `FOR UPDATE` : Verrouillage exclusif
+- **Row-level locks** : Verrouillent des lignes spécifiques  
+  - `FOR UPDATE` : Verrouillage exclusif  
   - `FOR SHARE` : Verrouillage partagé
 
-- **Table-level locks** : Verrouillent toute une table
-  - `ACCESS SHARE` : Lecture (peu restrictif)
+- **Table-level locks** : Verrouillent toute une table  
+  - `ACCESS SHARE` : Lecture (peu restrictif)  
   - `EXCLUSIVE` : Modification de structure (très restrictif)
 
 **Voir les verrous actifs** :
@@ -319,8 +319,8 @@ Un **deadlock** (interblocage) survient quand deux transactions s'attendent mutu
 
 **Exemple classique** :
 ```
-Transaction 1 : Verrouille ligne A → Attend ligne B
-Transaction 2 : Verrouille ligne B → Attend ligne A
+Transaction 1 : Verrouille ligne A → Attend ligne B  
+Transaction 2 : Verrouille ligne B → Attend ligne A  
 → Blocage mutuel !
 ```
 
@@ -395,8 +395,8 @@ Cluster PostgreSQL
 
 **Exemple** :
 ```sql
-CREATE SCHEMA ventes;
-CREATE TABLE ventes.produits (...);
+CREATE SCHEMA ventes;  
+CREATE TABLE ventes.produits (...);  
 ```
 
 ---
@@ -413,8 +413,8 @@ Le **search_path** définit l'ordre de recherche des schemas quand un objet n'es
 SELECT * FROM ventes.produits;
 
 -- Avec search_path = ventes, public
-SET search_path TO ventes, public;
-SELECT * FROM produits;  -- Cherche d'abord dans "ventes", puis "public"
+SET search_path TO ventes, public;  
+SELECT * FROM produits;  -- Cherche d'abord dans "ventes", puis "public"  
 ```
 
 ---
@@ -426,7 +426,7 @@ Une **sequence** est un générateur de nombres auto-incrémentés.
 **Usage principal** : Générer des identifiants uniques (clés primaires).
 
 **Types** :
-- `SERIAL` : Raccourci pour créer une sequence + colonne INTEGER (legacy)
+- `SERIAL` : Raccourci pour créer une sequence + colonne INTEGER (legacy)  
 - `IDENTITY` : Standard SQL moderne (recommandé depuis PG 10)
 
 **Exemple** :
@@ -458,14 +458,14 @@ CREATE TABLE produits (
 - Sans VACUUM, la base enfle indéfiniment
 
 **Types** :
-- `VACUUM` : Nettoyage standard (ne rend pas l'espace à l'OS)
-- `VACUUM FULL` : Nettoyage complet avec réorganisation (bloque la table, éviter en production)
+- `VACUUM` : Nettoyage standard (ne rend pas l'espace à l'OS)  
+- `VACUUM FULL` : Nettoyage complet avec réorganisation (bloque la table, éviter en production)  
 - `autovacuum` : Automatique, activé par défaut
 
 **Commande** :
 ```sql
-VACUUM ma_table;
-VACUUM ANALYZE ma_table;  -- VACUUM + mise à jour des statistiques
+VACUUM ma_table;  
+VACUUM ANALYZE ma_table;  -- VACUUM + mise à jour des statistiques  
 ```
 
 ---
@@ -484,8 +484,8 @@ VACUUM ANALYZE ma_table;  -- VACUUM + mise à jour des statistiques
 
 **Commande** :
 ```sql
-ANALYZE ma_table;
-ANALYZE;  -- Toutes les tables
+ANALYZE ma_table;  
+ANALYZE;  -- Toutes les tables  
 ```
 
 **Automatisé** : `autovacuum` exécute aussi ANALYZE automatiquement.
@@ -497,9 +497,9 @@ ANALYZE;  -- Toutes les tables
 Un **checkpoint** est une opération qui écrit toutes les modifications en mémoire (dirty pages) vers le disque.
 
 **Processus** :
-1. Les modifications normales vont d'abord dans le WAL (rapide)
-2. Elles restent en mémoire (shared buffers) jusqu'au checkpoint
-3. Le checkpoint écrit tout sur disque de manière ordonnée
+1. Les modifications normales vont d'abord dans le WAL (rapide)  
+2. Elles restent en mémoire (shared buffers) jusqu'au checkpoint  
+3. Le checkpoint écrit tout sur disque de manière ordonnée  
 4. Le WAL peut être recyclé après un checkpoint
 
 **Déclenchement** :
@@ -539,7 +539,7 @@ SELECT age(datfrozenxid) FROM pg_database WHERE datname = 'ma_base';
 **JSONB** est le type JSON binaire de PostgreSQL, optimisé pour les requêtes.
 
 **Différence JSON vs JSONB** :
-- `JSON` : Stocke le texte tel quel (plus lent)
+- `JSON` : Stocke le texte tel quel (plus lent)  
 - `JSONB` : Stocke en format binaire décomposé (plus rapide, plus de fonctionnalités)
 
 **Recommandation** : Toujours utiliser JSONB sauf cas très spécifique.
@@ -552,8 +552,8 @@ CREATE TABLE produits (
 );
 
 -- Requêtes sur JSONB
-SELECT * FROM produits WHERE data->>'categorie' = 'electronique';
-SELECT * FROM produits WHERE data @> '{"en_stock": true}';
+SELECT * FROM produits WHERE data->>'categorie' = 'electronique';  
+SELECT * FROM produits WHERE data @> '{"en_stock": true}';  
 
 -- Index pour performance
 CREATE INDEX idx_data ON produits USING GIN(data);
@@ -577,12 +577,12 @@ CREATE TABLE articles (
 **Manipulation** :
 ```sql
 -- Insertion
-INSERT INTO articles (tags) VALUES (ARRAY['postgresql', 'database', 'sql']);
-INSERT INTO articles (tags) VALUES ('{"tech", "tutorial"}');
+INSERT INTO articles (tags) VALUES (ARRAY['postgresql', 'database', 'sql']);  
+INSERT INTO articles (tags) VALUES ('{"tech", "tutorial"}');  
 
 -- Requêtes
-SELECT * FROM articles WHERE 'postgresql' = ANY(tags);
-SELECT * FROM articles WHERE tags @> ARRAY['database'];
+SELECT * FROM articles WHERE 'postgresql' = ANY(tags);  
+SELECT * FROM articles WHERE tags @> ARRAY['database'];  
 
 -- Index GIN pour recherche rapide
 CREATE INDEX idx_tags ON articles USING GIN(tags);
@@ -617,7 +617,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE TABLE users (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
     -- ou en PG 18
-    id UUID DEFAULT gen_random_uuid_v7() PRIMARY KEY,
+    id UUID DEFAULT uuidv7() PRIMARY KEY,
     nom TEXT
 );
 ```
@@ -671,7 +671,7 @@ Un **replication slot** garantit que le serveur primaire conserve le WAL nécess
 - Garantit la continuité de la réplication
 
 **Types** :
-- **Physical slot** : Pour la réplication physique (streaming)
+- **Physical slot** : Pour la réplication physique (streaming)  
 - **Logical slot** : Pour la réplication logique (publications/subscriptions)
 
 **Attention** : Un slot peut faire exploser l'espace disque si le replica ne se reconnecte jamais. Monitoring essentiel !
@@ -684,9 +684,9 @@ Le **WAL archiving** consiste à copier les fichiers WAL vers un stockage extern
 
 **Configuration de base** :
 ```
-wal_level = replica  (ou logical)
-archive_mode = on
-archive_command = 'cp %p /backup/wal_archives/%f'
+wal_level = replica  (ou logical)  
+archive_mode = on  
+archive_command = 'cp %p /backup/wal_archives/%f'  
 ```
 
 **Cas d'usage** :
@@ -706,14 +706,14 @@ La **streaming replication** est la méthode standard de réplication physique e
 - Il applique ces modifications en temps quasi-réel
 
 **Types** :
-- **Asynchrone** : Le primary n'attend pas la confirmation du standby (rapide mais risque de perte)
+- **Asynchrone** : Le primary n'attend pas la confirmation du standby (rapide mais risque de perte)  
 - **Synchrone** : Le primary attend la confirmation (lent mais sûr)
 
 **Configuration minimale** :
 ```
 # Sur le primary
-wal_level = replica
-max_wal_senders = 3
+wal_level = replica  
+max_wal_senders = 3  
 
 # Sur le standby
 primary_conninfo = 'host=primary port=5432 user=replication'
@@ -732,7 +732,7 @@ La **réplication logique** réplique les modifications au niveau logique (ligne
 - Le standby peut être accessible en écriture
 
 **Concepts** :
-- **Publication** : Sur le serveur source, définit ce qui est répliqué
+- **Publication** : Sur le serveur source, définit ce qui est répliqué  
 - **Subscription** : Sur le serveur destination, consomme les modifications
 
 **Exemple** :
@@ -760,11 +760,11 @@ CREATE EXTENSION nom_extension;
 ```
 
 **Extensions populaires** :
-- `pg_stat_statements` : Statistiques de requêtes
-- `pgcrypto` : Fonctions cryptographiques
-- `uuid-ossp` : Génération d'UUID
-- `hstore` : Paires clé-valeur
-- `PostGIS` : Données géospatiales
+- `pg_stat_statements` : Statistiques de requêtes  
+- `pgcrypto` : Fonctions cryptographiques  
+- `uuid-ossp` : Génération d'UUID  
+- `hstore` : Paires clé-valeur  
+- `PostGIS` : Données géospatiales  
 - `pg_trgm` : Recherche de similarité de texte
 
 **Lister les extensions disponibles** :
@@ -814,16 +814,16 @@ SELECT * FROM clients_distants WHERE id = 123;
 **DDL** regroupe les commandes qui définissent la structure de la base de données.
 
 **Commandes principales** :
-- `CREATE` : Créer (table, index, schema...)
-- `ALTER` : Modifier (ajouter/supprimer colonnes, changer types...)
-- `DROP` : Supprimer
+- `CREATE` : Créer (table, index, schema...)  
+- `ALTER` : Modifier (ajouter/supprimer colonnes, changer types...)  
+- `DROP` : Supprimer  
 - `TRUNCATE` : Vider une table (DDL car plus violent que DELETE)
 
 **Exemple** :
 ```sql
-CREATE TABLE produits (id SERIAL PRIMARY KEY, nom TEXT);
-ALTER TABLE produits ADD COLUMN prix NUMERIC(10,2);
-DROP TABLE ancienne_table;
+CREATE TABLE produits (id SERIAL PRIMARY KEY, nom TEXT);  
+ALTER TABLE produits ADD COLUMN prix NUMERIC(10,2);  
+DROP TABLE ancienne_table;  
 ```
 
 ---
@@ -833,16 +833,16 @@ DROP TABLE ancienne_table;
 **DML** regroupe les commandes qui manipulent les données.
 
 **Commandes** :
-- `SELECT` : Lire
-- `INSERT` : Insérer
-- `UPDATE` : Modifier
+- `SELECT` : Lire  
+- `INSERT` : Insérer  
+- `UPDATE` : Modifier  
 - `DELETE` : Supprimer
 
 **Exemple** :
 ```sql
-INSERT INTO produits (nom, prix) VALUES ('Ordinateur', 999.99);
-UPDATE produits SET prix = 899.99 WHERE nom = 'Ordinateur';
-DELETE FROM produits WHERE prix > 10000;
+INSERT INTO produits (nom, prix) VALUES ('Ordinateur', 999.99);  
+UPDATE produits SET prix = 899.99 WHERE nom = 'Ordinateur';  
+DELETE FROM produits WHERE prix > 10000;  
 ```
 
 ---
@@ -858,13 +858,13 @@ DELETE FROM produits WHERE prix > 10000;
 **DCL** gère les permissions et la sécurité.
 
 **Commandes** :
-- `GRANT` : Donner des permissions
+- `GRANT` : Donner des permissions  
 - `REVOKE` : Retirer des permissions
 
 **Exemple** :
 ```sql
-GRANT SELECT ON TABLE clients TO user_reporting;
-REVOKE INSERT ON TABLE clients FROM user_readonly;
+GRANT SELECT ON TABLE clients TO user_reporting;  
+REVOKE INSERT ON TABLE clients FROM user_readonly;  
 ```
 
 ---
@@ -874,10 +874,10 @@ REVOKE INSERT ON TABLE clients FROM user_readonly;
 Une **constraint** est une règle qui garantit l'intégrité des données.
 
 **Types** :
-- **PRIMARY KEY** : Identifiant unique non-null
-- **FOREIGN KEY** : Référence vers une autre table
-- **UNIQUE** : Valeur unique (peut être NULL)
-- **CHECK** : Condition personnalisée
+- **PRIMARY KEY** : Identifiant unique non-null  
+- **FOREIGN KEY** : Référence vers une autre table  
+- **UNIQUE** : Valeur unique (peut être NULL)  
+- **CHECK** : Condition personnalisée  
 - **NOT NULL** : Valeur obligatoire
 
 **Exemple** :
@@ -904,9 +904,9 @@ Un **trigger** est une fonction qui s'exécute automatiquement lors d'événemen
 
 **Exemple simple** :
 ```sql
-CREATE OR REPLACE FUNCTION maj_timestamp()
-RETURNS TRIGGER AS $$
-BEGIN
+CREATE OR REPLACE FUNCTION maj_timestamp()  
+RETURNS TRIGGER AS $$  
+BEGIN  
     NEW.updated_at = NOW();
     RETURN NEW;
 END;
@@ -932,14 +932,14 @@ Une **view** est une requête SQL sauvegardée et réutilisable comme une table 
 
 **Exemple** :
 ```sql
-CREATE VIEW ventes_2024 AS
-SELECT
+CREATE VIEW ventes_2024 AS  
+SELECT  
     p.nom AS produit,
     SUM(c.quantite) AS total_vendu
-FROM commandes c
-JOIN produits p ON c.produit_id = p.id
-WHERE c.date >= '2024-01-01'
-GROUP BY p.nom;
+FROM commandes c  
+JOIN produits p ON c.produit_id = p.id  
+WHERE c.date >= '2024-01-01'  
+GROUP BY p.nom;  
 
 -- Utilisation
 SELECT * FROM ventes_2024;
@@ -959,12 +959,12 @@ Une **materialized view** est une vue dont le résultat est physiquement stocké
 
 **Exemple** :
 ```sql
-CREATE MATERIALIZED VIEW stats_mensuelles AS
-SELECT
+CREATE MATERIALIZED VIEW stats_mensuelles AS  
+SELECT  
     DATE_TRUNC('month', date) AS mois,
     SUM(montant) AS total
-FROM commandes
-GROUP BY 1;
+FROM commandes  
+GROUP BY 1;  
 
 -- Créer un index sur la vue matérialisée
 CREATE INDEX ON stats_mensuelles(mois);
@@ -991,7 +991,7 @@ Le **connection pooling** est une technique qui réutilise les connexions à la 
 - La connexion retourne au pool après usage
 
 **Outils** :
-- **PgBouncer** : Pooler externe ultra-léger (recommandé)
+- **PgBouncer** : Pooler externe ultra-léger (recommandé)  
 - **Pgpool-II** : Plus complet (load balancing, cache...)
 - Pooling intégré dans l'application (HikariCP en Java, connexion pools en Python...)
 
@@ -1002,7 +1002,7 @@ Le **connection pooling** est une technique qui réutilise les connexions à la 
 Un **prepared statement** est une requête SQL compilée et mise en cache par le serveur.
 
 **Avantages** :
-- **Performance** : La requête n'est analysée qu'une fois
+- **Performance** : La requête n'est analysée qu'une fois  
 - **Sécurité** : Protection automatique contre l'injection SQL
 
 **Exemple en SQL** :
@@ -1010,8 +1010,8 @@ Un **prepared statement** est une requête SQL compilée et mise en cache par le
 PREPARE get_produit (INTEGER) AS
     SELECT * FROM produits WHERE id = $1;
 
-EXECUTE get_produit(42);
-EXECUTE get_produit(99);
+EXECUTE get_produit(42);  
+EXECUTE get_produit(99);  
 ```
 
 **En pratique** : Les drivers (psycopg2, node-pg...) utilisent automatiquement des prepared statements.
@@ -1023,11 +1023,11 @@ EXECUTE get_produit(99);
 Ce glossaire couvre les concepts essentiels pour comprendre et utiliser PostgreSQL efficacement. Chaque terme est interconnecté avec les autres, formant l'écosystème riche et puissant de PostgreSQL.
 
 **Points clés à retenir** :
-- **ACID** garantit la fiabilité des transactions
-- **MVCC** permet une excellente concurrence sans blocages
-- **WAL** assure la durabilité et permet la réplication
-- **Index** (B-Tree, GIN, GiST, BRIN) optimisent les performances selon les cas d'usage
-- **VACUUM** et **ANALYZE** sont essentiels pour la santé de la base
+- **ACID** garantit la fiabilité des transactions  
+- **MVCC** permet une excellente concurrence sans blocages  
+- **WAL** assure la durabilité et permet la réplication  
+- **Index** (B-Tree, GIN, GiST, BRIN) optimisent les performances selon les cas d'usage  
+- **VACUUM** et **ANALYZE** sont essentiels pour la santé de la base  
 - **Réplication** et **HA** assurent la disponibilité en production
 
 ---

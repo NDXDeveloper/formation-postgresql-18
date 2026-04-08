@@ -7,11 +7,11 @@
 
 ## Table des Matières
 
-1. [Introduction à l'Administration par Requêtes](#1-introduction-%C3%A0-ladministration-par-requ%C3%AAtes)
-2. [Gestion des Locks (Verrous)](#2-gestion-des-locks-verrous)
-3. [Détection et Analyse du Bloat](#3-d%C3%A9tection-et-analyse-du-bloat)
-4. [Surveillance de l'Utilisation des Index](#4-surveillance-de-lutilisation-des-index)
-5. [Mise en Pratique : Scénarios Courants](#5-mise-en-pratique--sc%C3%A9narios-courants)
+1. [Introduction à l'Administration par Requêtes](#1-introduction-%C3%A0-ladministration-par-requ%C3%AAtes)  
+2. [Gestion des Locks (Verrous)](#2-gestion-des-locks-verrous)  
+3. [Détection et Analyse du Bloat](#3-d%C3%A9tection-et-analyse-du-bloat)  
+4. [Surveillance de l'Utilisation des Index](#4-surveillance-de-lutilisation-des-index)  
+5. [Mise en Pratique : Scénarios Courants](#5-mise-en-pratique--sc%C3%A9narios-courants)  
 6. [Bonnes Pratiques et Recommandations](#6-bonnes-pratiques-et-recommandations)
 
 ---
@@ -24,8 +24,8 @@ En tant qu'administrateur ou développeur travaillant avec PostgreSQL, vous deve
 
 Les trois domaines les plus critiques pour l'administration quotidienne sont :
 
-1. **Les Locks (Verrous)** : Identifier les blocages entre transactions qui ralentissent ou figent votre application
-2. **Le Bloat (Gonflement)** : Détecter l'espace disque gaspillé dans vos tables et index
+1. **Les Locks (Verrous)** : Identifier les blocages entre transactions qui ralentissent ou figent votre application  
+2. **Le Bloat (Gonflement)** : Détecter l'espace disque gaspillé dans vos tables et index  
 3. **L'Utilisation des Index** : Vérifier que vos index sont effectivement utilisés et identifier ceux qui sont inutiles
 
 ### 1.2. Les Vues Système de PostgreSQL
@@ -69,8 +69,8 @@ PostgreSQL utilise différents types de verrous :
 
 Les locks deviennent problématiques quand :
 
-1. **Deadlock (Interblocage)** : Deux transactions s'attendent mutuellement
-2. **Lock Wait (Attente)** : Une transaction attend trop longtemps qu'un lock soit libéré
+1. **Deadlock (Interblocage)** : Deux transactions s'attendent mutuellement  
+2. **Lock Wait (Attente)** : Une transaction attend trop longtemps qu'un lock soit libéré  
 3. **Blocking Cascade** : Une transaction bloque plusieurs autres qui elles-mêmes en bloquent d'autres
 
 Ces situations peuvent **ralentir drastiquement** votre application ou la **figer complètement**.
@@ -99,10 +99,10 @@ ORDER BY
 
 **Explication des colonnes importantes** :
 
-- **locktype** : Type de ressource verrouillée (`relation`, `transactionid`, `tuple`, etc.)
-- **relation_name** : Nom de la table concernée (si applicable)
-- **mode** : Type de verrou (ex: `AccessShareLock`, `ExclusiveLock`)
-- **granted** : `true` si le verrou est obtenu, `false` si en attente
+- **locktype** : Type de ressource verrouillée (`relation`, `transactionid`, `tuple`, etc.)  
+- **relation_name** : Nom de la table concernée (si applicable)  
+- **mode** : Type de verrou (ex: `AccessShareLock`, `ExclusiveLock`)  
+- **granted** : `true` si le verrou est obtenu, `false` si en attente  
 - **pid** : ID du processus qui détient ou attend le verrou
 
 ### 2.4. Requête : Identifier les Transactions Bloquantes
@@ -146,9 +146,9 @@ WHERE
 
 **Ce que cette requête vous montre** :
 
-- **blocked_pid** : Le processus qui est bloqué
-- **blocking_pid** : Le processus qui bloque
-- **blocked_statement** : La requête qui est bloquée
+- **blocked_pid** : Le processus qui est bloqué  
+- **blocking_pid** : Le processus qui bloque  
+- **blocked_statement** : La requête qui est bloquée  
 - **blocking_statement** : La requête qui bloque
 
 ### 2.5. Requête : Deadlocks en Cours
@@ -191,7 +191,7 @@ SELECT pg_terminate_backend(12345);
 ```
 
 **Différence importante** :
-- `pg_cancel_backend()` : Demande poliment à la transaction de s'arrêter (SIGINT)
+- `pg_cancel_backend()` : Demande poliment à la transaction de s'arrêter (SIGINT)  
 - `pg_terminate_backend()` : Force l'arrêt immédiat (SIGTERM)
 
 ---
@@ -204,16 +204,16 @@ Le **bloat (gonflement)** est l'accumulation d'**espace mort** dans vos tables e
 
 #### Pourquoi le Bloat se Produit-il ?
 
-1. Quand vous faites un `UPDATE` ou `DELETE`, PostgreSQL ne supprime pas immédiatement les anciennes versions des lignes
-2. Ces anciennes versions (appelées **dead tuples**) restent dans la table pour permettre aux transactions concurrentes de les voir
-3. Le processus **VACUUM** nettoie ces dead tuples... mais si VACUUM ne tourne pas assez souvent, elles s'accumulent
+1. Quand vous faites un `UPDATE` ou `DELETE`, PostgreSQL ne supprime pas immédiatement les anciennes versions des lignes  
+2. Ces anciennes versions (appelées **dead tuples**) restent dans la table pour permettre aux transactions concurrentes de les voir  
+3. Le processus **VACUUM** nettoie ces dead tuples... mais si VACUUM ne tourne pas assez souvent, elles s'accumulent  
 4. Résultat : Vos tables et index occupent **beaucoup plus d'espace** qu'ils ne devraient
 
 #### Conséquences du Bloat
 
-- **Ralentissement des requêtes** : PostgreSQL doit parcourir plus de données
-- **Gaspillage d'espace disque**
-- **Cache moins efficace** : Les buffers sont remplis de données mortes
+- **Ralentissement des requêtes** : PostgreSQL doit parcourir plus de données  
+- **Gaspillage d'espace disque**  
+- **Cache moins efficace** : Les buffers sont remplis de données mortes  
 - **Index moins performants**
 
 ### 3.2. Requête : Détecter le Bloat dans les Tables
@@ -244,16 +244,16 @@ LIMIT 20;
 
 **Colonnes importantes** :
 
-- **total_size** : Taille totale (table + index + TOAST)
-- **table_size** : Taille de la table seule
-- **n_live_tup** : Nombre de lignes vivantes
-- **n_dead_tup** : Nombre de lignes mortes (bloat)
-- **dead_tuple_pct** : Pourcentage de bloat
+- **total_size** : Taille totale (table + index + TOAST)  
+- **table_size** : Taille de la table seule  
+- **n_live_tup** : Nombre de lignes vivantes  
+- **n_dead_tup** : Nombre de lignes mortes (bloat)  
+- **dead_tuple_pct** : Pourcentage de bloat  
 - **last_vacuum** / **last_autovacuum** : Dernière exécution de VACUUM
 
 **Seuils d'alerte** :
-- `dead_tuple_pct > 20%` : Bloat modéré, surveiller
-- `dead_tuple_pct > 40%` : Bloat important, action recommandée
+- `dead_tuple_pct > 20%` : Bloat modéré, surveiller  
+- `dead_tuple_pct > 40%` : Bloat important, action recommandée  
 - `dead_tuple_pct > 60%` : Bloat critique, action urgente
 
 ### 3.3. Requête : Estimer le Bloat Précisément (Extension pgstattuple)
@@ -270,10 +270,10 @@ SELECT * FROM pgstattuple('ma_table');
 
 Cette fonction retourne :
 
-- **table_len** : Taille totale de la table en bytes
-- **tuple_count** : Nombre de lignes vivantes
-- **dead_tuple_count** : Nombre de lignes mortes
-- **free_space** : Espace libre récupérable
+- **table_len** : Taille totale de la table en bytes  
+- **tuple_count** : Nombre de lignes vivantes  
+- **dead_tuple_count** : Nombre de lignes mortes  
+- **free_space** : Espace libre récupérable  
 - **dead_tuple_percent** : Pourcentage exact de bloat
 
 **Attention** : `pgstattuple()` fait un scan complet de la table, donc **coûteux** sur de grosses tables. À utiliser hors production ou en maintenance.
@@ -324,8 +324,8 @@ VACUUM VERBOSE ma_table;
 VACUUM ANALYZE ma_table;
 ```
 
-**Avantage** : Rapide, n'impose pas de verrou exclusif
-**Inconvénient** : Ne réduit pas physiquement la taille du fichier
+**Avantage** : Rapide, n'impose pas de verrou exclusif  
+**Inconvénient** : Ne réduit pas physiquement la taille du fichier  
 
 #### Option 2 : VACUUM FULL (Drastique)
 
@@ -334,8 +334,8 @@ VACUUM ANALYZE ma_table;
 VACUUM FULL ma_table;
 ```
 
-**Avantage** : Récupère vraiment tout l'espace
-**Inconvénient** : Pose un verrou exclusif (AccessExclusiveLock), bloque toute opération sur la table
+**Avantage** : Récupère vraiment tout l'espace  
+**Inconvénient** : Pose un verrou exclusif (AccessExclusiveLock), bloque toute opération sur la table  
 
 #### Option 3 : REINDEX (Pour les Index)
 
@@ -371,8 +371,8 @@ pg_repack -d ma_base -t ma_table
 
 Les index sont **essentiels pour la performance**, mais :
 
-1. **Coût de maintenance** : Chaque index ralentit les INSERT/UPDATE/DELETE
-2. **Consommation d'espace disque**
+1. **Coût de maintenance** : Chaque index ralentit les INSERT/UPDATE/DELETE  
+2. **Consommation d'espace disque**  
 3. **Cache pollution** : Index inutiles occupent de la mémoire
 
 Il est donc crucial d'identifier :
@@ -438,8 +438,8 @@ LIMIT 20;
 
 **Analyse** :
 
-- **index_usage_pct > 90%** : Excellent, vos index sont bien utilisés
-- **index_usage_pct < 50%** : Beaucoup de scans séquentiels, envisagez d'ajouter des index
+- **index_usage_pct > 90%** : Excellent, vos index sont bien utilisés  
+- **index_usage_pct < 50%** : Beaucoup de scans séquentiels, envisagez d'ajouter des index  
 - **seq_scan élevé sur grosse table** : Problème de performance potentiel
 
 **Nuance** : Sur de petites tables (<1000 lignes), PostgreSQL préfère souvent le scan séquentiel car c'est plus rapide. C'est normal.
@@ -503,7 +503,7 @@ LIMIT 20;
 ```
 
 **Objectif** :
-- **cache_hit_ratio > 95%** : Excellent
+- **cache_hit_ratio > 95%** : Excellent  
 - **cache_hit_ratio < 80%** : L'index est souvent lu depuis le disque, envisagez d'augmenter `shared_buffers`
 
 ### 4.6. Requête : Taille de Tous les Index d'une Table
@@ -554,15 +554,15 @@ LIMIT 20;
 
 **Processus d'analyse** :
 
-1. Identifiez les requêtes lentes avec `pg_stat_statements`
-2. Pour chaque requête, faites un `EXPLAIN ANALYZE` pour voir le plan d'exécution
+1. Identifiez les requêtes lentes avec `pg_stat_statements`  
+2. Pour chaque requête, faites un `EXPLAIN ANALYZE` pour voir le plan d'exécution  
 3. Si vous voyez des `Seq Scan` sur de grosses tables : **créez un index**
 
 Exemple :
 
 ```sql
-EXPLAIN ANALYZE
-SELECT * FROM users WHERE email = 'john@example.com';
+EXPLAIN ANALYZE  
+SELECT * FROM users WHERE email = 'john@example.com';  
 ```
 
 Si le plan montre :
@@ -602,9 +602,9 @@ PostgreSQL 18 introduit l'optimisation **Skip Scan** pour les index multi-colonn
 
 ```sql
 -- Étape 1 : Voir les connexions actives
-SELECT pid, usename, state, query, wait_event_type, wait_event
-FROM pg_stat_activity
-WHERE state != 'idle';
+SELECT pid, usename, state, query, wait_event_type, wait_event  
+FROM pg_stat_activity  
+WHERE state != 'idle';  
 
 -- Étape 2 : Identifier qui bloque qui
 -- (Utiliser la requête de la section 2.4)
@@ -628,8 +628,8 @@ SELECT
     n_dead_tup,
     round(100 * n_dead_tup / NULLIF(n_live_tup + n_dead_tup, 0), 2) AS dead_pct,
     last_autovacuum
-FROM pg_stat_user_tables
-WHERE tablename = 'orders';
+FROM pg_stat_user_tables  
+WHERE tablename = 'orders';  
 ```
 
 **Si dead_pct > 40%** :
@@ -657,8 +657,8 @@ VACUUM FULL orders;
 -- (Section 4.2)
 
 -- Étape 2 : Analyser le plan d'exécution
-EXPLAIN ANALYZE
-SELECT * FROM products WHERE category = 'Electronics';
+EXPLAIN ANALYZE  
+SELECT * FROM products WHERE category = 'Electronics';  
 
 -- Étape 3 : Si vous voyez "Seq Scan" sur une grosse table
 -- Créer un index :
@@ -680,9 +680,9 @@ SELECT
     indexname,
     pg_size_pretty(pg_relation_size(indexrelid)) AS size,
     idx_scan
-FROM pg_stat_user_indexes
-WHERE tablename = 'ma_table'
-ORDER BY idx_scan ASC;
+FROM pg_stat_user_indexes  
+WHERE tablename = 'ma_table'  
+ORDER BY idx_scan ASC;  
 ```
 
 **Solution** : Supprimer les index avec `idx_scan = 0` :
@@ -701,14 +701,14 @@ DROP INDEX idx_unused_column;
 
 **Mettez en place un monitoring régulier** :
 
-1. **Locks** : Alerter si une transaction bloque depuis > 5 minutes
-2. **Bloat** : Audit hebdomadaire du bloat, VACUUM si nécessaire
+1. **Locks** : Alerter si une transaction bloque depuis > 5 minutes  
+2. **Bloat** : Audit hebdomadaire du bloat, VACUUM si nécessaire  
 3. **Index** : Audit mensuel de l'utilisation des index
 
 **Outils recommandés** :
-- **pg_stat_statements** : Extension indispensable
-- **pgBadger** : Analyse de logs
-- **Prometheus + postgres_exporter** : Monitoring temps réel
+- **pg_stat_statements** : Extension indispensable  
+- **pgBadger** : Analyse de logs  
+- **Prometheus + postgres_exporter** : Monitoring temps réel  
 - **Grafana** : Dashboards visuels
 
 ### 6.2. Configuration de l'Autovacuum
@@ -731,18 +731,18 @@ autovacuum_vacuum_max_threshold = 50000000
 autovacuum_vacuum_scale_factor = 0.1  # 10% de la table
 
 # Coût du vacuum (limiter l'impact I/O)
-autovacuum_vacuum_cost_delay = 2ms  # Pause entre I/O
-autovacuum_vacuum_cost_limit = 200  # Budget I/O
+autovacuum_vacuum_cost_delay = 2ms  # Pause entre I/O  
+autovacuum_vacuum_cost_limit = 200  # Budget I/O  
 ```
 
 ### 6.3. Stratégie d'Indexation
 
 **Principes** :
 
-1. **Indexez les colonnes de filtrage (WHERE)** : Toujours
-2. **Indexez les colonnes de jointure (JOIN)** : FK notamment
-3. **Indexez les colonnes de tri (ORDER BY)** : Si tri fréquent
-4. **N'indexez pas les petites tables** : < 10 000 lignes, inutile
+1. **Indexez les colonnes de filtrage (WHERE)** : Toujours  
+2. **Indexez les colonnes de jointure (JOIN)** : FK notamment  
+3. **Indexez les colonnes de tri (ORDER BY)** : Si tri fréquent  
+4. **N'indexez pas les petites tables** : < 10 000 lignes, inutile  
 5. **Utilisez des index partiels** : Pour filtrer sur des valeurs spécifiques
 
 **Exemple d'index partiel** :
@@ -782,8 +782,8 @@ Cela vous aidera à **identifier les patterns** et **prévenir les problèmes r�
 
 Avant toute modification majeure (ajout d'index, VACUUM FULL, changement de configuration) :
 
-1. **Testez en environnement de préproduction**
-2. **Mesurez l'impact** : Temps de réponse, débit, utilisation CPU/RAM
+1. **Testez en environnement de préproduction**  
+2. **Mesurez l'impact** : Temps de réponse, débit, utilisation CPU/RAM  
 3. **Préparez un rollback** : Plan B si ça se passe mal
 
 ---
@@ -792,22 +792,22 @@ Avant toute modification majeure (ajout d'index, VACUUM FULL, changement de conf
 
 ### Locks
 
-- ✅ Utilisez `pg_stat_activity` et `pg_locks` pour diagnostiquer les blocages
-- ✅ Identifiez rapidement la transaction bloquante avec la requête de la section 2.4
+- ✅ Utilisez `pg_stat_activity` et `pg_locks` pour diagnostiquer les blocages  
+- ✅ Identifiez rapidement la transaction bloquante avec la requête de la section 2.4  
 - ✅ Utilisez `pg_cancel_backend()` ou `pg_terminate_backend()` en dernier recours
 
 ### Bloat
 
-- ✅ Surveillez le pourcentage de dead tuples avec `pg_stat_user_tables`
-- ✅ Configurez correctement l'autovacuum (PostgreSQL 18 : nouveaux paramètres)
-- ✅ Utilisez VACUUM ou pg_repack pour nettoyer le bloat
+- ✅ Surveillez le pourcentage de dead tuples avec `pg_stat_user_tables`  
+- ✅ Configurez correctement l'autovacuum (PostgreSQL 18 : nouveaux paramètres)  
+- ✅ Utilisez VACUUM ou pg_repack pour nettoyer le bloat  
 - ✅ Évitez VACUUM FULL en production (bloque la table)
 
 ### Index
 
-- ✅ Identifiez et supprimez les index inutilisés (`idx_scan = 0`)
-- ✅ Surveillez le ratio index vs scan séquentiel
-- ✅ Créez des index pour les requêtes lentes (vérifiez avec EXPLAIN)
+- ✅ Identifiez et supprimez les index inutilisés (`idx_scan = 0`)  
+- ✅ Surveillez le ratio index vs scan séquentiel  
+- ✅ Créez des index pour les requêtes lentes (vérifiez avec EXPLAIN)  
 - ✅ PostgreSQL 18 : Skip Scan réduit le besoin d'index redondants
 
 ---
@@ -816,15 +816,15 @@ Avant toute modification majeure (ajout d'index, VACUUM FULL, changement de conf
 
 ### Documentation Officielle PostgreSQL
 
-- [Monitoring Database Activity](https://www.postgresql.org/docs/18/monitoring.html)
-- [Routine Database Maintenance](https://www.postgresql.org/docs/18/maintenance.html)
+- [Monitoring Database Activity](https://www.postgresql.org/docs/18/monitoring.html)  
+- [Routine Database Maintenance](https://www.postgresql.org/docs/18/maintenance.html)  
 - [System Administration Functions](https://www.postgresql.org/docs/18/functions-admin.html)
 
 ### Outils Recommandés
 
-- **pg_stat_statements** : Tracking des requêtes
-- **pgBadger** : Analyse de logs
-- **pg_repack** : Réorganisation sans verrous
+- **pg_stat_statements** : Tracking des requêtes  
+- **pgBadger** : Analyse de logs  
+- **pg_repack** : Réorganisation sans verrous  
 - **HypoPG** : Tester des index hypothétiques
 
 ### Communautés et Support

@@ -16,19 +16,19 @@ Cette section propose des roadmaps complètes adaptées à différents profils p
 
 PostgreSQL est un système riche et complexe. La documentation officielle compte des milliers de pages, et l'écosystème d'outils et d'extensions ne cesse de croître. Face à cette abondance, il est facile de :
 
-- **Se disperser** : sauter d'un sujet à l'autre sans approfondir
-- **Brûler les étapes** : aborder des sujets avancés sans maîtriser les fondamentaux
-- **Négliger des domaines importants** : se concentrer sur ce qu'on connaît déjà
+- **Se disperser** : sauter d'un sujet à l'autre sans approfondir  
+- **Brûler les étapes** : aborder des sujets avancés sans maîtriser les fondamentaux  
+- **Négliger des domaines importants** : se concentrer sur ce qu'on connaît déjà  
 - **Perdre sa motivation** : ne pas voir de progression claire
 
 ### Les avantages d'un parcours structuré
 
 Une roadmap bien conçue vous permet de :
 
-- **Progresser logiquement** : chaque concept s'appuie sur les précédents
-- **Mesurer votre progression** : savoir où vous en êtes et ce qu'il reste à apprendre
-- **Rester motivé** : atteindre des jalons concrets et visibles
-- **Être opérationnel** : acquérir les compétences dans l'ordre où elles sont utiles
+- **Progresser logiquement** : chaque concept s'appuie sur les précédents  
+- **Mesurer votre progression** : savoir où vous en êtes et ce qu'il reste à apprendre  
+- **Rester motivé** : atteindre des jalons concrets et visibles  
+- **Être opérationnel** : acquérir les compétences dans l'ordre où elles sont utiles  
 - **Ne rien oublier** : couvrir tous les domaines essentiels
 
 ---
@@ -186,8 +186,8 @@ Dans la réalité, les rôles sont rarement aussi cloisonnés que les parcours l
 
 Chaque parcours inclut des "indicateurs de progression" à la fin de chaque phase. Utilisez-les pour :
 
-- **Auto-évaluation** : Pouvez-vous réaliser les tâches listées ?
-- **Identification des lacunes** : Quels points nécessitent plus de travail ?
+- **Auto-évaluation** : Pouvez-vous réaliser les tâches listées ?  
+- **Identification des lacunes** : Quels points nécessitent plus de travail ?  
 - **Validation** : Êtes-vous prêt à passer à la phase suivante ?
 
 Soyez honnête avec vous-même. Il vaut mieux consolider une phase que de passer à la suivante avec des bases fragiles.
@@ -224,9 +224,9 @@ Chaque parcours est organisé en trois phases :
 
 La théorie seule ne suffit pas. PostgreSQL s'apprend en pratiquant :
 
-- **Installez PostgreSQL** sur votre machine personnelle
-- **Créez des projets personnels** utilisant PostgreSQL
-- **Reproduisez des scénarios** vus dans la documentation ou les tutoriels
+- **Installez PostgreSQL** sur votre machine personnelle  
+- **Créez des projets personnels** utilisant PostgreSQL  
+- **Reproduisez des scénarios** vus dans la documentation ou les tutoriels  
 - **Expérimentez** : cassez des choses, réparez-les, comprenez pourquoi
 
 ### Lire la documentation officielle
@@ -241,18 +241,18 @@ La documentation PostgreSQL est exceptionnelle : complète, bien écrite, avec d
 
 La communauté PostgreSQL est accueillante et active :
 
-- **Mailing lists** : pgsql-general pour les questions générales
-- **Forums** : Stack Overflow (tag postgresql)
-- **Réseaux sociaux** : Reddit r/PostgreSQL, Twitter/X #postgresql
-- **Chat** : Discord et Slack PostgreSQL
+- **Mailing lists** : pgsql-general pour les questions générales  
+- **Forums** : Stack Overflow (tag postgresql)  
+- **Réseaux sociaux** : Reddit r/PostgreSQL, Twitter/X #postgresql  
+- **Chat** : Discord et Slack PostgreSQL  
 - **Conférences** : PGConf, FOSDEM, meetups locaux
 
 ### Apprendre des erreurs
 
 Chaque erreur est une opportunité d'apprentissage :
 
-- **Lisez les messages d'erreur** : PostgreSQL est verbeux et explicite
-- **Comprenez la cause** : ne vous contentez pas de contourner le problème
+- **Lisez les messages d'erreur** : PostgreSQL est verbeux et explicite  
+- **Comprenez la cause** : ne vous contentez pas de contourner le problème  
 - **Documentez** : notez les problèmes rencontrés et leurs solutions
 
 ### Rester à jour
@@ -271,22 +271,22 @@ Avant de commencer n'importe quel parcours, assurez-vous d'avoir :
 
 ### Connaissances de base
 
-- **Concepts informatiques généraux** : fichiers, processus, mémoire, réseau
-- **Ligne de commande** : navigation, édition de fichiers, commandes de base
+- **Concepts informatiques généraux** : fichiers, processus, mémoire, réseau  
+- **Ligne de commande** : navigation, édition de fichiers, commandes de base  
 - **Bases de Linux/Unix** : les parcours supposent un environnement Linux (le plus courant en production)
 
 ### Environnement de travail
 
-- **Un ordinateur** capable de faire tourner PostgreSQL (la plupart des machines modernes conviennent)
-- **PostgreSQL installé** : version 16 ou supérieure recommandée (18 idéalement)
-- **Un éditeur de texte** ou IDE : VS Code, vim, ou tout autre éditeur confortable
+- **Un ordinateur** capable de faire tourner PostgreSQL (la plupart des machines modernes conviennent)  
+- **PostgreSQL installé** : version 16 ou supérieure recommandée (18 idéalement)  
+- **Un éditeur de texte** ou IDE : VS Code, vim, ou tout autre éditeur confortable  
 - **Accès à internet** : pour la documentation et les ressources
 
 ### État d'esprit
 
-- **Curiosité** : envie de comprendre comment les choses fonctionnent
-- **Patience** : l'expertise se construit sur des mois et des années
-- **Persévérance** : ne pas abandonner face aux difficultés
+- **Curiosité** : envie de comprendre comment les choses fonctionnent  
+- **Patience** : l'expertise se construit sur des mois et des années  
+- **Persévérance** : ne pas abandonner face aux difficultés  
 - **Humilité** : accepter qu'on ne sait pas tout et qu'on peut toujours apprendre
 
 ---
@@ -310,9 +310,9 @@ Vous êtes maintenant prêt à commencer. Choisissez le parcours qui correspond 
 
 Rappelez-vous :
 
-- **Le meilleur moment pour commencer, c'est maintenant**
-- **La progression n'est pas linéaire** : vous aurez des plateaux et des accélérations
-- **L'objectif n'est pas la perfection** : c'est la progression continue
+- **Le meilleur moment pour commencer, c'est maintenant**  
+- **La progression n'est pas linéaire** : vous aurez des plateaux et des accélérations  
+- **L'objectif n'est pas la perfection** : c'est la progression continue  
 - **Chaque expert a été débutant** : les meilleurs DBA du monde ont un jour écrit leur premier `SELECT`
 
 Bonne route dans votre apprentissage de PostgreSQL !
@@ -321,9 +321,9 @@ Bonne route dans votre apprentissage de PostgreSQL !
 
 *Les sections suivantes détaillent chaque parcours :*
 
-- *21.5.1. Parcours Développeur*
-- *21.5.2. Parcours DevOps/SRE*
-- *21.5.3. Parcours DBA*
+- *21.5.1. Parcours Développeur*  
+- *21.5.2. Parcours DevOps/SRE*  
+- *21.5.3. Parcours DBA*  
 - *21.5.4. Certifications PostgreSQL*
 
 ---

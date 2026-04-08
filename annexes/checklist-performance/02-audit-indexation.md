@@ -7,22 +7,22 @@
 
 ## Table des Matières
 
-1. [Introduction aux Index](#1-introduction-aux-index)
-2. [Pourquoi Auditer les Index ?](#2-pourquoi-auditer-les-index-)
-3. [Anatomie d'un Index](#3-anatomie-dun-index)
-4. [Types d'Index dans PostgreSQL](#4-types-dindex-dans-postgresql)
-5. [Méthodologie d'Audit d'Indexation](#5-m%C3%A9thodologie-daudit-dindexation)
-6. [Détection des Index Manquants](#6-d%C3%A9tection-des-index-manquants)
-7. [Détection des Index Inutilisés](#7-d%C3%A9tection-des-index-inutilis%C3%A9s)
-8. [Détection des Index Redondants](#8-d%C3%A9tection-des-index-redondants)
-9. [Bloat et Fragmentation des Index](#9-bloat-et-fragmentation-des-index)
-10. [Performance des Index](#10-performance-des-index)
-11. [Stratégies d'Indexation Avancées](#11-strat%C3%A9gies-dindexation-avanc%C3%A9es)
-12. [PostgreSQL 18 : Nouveautés d'Indexation](#12-postgresql-18--nouveaut%C3%A9s-dindexation)
-13. [Outils d'Audit d'Indexation](#13-outils-daudit-dindexation)
-14. [Checklist d'Audit Complète](#14-checklist-daudit-compl%C3%A8te)
-15. [Erreurs Courantes d'Indexation](#15-erreurs-courantes-dindexation)
-16. [Cas Pratiques et Scénarios](#16-cas-pratiques-et-sc%C3%A9narios)
+1. [Introduction aux Index](#1-introduction-aux-index)  
+2. [Pourquoi Auditer les Index ?](#2-pourquoi-auditer-les-index-)  
+3. [Anatomie d'un Index](#3-anatomie-dun-index)  
+4. [Types d'Index dans PostgreSQL](#4-types-dindex-dans-postgresql)  
+5. [Méthodologie d'Audit d'Indexation](#5-m%C3%A9thodologie-daudit-dindexation)  
+6. [Détection des Index Manquants](#6-d%C3%A9tection-des-index-manquants)  
+7. [Détection des Index Inutilisés](#7-d%C3%A9tection-des-index-inutilis%C3%A9s)  
+8. [Détection des Index Redondants](#8-d%C3%A9tection-des-index-redondants)  
+9. [Bloat et Fragmentation des Index](#9-bloat-et-fragmentation-des-index)  
+10. [Performance des Index](#10-performance-des-index)  
+11. [Stratégies d'Indexation Avancées](#11-strat%C3%A9gies-dindexation-avanc%C3%A9es)  
+12. [PostgreSQL 18 : Nouveautés d'Indexation](#12-postgresql-18--nouveaut%C3%A9s-dindexation)  
+13. [Outils d'Audit d'Indexation](#13-outils-daudit-dindexation)  
+14. [Checklist d'Audit Complète](#14-checklist-daudit-compl%C3%A8te)  
+15. [Erreurs Courantes d'Indexation](#15-erreurs-courantes-dindexation)  
+16. [Cas Pratiques et Scénarios](#16-cas-pratiques-et-sc%C3%A9narios)  
 17. [Conclusion et Bonnes Pratiques](#17-conclusion-et-bonnes-pratiques)
 
 ---
@@ -47,8 +47,8 @@ PostgreSQL doit lire **toute la table** ligne par ligne jusqu'à trouver 'Dupont
 
 **Avec un index sur `nom`** :
 ```sql
-CREATE INDEX idx_employes_nom ON employes(nom);
-SELECT * FROM employes WHERE nom = 'Dupont';
+CREATE INDEX idx_employes_nom ON employes(nom);  
+SELECT * FROM employes WHERE nom = 'Dupont';  
 ```
 PostgreSQL consulte l'index qui pointe directement vers les lignes contenant 'Dupont'.
 
@@ -57,15 +57,15 @@ PostgreSQL consulte l'index qui pointe directement vers les lignes contenant 'Du
 Les index offrent un compromis (trade-off) :
 
 **Avantages** :
-- ✅ Lectures beaucoup plus rapides (SELECT)
-- ✅ Tri rapide (ORDER BY)
-- ✅ Jointures accélérées
+- ✅ Lectures beaucoup plus rapides (SELECT)  
+- ✅ Tri rapide (ORDER BY)  
+- ✅ Jointures accélérées  
 - ✅ Contraintes d'unicité (UNIQUE)
 
 **Inconvénients** :
-- ❌ Écritures plus lentes (INSERT, UPDATE, DELETE)
-- ❌ Consommation d'espace disque
-- ❌ Coût de maintenance (VACUUM, REINDEX)
+- ❌ Écritures plus lentes (INSERT, UPDATE, DELETE)  
+- ❌ Consommation d'espace disque  
+- ❌ Coût de maintenance (VACUUM, REINDEX)  
 - ❌ Surcharge mémoire
 
 **Règle d'or** : Un bon index accélère les lectures sans trop pénaliser les écritures.
@@ -73,17 +73,17 @@ Les index offrent un compromis (trade-off) :
 ### 1.4. Quand Créer un Index ?
 
 Créez un index quand :
-- ✅ La colonne est fréquemment utilisée dans les clauses WHERE
-- ✅ La colonne est utilisée pour des jointures (JOIN)
-- ✅ La colonne est utilisée pour des tris (ORDER BY)
-- ✅ La colonne est utilisée dans des GROUP BY
-- ✅ La table est grande (> 10,000 lignes)
+- ✅ La colonne est fréquemment utilisée dans les clauses WHERE  
+- ✅ La colonne est utilisée pour des jointures (JOIN)  
+- ✅ La colonne est utilisée pour des tris (ORDER BY)  
+- ✅ La colonne est utilisée dans des GROUP BY  
+- ✅ La table est grande (> 10,000 lignes)  
 - ✅ La sélectivité est élevée (peu de doublons)
 
 Ne créez **pas** d'index quand :
-- ❌ La table est petite (< 1,000 lignes)
-- ❌ La colonne a peu de valeurs distinctes (ex: booléen)
-- ❌ La table est principalement en écriture (INSERT/UPDATE massif)
+- ❌ La table est petite (< 1,000 lignes)  
+- ❌ La colonne a peu de valeurs distinctes (ex: booléen)  
+- ❌ La table est principalement en écriture (INSERT/UPDATE massif)  
 - ❌ La colonne est rarement utilisée dans les requêtes
 
 ---
@@ -148,21 +148,21 @@ Une stratégie d'indexation inadaptée peut causer :
 
 Un audit régulier permet de :
 
-- **Optimiser les performances** : Identifier et combler les lacunes
-- **Réduire les coûts** : Supprimer les index inutiles
-- **Améliorer le débit** : Équilibrer lecture/écriture
-- **Simplifier la maintenance** : Moins d'index à gérer
+- **Optimiser les performances** : Identifier et combler les lacunes  
+- **Réduire les coûts** : Supprimer les index inutiles  
+- **Améliorer le débit** : Équilibrer lecture/écriture  
+- **Simplifier la maintenance** : Moins d'index à gérer  
 - **Prévenir les problèmes** : Détecter le bloat avant qu'il devienne critique
 
 ### 2.3. Quand Effectuer un Audit d'Indexation ?
 
 Il est recommandé d'auditer les index :
 
-- **Après le déploiement initial** : Valider la stratégie d'indexation
-- **Mensuellement** : Sur les systèmes critiques en production
-- **Après un changement de charge** : Nouvelles fonctionnalités, pic d'utilisation
-- **Suite à des problèmes de performance** : Requêtes lentes identifiées
-- **Après une migration** : PostgreSQL 17 → 18
+- **Après le déploiement initial** : Valider la stratégie d'indexation  
+- **Mensuellement** : Sur les systèmes critiques en production  
+- **Après un changement de charge** : Nouvelles fonctionnalités, pic d'utilisation  
+- **Suite à des problèmes de performance** : Requêtes lentes identifiées  
+- **Après une migration** : PostgreSQL 17 → 18  
 - **Avant un scaling up** : Optimiser avant d'ajouter du matériel
 
 ---
@@ -180,7 +180,7 @@ Un index PostgreSQL est composé de :
 
 #### Entrées d'Index
 Chaque entrée contient :
-- **Clé** : La valeur de la colonne indexée
+- **Clé** : La valeur de la colonne indexée  
 - **Pointeur** : Référence vers la ligne de la table (TID - Tuple ID)
 
 **Exemple** : Index sur `employes(nom)`
@@ -227,14 +227,14 @@ Index :
 
 Le **planificateur** (query planner) décide quel type de scan utiliser en fonction de :
 
-1. **Statistiques** : Données sur la distribution des valeurs (pg_stats)
-2. **Coût estimé** : Calcul du coût de chaque stratégie
+1. **Statistiques** : Données sur la distribution des valeurs (pg_stats)  
+2. **Coût estimé** : Calcul du coût de chaque stratégie  
 3. **Sélectivité** : Proportion de lignes retournées
 
 **Formule simplifiée** :
 ```
-Coût Index Scan = (Coût lecture index) + (Coût lecture lignes table)
-Coût Seq Scan = Coût lecture table complète
+Coût Index Scan = (Coût lecture index) + (Coût lecture lignes table)  
+Coût Seq Scan = Coût lecture table complète  
 ```
 
 Le planificateur choisit le scan avec le **coût le plus bas**.
@@ -275,18 +275,18 @@ PostgreSQL supporte plusieurs types d'index, chacun adapté à des cas d'usage s
 CREATE INDEX idx_employes_salaire ON employes(salaire);
 
 -- Utilisera l'index
-SELECT * FROM employes WHERE salaire > 50000;
-SELECT * FROM employes WHERE salaire BETWEEN 40000 AND 60000;
-SELECT * FROM employes ORDER BY salaire;
+SELECT * FROM employes WHERE salaire > 50000;  
+SELECT * FROM employes WHERE salaire BETWEEN 40000 AND 60000;  
+SELECT * FROM employes ORDER BY salaire;  
 ```
 
 **Avantages** :
-- ✅ Très polyvalent
-- ✅ Excellentes performances générales
+- ✅ Très polyvalent  
+- ✅ Excellentes performances générales  
 - ✅ Supporte le tri
 
 **Limites** :
-- ❌ Pas optimal pour la recherche de texte intégral
+- ❌ Pas optimal pour la recherche de texte intégral  
 - ❌ Pas adapté aux données géométriques
 
 ---
@@ -317,12 +317,12 @@ SELECT * FROM employes WHERE email LIKE '%@example.com';
 ```
 
 **Avantages** :
-- ✅ Légèrement plus rapide que B-Tree pour l'égalité pure
+- ✅ Légèrement plus rapide que B-Tree pour l'égalité pure  
 - ✅ Taille d'index potentiellement plus petite
 
 **Limites** :
-- ❌ **Aucun** support des comparaisons (<, >, BETWEEN)
-- ❌ **Aucun** support du tri
+- ❌ **Aucun** support des comparaisons (<, >, BETWEEN)  
+- ❌ **Aucun** support du tri  
 - ❌ Moins polyvalent que B-Tree
 
 **Quand utiliser Hash ?**
@@ -352,21 +352,21 @@ SELECT * FROM employes WHERE email LIKE '%@example.com';
 **Exemple** :
 ```sql
 -- Géométrie avec PostGIS
-CREATE INDEX idx_lieux_geom ON lieux USING gist(geom);
-SELECT * FROM lieux WHERE ST_DWithin(geom, point_reference, 1000);
+CREATE INDEX idx_lieux_geom ON lieux USING gist(geom);  
+SELECT * FROM lieux WHERE ST_DWithin(geom, point_reference, 1000);  
 
 -- Recherche de texte
-CREATE INDEX idx_documents_texte ON documents USING gist(to_tsvector('french', contenu));
-SELECT * FROM documents WHERE to_tsvector('french', contenu) @@ to_tsquery('postgresql');
+CREATE INDEX idx_documents_texte ON documents USING gist(to_tsvector('french', contenu));  
+SELECT * FROM documents WHERE to_tsvector('french', contenu) @@ to_tsquery('postgresql');  
 ```
 
 **Avantages** :
-- ✅ Très flexible et extensible
-- ✅ Optimal pour les données spatiales
+- ✅ Très flexible et extensible  
+- ✅ Optimal pour les données spatiales  
 - ✅ Supporte de nombreux types de données
 
 **Limites** :
-- ❌ Plus lent que B-Tree pour les comparaisons simples
+- ❌ Plus lent que B-Tree pour les comparaisons simples  
 - ❌ Taille d'index plus importante
 
 ---
@@ -378,9 +378,9 @@ SELECT * FROM documents WHERE to_tsvector('french', contenu) @@ to_tsquery('post
 **Structure** : Index inversé où chaque élément pointe vers les lignes qui le contiennent.
 
 **Cas d'usage** :
-- **JSONB** : Recherche dans des documents JSON
-- **Arrays** : Recherche d'éléments dans des tableaux
-- **Full-Text Search** : Recherche de texte intégral (plus rapide que GiST)
+- **JSONB** : Recherche dans des documents JSON  
+- **Arrays** : Recherche d'éléments dans des tableaux  
+- **Full-Text Search** : Recherche de texte intégral (plus rapide que GiST)  
 - **hstore** : Paires clé-valeur
 
 **Opérateurs supportés** :
@@ -393,29 +393,29 @@ SELECT * FROM documents WHERE to_tsvector('french', contenu) @@ to_tsquery('post
 **Exemple** :
 ```sql
 -- JSONB
-CREATE INDEX idx_produits_attributs ON produits USING gin(attributs);
-SELECT * FROM produits WHERE attributs @> '{"couleur": "rouge"}';
+CREATE INDEX idx_produits_attributs ON produits USING gin(attributs);  
+SELECT * FROM produits WHERE attributs @> '{"couleur": "rouge"}';  
 
 -- Array
-CREATE INDEX idx_articles_tags ON articles USING gin(tags);
-SELECT * FROM articles WHERE tags @> ARRAY['postgresql', 'index'];
+CREATE INDEX idx_articles_tags ON articles USING gin(tags);  
+SELECT * FROM articles WHERE tags @> ARRAY['postgresql', 'index'];  
 
 -- Full-text search
-CREATE INDEX idx_documents_fts ON documents USING gin(to_tsvector('french', contenu));
-SELECT * FROM documents WHERE to_tsvector('french', contenu) @@ to_tsquery('base & donnees');
+CREATE INDEX idx_documents_fts ON documents USING gin(to_tsvector('french', contenu));  
+SELECT * FROM documents WHERE to_tsvector('french', contenu) @@ to_tsquery('base & donnees');  
 ```
 
 **Avantages** :
-- ✅ Très rapide pour la recherche dans JSONB et arrays
-- ✅ Excellent pour full-text search
+- ✅ Très rapide pour la recherche dans JSONB et arrays  
+- ✅ Excellent pour full-text search  
 - ✅ Taille d'index raisonnable
 
 **Limites** :
-- ❌ Écritures plus lentes (maintenance plus coûteuse)
+- ❌ Écritures plus lentes (maintenance plus coûteuse)  
 - ❌ Ne supporte pas toutes les opérations
 
 **GIN vs GiST pour Full-Text** :
-- **GIN** : Plus rapide en lecture, plus lent en écriture
+- **GIN** : Plus rapide en lecture, plus lent en écriture  
 - **GiST** : Plus lent en lecture, plus rapide en écriture
 
 Privilégiez **GIN** pour le full-text sauf si vous avez beaucoup d'écritures.
@@ -441,18 +441,18 @@ Privilégiez **GIN** pour le full-text sauf si vous avez beaucoup d'écritures.
 **Exemple** :
 ```sql
 -- Table de logs avec timestamp séquentiel
-CREATE INDEX idx_logs_timestamp_brin ON logs USING brin(timestamp);
-SELECT * FROM logs WHERE timestamp >= '2025-01-01' AND timestamp < '2025-02-01';
+CREATE INDEX idx_logs_timestamp_brin ON logs USING brin(timestamp);  
+SELECT * FROM logs WHERE timestamp >= '2025-01-01' AND timestamp < '2025-02-01';  
 ```
 
 **Avantages** :
-- ✅ **Très petit** : 1000× plus petit qu'un B-Tree équivalent
-- ✅ Maintenance rapide
+- ✅ **Très petit** : 1000× plus petit qu'un B-Tree équivalent  
+- ✅ Maintenance rapide  
 - ✅ Excellent pour les données séquentielles
 
 **Limites** :
-- ❌ Moins précis qu'un B-Tree (plus de faux positifs)
-- ❌ Nécessite une corrélation physique forte
+- ❌ Moins précis qu'un B-Tree (plus de faux positifs)  
+- ❌ Nécessite une corrélation physique forte  
 - ❌ Pas adapté aux données aléatoires
 
 **Quand utiliser BRIN ?**
@@ -478,16 +478,16 @@ SELECT * FROM logs WHERE timestamp >= '2025-01-01' AND timestamp < '2025-02-01';
 **Exemple** :
 ```sql
 -- Adresses IP
-CREATE INDEX idx_connexions_ip ON connexions USING spgist(adresse_ip);
-SELECT * FROM connexions WHERE adresse_ip << inet '192.168.1.0/24';
+CREATE INDEX idx_connexions_ip ON connexions USING spgist(adresse_ip);  
+SELECT * FROM connexions WHERE adresse_ip << inet '192.168.1.0/24';  
 ```
 
 **Avantages** :
-- ✅ Optimal pour certaines structures spécifiques
+- ✅ Optimal pour certaines structures spécifiques  
 - ✅ Plus compact que GiST pour certains types
 
 **Limites** :
-- ❌ Cas d'usage très spécifiques
+- ❌ Cas d'usage très spécifiques  
 - ❌ Moins universel que GiST
 
 **Quand utiliser SP-GiST ?**
@@ -525,9 +525,9 @@ SELECT
     tablename,
     indexname,
     indexdef
-FROM pg_indexes
-WHERE schemaname NOT IN ('pg_catalog', 'information_schema')
-ORDER BY schemaname, tablename, indexname;
+FROM pg_indexes  
+WHERE schemaname NOT IN ('pg_catalog', 'information_schema')  
+ORDER BY schemaname, tablename, indexname;  
 ```
 
 **Documentation** : Créez un tableau avec :
@@ -550,13 +550,13 @@ SELECT
     idx_scan,
     idx_tup_read,
     idx_tup_fetch
-FROM pg_stat_user_indexes
-ORDER BY idx_scan ASC;
+FROM pg_stat_user_indexes  
+ORDER BY idx_scan ASC;  
 ```
 
 **Indicateurs** :
-- `idx_scan = 0` : Index jamais utilisé
-- `idx_scan` faible : Index peu utilisé
+- `idx_scan = 0` : Index jamais utilisé  
+- `idx_scan` faible : Index peu utilisé  
 - `idx_scan` élevé : Index utile
 
 #### Étape 3 : Identification des Index Manquants
@@ -570,10 +570,10 @@ SELECT
     calls,
     mean_exec_time,
     total_exec_time
-FROM pg_stat_statements
-WHERE query LIKE '%Seq Scan%'
-ORDER BY total_exec_time DESC
-LIMIT 20;
+FROM pg_stat_statements  
+WHERE query LIKE '%Seq Scan%'  
+ORDER BY total_exec_time DESC  
+LIMIT 20;  
 ```
 
 #### Étape 4 : Détection des Index Redondants
@@ -587,9 +587,9 @@ SELECT
     i2.indexrelname AS index2,
     i1.indkey AS columns1,
     i2.indkey AS columns2
-FROM pg_index i1
-JOIN pg_index i2 ON i1.indrelid = i2.indrelid
-WHERE i1.indexrelid < i2.indexrelid
+FROM pg_index i1  
+JOIN pg_index i2 ON i1.indrelid = i2.indrelid  
+WHERE i1.indexrelid < i2.indexrelid  
   AND i1.indkey::text LIKE i2.indkey::text || '%';
 ```
 
@@ -606,9 +606,9 @@ SELECT
     pg_size_pretty(pg_relation_size(indexrelid)) AS index_size,
     ROUND(100 * (pg_relation_size(indexrelid) - pg_relation_size(indexrelid, 'main'))::numeric /
           NULLIF(pg_relation_size(indexrelid), 0), 2) AS bloat_pct
-FROM pg_stat_user_indexes
-ORDER BY pg_relation_size(indexrelid) DESC
-LIMIT 20;
+FROM pg_stat_user_indexes  
+ORDER BY pg_relation_size(indexrelid) DESC  
+LIMIT 20;  
 ```
 
 #### Étape 6 : Évaluation des Performances
@@ -649,14 +649,14 @@ SELECT
     seq_tup_read,
     idx_scan,
     seq_tup_read / NULLIF(seq_scan, 0) AS avg_seq_tup_per_scan
-FROM pg_stat_user_tables
-WHERE seq_scan > 0
-ORDER BY seq_scan DESC
-LIMIT 20;
+FROM pg_stat_user_tables  
+WHERE seq_scan > 0  
+ORDER BY seq_scan DESC  
+LIMIT 20;  
 ```
 
 **Interprétation** :
-- `seq_scan` élevé + `idx_scan` faible : Manque probable d'index
+- `seq_scan` élevé + `idx_scan` faible : Manque probable d'index  
 - `avg_seq_tup_per_scan` faible : Table petite, index peut-être inutile
 
 #### Symptôme 2 : Requêtes Lentes dans pg_stat_statements
@@ -668,10 +668,10 @@ SELECT
     calls,
     mean_exec_time,
     total_exec_time
-FROM pg_stat_statements
-WHERE mean_exec_time > 100  -- Plus de 100 ms
-ORDER BY total_exec_time DESC
-LIMIT 20;
+FROM pg_stat_statements  
+WHERE mean_exec_time > 100  -- Plus de 100 ms  
+ORDER BY total_exec_time DESC  
+LIMIT 20;  
 ```
 
 Pour chaque requête lente, utilisez `EXPLAIN` pour voir si des sequential scans sont présents.
@@ -679,8 +679,8 @@ Pour chaque requête lente, utilisez `EXPLAIN` pour voir si des sequential scans
 #### Symptôme 3 : Plans de Requêtes avec Seq Scan
 
 ```sql
-EXPLAIN (ANALYZE, BUFFERS)
-SELECT * FROM employes WHERE nom = 'Dupont';
+EXPLAIN (ANALYZE, BUFFERS)  
+SELECT * FROM employes WHERE nom = 'Dupont';  
 ```
 
 Si vous voyez :
@@ -707,9 +707,9 @@ CREATE INDEX idx_commandes_client_id ON commandes(client_id);
 
 ```sql
 -- Exemple : Jointure fréquente
-SELECT *
-FROM commandes c
-JOIN clients cl ON c.client_id = cl.id;
+SELECT *  
+FROM commandes c  
+JOIN clients cl ON c.client_id = cl.id;  
 
 -- Index recommandés
 CREATE INDEX idx_commandes_client_id ON commandes(client_id);
@@ -734,9 +734,9 @@ CREATE INDEX idx_produits_prix ON produits(prix DESC);
 
 ```sql
 -- Définition de FK
-ALTER TABLE commandes
-ADD CONSTRAINT fk_client
-FOREIGN KEY (client_id) REFERENCES clients(id);
+ALTER TABLE commandes  
+ADD CONSTRAINT fk_client  
+FOREIGN KEY (client_id) REFERENCES clients(id);  
 
 -- Index à créer MANUELLEMENT
 CREATE INDEX idx_commandes_client_id ON commandes(client_id);
@@ -771,8 +771,8 @@ SELECT hypopg_reset();
 ```
 
 **Avantages** :
-- ✅ Aucun impact sur la production
-- ✅ Test instantané
+- ✅ Aucun impact sur la production  
+- ✅ Test instantané  
 - ✅ Permet de valider avant de créer
 
 ---
@@ -791,8 +791,8 @@ SELECT
     idx_scan,
     pg_size_pretty(pg_relation_size(indexrelid)) AS index_size,
     pg_relation_size(indexrelid) AS size_bytes
-FROM pg_stat_user_indexes
-WHERE idx_scan = 0
+FROM pg_stat_user_indexes  
+WHERE idx_scan = 0  
   AND indexrelname NOT LIKE '%_pkey'  -- Exclure les PK
 ORDER BY pg_relation_size(indexrelid) DESC;
 ```
@@ -819,15 +819,15 @@ Si les stats ont été réinitialisées récemment, `idx_scan = 0` peut être te
 SELECT
     i.relname AS index_name,
     c.contype AS constraint_type
-FROM pg_index ix
-JOIN pg_class i ON i.oid = ix.indexrelid
-LEFT JOIN pg_constraint c ON c.conindid = ix.indexrelid
-WHERE i.relname = 'nom_de_lindex';
+FROM pg_index ix  
+JOIN pg_class i ON i.oid = ix.indexrelid  
+LEFT JOIN pg_constraint c ON c.conindid = ix.indexrelid  
+WHERE i.relname = 'nom_de_lindex';  
 ```
 
 **Types de contraintes** :
-- `p` : PRIMARY KEY
-- `u` : UNIQUE
+- `p` : PRIMARY KEY  
+- `u` : UNIQUE  
 - `f` : FOREIGN KEY
 
 **Ne supprimez jamais** un index servant à une contrainte.
@@ -891,9 +891,9 @@ CREATE INDEX CONCURRENTLY nom_index ON table(colonne);
 
 Ne supprimez **jamais** :
 
-1. **Index PRIMARY KEY** : `table_pkey`
-2. **Index UNIQUE** : Servant à contrainte d'unicité
-3. **Index de FK** : Sur colonnes de clés étrangères
+1. **Index PRIMARY KEY** : `table_pkey`  
+2. **Index UNIQUE** : Servant à contrainte d'unicité  
+3. **Index de FK** : Sur colonnes de clés étrangères  
 4. **Index système** : Dans `pg_catalog`
 
 ---
@@ -906,8 +906,8 @@ Ne supprimez **jamais** :
 
 **Cas 1 : Duplication exacte**
 ```sql
-CREATE INDEX idx1 ON employes(nom);
-CREATE INDEX idx2 ON employes(nom);  -- Redondant !
+CREATE INDEX idx1 ON employes(nom);  
+CREATE INDEX idx2 ON employes(nom);  -- Redondant !  
 ```
 
 **Détection** :
@@ -916,9 +916,9 @@ SELECT
     i1.indexrelname AS index1,
     i2.indexrelname AS index2,
     i1.indkey AS columns
-FROM pg_index i1
-JOIN pg_index i2 ON i1.indrelid = i2.indrelid
-WHERE i1.indexrelid < i2.indexrelid
+FROM pg_index i1  
+JOIN pg_index i2 ON i1.indrelid = i2.indrelid  
+WHERE i1.indexrelid < i2.indexrelid  
   AND i1.indkey = i2.indkey;
 ```
 
@@ -926,8 +926,8 @@ WHERE i1.indexrelid < i2.indexrelid
 
 **Cas 2 : Index multi-colonnes vs simple**
 ```sql
-CREATE INDEX idx_employes_nom_prenom ON employes(nom, prenom);
-CREATE INDEX idx_employes_nom ON employes(nom);  -- Potentiellement redondant
+CREATE INDEX idx_employes_nom_prenom ON employes(nom, prenom);  
+CREATE INDEX idx_employes_nom ON employes(nom);  -- Potentiellement redondant  
 ```
 
 **Règle** : Un index sur `(a, b)` peut souvent remplacer un index sur `(a)`.
@@ -943,9 +943,9 @@ SELECT
     i2.indexrelname AS narrow_index,
     i1.indkey AS wide_columns,
     i2.indkey AS narrow_columns
-FROM pg_index i1
-JOIN pg_index i2 ON i1.indrelid = i2.indrelid
-WHERE i1.indexrelid <> i2.indexrelid
+FROM pg_index i1  
+JOIN pg_index i2 ON i1.indrelid = i2.indrelid  
+WHERE i1.indexrelid <> i2.indexrelid  
   AND i1.indkey::text LIKE i2.indkey::text || '%'
   AND array_length(string_to_array(i1.indkey::text, ' '), 1) >
       array_length(string_to_array(i2.indkey::text, ' '), 1);
@@ -974,8 +974,8 @@ CREATE INDEX idx_petit ON logs(timestamp);
 CREATE INDEX idx_commandes_statut ON commandes(statut);
 
 -- Index partiel pour statut spécifique (plus petit, plus rapide)
-CREATE INDEX idx_commandes_encours ON commandes(statut)
-WHERE statut = 'en_cours';
+CREATE INDEX idx_commandes_encours ON commandes(statut)  
+WHERE statut = 'en_cours';  
 ```
 
 **Non redondant** : L'index partiel est plus efficace pour les requêtes sur 'en_cours'.
@@ -1002,8 +1002,8 @@ SELECT
     indexrelname,
     idx_scan,
     idx_tup_read
-FROM pg_stat_user_indexes
-WHERE indexrelname IN ('index1', 'index2');
+FROM pg_stat_user_indexes  
+WHERE indexrelname IN ('index1', 'index2');  
 ```
 
 **Étape 3** : Décider lequel garder
@@ -1056,11 +1056,11 @@ SELECT
     pg_size_pretty(pg_relation_size(pg_class.oid)) AS table_size,
     ROUND(100 * pg_relation_size(indexrelid)::numeric /
           NULLIF(pg_relation_size(pg_class.oid), 0), 2) AS index_to_table_ratio
-FROM pg_stat_user_indexes
-JOIN pg_class ON pg_class.relname = pg_stat_user_indexes.tablename
-WHERE schemaname = 'public'
-ORDER BY pg_relation_size(indexrelid) DESC
-LIMIT 20;
+FROM pg_stat_user_indexes  
+JOIN pg_class ON pg_class.relname = pg_stat_user_indexes.tablename  
+WHERE schemaname = 'public'  
+ORDER BY pg_relation_size(indexrelid) DESC  
+LIMIT 20;  
 ```
 
 **Heuristique** : Si `index_to_table_ratio > 100%`, investiguer le bloat.
@@ -1076,12 +1076,12 @@ SELECT * FROM pgstatindex('nom_de_lindex');
 ```
 
 **Colonnes importantes** :
-- `leaf_fragmentation` : % de fragmentation (> 50% = mauvais)
+- `leaf_fragmentation` : % de fragmentation (> 50% = mauvais)  
 - `avg_leaf_density` : Densité moyenne des pages (< 70% = bloat)
 
 **Interprétation** :
-- `avg_leaf_density > 90%` : Excellent
-- `avg_leaf_density 70-90%` : Correct
+- `avg_leaf_density > 90%` : Excellent  
+- `avg_leaf_density 70-90%` : Correct  
 - `avg_leaf_density < 70%` : Bloat significatif, REINDEX recommandé
 
 #### Méthode 3 : Requête Complète de Bloat
@@ -1099,10 +1099,10 @@ SELECT
                     (pg_relation_size(indexrelid) * 0.9))::numeric /
                    pg_relation_size(indexrelid) * 100, 2)
     END AS estimated_bloat_pct
-FROM pg_stat_user_indexes
-WHERE pg_relation_size(indexrelid) > 1024 * 1024  -- > 1 MB
-ORDER BY pg_relation_size(indexrelid) DESC
-LIMIT 50;
+FROM pg_stat_user_indexes  
+WHERE pg_relation_size(indexrelid) > 1024 * 1024  -- > 1 MB  
+ORDER BY pg_relation_size(indexrelid) DESC  
+LIMIT 50;  
 ```
 
 **Note** : Cette estimation est simplifiée. Pour une mesure précise, utilisez `pgstattuple`.
@@ -1138,13 +1138,13 @@ REINDEX INDEX CONCURRENTLY nom_index;
 ```
 
 **REINDEX CONCURRENTLY** :
-- ✅ N'acquiert pas de verrou exclusif
-- ✅ La table reste accessible en lecture/écriture
-- ❌ Plus lent qu'un REINDEX normal
+- ✅ N'acquiert pas de verrou exclusif  
+- ✅ La table reste accessible en lecture/écriture  
+- ❌ Plus lent qu'un REINDEX normal  
 - ❌ Nécessite un espace disque temporaire (2× la taille de l'index)
 
 **REINDEX normal** :
-- ✅ Plus rapide
+- ✅ Plus rapide  
 - ❌ Verrou exclusif (table bloquée en écriture)
 
 **Recommandation** : Utilisez toujours `CONCURRENTLY` en production.
@@ -1162,8 +1162,8 @@ pg_repack -d ma_base -t employes
 ```
 
 **Avantages** :
-- ✅ Aucun verrou exclusif
-- ✅ Réorganise table + index
+- ✅ Aucun verrou exclusif  
+- ✅ Réorganise table + index  
 - ✅ Supprime le bloat
 
 **Inconvénient** :
@@ -1188,7 +1188,7 @@ ALTER INDEX idx_employes_nom_new RENAME TO idx_employes_nom;
 ```
 
 **Avantages** :
-- ✅ Flexibilité maximale
+- ✅ Flexibilité maximale  
 - ✅ Permet de modifier la définition en même temps
 
 ### 9.4. Planification de la Maintenance
@@ -1206,8 +1206,8 @@ ALTER INDEX idx_employes_nom_new RENAME TO idx_employes_nom;
 
 ```sql
 -- Script de monitoring à exécuter hebdomadairement
-DO $$
-DECLARE
+DO $$  
+DECLARE  
     idx_record RECORD;
 BEGIN
     FOR idx_record IN
@@ -1243,10 +1243,10 @@ SELECT
         WHEN idx_blks_hit + idx_blks_read = 0 THEN 0
         ELSE ROUND(100.0 * idx_blks_hit / (idx_blks_hit + idx_blks_read), 2)
     END AS cache_hit_ratio
-FROM pg_statio_user_indexes
-WHERE idx_blks_hit + idx_blks_read > 0
-ORDER BY cache_hit_ratio ASC
-LIMIT 20;
+FROM pg_statio_user_indexes  
+WHERE idx_blks_hit + idx_blks_read > 0  
+ORDER BY cache_hit_ratio ASC  
+LIMIT 20;  
 ```
 
 **Objectif** : `cache_hit_ratio > 95%`
@@ -1268,14 +1268,14 @@ SELECT
         WHEN idx_scan = 0 THEN 0
         ELSE pg_relation_size(indexrelid) / idx_scan
     END AS bytes_per_scan
-FROM pg_stat_user_indexes
-WHERE pg_relation_size(indexrelid) > 10 * 1024 * 1024  -- > 10 MB
-ORDER BY bytes_per_scan DESC
-LIMIT 20;
+FROM pg_stat_user_indexes  
+WHERE pg_relation_size(indexrelid) > 10 * 1024 * 1024  -- > 10 MB  
+ORDER BY bytes_per_scan DESC  
+LIMIT 20;  
 ```
 
 **Interprétation** :
-- `bytes_per_scan` élevé : Index large utilisé rarement (candidat à suppression)
+- `bytes_per_scan` élevé : Index large utilisé rarement (candidat à suppression)  
 - `bytes_per_scan` faible : Index efficace
 
 ### 10.2. Analyse avec EXPLAIN
@@ -1283,8 +1283,8 @@ LIMIT 20;
 #### EXPLAIN ANALYZE
 
 ```sql
-EXPLAIN (ANALYZE, BUFFERS, VERBOSE)
-SELECT * FROM employes WHERE nom = 'Dupont';
+EXPLAIN (ANALYZE, BUFFERS, VERBOSE)  
+SELECT * FROM employes WHERE nom = 'Dupont';  
 ```
 
 **Sortie type** :
@@ -1294,23 +1294,23 @@ Index Scan using idx_employes_nom on public.employes
   (actual time=0.023..0.024 rows=1 loops=1)
   Index Cond: (nom = 'Dupont'::text)
   Buffers: shared hit=4
-Planning Time: 0.123 ms
-Execution Time: 0.045 ms
+Planning Time: 0.123 ms  
+Execution Time: 0.045 ms  
 ```
 
 **Éléments à analyser** :
-- **Type de scan** : Index Scan (bon) vs Seq Scan (mauvais si grande table)
-- **Buffers** : `shared hit=4` signifie 4 pages lues depuis le cache
-- **Execution Time** : Temps réel d'exécution
+- **Type de scan** : Index Scan (bon) vs Seq Scan (mauvais si grande table)  
+- **Buffers** : `shared hit=4` signifie 4 pages lues depuis le cache  
+- **Execution Time** : Temps réel d'exécution  
 - **rows estimé vs actual** : Si très différent, statistiques obsolètes
 
 #### Forcer/Désactiver un Index
 
 **Désactiver les index pour tester** :
 ```sql
-SET enable_indexscan = off;
-EXPLAIN SELECT * FROM employes WHERE nom = 'Dupont';
-SET enable_indexscan = on;
+SET enable_indexscan = off;  
+EXPLAIN SELECT * FROM employes WHERE nom = 'Dupont';  
+SET enable_indexscan = on;  
 ```
 
 **Forcer un index spécifique** (non recommandé en production) :
@@ -1343,15 +1343,15 @@ SELECT
     n_distinct,
     most_common_vals,
     most_common_freqs
-FROM pg_stats
-WHERE tablename = 'employes'
+FROM pg_stats  
+WHERE tablename = 'employes'  
   AND schemaname = 'public'
 ORDER BY abs(n_distinct) DESC;
 ```
 
 **Interprétation** :
-- `n_distinct > 0` : Nombre de valeurs distinctes
-- `n_distinct = -1` : Toutes les valeurs sont distinctes (sélectivité maximale)
+- `n_distinct > 0` : Nombre de valeurs distinctes  
+- `n_distinct = -1` : Toutes les valeurs sont distinctes (sélectivité maximale)  
 - `n_distinct proche de 0` : Peu de valeurs distinctes (sélectivité faible)
 
 **Règle** : N'indexez pas les colonnes avec `n_distinct < 100` (sauf cas particulier).
@@ -1386,10 +1386,10 @@ CREATE INDEX idx_mauvais ON employes(prenom, nom);
 #### Utilisation de l'Index Multi-Colonnes
 
 Un index sur `(a, b, c)` peut être utilisé pour :
-- ✅ `WHERE a = ... AND b = ... AND c = ...`
-- ✅ `WHERE a = ... AND b = ...`
-- ✅ `WHERE a = ...`
-- ❌ `WHERE b = ...` (colonne non en préfixe)
+- ✅ `WHERE a = ... AND b = ... AND c = ...`  
+- ✅ `WHERE a = ... AND b = ...`  
+- ✅ `WHERE a = ...`  
+- ❌ `WHERE b = ...` (colonne non en préfixe)  
 - ❌ `WHERE c = ...` (colonne non en préfixe)
 
 **Règle du left-prefix** : L'index est utilisable seulement si les colonnes sont filtrées **de gauche à droite**.
@@ -1419,21 +1419,21 @@ SELECT * FROM commandes WHERE date_commande = '2025-01-01';
 **Définition** : Index qui ne contient qu'un sous-ensemble des lignes.
 
 ```sql
-CREATE INDEX idx_commandes_encours
-ON commandes(date_commande)
-WHERE statut = 'en_cours';
+CREATE INDEX idx_commandes_encours  
+ON commandes(date_commande)  
+WHERE statut = 'en_cours';  
 ```
 
 **Avantages** :
-- ✅ Plus petit que l'index complet
-- ✅ Plus rapide (moins de données à scanner)
+- ✅ Plus petit que l'index complet  
+- ✅ Plus rapide (moins de données à scanner)  
 - ✅ Maintenance plus légère
 
 **Cas d'usage** :
 ```sql
 -- Requête fréquente sur un statut spécifique
-SELECT * FROM commandes
-WHERE statut = 'en_cours'
+SELECT * FROM commandes  
+WHERE statut = 'en_cours'  
   AND date_commande > '2025-01-01';
 ```
 
@@ -1452,8 +1452,8 @@ CREATE INDEX idx_users_email_not_null ON users(email) WHERE email IS NOT NULL;
 **Filtrer sur date récente** :
 ```sql
 -- Index uniquement sur les 30 derniers jours
-CREATE INDEX idx_logs_recent ON logs(timestamp)
-WHERE timestamp > CURRENT_DATE - INTERVAL '30 days';
+CREATE INDEX idx_logs_recent ON logs(timestamp)  
+WHERE timestamp > CURRENT_DATE - INTERVAL '30 days';  
 ```
 
 **Filtrer par statut actif** :
@@ -1511,9 +1511,9 @@ CREATE INDEX idx_users_prefs_lang ON users((preferences->>'language'));
 **Définition** : Index contenant des colonnes supplémentaires non indexées, pour permettre des **Index Only Scans**.
 
 ```sql
-CREATE INDEX idx_employes_nom_include
-ON employes(nom)
-INCLUDE (prenom, salaire);
+CREATE INDEX idx_employes_nom_include  
+ON employes(nom)  
+INCLUDE (prenom, salaire);  
 ```
 
 **Avantage** : La requête peut être satisfaite entièrement depuis l'index, sans accéder à la table.
@@ -1535,15 +1535,15 @@ SELECT nom, prenom, salaire FROM employes WHERE nom = 'Dupont';
 
 ```sql
 -- Sans INCLUDE : Index Scan + lecture table
-CREATE INDEX idx_commandes_client ON commandes(client_id);
-SELECT client_id, total FROM commandes WHERE client_id = 123;
+CREATE INDEX idx_commandes_client ON commandes(client_id);  
+SELECT client_id, total FROM commandes WHERE client_id = 123;  
 -- Plan : Index Scan → Lit index puis table
 
 -- Avec INCLUDE : Index Only Scan
-CREATE INDEX idx_commandes_client_include
-ON commandes(client_id)
-INCLUDE (total);
-SELECT client_id, total FROM commandes WHERE client_id = 123;
+CREATE INDEX idx_commandes_client_include  
+ON commandes(client_id)  
+INCLUDE (total);  
+SELECT client_id, total FROM commandes WHERE client_id = 123;  
 -- Plan : Index Only Scan → Lit uniquement index (plus rapide)
 ```
 
@@ -1566,8 +1566,8 @@ CREATE UNIQUE INDEX idx_users_email ON users(email);
 **Définition** : Spécifier l'ordre de tri (ASC/DESC) et la gestion des NULL dans l'index.
 
 ```sql
-CREATE INDEX idx_produits_prix_desc
-ON produits(prix DESC NULLS LAST);
+CREATE INDEX idx_produits_prix_desc  
+ON produits(prix DESC NULLS LAST);  
 ```
 
 **Cas d'usage** :
@@ -1577,9 +1577,9 @@ SELECT * FROM produits ORDER BY prix DESC NULLS LAST LIMIT 10;
 ```
 
 **Options** :
-- `ASC` : Ordre croissant (défaut)
-- `DESC` : Ordre décroissant
-- `NULLS FIRST` : Les NULL en premier
+- `ASC` : Ordre croissant (défaut)  
+- `DESC` : Ordre décroissant  
+- `NULLS FIRST` : Les NULL en premier  
 - `NULLS LAST` : Les NULL en dernier (défaut pour ASC)
 
 **Note** : Depuis PostgreSQL 8.3, les index B-Tree peuvent être parcourus dans les deux sens, donc un seul index suffit généralement.
@@ -1609,8 +1609,8 @@ SELECT * FROM ventes WHERE date_vente = '2025-01-01';
 **Mécanisme** : Le planificateur "saute" (skip) les valeurs de la première colonne pour accéder à la seconde.
 
 **Avantages** :
-- ✅ Réduit le besoin d'index redondants
-- ✅ Améliore automatiquement les requêtes existantes
+- ✅ Réduit le besoin d'index redondants  
+- ✅ Améliore automatiquement les requêtes existantes  
 - ✅ Aucune modification de code nécessaire
 
 **Quand est-ce utilisé ?**
@@ -1636,7 +1636,7 @@ SELECT * FROM employes WHERE id = ANY(ARRAY[1, 2, 3]);
 ```
 
 **Avantages** :
-- ✅ Optimisation automatique
+- ✅ Optimisation automatique  
 - ✅ Pas de réécriture de requêtes nécessaire
 
 ### 12.3. Auto-Élimination des Self-Joins
@@ -1646,10 +1646,10 @@ SELECT * FROM employes WHERE id = ANY(ARRAY[1, 2, 3]);
 **Exemple** :
 ```sql
 -- Requête avec self-join redondant
-SELECT e1.nom
-FROM employes e1
-JOIN employes e2 ON e1.id = e2.id
-WHERE e1.salaire > 50000;
+SELECT e1.nom  
+FROM employes e1  
+JOIN employes e2 ON e1.id = e2.id  
+WHERE e1.salaire > 50000;  
 ```
 
 **PostgreSQL 18** : Le planificateur simplifie automatiquement en :
@@ -1701,9 +1701,9 @@ SELECT
     calls,
     mean_exec_time,
     total_exec_time
-FROM pg_stat_statements
-ORDER BY mean_exec_time DESC
-LIMIT 20;
+FROM pg_stat_statements  
+ORDER BY mean_exec_time DESC  
+LIMIT 20;  
 ```
 
 **Requêtes avec Seq Scan** :
@@ -1712,9 +1712,9 @@ SELECT
     query,
     calls,
     mean_exec_time
-FROM pg_stat_statements
-WHERE query ~* 'seq scan'  -- Approximation
-ORDER BY total_exec_time DESC;
+FROM pg_stat_statements  
+WHERE query ~* 'seq scan'  -- Approximation  
+ORDER BY total_exec_time DESC;  
 ```
 
 **Analyser ensuite avec EXPLAIN** :
@@ -1752,8 +1752,8 @@ SELECT hypopg_reset();
 ```
 
 **Avantages** :
-- ✅ Aucun impact sur la production
-- ✅ Test instantané
+- ✅ Aucun impact sur la production  
+- ✅ Test instantané  
 - ✅ Validation avant création
 
 ### 13.3. pgstattuple
@@ -1779,7 +1779,7 @@ SELECT * FROM pgstatindex('idx_employes_nom');
 ```
 
 **Interprétation** :
-- `avg_leaf_density > 90%` : Excellent
+- `avg_leaf_density > 90%` : Excellent  
 - `avg_leaf_density < 70%` : REINDEX recommandé
 
 ### 13.4. pg_indexes (Vue Système)
@@ -1792,9 +1792,9 @@ SELECT
     tablename,
     indexname,
     indexdef
-FROM pg_indexes
-WHERE schemaname = 'public'
-ORDER BY tablename, indexname;
+FROM pg_indexes  
+WHERE schemaname = 'public'  
+ORDER BY tablename, indexname;  
 ```
 
 ### 13.5. pg_stat_user_indexes (Vue Système)
@@ -1809,8 +1809,8 @@ SELECT
     idx_scan,           -- Nombre de scans
     idx_tup_read,       -- Tuples lus depuis l'index
     idx_tup_fetch       -- Tuples récupérés depuis la table
-FROM pg_stat_user_indexes
-ORDER BY idx_scan DESC;
+FROM pg_stat_user_indexes  
+ORDER BY idx_scan DESC;  
 ```
 
 ### 13.6. Scripts SQL Utiles
@@ -1822,8 +1822,8 @@ SELECT
     schemaname || '.' || tablename AS table,
     indexrelname AS index,
     pg_size_pretty(pg_relation_size(indexrelid)) AS size
-FROM pg_stat_user_indexes
-WHERE idx_scan = 0
+FROM pg_stat_user_indexes  
+WHERE idx_scan = 0  
   AND indexrelname NOT LIKE '%_pkey'
 ORDER BY pg_relation_size(indexrelid) DESC;
 ```
@@ -1836,9 +1836,9 @@ SELECT
     indexrelname AS index,
     pg_size_pretty(pg_relation_size(indexrelid)) AS size,
     idx_scan AS scans
-FROM pg_stat_user_indexes
-ORDER BY pg_relation_size(indexrelid) DESC
-LIMIT 20;
+FROM pg_stat_user_indexes  
+ORDER BY pg_relation_size(indexrelid) DESC  
+LIMIT 20;  
 ```
 
 #### Cache Hit Ratio par Index
@@ -1851,9 +1851,9 @@ SELECT
         WHEN idx_blks_hit + idx_blks_read = 0 THEN NULL
         ELSE ROUND(100.0 * idx_blks_hit / (idx_blks_hit + idx_blks_read), 2)
     END AS cache_hit_ratio
-FROM pg_statio_user_indexes
-WHERE idx_blks_hit + idx_blks_read > 0
-ORDER BY cache_hit_ratio ASC;
+FROM pg_statio_user_indexes  
+WHERE idx_blks_hit + idx_blks_read > 0  
+ORDER BY cache_hit_ratio ASC;  
 ```
 
 #### Taille Totale des Index par Table
@@ -1863,9 +1863,9 @@ SELECT
     tablename,
     pg_size_pretty(SUM(pg_relation_size(indexrelid))) AS total_index_size,
     COUNT(*) AS index_count
-FROM pg_stat_user_indexes
-GROUP BY tablename
-ORDER BY SUM(pg_relation_size(indexrelid)) DESC;
+FROM pg_stat_user_indexes  
+GROUP BY tablename  
+ORDER BY SUM(pg_relation_size(indexrelid)) DESC;  
 ```
 
 ---
@@ -1874,58 +1874,58 @@ ORDER BY SUM(pg_relation_size(indexrelid)) DESC;
 
 ### 14.1. Phase 1 : Inventaire
 
-- [ ] Lister tous les index existants (`pg_indexes`)
-- [ ] Mesurer la taille de chaque index (`pg_relation_size`)
-- [ ] Identifier le type de chaque index (B-Tree, GIN, etc.)
+- [ ] Lister tous les index existants (`pg_indexes`)  
+- [ ] Mesurer la taille de chaque index (`pg_relation_size`)  
+- [ ] Identifier le type de chaque index (B-Tree, GIN, etc.)  
 - [ ] Documenter le but de chaque index
 
 ### 14.2. Phase 2 : Utilisation
 
-- [ ] Identifier les index inutilisés (`idx_scan = 0`)
-- [ ] Mesurer la fréquence d'utilisation (`idx_scan`)
-- [ ] Calculer le ratio scans/taille
+- [ ] Identifier les index inutilisés (`idx_scan = 0`)  
+- [ ] Mesurer la fréquence d'utilisation (`idx_scan`)  
+- [ ] Calculer le ratio scans/taille  
 - [ ] Identifier les index peu utilisés mais coûteux
 
 ### 14.3. Phase 3 : Redondance
 
-- [ ] Détecter les index dupliqués (mêmes colonnes)
-- [ ] Détecter les redondances partielles (left-prefix)
-- [ ] Évaluer si les index redondants sont justifiés
+- [ ] Détecter les index dupliqués (mêmes colonnes)  
+- [ ] Détecter les redondances partielles (left-prefix)  
+- [ ] Évaluer si les index redondants sont justifiés  
 - [ ] Planifier la consolidation
 
 ### 14.4. Phase 4 : Bloat
 
-- [ ] Mesurer le bloat de chaque index (`pgstatindex`)
-- [ ] Identifier les index avec bloat > 30%
-- [ ] Planifier REINDEX CONCURRENTLY pour index > 50% bloat
+- [ ] Mesurer le bloat de chaque index (`pgstatindex`)  
+- [ ] Identifier les index avec bloat > 30%  
+- [ ] Planifier REINDEX CONCURRENTLY pour index > 50% bloat  
 - [ ] Vérifier la fréquence de VACUUM
 
 ### 14.5. Phase 5 : Performance
 
-- [ ] Mesurer le cache hit ratio par index
-- [ ] Analyser les requêtes lentes (`pg_stat_statements`)
-- [ ] Utiliser EXPLAIN ANALYZE sur requêtes critiques
+- [ ] Mesurer le cache hit ratio par index  
+- [ ] Analyser les requêtes lentes (`pg_stat_statements`)  
+- [ ] Utiliser EXPLAIN ANALYZE sur requêtes critiques  
 - [ ] Identifier les sequential scans sur grandes tables
 
 ### 14.6. Phase 6 : Index Manquants
 
-- [ ] Analyser les colonnes fréquentes dans WHERE
-- [ ] Vérifier les index sur clés étrangères
-- [ ] Identifier les colonnes de jointure sans index
+- [ ] Analyser les colonnes fréquentes dans WHERE  
+- [ ] Vérifier les index sur clés étrangères  
+- [ ] Identifier les colonnes de jointure sans index  
 - [ ] Tester avec HypoPG les index candidats
 
 ### 14.7. Phase 7 : Stratégies Avancées
 
-- [ ] Évaluer l'opportunité d'index partiels
-- [ ] Identifier les cas pour index sur expressions
-- [ ] Considérer INCLUDE pour covering index
+- [ ] Évaluer l'opportunité d'index partiels  
+- [ ] Identifier les cas pour index sur expressions  
+- [ ] Considérer INCLUDE pour covering index  
 - [ ] Évaluer le besoin d'index spécialisés (GIN, BRIN)
 
 ### 14.8. Phase 8 : Documentation
 
-- [ ] Documenter chaque index et sa justification
-- [ ] Créer un plan de maintenance (REINDEX schedule)
-- [ ] Définir les métriques de monitoring
+- [ ] Documenter chaque index et sa justification  
+- [ ] Créer un plan de maintenance (REINDEX schedule)  
+- [ ] Définir les métriques de monitoring  
 - [ ] Établir un calendrier d'audit (mensuel/trimestriel)
 
 ---
@@ -1938,9 +1938,9 @@ ORDER BY SUM(pg_relation_size(indexrelid)) DESC;
 
 ```sql
 -- Mauvaise pratique
-CREATE INDEX idx_employes_col1 ON employes(colonne1);
-CREATE INDEX idx_employes_col2 ON employes(colonne2);
-CREATE INDEX idx_employes_col3 ON employes(colonne3);
+CREATE INDEX idx_employes_col1 ON employes(colonne1);  
+CREATE INDEX idx_employes_col2 ON employes(colonne2);  
+CREATE INDEX idx_employes_col3 ON employes(colonne3);  
 -- ... etc pour 20 colonnes
 ```
 
@@ -1983,9 +1983,9 @@ CREATE INDEX idx_users_inactifs ON users(actif) WHERE actif = false;
 
 ```sql
 -- Contrainte FK créée
-ALTER TABLE commandes
-ADD CONSTRAINT fk_client
-FOREIGN KEY (client_id) REFERENCES clients(id);
+ALTER TABLE commandes  
+ADD CONSTRAINT fk_client  
+FOREIGN KEY (client_id) REFERENCES clients(id);  
 
 -- MAIS : Pas d'index sur commandes.client_id !
 ```
@@ -2113,8 +2113,8 @@ CREATE INDEX idx_commandes_client ON commandes(client_id);
 CREATE INDEX idx_commandes_client_statut ON commandes(client_id, statut);
 
 -- 4. Index partiel pour commandes en cours
-CREATE INDEX idx_commandes_encours ON commandes(date_commande, montant)
-WHERE statut = 'en_cours';
+CREATE INDEX idx_commandes_encours ON commandes(date_commande, montant)  
+WHERE statut = 'en_cours';  
 
 -- 5. Index BRIN sur date (données séquentielles)
 CREATE INDEX idx_commandes_date_brin ON commandes USING brin(date_commande);
@@ -2127,16 +2127,16 @@ CREATE INDEX idx_produits_nom_gin ON produits USING gin(to_tsvector('french', no
 
 ```sql
 -- Utilise idx_commandes_client_statut
-SELECT * FROM commandes
-WHERE client_id = 123 AND statut = 'livré';
+SELECT * FROM commandes  
+WHERE client_id = 123 AND statut = 'livré';  
 
 -- Utilise idx_commandes_encours (index partiel)
-SELECT * FROM commandes
-WHERE statut = 'en_cours' AND date_commande > CURRENT_DATE - INTERVAL '7 days';
+SELECT * FROM commandes  
+WHERE statut = 'en_cours' AND date_commande > CURRENT_DATE - INTERVAL '7 days';  
 
 -- Utilise idx_commandes_date_brin
-SELECT COUNT(*) FROM commandes
-WHERE date_commande BETWEEN '2025-01-01' AND '2025-01-31';
+SELECT COUNT(*) FROM commandes  
+WHERE date_commande BETWEEN '2025-01-01' AND '2025-01-31';  
 ```
 
 ### 16.2. Scénario 2 : Application SaaS Multi-tenant
@@ -2153,12 +2153,12 @@ WHERE date_commande BETWEEN '2025-01-01' AND '2025-01-31';
 CREATE INDEX idx_users_tenant_email ON utilisateurs(tenant_id, email);
 
 -- 2. Index unique pour éviter doublons email par tenant
-CREATE UNIQUE INDEX idx_users_tenant_email_unique
-ON utilisateurs(tenant_id, lower(email));
+CREATE UNIQUE INDEX idx_users_tenant_email_unique  
+ON utilisateurs(tenant_id, lower(email));  
 
 -- 3. Index partiel pour utilisateurs actifs
-CREATE INDEX idx_users_actifs ON utilisateurs(tenant_id, last_login)
-WHERE actif = true;
+CREATE INDEX idx_users_actifs ON utilisateurs(tenant_id, last_login)  
+WHERE actif = true;  
 
 -- 4. Index GIN sur permissions JSONB
 CREATE INDEX idx_users_permissions ON utilisateurs USING gin(permissions);
@@ -2168,17 +2168,17 @@ CREATE INDEX idx_users_permissions ON utilisateurs USING gin(permissions);
 
 ```sql
 -- Utilise idx_users_tenant_email
-SELECT * FROM utilisateurs
-WHERE tenant_id = 42 AND email = 'user@example.com';
+SELECT * FROM utilisateurs  
+WHERE tenant_id = 42 AND email = 'user@example.com';  
 
 -- Utilise idx_users_actifs
-SELECT * FROM utilisateurs
-WHERE tenant_id = 42 AND actif = true
-ORDER BY last_login DESC;
+SELECT * FROM utilisateurs  
+WHERE tenant_id = 42 AND actif = true  
+ORDER BY last_login DESC;  
 
 -- Utilise idx_users_permissions
-SELECT * FROM utilisateurs
-WHERE permissions @> '{"role": "admin"}';
+SELECT * FROM utilisateurs  
+WHERE permissions @> '{"role": "admin"}';  
 ```
 
 ### 16.3. Scénario 3 : Logs et Séries Temporelles
@@ -2192,12 +2192,12 @@ WHERE permissions @> '{"role": "admin"}';
 
 ```sql
 -- 1. Index BRIN sur timestamp (très efficace pour grandes tables)
-CREATE INDEX idx_logs_timestamp_brin ON logs USING brin(timestamp)
-WITH (pages_per_range = 128);
+CREATE INDEX idx_logs_timestamp_brin ON logs USING brin(timestamp)  
+WITH (pages_per_range = 128);  
 
 -- 2. Index partiel sur derniers 30 jours (hot data)
-CREATE INDEX idx_logs_recent ON logs(timestamp, level)
-WHERE timestamp > CURRENT_DATE - INTERVAL '30 days';
+CREATE INDEX idx_logs_recent ON logs(timestamp, level)  
+WHERE timestamp > CURRENT_DATE - INTERVAL '30 days';  
 
 -- 3. Index GIN sur message pour recherche texte
 CREATE INDEX idx_logs_message_gin ON logs USING gin(to_tsvector('english', message));
@@ -2210,13 +2210,13 @@ CREATE INDEX idx_logs_message_gin ON logs USING gin(to_tsvector('english', messa
 
 ```sql
 -- Utilise idx_logs_recent (index partiel)
-SELECT * FROM logs
-WHERE timestamp > CURRENT_DATE - INTERVAL '1 day'
+SELECT * FROM logs  
+WHERE timestamp > CURRENT_DATE - INTERVAL '1 day'  
   AND level = 'ERROR';
 
 -- Utilise idx_logs_timestamp_brin
-SELECT COUNT(*) FROM logs
-WHERE timestamp BETWEEN '2025-01-01' AND '2025-02-01';
+SELECT COUNT(*) FROM logs  
+WHERE timestamp BETWEEN '2025-01-01' AND '2025-02-01';  
 ```
 
 ### 16.4. Scénario 4 : Recherche Géospatiale
@@ -2246,12 +2246,12 @@ CREATE INDEX idx_lieux_ville_brin ON lieux USING brin(ville);
 
 ```sql
 -- Utilise idx_lieux_geom
-SELECT * FROM lieux
-WHERE ST_DWithin(geom, ST_MakePoint(2.3522, 48.8566), 1000);
+SELECT * FROM lieux  
+WHERE ST_DWithin(geom, ST_MakePoint(2.3522, 48.8566), 1000);  
 
 -- Recherche restaurants dans un rayon
-SELECT * FROM lieux
-WHERE type = 'restaurant'
+SELECT * FROM lieux  
+WHERE type = 'restaurant'  
   AND ST_DWithin(geom, ST_MakePoint(2.3522, 48.8566), 1000);
 ```
 
@@ -2294,8 +2294,8 @@ WHERE type = 'restaurant'
 
 **Application** :
 ```sql
-CREATE INDEX CONCURRENTLY ...
-REINDEX INDEX CONCURRENTLY ...
+CREATE INDEX CONCURRENTLY ...  
+REINDEX INDEX CONCURRENTLY ...  
 ```
 
 #### 6. Maintenez Vos Index
@@ -2319,8 +2319,8 @@ REINDEX INDEX CONCURRENTLY ...
 
 **Application** :
 ```sql
-CREATE INDEX ...
-ANALYZE table_name;
+CREATE INDEX ...  
+ANALYZE table_name;  
 ```
 
 #### 9. Testez Avant de Créer
@@ -2340,23 +2340,23 @@ ANALYZE table_name;
 ### 17.2. Checklist Récapitulative Rapide
 
 **Avant de créer un index** :
-- [ ] La colonne est-elle fréquemment filtrée/triée ?
-- [ ] La table est-elle suffisamment grande (> 10,000 lignes) ?
-- [ ] La colonne a-t-elle une sélectivité suffisante ?
-- [ ] Un index existant ne couvre-t-il pas déjà ce besoin ?
+- [ ] La colonne est-elle fréquemment filtrée/triée ?  
+- [ ] La table est-elle suffisamment grande (> 10,000 lignes) ?  
+- [ ] La colonne a-t-elle une sélectivité suffisante ?  
+- [ ] Un index existant ne couvre-t-il pas déjà ce besoin ?  
 - [ ] Ai-je testé avec EXPLAIN ou HypoPG ?
 
 **Audit mensuel** :
-- [ ] Identifier les index inutilisés (`idx_scan = 0`)
-- [ ] Mesurer le bloat des index
-- [ ] Analyser les requêtes lentes
-- [ ] Chercher les redondances
+- [ ] Identifier les index inutilisés (`idx_scan = 0`)  
+- [ ] Mesurer le bloat des index  
+- [ ] Analyser les requêtes lentes  
+- [ ] Chercher les redondances  
 - [ ] Vérifier le cache hit ratio
 
 **Maintenance trimestrielle** :
-- [ ] REINDEX des index avec bloat > 30%
-- [ ] Supprimer les index inutilisés confirmés
-- [ ] Consolider les index redondants
+- [ ] REINDEX des index avec bloat > 30%  
+- [ ] Supprimer les index inutilisés confirmés  
+- [ ] Consolider les index redondants  
 - [ ] Réviser la stratégie d'indexation selon l'évolution de la charge
 
 ### 17.3. Récapitulatif des Types d'Index
@@ -2398,9 +2398,9 @@ Créez l'index seulement si `ROI > 1`.
 
 Les nouveautés PostgreSQL 18 impactent l'indexation :
 
-1. **Skip Scan** : Réduit le besoin d'index redondants
-2. **Optimisation OR** : Transformation automatique OR → ANY
-3. **Auto-élimination self-joins** : Meilleure utilisation des index existants
+1. **Skip Scan** : Réduit le besoin d'index redondants  
+2. **Optimisation OR** : Transformation automatique OR → ANY  
+3. **Auto-élimination self-joins** : Meilleure utilisation des index existants  
 4. **EXPLAIN amélioré** : Meilleure observabilité
 
 **Action** : Réévaluez vos index redondants avec PostgreSQL 18, certains peuvent devenir inutiles grâce à Skip Scan.
@@ -2408,21 +2408,21 @@ Les nouveautés PostgreSQL 18 impactent l'indexation :
 ### 17.6. Ressources Complémentaires
 
 #### Documentation
-- **PostgreSQL 18 Indexes** : https://www.postgresql.org/docs/18/indexes.html
+- **PostgreSQL 18 Indexes** : https://www.postgresql.org/docs/18/indexes.html  
 - **EXPLAIN** : https://www.postgresql.org/docs/18/using-explain.html
 
 #### Extensions
-- **HypoPG** : https://github.com/HypoPG/hypopg
-- **pg_repack** : https://github.com/reorg/pg_repack
+- **HypoPG** : https://github.com/HypoPG/hypopg  
+- **pg_repack** : https://github.com/reorg/pg_repack  
 - **pgstattuple** : https://www.postgresql.org/docs/18/pgstattuple.html
 
 #### Livres
-- *PostgreSQL Query Optimization* - plusieurs auteurs
+- *PostgreSQL Query Optimization* - plusieurs auteurs  
 - *The Art of PostgreSQL* par Dimitri Fontaine
 
 #### Outils
-- **pgAdmin** : Interface graphique avec visualisation des index
-- **DBeaver** : IDE avec analyse de performance
+- **pgAdmin** : Interface graphique avec visualisation des index  
+- **DBeaver** : IDE avec analyse de performance  
 - **Postgres.ai** : Plateforme d'optimisation de requêtes
 
 ---
@@ -2438,10 +2438,10 @@ L'audit d'indexation est un processus **continu et itératif**. Une stratégie d
 **Les index sont un outil puissant** mais ils doivent être utilisés avec **discernement**. Trop d'index est aussi néfaste que pas assez.
 
 **Approche recommandée** :
-1. **Commencez simple** : Index sur PK, FK, et colonnes fréquemment filtrées
-2. **Mesurez** : Utilisez pg_stat_statements et EXPLAIN
-3. **Ajustez** : Ajoutez/supprimez selon les besoins réels
-4. **Maintenez** : REINDEX régulièrement
+1. **Commencez simple** : Index sur PK, FK, et colonnes fréquemment filtrées  
+2. **Mesurez** : Utilisez pg_stat_statements et EXPLAIN  
+3. **Ajustez** : Ajoutez/supprimez selon les besoins réels  
+4. **Maintenez** : REINDEX régulièrement  
 5. **Documentez** : Justifiez chaque index
 
 Avec PostgreSQL 18, le planificateur est plus intelligent que jamais (Skip Scan, optimisations OR, etc.). **Laissez PostgreSQL faire son travail** et concentrez-vous sur les index vraiment stratégiques.

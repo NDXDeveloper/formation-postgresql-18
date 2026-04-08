@@ -22,9 +22,9 @@ SELECT * FROM clients;
 ### Convention de notation
 
 Dans ce guide :
-- `\commande` : La commande de base
-- `\commande+` : Version détaillée (avec plus d'informations)
-- `\commande PATTERN` : Commande avec un filtre/motif optionnel
+- `\commande` : La commande de base  
+- `\commande+` : Version détaillée (avec plus d'informations)  
+- `\commande PATTERN` : Commande avec un filtre/motif optionnel  
 - `[...]` : Paramètre optionnel
 - Toutes les commandes sont **insensibles à la casse** mais traditionnellement écrites en minuscules
 
@@ -117,17 +117,17 @@ Dans ce guide :
 ```
 
 **Comprendre la sortie** :
-- **Name** : Nom de la base
-- **Owner** : Propriétaire (utilisateur qui a créé la base)
-- **Encoding** : Encodage des caractères (UTF8 recommandé)
-- **Collate** : Règles de tri
-- **Ctype** : Règles de classification des caractères
-- **Access privileges** : Permissions (vide = propriétaire a tous les droits)
+- **Name** : Nom de la base  
+- **Owner** : Propriétaire (utilisateur qui a créé la base)  
+- **Encoding** : Encodage des caractères (UTF8 recommandé)  
+- **Collate** : Règles de tri  
+- **Ctype** : Règles de classification des caractères  
+- **Access privileges** : Permissions (vide = propriétaire a tous les droits)  
 - **Size** (avec `+`) : Taille sur disque
 
 **Bases système** :
-- `postgres` : Base par défaut (ne pas supprimer)
-- `template0` : Modèle propre (ne jamais modifier)
+- `postgres` : Base par défaut (ne pas supprimer)  
+- `template0` : Modèle propre (ne jamais modifier)  
 - `template1` : Modèle personnalisable
 - Les autres sont vos bases utilisateur
 
@@ -283,12 +283,12 @@ Dans ce guide :
 ```
 
 **Comprendre la sortie** :
-- **Column** : Nom de la colonne
-- **Type** : Type de données
-- **Nullable** : Accepte NULL ? (not null = obligatoire)
-- **Default** : Valeur par défaut
-- **Indexes** : Tous les index sur cette table
-- **Referenced by** : Tables qui ont des FK vers celle-ci
+- **Column** : Nom de la colonne  
+- **Type** : Type de données  
+- **Nullable** : Accepte NULL ? (not null = obligatoire)  
+- **Default** : Valeur par défaut  
+- **Indexes** : Tous les index sur cette table  
+- **Referenced by** : Tables qui ont des FK vers celle-ci  
 - **Foreign-key constraints** : FK de cette table vers d'autres
 
 **Autres objets** :
@@ -479,8 +479,8 @@ Dans ce guide :
 **Valeur actuelle d'une séquence** :
 ```sql
 -- Ceci est du SQL, pas une méta-commande
-SELECT currval('clients_id_seq');
-SELECT last_value FROM clients_id_seq;
+SELECT currval('clients_id_seq');  
+SELECT last_value FROM clients_id_seq;  
 ```
 
 ---
@@ -563,14 +563,14 @@ SELECT last_value FROM clients_id_seq;
 ```
 
 **Comprendre les codes de privilèges** :
-- `r` = SELECT (read)
-- `w` = UPDATE (write)
-- `a` = INSERT (append)
-- `d` = DELETE
-- `D` = TRUNCATE
-- `x` = REFERENCES
-- `t` = TRIGGER
-- `=` séparateur entre utilisateur et droits
+- `r` = SELECT (read)  
+- `w` = UPDATE (write)  
+- `a` = INSERT (append)  
+- `d` = DELETE  
+- `D` = TRUNCATE  
+- `x` = REFERENCES  
+- `t` = TRIGGER  
+- `=` séparateur entre utilisateur et droits  
 - `/` séparateur avant le grantor (qui a donné les droits)
 
 **Exemple d'interprétation** :
@@ -625,11 +625,11 @@ Signifie : "alice a le droit SELECT, accordé par postgres"
 ```
 
 **Comprendre les attributs** :
-- **Superuser** : Tous les droits (attention !)
-- **Create role** : Peut créer d'autres rôles
-- **Create DB** : Peut créer des bases de données
-- **Replication** : Peut initier la réplication
-- **Bypass RLS** : Ignore la sécurité niveau ligne (Row-Level Security)
+- **Superuser** : Tous les droits (attention !)  
+- **Create role** : Peut créer d'autres rôles  
+- **Create DB** : Peut créer des bases de données  
+- **Replication** : Peut initier la réplication  
+- **Bypass RLS** : Ignore la sécurité niveau ligne (Row-Level Security)  
 - **Member of** : Groupes/rôles dont cet utilisateur hérite
 
 **Filtrer par nom** :
@@ -817,8 +817,8 @@ Signifie : "alice a le droit SELECT, accordé par postgres"
 
 **Syntaxe des patterns** :
 
-- `*` : N'importe quelle séquence de caractères
-- `?` : Un caractère quelconque
+- `*` : N'importe quelle séquence de caractères  
+- `?` : Un caractère quelconque  
 - `[abc]` : Un caractère parmi a, b ou c
 
 **Exemples** :
@@ -1337,20 +1337,20 @@ psql -U username -d database_name
 
 Maîtriser les commandes de navigation de `psql` est essentiel pour travailler efficacement avec PostgreSQL. Ces commandes vous permettent de :
 
-- ✅ **Explorer** rapidement la structure d'une base
-- ✅ **Comprendre** les relations entre les objets
-- ✅ **Diagnostiquer** les problèmes de performance
-- ✅ **Auditer** les permissions et la sécurité
+- ✅ **Explorer** rapidement la structure d'une base  
+- ✅ **Comprendre** les relations entre les objets  
+- ✅ **Diagnostiquer** les problèmes de performance  
+- ✅ **Auditer** les permissions et la sécurité  
 - ✅ **Naviguer** efficacement entre schémas et bases
 
 **Mémo des commandes essentielles à retenir** :
-- `\l` : Bases de données
-- `\c` : Se connecter
-- `\dt` : Tables
-- `\d` : Décrire un objet
-- `\di` : Index
-- `\du` : Utilisateurs
-- `\dx` : Extensions
+- `\l` : Bases de données  
+- `\c` : Se connecter  
+- `\dt` : Tables  
+- `\d` : Décrire un objet  
+- `\di` : Index  
+- `\du` : Utilisateurs  
+- `\dx` : Extensions  
 - `\?` : Aide
 
 **Prochaines sections** :

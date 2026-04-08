@@ -6,14 +6,14 @@
 ---
 
 ## Table des Matières
-1. [Introduction](#introduction)
-2. [Pourquoi une Checklist de Performance ?](#pourquoi-une-checklist-de-performance-)
-3. [À qui s'adresse cette Checklist ?](#%C3%A0-qui-sadresse-cette-checklist-)
-4. [Quand Utiliser cette Checklist ?](#quand-utiliser-cette-checklist-)
-5. [Les Quatre Piliers de la Performance](#les-quatre-piliers-de-la-performance)
-6. [Méthodologie d'Audit](#m%C3%A9thodologie-daudit)
-7. [Comprendre les Métriques de Performance](#comprendre-les-m%C3%A9triques-de-performance)
-8. [Outils Essentiels](#outils-essentiels)
+1. [Introduction](#introduction)  
+2. [Pourquoi une Checklist de Performance ?](#pourquoi-une-checklist-de-performance-)  
+3. [À qui s'adresse cette Checklist ?](#%C3%A0-qui-sadresse-cette-checklist-)  
+4. [Quand Utiliser cette Checklist ?](#quand-utiliser-cette-checklist-)  
+5. [Les Quatre Piliers de la Performance](#les-quatre-piliers-de-la-performance)  
+6. [Méthodologie d'Audit](#m%C3%A9thodologie-daudit)  
+7. [Comprendre les Métriques de Performance](#comprendre-les-m%C3%A9triques-de-performance)  
+8. [Outils Essentiels](#outils-essentiels)  
 9. [Vue d'Ensemble des Audits](#vue-densemble-des-audits)
 
 ---
@@ -26,10 +26,10 @@ Cette checklist est conçue comme un **guide pratique et systématique** pour id
 
 ### Philosophie de cette Checklist
 
-- ✅ **Pragmatique** : Se concentre sur les problèmes réels et fréquents
-- ✅ **Progressive** : Du simple au complexe, du rapide au détaillé
-- ✅ **Actionnable** : Chaque point mène à une action concrète
-- ✅ **Pédagogique** : Explique le "pourquoi", pas seulement le "comment"
+- ✅ **Pragmatique** : Se concentre sur les problèmes réels et fréquents  
+- ✅ **Progressive** : Du simple au complexe, du rapide au détaillé  
+- ✅ **Actionnable** : Chaque point mène à une action concrète  
+- ✅ **Pédagogique** : Explique le "pourquoi", pas seulement le "comment"  
 - ✅ **Adaptable** : S'ajuste à différents contextes (OLTP, OLAP, mixte)
 
 ---
@@ -80,10 +80,10 @@ Locks prolongés → Connexions bloquées → Cascade d'erreurs
 
 Une checklist systématique permet de :
 
-1. **Identifier la cause racine** (pas juste les symptômes)
-2. **Prioriser les actions** (impact vs effort)
-3. **Éviter les optimisations contre-productives**
-4. **Documenter l'état actuel et les améliorations**
+1. **Identifier la cause racine** (pas juste les symptômes)  
+2. **Prioriser les actions** (impact vs effort)  
+3. **Éviter les optimisations contre-productives**  
+4. **Documenter l'état actuel et les améliorations**  
 5. **Établir une baseline** pour mesurer les progrès
 
 ### Le Coût de l'Inaction
@@ -211,9 +211,9 @@ Quand utiliser la checklist en mode "urgence" :
 - Timeouts et errors en production
 
 **Approche en mode réactif**
-1. **Triage** : Identifier la dimension en cause (config, index, requêtes, schéma)
-2. **Quick wins** : Appliquer les corrections immédiates
-3. **Audit complet** : Une fois la situation stabilisée
+1. **Triage** : Identifier la dimension en cause (config, index, requêtes, schéma)  
+2. **Quick wins** : Appliquer les corrections immédiates  
+3. **Audit complet** : Une fois la situation stabilisée  
 4. **Post-mortem** : Documenter et prévenir la récurrence
 
 ### 3. Avant Mise en Production
@@ -279,13 +279,13 @@ Une mauvaise configuration peut :
 - Ralentir les opérations de maintenance
 
 **Exemples de paramètres clés**
-- `shared_buffers` : Cache PostgreSQL
-- `work_mem` : Mémoire pour les tris
-- `effective_cache_size` : Estimation du cache OS
+- `shared_buffers` : Cache PostgreSQL  
+- `work_mem` : Mémoire pour les tris  
+- `effective_cache_size` : Estimation du cache OS  
 - `max_connections` : Limite de connexions
 
 **Impact typique**
-- 🟢 **Bien configuré** : Utilisation optimale des ressources
+- 🟢 **Bien configuré** : Utilisation optimale des ressources  
 - 🔴 **Mal configuré** : 2-10× de dégradation possible
 
 ### 2. 📊 Indexation
@@ -303,15 +303,15 @@ Sans index appropriés :
 - Locks prolongés
 
 **Types d'index**
-- **B-Tree** : Index par défaut, polyvalent
-- **GIN** : JSONB, arrays, full-text
-- **GiST** : Géométrie, texte
-- **BRIN** : Grandes tables séquentielles
+- **B-Tree** : Index par défaut, polyvalent  
+- **GIN** : JSONB, arrays, full-text  
+- **GiST** : Géométrie, texte  
+- **BRIN** : Grandes tables séquentielles  
 - **Hash** : Égalité stricte (rarement utilisé)
 
 **Impact typique**
-- 🟢 **Bien indexé** : Requêtes en millisecondes
-- 🔴 **Sous-indexé** : 100-1000× plus lent
+- 🟢 **Bien indexé** : Requêtes en millisecondes  
+- 🔴 **Sous-indexé** : 100-1000× plus lent  
 - 🟠 **Sur-indexé** : Écritures ralenties, espace gaspillé
 
 ### 3. 🔍 Requêtes
@@ -336,7 +336,7 @@ Une requête mal écrite peut :
 - Absence de LIMIT sur grandes tables
 
 **Impact typique**
-- 🟢 **Requêtes optimisées** : < 10ms en moyenne
+- 🟢 **Requêtes optimisées** : < 10ms en moyenne  
 - 🔴 **Requêtes mal écrites** : Plusieurs secondes, voire minutes
 
 ### 4. 🗂️ Schéma
@@ -360,7 +360,7 @@ Un schéma mal conçu entraîne :
 - Contraintes d'intégrité
 
 **Impact typique**
-- 🟢 **Schéma bien conçu** : Requêtes simples et rapides
+- 🟢 **Schéma bien conçu** : Requêtes simples et rapides  
 - 🔴 **Schéma mal conçu** : Difficile à optimiser, refactoring coûteux
 
 ### Interdépendances
@@ -392,17 +392,17 @@ Qui maintient la configuration efficace
 **Top-Down (Recommandé pour débutants)**
 
 Partir des symptômes et descendre vers la cause :
-1. Observer les métriques globales (CPU, I/O, Cache Hit)
-2. Identifier les requêtes lentes (pg_stat_statements)
-3. Analyser les plans d'exécution (EXPLAIN)
+1. Observer les métriques globales (CPU, I/O, Cache Hit)  
+2. Identifier les requêtes lentes (pg_stat_statements)  
+3. Analyser les plans d'exécution (EXPLAIN)  
 4. Vérifier les index et la configuration
 
 **Bottom-Up (Recommandé pour audits préventifs)**
 
 Vérifier chaque dimension systématiquement :
-1. Audit de configuration
-2. Audit d'indexation
-3. Audit de requêtes
+1. Audit de configuration  
+2. Audit d'indexation  
+3. Audit de requêtes  
 4. Audit de schéma
 
 ### Processus en 7 Étapes
@@ -415,8 +415,8 @@ Avant de commencer, collecter :
 - Logs (slow queries)
 - Configuration actuelle
 
-**Durée** : 1-2 heures
-**Outils** : Monitoring, pg_stat_statements, scripts
+**Durée** : 1-2 heures  
+**Outils** : Monitoring, pg_stat_statements, scripts  
 
 **Étape 2 : Établir une Baseline**
 
@@ -442,14 +442,14 @@ Matrice Impact vs Effort :
 ```
          Effort
          Low    High
-Impact
-High    🟢 P0  🟡 P1
-Low     🟡 P2  🔴 P3
+Impact  
+High    🟢 P0  🟡 P1  
+Low     🟡 P2  🔴 P3  
 ```
 
-- **P0 (Quick Wins)** : Traiter en premier
-- **P1 (High Impact)** : Planifier rapidement
-- **P2 (Low Effort)** : Faire si temps disponible
+- **P0 (Quick Wins)** : Traiter en premier  
+- **P1 (High Impact)** : Planifier rapidement  
+- **P2 (Low Effort)** : Faire si temps disponible  
 - **P3 (Low Priority)** : Reporter ou ignorer
 
 **Étape 5 : Appliquer les Corrections**
@@ -457,9 +457,9 @@ Low     🟡 P2  🔴 P3
 **Important** : Une correction à la fois !
 
 Pour chaque correction :
-1. Créer un backup
-2. Tester en environnement de dev/staging
-3. Appliquer en production (fenêtre de maintenance si nécessaire)
+1. Créer un backup  
+2. Tester en environnement de dev/staging  
+3. Appliquer en production (fenêtre de maintenance si nécessaire)  
 4. Mesurer l'impact
 
 **Étape 6 : Mesurer l'Amélioration**
@@ -486,18 +486,18 @@ Avant de plonger dans les audits, il est essentiel de comprendre les métriques 
 ### 1. Métriques Système
 
 **CPU**
-- **Utilisation moyenne** : < 70% en normal, < 85% en pic
-- **Wait I/O (iowait)** : < 10% (sinon disques saturés)
+- **Utilisation moyenne** : < 70% en normal, < 85% en pic  
+- **Wait I/O (iowait)** : < 10% (sinon disques saturés)  
 - **Load Average** : < nombre de cores
 
 **Mémoire**
-- **Utilisation RAM** : 70-85% (le reste pour cache OS)
-- **Swap** : Doit rester à 0 (ou minimal)
+- **Utilisation RAM** : 70-85% (le reste pour cache OS)  
+- **Swap** : Doit rester à 0 (ou minimal)  
 - **Cache hit** : Pages en RAM vs lues sur disque
 
 **Disque I/O**
-- **Latence lecture/écriture** : < 10ms pour SSD, < 50ms pour HDD
-- **IOPS** : Dépend du disque (SSD : 10k-100k, HDD : 100-500)
+- **Latence lecture/écriture** : < 10ms pour SSD, < 50ms pour HDD  
+- **IOPS** : Dépend du disque (SSD : 10k-100k, HDD : 100-500)  
 - **Throughput** : MB/s lus/écrits
 
 ### 2. Métriques PostgreSQL
@@ -512,7 +512,7 @@ SELECT
 FROM pg_statio_user_tables;
 ```
 
-- **Objectif** : > 95%
+- **Objectif** : > 95%  
 - **Signification** : % de données lues depuis le cache (pas le disque)
 
 **Connexions Actives**
@@ -521,7 +521,7 @@ FROM pg_statio_user_tables;
 SELECT count(*) FROM pg_stat_activity WHERE state = 'active';
 ```
 
-- **Objectif** : < 80% de max_connections
+- **Objectif** : < 80% de max_connections  
 - **Problème** : Saturation = nouvelles connexions refusées
 
 **Transactions par Seconde (TPS)**
@@ -531,17 +531,17 @@ SELECT
     xact_commit + xact_rollback as total_transactions,
     xact_commit,
     xact_rollback
-FROM pg_stat_database
-WHERE datname = current_database();
+FROM pg_stat_database  
+WHERE datname = current_database();  
 ```
 
-- **Objectif** : Dépend de l'application
+- **Objectif** : Dépend de l'application  
 - **Problème** : Chute soudaine = problème
 
 **Checkpoint Rate**
 
 Trop de checkpoints = I/O élevé
-- **Objectif** : < 1 par 5 minutes
+- **Objectif** : < 1 par 5 minutes  
 - **Configuration** : Ajuster max_wal_size
 
 ### 3. Métriques de Requêtes
@@ -553,12 +553,12 @@ SELECT
     mean_exec_time,
     calls,
     query
-FROM pg_stat_statements
-ORDER BY mean_exec_time DESC
-LIMIT 10;
+FROM pg_stat_statements  
+ORDER BY mean_exec_time DESC  
+LIMIT 10;  
 ```
 
-- **Objectif** : < 100ms pour OLTP, variable pour OLAP
+- **Objectif** : < 100ms pour OLTP, variable pour OLAP  
 - **Problème** : > 1s = requête à optimiser
 
 **Top Requêtes par Temps Total**
@@ -569,9 +569,9 @@ SELECT
     calls,
     mean_exec_time,
     query
-FROM pg_stat_statements
-ORDER BY total_exec_time DESC
-LIMIT 10;
+FROM pg_stat_statements  
+ORDER BY total_exec_time DESC  
+LIMIT 10;  
 ```
 
 - **Utilité** : Identifier les requêtes qui consomment le plus de ressources cumulativement
@@ -600,8 +600,8 @@ LIMIT 10;
 CREATE EXTENSION pg_stat_statements;
 
 -- Configuration dans postgresql.conf
-shared_preload_libraries = 'pg_stat_statements'
-pg_stat_statements.track = all
+shared_preload_libraries = 'pg_stat_statements'  
+pg_stat_statements.track = all  
 ```
 
 **Utilité** : Tracking de toutes les requêtes exécutées
@@ -657,10 +657,10 @@ SELECT
     mean_exec_time::numeric(10,2) as avg_ms,
     (total_exec_time/1000/60)::numeric(10,2) as total_min,
     query
-FROM pg_stat_statements
-WHERE mean_exec_time > 100  -- > 100ms
-ORDER BY mean_exec_time DESC
-LIMIT 20;
+FROM pg_stat_statements  
+WHERE mean_exec_time > 100  -- > 100ms  
+ORDER BY mean_exec_time DESC  
+LIMIT 20;  
 ```
 
 **Script : Cache Hit Ratio par Table**
@@ -675,8 +675,8 @@ SELECT
         WHEN heap_blks_hit + heap_blks_read = 0 THEN 0
         ELSE (heap_blks_hit::float / (heap_blks_hit + heap_blks_read)) * 100
     END as cache_hit_ratio
-FROM pg_statio_user_tables
-ORDER BY cache_hit_ratio ASC;
+FROM pg_statio_user_tables  
+ORDER BY cache_hit_ratio ASC;  
 ```
 
 **Script : Index Inutilisés**
@@ -688,8 +688,8 @@ SELECT
     indexname,
     idx_scan,
     pg_size_pretty(pg_relation_size(indexrelid)) as size
-FROM pg_stat_user_indexes
-WHERE idx_scan = 0
+FROM pg_stat_user_indexes  
+WHERE idx_scan = 0  
     AND indexrelid NOT IN (
         SELECT indexrelid FROM pg_constraint WHERE contype IN ('p','u')
     )
@@ -713,9 +713,9 @@ Les sections suivantes de cette checklist détaillent chacun des quatre audits. 
 - Connexions (max_connections, pooling)
 - Autovacuum (paramètres de maintenance automatique)
 
-**Durée estimée** : 1-2 heures
-**Complexité** : Intermédiaire
-**Impact potentiel** : 🔥🔥🔥 Élevé
+**Durée estimée** : 1-2 heures  
+**Complexité** : Intermédiaire  
+**Impact potentiel** : 🔥🔥🔥 Élevé  
 
 ### Audit d'Indexation
 
@@ -728,9 +728,9 @@ Les sections suivantes de cette checklist détaillent chacun des quatre audits. 
 - Index partiels et sur expressions
 - Stratégies d'index multi-colonnes
 
-**Durée estimée** : 2-4 heures
-**Complexité** : Intermédiaire à Avancé
-**Impact potentiel** : 🔥🔥🔥🔥🔥 Très Élevé
+**Durée estimée** : 2-4 heures  
+**Complexité** : Intermédiaire à Avancé  
+**Impact potentiel** : 🔥🔥🔥🔥🔥 Très Élevé  
 
 ### Audit de Requêtes
 
@@ -745,9 +745,9 @@ Les sections suivantes de cette checklist détaillent chacun des quatre audits. 
 - Absence de LIMIT
 - Plans d'exécution (EXPLAIN ANALYZE)
 
-**Durée estimée** : 3-6 heures
-**Complexité** : Intermédiaire à Avancé
-**Impact potentiel** : 🔥🔥🔥🔥🔥 Très Élevé
+**Durée estimée** : 3-6 heures  
+**Complexité** : Intermédiaire à Avancé  
+**Impact potentiel** : 🔥🔥🔥🔥🔥 Très Élevé  
 
 ### Audit de Schéma
 
@@ -761,24 +761,24 @@ Les sections suivantes de cette checklist détaillent chacun des quatre audits. 
 - Contraintes d'intégrité
 - Tables sans clé primaire
 
-**Durée estimée** : 2-4 heures
-**Complexité** : Intermédiaire
-**Impact potentiel** : 🔥🔥🔥 Élevé (mais souvent long à corriger)
+**Durée estimée** : 2-4 heures  
+**Complexité** : Intermédiaire  
+**Impact potentiel** : 🔥🔥🔥 Élevé (mais souvent long à corriger)  
 
 ### Comment Naviguer dans la Checklist
 
 **Approche Recommandée pour Débutants**
 
-1. Commencer par l'**Audit de Configuration** (quick wins)
-2. Passer à l'**Audit d'Indexation** (impact élevé)
-3. Ensuite l'**Audit de Requêtes** (identification des problèmes)
+1. Commencer par l'**Audit de Configuration** (quick wins)  
+2. Passer à l'**Audit d'Indexation** (impact élevé)  
+3. Ensuite l'**Audit de Requêtes** (identification des problèmes)  
 4. Terminer par l'**Audit de Schéma** (long terme)
 
 **Approche Recommandée en Situation d'Urgence**
 
-1. **Audit de Requêtes** → Identifier la requête problématique
-2. **Audit d'Indexation** → Ajouter l'index manquant
-3. **Audit de Configuration** → Ajuster les paramètres critiques
+1. **Audit de Requêtes** → Identifier la requête problématique  
+2. **Audit d'Indexation** → Ajouter l'index manquant  
+3. **Audit de Configuration** → Ajuster les paramètres critiques  
 4. **Audit de Schéma** → Planifier les corrections structurelles
 
 **Approche Recommandée pour Audit Préventif**
@@ -791,10 +791,10 @@ Suivre l'ordre de la checklist : Configuration → Indexation → Requêtes → 
 
 Maintenant que vous comprenez le contexte et la méthodologie, vous êtes prêt à commencer les audits. Les sections suivantes détaillent chacun des quatre audits avec :
 
-- ✅ **Points de vérification spécifiques**
-- ✅ **Requêtes SQL pour diagnostiquer**
-- ✅ **Actions correctives concrètes**
-- ✅ **Exemples avant/après**
+- ✅ **Points de vérification spécifiques**  
+- ✅ **Requêtes SQL pour diagnostiquer**  
+- ✅ **Actions correctives concrètes**  
+- ✅ **Exemples avant/après**  
 - ✅ **Explications pédagogiques**
 
 ### Préparation Avant de Commencer
@@ -802,20 +802,20 @@ Maintenant que vous comprenez le contexte et la méthodologie, vous êtes prêt 
 **1. Installer les Extensions Nécessaires**
 
 ```sql
-CREATE EXTENSION IF NOT EXISTS pg_stat_statements;
-CREATE EXTENSION IF NOT EXISTS pgstattuple;
+CREATE EXTENSION IF NOT EXISTS pg_stat_statements;  
+CREATE EXTENSION IF NOT EXISTS pgstattuple;  
 ```
 
 **2. Activer le Logging Approprié**
 
 Dans `postgresql.conf` :
 ```
-log_min_duration_statement = 1000  # Log requêtes > 1s
-log_line_prefix = '%t [%p]: [%l-1] user=%u,db=%d,app=%a,client=%h '
-log_checkpoints = on
-log_connections = on
-log_disconnections = on
-log_lock_waits = on
+log_min_duration_statement = 1000  # Log requêtes > 1s  
+log_line_prefix = '%t [%p]: [%l-1] user=%u,db=%d,app=%a,client=%h '  
+log_checkpoints = on  
+log_connections = on  
+log_disconnections = on  
+log_lock_waits = on  
 ```
 
 **3. Créer un Répertoire pour les Résultats**
@@ -843,10 +843,10 @@ Cette checklist est votre guide pour atteindre et maintenir une performance opti
 
 ### Rappel des Principes Clés
 
-1. **Mesurer avant d'optimiser** : Baseline + monitoring
-2. **Une correction à la fois** : Pour mesurer l'impact
-3. **Approche holistique** : Les 4 piliers sont interconnectés
-4. **Documenter** : Pour vous et les autres
+1. **Mesurer avant d'optimiser** : Baseline + monitoring  
+2. **Une correction à la fois** : Pour mesurer l'impact  
+3. **Approche holistique** : Les 4 piliers sont interconnectés  
+4. **Documenter** : Pour vous et les autres  
 5. **Automatiser** : Monitoring et alerting
 
 ---
