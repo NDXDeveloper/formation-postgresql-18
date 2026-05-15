@@ -80,23 +80,23 @@ Vous pouvez utiliser, copier, modifier et distribuer PostgreSQL pour n'importe q
 
 **6. Ne PAS partager vos modifications**
 - Vos modifications peuvent rester privées
-- Aucune obligation de "rendre à la communauté"
+- Aucune obligation de « rendre à la communauté »
 - (Bien que ce soit encouragé et bénéfique)
 
 #### ❌ Vous Ne Pouvez Pas
 
 **1. Retirer les mentions de copyright**
-- Le nom "PostgreSQL" doit être mentionné
+- Le nom « PostgreSQL » doit être mentionné
 - Les copyrights originaux doivent être préservés
 
 **2. Tenir les auteurs responsables**
-- Le logiciel est fourni "tel quel"
+- Le logiciel est fourni « tel quel »
 - Sans garantie explicite ou implicite
 - Les contributeurs ne sont pas légalement responsables
 
 **3. Utiliser les marques déposées sans permission**
 - Le logo PostgreSQL est une marque déposée
-- "PostgreSQL" est une marque déposée
+- « PostgreSQL » est une marque déposée
 - Utilisation commerciale de la marque nécessite permission
 
 ### Comparaison avec D'Autres Licences
@@ -115,8 +115,8 @@ Pour mieux comprendre la permissivité de la licence PostgreSQL, comparons-la av
 | **Intégration produit propriétaire** | ✅ Sans restriction | ❌ Tout devient GPL |
 
 **En résumé :**
-- **GPL** : "Si vous utilisez mon code, vous devez partager vos modifications"  
-- **PostgreSQL** : "Faites ce que vous voulez, juste créditez-nous"
+- **GPL** : « si vous utilisez mon code, vous devez partager vos modifications »
+- **PostgreSQL** : « faites ce que vous voulez, juste créditez-nous »
 
 **Exemple concret :**
 
@@ -147,15 +147,43 @@ Avec PostgreSQL :
 
 | Aspect | PostgreSQL | Oracle |
 |--------|-----------|--------|
-| **Coût de licence** | 💰 Gratuit | 💰💰💰💰💰 47 500 $/cœur + maintenance |
-| **Utilisation** | ✅ Illimitée | ⚠️ Limitée par licence |
+| **Coût de licence** | 💰 Gratuit | 💰💰💰💰💰 47 500 $/cœur (Enterprise Edition) + ~22 % de maintenance/an |
+| **Utilisation** | ✅ Illimitée | ⚠️ Limitée par licence et par « core factor » |
 | **Audit** | ❌ Jamais | ✅ Possible (risque financier) |
 | **Vendor lock-in** | ❌ Aucun | ✅ Fort |
 | **Modifications** | ✅ Totales | ❌ Interdites |
 
+> 💡 **Note sur le « core factor » Oracle** : Oracle multiplie le nombre de cœurs physiques par un facteur (0,25 à 1,0 selon le processeur) pour calculer les licences. Pour la plupart des CPU x86 modernes, le facteur est de **0,5** : 8 cœurs facturent donc l'équivalent de 4 licences. Cela complique fortement les estimations.
+
 **Économie typique :**
 
 Une entreprise avec 50 serveurs PostgreSQL épargne facilement **plusieurs millions d'euros** par rapport à Oracle, sans compromis sur les fonctionnalités.
+
+### La « crise des relicensings » : pourquoi la licence PostgreSQL est précieuse
+
+Les années 2018-2024 ont vu plusieurs projets open source majeurs **changer de licence** pour se protéger des cloud providers qui revendaient leur logiciel sans contribuer en retour :
+
+| Projet | Année | Ancienne licence | Nouvelle licence | Conséquences |
+|--------|------|------------------|-------------------|--------------|
+| **MongoDB** | 2018 | AGPL | **SSPL** | Non reconnue open source par l'OSI. AWS a forké en DocumentDB |
+| **Elasticsearch / Kibana** | 2021 | Apache 2.0 | **Elastic License v2 / SSPL** | OpenSearch créé par AWS comme fork compatible |
+| **Redis** | 2024 | BSD | **Source-available (SSPL / RSALv2)** | Fork **Valkey** créé par Linux Foundation |
+| **HashiCorp Terraform** | 2023 | MPL | **BSL** | Fork **OpenTofu** créé par Linux Foundation |
+
+**Quel est le risque pour les utilisateurs ?**
+
+- Incertitude juridique sur ce qu'on peut faire (notamment en SaaS / managé)
+- Impossibilité pour certaines entreprises (cloud providers, hébergeurs) de continuer à utiliser le logiciel
+- Forks divergents qui fragmentent l'écosystème
+
+**Pourquoi PostgreSQL est à l'abri de ce scénario** :
+
+- Aucune entreprise n'est propriétaire du code → personne ne peut **unilatéralement** changer la licence
+- Le copyright est détenu collectivement par les contributeurs (sous la PostgreSQL License)
+- La gouvernance communautaire rend tout changement de licence pratiquement impossible : il faudrait l'accord de **tous** les contributeurs depuis 1996
+- Cette stabilité juridique est un **argument décisif** pour les entreprises qui choisissent PostgreSQL pour leur SI à 10 ou 20 ans
+
+> 🛡️ Quand vous bâtissez votre infrastructure sur PostgreSQL, vous bénéficiez d'une garantie quasi unique dans l'industrie : **la licence ne changera jamais à votre détriment.** C'est exactement ce qui s'est passé pour les utilisateurs d'Elasticsearch ou de Redis : ils ont dû soit migrer, soit accepter de nouvelles contraintes commerciales. Les utilisateurs de PostgreSQL n'ont jamais eu à subir ce genre de surprise.
 
 ### Pourquoi Une Licence Permissive ?
 
@@ -351,6 +379,31 @@ La communauté se rencontre régulièrement à travers le monde.
 - Accessible à tous (débutants à experts)
 - Enregistrements souvent disponibles
 
+### La Communauté Francophone
+
+La communauté francophone PostgreSQL est particulièrement active :
+
+**PostgreSQLFr — Association française des utilisateurs de PostgreSQL**
+- Site : https://www.postgresql.fr/
+- Association loi 1901 fondée en 2007
+- Coordonne la traduction de la documentation officielle en français
+- Organise des événements et meetups
+- Anime la liste pgsql-fr-generale
+
+**Événements francophones notables :**
+- **PG Day France** : conférence annuelle en France (souvent Lyon, Lille, Paris…)
+- **PostgreSQL Sessions** : meetups parisiens réguliers
+- **pgDay Paris** : conférence internationale à Paris (en anglais)
+- **Meetups locaux** : Toulouse, Lyon, Bordeaux, Strasbourg, Bruxelles, Genève, Montréal
+
+**Communautés en ligne francophones :**
+- Liste pgsql-fr-generale (mailing list francophone)
+- Canal `#pgsql-fr` (IRC/Matrix)
+- Le forum de developpez.net (section PostgreSQL)
+- Documentation officielle traduite en français (à jour)
+
+> 🇫🇷 Si vous lisez cette formation en français, sachez que vous pouvez interagir avec une communauté francophone très réactive. La barrière de la langue n'existe pratiquement pas pour obtenir de l'aide ou contribuer.
+
 ### Processus de Développement
 
 Le développement de PostgreSQL suit un cycle rigoureux et transparent.
@@ -430,7 +483,7 @@ La communauté PostgreSQL accueille toutes les contributions, quel que soit votr
    - Extensions PostgreSQL personnalisées
    - Publier sur PGXN (PostgreSQL Extension Network)
 
-8. **Organiser des Events**
+8. **Organiser des événements**
    - Meetups locaux
    - Présentations dans votre entreprise
    - Ateliers pratiques
@@ -596,7 +649,7 @@ Bien que PostgreSQL soit gratuit, des entreprises offrent du support payant.
 #### Pourquoi du Support Commercial ?
 
 **Cas d'usage :**
-- Entreprises avec SLA stricts (99.99% uptime)
+- Entreprises avec SLA stricts (99,99 % de disponibilité)
 - Besoin d'assistance 24/7
 - Projets critiques nécessitant garanties
 - Formations sur mesure
@@ -634,7 +687,7 @@ Bien que PostgreSQL soit gratuit, des entreprises offrent du support payant.
 
 **Coûts typiques :**
 - 10 000 - 50 000 € / an selon taille et SLA
-- **Toujours moins cher qu'Oracle** (50-90% d'économie)
+- **Toujours moins cher qu'Oracle** (50 à 90 % d'économie)
 
 ---
 
@@ -758,7 +811,7 @@ Le modèle open source communautaire a aussi ses défis.
 
 #### 1. **Pas de Responsabilité Légale**
 
-- ⚠️ "Fourni tel quel, sans garantie"  
+- ⚠️ « Fourni tel quel, sans garantie »
 - ⚠️ Personne à poursuivre en cas de problème  
 - ⚠️ Risque assumé par l'utilisateur
 
@@ -826,14 +879,14 @@ Le modèle open source communautaire a aussi ses défis.
 
 ### PostgreSQL vs MongoDB (Open Core)
 
-**MongoDB** utilise un modèle "Open Core" :
+**MongoDB** utilise un modèle « Open Core » :
 - Fonctionnalités de base open source
 - Fonctionnalités avancées commerciales uniquement
-- Licence récemment changée en SSPL (controversée)
+- Licence changée en **SSPL** en 2018 (controversée, non reconnue comme open source par l'OSI)
 
 **Différence avec PostgreSQL :**
-- PostgreSQL : 100% des fonctionnalités open source
-- Pas de fonctionnalités "enterprise only"
+- PostgreSQL : 100 % des fonctionnalités open source
+- Pas de fonctionnalités « enterprise only »
 - Pas de piège à licences
 
 ### PostgreSQL vs SQL Server (Propriétaire)
@@ -856,7 +909,7 @@ Le modèle open source communautaire a aussi ses défis.
 
 #### 1. **Croissance Continue**
 
-📈 **Contributeurs** : +10-15% par an  
+📈 **Contributeurs** : +10-15 % par an  
 📈 **Commits** : ~2000-3000 par release  
 📈 **Entreprises sponsors** : En augmentation
 
@@ -874,9 +927,9 @@ Le modèle open source communautaire a aussi ses défis.
 
 #### 4. **Professionnalisation**
 
-- Entreprises dédiées (Crunchy Data, EDB, Aiven...)
+- Entreprises dédiées (Crunchy Data, EDB, Aiven…)
 - Investissements venture capital dans écosystème
-- Emplois "PostgreSQL" en forte croissance
+- Emplois « PostgreSQL » en forte croissance
 
 ### Défis Futurs
 

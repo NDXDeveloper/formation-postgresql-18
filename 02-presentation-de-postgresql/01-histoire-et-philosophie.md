@@ -1,10 +1,10 @@
 🔝 Retour au [Sommaire](/SOMMAIRE.md)
 
-# 2.1. Histoire et Philosophie : Le SGBD "Objet-Relationnel"
+# 2.1. Histoire et Philosophie : Le SGBD « objet-relationnel »
 
 ## Introduction
 
-PostgreSQL n'est pas un simple système de gestion de bases de données parmi d'autres. C'est un projet avec une histoire riche, une philosophie unique et une approche distinctive qui le distingue de ses concurrents. Dans ce chapitre, nous allons explorer les origines de PostgreSQL, comprendre ce qui fait sa particularité et découvrir pourquoi on le qualifie de SGBD "objet-relationnel".
+PostgreSQL n'est pas un simple système de gestion de bases de données parmi d'autres. C'est un projet avec une histoire riche, une philosophie unique et une approche distinctive qui le distingue de ses concurrents. Dans ce chapitre, nous allons explorer les origines de PostgreSQL, comprendre ce qui fait sa particularité et découvrir pourquoi on le qualifie de SGBD « objet-relationnel ».
 
 ---
 
@@ -12,36 +12,48 @@ PostgreSQL n'est pas un simple système de gestion de bases de données parmi d'
 
 ### Les Années 1970 : INGRES
 
-L'histoire de PostgreSQL commence bien avant sa création officielle. Dans les années 1970, à l'Université de Californie à Berkeley, le professeur **Michael Stonebraker** et son équipe développent un système de bases de données appelé **INGRES** (INteractive Graphics REtrieval System).
+L'histoire de PostgreSQL commence bien avant sa création officielle. Dans les années 1970, à l'Université de Californie à Berkeley, le professeur **Michael Stonebraker** et son équipe développent un système de bases de données appelé **INGRES** (*INteractive GRaphics REtrieval System*).
 
 INGRES était l'un des premiers systèmes de gestion de bases de données relationnelles, concurrent direct d'Oracle et de System R d'IBM. Ce projet a posé les bases de nombreux concepts que nous utilisons encore aujourd'hui.
 
+> 🏆 Michael Stonebraker recevra plus tard, en **2014, le Prix Turing** (l'équivalent du Prix Nobel en informatique) pour ses contributions fondamentales aux systèmes de bases de données — INGRES, POSTGRES et plusieurs autres SGBD ont contribué à cette reconnaissance.
+
 ### 1986 : Naissance de POSTGRES
 
-Après le succès d'INGRES, Michael Stonebraker et son équipe à Berkeley identifient plusieurs limitations des systèmes relationnels de l'époque. En 1986, ils lancent un nouveau projet ambitieux : **POSTGRES** (POST inGRES).
+Après le succès d'INGRES, Michael Stonebraker et son équipe à Berkeley identifient plusieurs limitations des systèmes relationnels de l'époque. En 1986, ils lancent un nouveau projet ambitieux : **POSTGRES** (*POST inGRES*). Le projet est présenté dans l'article fondateur *« The Design of POSTGRES »* (Stonebraker & Rowe, 1986).
 
 **Les objectifs de POSTGRES étaient révolutionnaires pour l'époque :**
 
-- **Extension du modèle relationnel** : Ajouter la possibilité de définir des types de données personnalisés  
-- **Support des données complexes** : Gérer des données plus sophistiquées que les simples nombres et textes  
-- **Règles et déclencheurs** : Automatiser des actions en réponse à des événements  
-- **Requêtes sur des données historiques** : Voyager dans le temps avec les données (time travel)
+- **Extension du modèle relationnel** : ajouter la possibilité de définir des types de données personnalisés (*Abstract Data Types*, ADT)
+- **Support des données complexes** : gérer des données plus sophistiquées que les simples nombres et textes
+- **Règles et déclencheurs** : automatiser des actions en réponse à des événements
+- **Requêtes sur des données historiques** : voyager dans le temps avec les données (*time travel*)
 
-Le projet POSTGRES a été développé entre 1986 et 1994 à l'Université de Berkeley, financé par des agences gouvernementales américaines et des sponsors privés.
+> 🧩 **Pourquoi ces objectifs ? Le problème du « impedance mismatch »**  
+>  
+> Dans les années 1980, les développeurs souffraient d'un problème récurrent appelé *« object-relational impedance mismatch »* : leurs langages de programmation devenaient orientés objet (C++, Smalltalk…), mais leurs bases de données restaient strictement relationnelles, avec des types primitifs limités (entiers, chaînes, dates). Pour stocker un objet complexe comme une **adresse postale** ou une **géométrie 3D**, il fallait l'éclater en plusieurs colonnes plates, puis le reconstruire en mémoire — code répétitif, bugs subtils, performances dégradées.  
+>  
+> POSTGRES proposait une réponse radicale : **rendre la base de données elle-même extensible** pour qu'elle accepte ces objets complexes nativement. C'est ce qui distinguait POSTGRES de tous les SGBD concurrents de l'époque — et qui rend PostgreSQL toujours unique aujourd'hui, avec ses types JSON, géométriques, vectoriels, etc.
 
-### 1995 : L'Arrivée du SQL
+Le projet POSTGRES a été développé entre 1986 et 1994 à l'Université de Berkeley, financé par des agences gouvernementales (DARPA, ARO, NSF) et des sponsors privés.
+
+> 📚 **Héritage commercial de POSTGRES**  
+>  
+> En 1992, Stonebraker fonda **Illustra Information Technologies** pour commercialiser POSTGRES. Illustra fut racheté par **Informix** en 1996, qui intégra son moteur extensible dans Informix Universal Server. **IBM** racheta Informix en 2001, et plusieurs concepts d'extensibilité ont depuis irrigué DB2. La descendance commerciale de POSTGRES est donc présente dans toute l'industrie, en plus du PostgreSQL open source que nous utilisons aujourd'hui.
+
+### 1994-1995 : L'Arrivée du SQL
 
 Initialement, POSTGRES utilisait son propre langage de requête appelé **POSTQUEL**. Bien que puissant, ce langage propriétaire limitait l'adoption du système.
 
-En 1995, deux étudiants, **Andrew Yu** et **Jolly Chen**, ajoutent le support du langage **SQL** standard. Le système est alors renommé **Postgres95**.
+En **1994**, deux étudiants de Berkeley, **Andrew Yu** et **Jolly Chen**, remplacent l'interpréteur POSTQUEL par un interpréteur **SQL** standard. La première version publique de **Postgres95** (v0.01) est diffusée le **5 mai 1995** sur le web.
 
-Cette évolution marque un tournant majeur : PostgreSQL devient compatible avec le standard de l'industrie tout en conservant ses innovations uniques.
+Cette évolution marque un tournant majeur : Postgres devient compatible avec le standard de l'industrie tout en conservant ses innovations uniques.
 
 ### 1996 : PostgreSQL Devient Open Source
 
-En 1996, le projet est officiellement renommé **PostgreSQL** (la prononciation officielle est "Post-Gress-Q-L" ou simplement "Postgres").
+En 1996, il devient évident que le nom « Postgres95 » ne survivra pas au passage du millénaire. Le projet est officiellement renommé **PostgreSQL** — un nom qui reflète le lien entre l'ancêtre POSTGRES et l'arrivée du SQL. La prononciation officielle est *« post-GRES-Q-L »* (en quatre syllabes), souvent abrégé en *« Postgres »* à l'oral.
 
-**Événement crucial :** Le code source est publié sous une licence open source très permissive (licence BSD-like, appelée aujourd'hui licence PostgreSQL). Cette décision permet :
+**Événement crucial :** le code source est publié sous une licence open source très permissive (licence de type BSD, appelée aujourd'hui *PostgreSQL License*). Cette décision permet :
 
 - La création d'une communauté mondiale de développeurs
 - L'utilisation gratuite dans des projets commerciaux
@@ -53,15 +65,19 @@ Depuis 1996, PostgreSQL a connu une évolution constante avec une nouvelle versi
 
 **Quelques jalons importants :**
 
-- **PostgreSQL 7.1 (2001)** : Introduction du WAL (Write-Ahead Logging), garantissant une durabilité robuste  
-- **PostgreSQL 8.0 (2005)** : Support natif Windows, Point-In-Time Recovery (PITR), savepoints  
-- **PostgreSQL 9.0 (2010)** : Réplication en streaming, Hot Standby  
-- **PostgreSQL 9.4 (2014)** : Support JSONB (JSON binaire optimisé)  
-- **PostgreSQL 10 (2017)** : Partitionnement déclaratif natif  
-- **PostgreSQL 12 (2019)** : Amélioration massive des performances  
-- **PostgreSQL 14 (2021)** : Pipeline de requêtes, amélioration JSON  
-- **PostgreSQL 16 (2023)** : Parallélisation massive, optimisations logiques  
-- **PostgreSQL 18 (2025)** : I/O asynchrone, colonnes virtuelles, OAuth
+- **PostgreSQL 7.1 (2001)** : introduction du WAL (*Write-Ahead Logging*), garantissant une durabilité robuste
+- **PostgreSQL 8.0 (2005)** : support natif Windows, Point-In-Time Recovery (PITR), savepoints
+- **PostgreSQL 9.0 (2010)** : réplication en streaming, Hot Standby
+- **PostgreSQL 9.4 (2014)** : type JSONB (JSON binaire indexable)
+- **PostgreSQL 10 (2017)** : partitionnement déclaratif natif, réplication logique
+- **PostgreSQL 11 (2018)** : procédures stockées (CALL, transactions imbriquées), JIT compilation
+- **PostgreSQL 12 (2019)** : améliorations massives des performances, colonnes générées (stockées)
+- **PostgreSQL 13 (2020)** : déduplication B-Tree, vacuum parallèle
+- **PostgreSQL 14 (2021)** : pipeline mode du protocole, améliorations JSON, *predicate locks* en logical replication
+- **PostgreSQL 15 (2022)** : MERGE SQL standard, compression LZ4 pour TOAST
+- **PostgreSQL 16 (2023)** : parallélisation accrue, réplication logique depuis un standby
+- **PostgreSQL 17 (2024)** : *incremental backup*, optimisations VACUUM, MERGE amélioré
+- **PostgreSQL 18 (sept. 2025)** : I/O asynchrone (AIO), colonnes virtuelles, OAuth 2.0, UUIDv7, contraintes temporelles, data checksums par défaut
 
 ---
 
@@ -126,11 +142,11 @@ La licence PostgreSQL (similaire à BSD/MIT) est très permissive. Vous pouvez :
 
 ---
 
-## PostgreSQL : Un SGBD "Objet-Relationnel"
+## PostgreSQL : Un SGBD « objet-relationnel »
 
 ### Qu'est-ce qu'un Modèle Relationnel ?
 
-Avant de comprendre le terme "objet-relationnel", rappelons ce qu'est un modèle **relationnel** classique.
+Avant de comprendre le terme « objet-relationnel », rappelons ce qu'est un modèle **relationnel** classique.
 
 **Un SGBD relationnel organise les données en :**
 
@@ -191,25 +207,51 @@ PostgreSQL ajoute des capacités orientées objet :
 
 ##### a) **Types de Données Personnalisés**
 
-Vous pouvez créer vos propres types de données adaptés à votre domaine métier.
+Vous pouvez créer vos propres types de données adaptés à votre domaine métier. PostgreSQL propose plusieurs niveaux de personnalisation :
 
-**Exemple conceptuel :**
+**Niveau 1 — `DOMAIN` : un type existant + contraintes**
+
+Le plus simple : étendre un type primitif avec des règles métier.
+
 ```sql
--- Créer un type personnalisé pour une adresse
+-- Définir un domaine « code postal français »
+CREATE DOMAIN code_postal_fr AS VARCHAR(5)
+    CHECK (VALUE ~ '^[0-9]{5}$');
+
+-- Utiliser ce domaine dans une table
+CREATE TABLE clients (
+    id SERIAL PRIMARY KEY,
+    nom TEXT,
+    cp code_postal_fr  -- Validation automatique du format !
+);
+
+-- Tentative d'insertion invalide
+INSERT INTO clients (nom, cp) VALUES ('Dupont', 'ABCDE');
+-- ERROR: value for domain code_postal_fr violates check constraint
+```
+
+**Niveau 2 — `CREATE TYPE` (composite) : objet métier complet**
+
+```sql
+-- Créer un type composite pour une adresse
 CREATE TYPE adresse AS (
     rue TEXT,
     ville TEXT,
-    code_postal VARCHAR(5),
+    code_postal code_postal_fr,  -- Réutilise notre domaine !
     pays TEXT
 );
 
 -- Utiliser ce type dans une table
-CREATE TABLE clients (
+CREATE TABLE clients_v2 (
     id SERIAL PRIMARY KEY,
     nom TEXT,
-    adresse adresse  -- Type personnalisé !
+    adresse adresse  -- Type personnalisé composite
 );
 ```
+
+**Niveau 3 — `CREATE TYPE` (base) : type entièrement nouveau en C**
+
+Pour les performances maximales, on peut écrire un type en C avec ses fonctions d'entrée/sortie, opérateurs, comparateurs. C'est ainsi que sont construits PostGIS (géométries), pgvector (embeddings), hstore (clé-valeur)…
 
 ##### b) **Types Composites**
 
@@ -292,11 +334,24 @@ En restant fidèle aux standards SQL tout en innovant, PostgreSQL garantit :
 
 ### 3. **Innovation Sans Rupture**
 
-PostgreSQL innove constamment (I/O asynchrone, colonnes virtuelles, optimisations...) sans casser la compatibilité avec le code existant.
+PostgreSQL innove constamment (I/O asynchrone, colonnes virtuelles, optimisations…) sans casser la compatibilité avec le code existant.
 
 ### 4. **Écosystème Riche**
 
 La philosophie d'extensibilité a créé un écosystème d'extensions, d'outils et de solutions qui enrichissent PostgreSQL sans alourdir le cœur du système.
+
+### 5. **Une Philosophie « Unix » Appliquée aux Bases de Données**
+
+PostgreSQL applique au monde des SGBD ce que Unix a apporté au monde des systèmes d'exploitation :
+
+| Principe Unix | Application dans PostgreSQL |
+|---------------|------------------------------|
+| *« Do one thing and do it well »* | Le cœur fait l'essentiel : transactions ACID, planification, stockage. Les fonctionnalités spécialisées (géospatial, IA, séries temporelles) sont déléguées aux extensions. |
+| Composition d'outils simples | `CREATE EXTENSION postgis;` ajoute un monde entier de capacités, sans toucher au cœur. |
+| Configuration explicite plutôt que magique | `postgresql.conf` est lisible et auditable, chaque paramètre a une signification documentée. |
+| Stabilité avant la mode | Les fonctionnalités sont mûrement réfléchies. Pas de course aux annonces marketing. |
+
+Cette philosophie explique pourquoi PostgreSQL **vieillit bien** : du code écrit pour PostgreSQL 9 continue de fonctionner sur PostgreSQL 18, sans réécriture massive.
 
 ---
 
@@ -308,10 +363,10 @@ Aujourd'hui, PostgreSQL est reconnu comme l'un des SGBD les plus avancés et les
 
 **Quelques faits marquants :**
 
-- **DB-Engines** : Régulièrement classé parmi les 4 premiers SGBD mondiaux  
-- **StackOverflow Survey** : L'un des SGBD les plus aimés par les développeurs  
-- **Adoption massive** : Utilisé par Apple, Instagram, Spotify, Netflix, Reddit, et des milliers d'autres entreprises  
-- **Cloud providers** : Support natif par AWS, Azure, Google Cloud, et tous les grands fournisseurs
+- **DB-Engines** : régulièrement classé parmi les 4 premiers SGBD mondiaux
+- **Stack Overflow Developer Survey** : le SGBD le plus utilisé par les développeurs depuis 2023 (≈ 49 % en 2024)
+- **Adoption massive** : utilisé par Apple, Instagram, Spotify, Reddit, Twitch, et des milliers d'autres entreprises
+- **Cloud providers** : support natif par AWS (RDS, Aurora), Azure (Azure Database for PostgreSQL), Google Cloud (Cloud SQL, AlloyDB), et tous les grands fournisseurs
 
 ### Une Communauté Mondiale
 
@@ -333,8 +388,8 @@ Pour mieux comprendre la particularité de PostgreSQL, comparons sa philosophie 
 **MySQL** :
 - Historiquement axé sur la rapidité et la simplicité
 - Compromis parfois sur la conformité SQL et l'intégrité
-- Propriétaire d'Oracle (bien que open source)
-- Plusieurs moteurs de stockage (InnoDB, MyISAM...)
+- Propriété d'Oracle (bien qu'open source)
+- Plusieurs moteurs de stockage (InnoDB, MyISAM…)
 
 **PostgreSQL** :
 - Priorité à la conformité, l'intégrité et la fiabilité
@@ -403,6 +458,6 @@ En tant que développeur ou DevOps, comprendre cette philosophie vous aidera à 
 
 ---
 
-**Prochaine section : 2.2. Gestion des versions et cycle de vie (PostgreSQL 18 : Septembre 2025)**
+**Prochaine section : 2.2. Gestion des versions et cycle de vie (PostgreSQL 18 : septembre 2025)**
 
-⏭️ [Gestion des versions et cycle de vie (PostgreSQL 18 : Septembre 2025)](/02-presentation-de-postgresql/02-gestion-des-versions-et-cycle-de-vie.md)
+⏭️ [Gestion des versions et cycle de vie (PostgreSQL 18 : septembre 2025)](/02-presentation-de-postgresql/02-gestion-des-versions-et-cycle-de-vie.md)

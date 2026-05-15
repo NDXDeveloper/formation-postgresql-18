@@ -46,14 +46,17 @@ Avant d'entrer dans les détails, voici un aperçu rapide de chaque système :
 
 ### Tableau Récapitulatif Rapide
 
-| Critère | PostgreSQL | MySQL | Oracle | SQL Server |
-|---------|-----------|-------|--------|------------|
-| **Licence** | Permissive | Dual GPL/Commercial | Propriétaire | Propriétaire |
-| **Coût** | Gratuit | Gratuit/Payant | 💰💰💰💰💰 | 💰💰💰 |
-| **Plateforme** | Multi | Multi | Multi | Windows/Linux |
-| **Standards SQL** | ⭐⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐⭐ |
-| **Extensibilité** | ⭐⭐⭐⭐⭐ | ⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐ |
-| **Complexité** | ⭐⭐⭐⭐ | ⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐ |
+| Critère | PostgreSQL | MySQL | MariaDB | Oracle | SQL Server |
+|---------|-----------|-------|---------|--------|------------|
+| **Licence** | Permissive | Dual GPL/Commercial | GPL | Propriétaire | Propriétaire |
+| **Coût** | Gratuit | Gratuit/Payant | Gratuit | 💰💰💰💰💰 | 💰💰💰 |
+| **Plateforme** | Multi | Multi | Multi | Multi | Windows/Linux |
+| **Standards SQL** | ⭐⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐⭐ |
+| **Extensibilité** | ⭐⭐⭐⭐⭐ | ⭐⭐ | ⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐ |
+| **Complexité** | ⭐⭐⭐⭐ | ⭐⭐ | ⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐ |
+| **Gouvernance** | Communauté | Oracle | Fondation MariaDB | Oracle | Microsoft |
+
+> 💡 **Note sur MariaDB** : fork de MySQL créé en 2009 par Monty Widenius (créateur original de MySQL) suite au rachat de MySQL par Oracle. MariaDB vise la compatibilité MySQL tout en restant 100 % open source sous contrôle d'une fondation à but non lucratif. Mêmes forces/faiblesses générales que MySQL, sans le risque Oracle.
 
 ---
 
@@ -63,17 +66,17 @@ MySQL est historiquement le concurrent le plus direct de PostgreSQL dans le mond
 
 ### Histoire et Philosophie
 
-**MySQL : "Rapide et Simple"**
+**MySQL : « Rapide et Simple »**
 - Créé pour les applications web (LAMP stack)
 - Philosophie : simplicité et rapidité d'adoption
 - Compromis historiques sur la conformité SQL
-- Après le rachat par Oracle (2010), inquiétudes communautaires
+- Après le rachat par Oracle (2010 via Sun Microsystems), inquiétudes communautaires (à l'origine du fork MariaDB)
 
-**PostgreSQL : "Conformité et Puissance"**
+**PostgreSQL : « Conformité et Puissance »**
 - Créé pour étendre le modèle relationnel
 - Philosophie : respect des standards, intégrité des données
 - Aucun compromis sur la correction
-- Reste 100% communautaire et indépendant
+- Reste 100 % communautaire et indépendant
 
 ### Comparaison Détaillée
 
@@ -165,7 +168,7 @@ CREATE TABLE produit (
 - ⚠️ Nécessite VACUUM pour nettoyer les anciennes versions
 
 **Principe MVCC :**
-- Chaque transaction voit un "snapshot" de la base
+- Chaque transaction voit un « snapshot » (image cohérente) de la base
 - Les anciennes versions de lignes sont conservées temporairement
 - Aucun blocage entre lecteurs et écrivains
 
@@ -256,13 +259,13 @@ INSERT INTO test VALUES ('abc');
 **Benchmarks réels (ordre de grandeur) :**
 
 | Scénario | PostgreSQL | MySQL |
-|----------|-----------|-------|
-| SELECT simple par PK | ~95% | 100% |
-| Jointure 3-4 tables | 100% | ~80% |
-| Agrégations complexes | 100% | ~70% |
-| Requêtes analytiques | 100% | ~60% |
-| Bulk INSERT | ~90% | 100% |
-| Concurrence élevée | 100% | ~85% |
+|----------|------------|-------|
+| SELECT simple par PK | ~95 % | 100 % |
+| Jointure 3-4 tables | 100 % | ~80 % |
+| Agrégations complexes | 100 % | ~70 % |
+| Requêtes analytiques | 100 % | ~60 % |
+| Bulk INSERT | ~90 % | 100 % |
+| Concurrence élevée | 100 % | ~85 % |
 
 **Verdict :** PostgreSQL généralement plus performant sur requêtes complexes, MySQL légèrement plus rapide sur requêtes très simples. Différence souvent négligeable en pratique moderne.
 
@@ -333,12 +336,12 @@ Oracle est le SGBD commercial le plus puissant et le plus cher du marché. La co
 - Créé en 1979, le pionnier des SGBD relationnels commerciaux
 - Leader du marché enterprise pendant des décennies
 - Fonctionnalités extrêmement riches
-- Coût prohibitif (tens of thousands d'euros par cœur CPU)
+- Coût prohibitif (des dizaines de milliers d'euros par cœur CPU)
 - Support commercial premium 24/7/365
 
 **PostgreSQL**
-- Souvent appelé "l'Oracle open source"
-- A rattrapé 90-95% des fonctionnalités Oracle
+- Souvent appelé « l'Oracle open source »
+- A rattrapé 90 à 95 % des fonctionnalités Oracle
 - Gratuit et open source
 - Support communautaire + commercial optionnel
 
@@ -348,8 +351,8 @@ Oracle est le SGBD commercial le plus puissant et le plus cher du marché. La co
 
 **Similarités (PostgreSQL = Oracle) :**
 
-- ✅ Transactions ACID complètes  
-- ✅ MVCC (appelé "Read Consistency" chez Oracle)  
+- ✅ Transactions ACID complètes
+- ✅ MVCC (appelé « Read Consistency » chez Oracle)
 - ✅ Réplication (physique et logique)  
 - ✅ Partitionnement de tables  
 - ✅ Procédures stockées et triggers  
@@ -374,7 +377,7 @@ Oracle est le SGBD commercial le plus puissant et le plus cher du marché. La co
 - ✅ Licence libre (aucune restriction)  
 - ✅ Communauté innovante et rapide
 
-**Verdict :** Oracle a quelques fonctionnalités enterprise exclusives, mais PostgreSQL couvre 90-95% des besoins.
+**Verdict :** Oracle a quelques fonctionnalités enterprise exclusives, mais PostgreSQL couvre 90 à 95 % des besoins.
 
 #### 2. Performance
 
@@ -393,17 +396,17 @@ Oracle est le SGBD commercial le plus puissant et le plus cher du marché. La co
 **Benchmarks TPC-H (Data Warehouse) :**
 
 | Taille données | PostgreSQL | Oracle | Ratio |
-|---------------|-----------|--------|-------|
-| 100 GB | 100% | 110% | Oracle +10% |
-| 1 TB | 100% | 105% | Quasi égal |
-| 10 TB | 100% | 115% | Oracle +15% |
+|----------------|------------|--------|-------|
+| 100 Go | 100 % | 110 % | Oracle +10 % |
+| 1 To | 100 % | 105 % | Quasi égal |
+| 10 To | 100 % | 115 % | Oracle +15 % |
 
 **Note :** Oracle conserve un léger avantage sur très gros volumes, mais l'écart se réduit.
 
 **OLTP (Transactions) :**
 Performances globalement équivalentes pour la plupart des charges de travail.
 
-**Verdict :** Oracle légèrement plus performant sur très gros systèmes, PostgreSQL excellent pour 95% des cas.
+**Verdict :** Oracle légèrement plus performant sur très gros systèmes, PostgreSQL excellent pour 95 % des cas.
 
 #### 3. Coût Total de Possession (TCO)
 
@@ -425,7 +428,7 @@ TOTAL :                       1 750 000 €
 **Oracle Standard Edition :**
 ```
 Licences initiales :          2 000 000 €  
-Maintenance annuelle (22%) :  2 200 000 € (440k×5 ans)  
+Maintenance annuelle (22 %) : 2 200 000 € (440k × 5 ans)  
 Infrastructure :              500 000 €  
 Personnel (DBA Oracle) :      1 200 000 € (salaires plus élevés)  
 Audits et conformité :        300 000 € (risque d'audit)  
@@ -436,7 +439,7 @@ TOTAL :                       6 200 000 €
 **Oracle Enterprise Edition :**
 ```
 Licences initiales :          6 000 000 €  
-Maintenance annuelle (22%) :  6 600 000 € (1,32M×5 ans)  
+Maintenance annuelle (22 %) : 6 600 000 € (1,32M × 5 ans)  
 Options supplémentaires :     2 000 000 € (Partitioning, RAC, etc.)  
 Infrastructure :              500 000 €  
 Personnel :                   1 200 000 €  
@@ -477,11 +480,37 @@ TOTAL :                       16 800 000 €
 - **EDB Migration Portal** : Service d'EnterpriseDB  
 - **Services pro** : Consultants spécialisés
 
-**Taux de succès :** ~80-90% de compatibilité automatique, 10-20% nécessite adaptation manuelle.
+**Taux de succès :** ~80-90 % de compatibilité automatique, 10-20 % nécessite adaptation manuelle.
 
 **Durée typique :** 3-12 mois selon complexité
 
-**ROI :** Généralement positif dès la première année grâce aux économies de licence.
+**ROI :** généralement positif dès la première année grâce aux économies de licence.
+
+**Carte de compatibilité Oracle ↔ PostgreSQL** (vue d'ensemble) :
+
+| Concept Oracle | Équivalent PostgreSQL | Niveau d'effort |
+|---------------|------------------------|:--------------:|
+| `NUMBER` | `NUMERIC` / `INTEGER` / `BIGINT` | 🟢 Direct |
+| `VARCHAR2(n)` | `VARCHAR(n)` ou `TEXT` | 🟢 Direct |
+| `DATE` (avec heure) | `TIMESTAMP` | 🟡 Léger (Oracle DATE contient l'heure) |
+| Séquences | Séquences (identiques) ou `GENERATED ALWAYS AS IDENTITY` | 🟢 Direct |
+| `DUAL` (table fictive) | Omettre (PostgreSQL accepte `SELECT 1;`) | 🟢 Direct |
+| `ROWNUM` | `LIMIT` / `OFFSET` ou `ROW_NUMBER()` | 🟡 Réécriture |
+| `CONNECT BY` (hiérarchies) | CTE récursives `WITH RECURSIVE` | 🟡 Réécriture |
+| `MERGE` | `MERGE` (depuis PG 15) ou `INSERT … ON CONFLICT` | 🟢 Direct depuis PG 15 |
+| PL/SQL (procédures) | PL/pgSQL (très proche) | 🟡 Adaptation de syntaxe |
+| Packages PL/SQL | Schémas + fonctions | 🔴 Refactoring requis |
+| `DBMS_*` (Oracle Built-in Packages) | Pas d'équivalent direct, ou via extension **Orafce** | 🟡 Orafce comble la majorité |
+| Synonymes | Vues, ou aucun (utiliser le nom complet) | 🟡 Léger |
+| `RAC` (Real Application Clusters) | Patroni, Citus, ou réplication multi-maître | 🔴 Architecture différente |
+| `Flashback` | PITR (Point-In-Time Recovery) | 🟡 Différent mais équivalent fonctionnel |
+| Hints d'optimiseur (`/*+ INDEX(t) */`) | Généralement non recommandés, mais possible via `pg_hint_plan` | 🟡 Philosophie différente |
+| Réglages session-level (`ALTER SESSION`) | `SET` (paramètres GUC) | 🟢 Direct |
+
+**Outils de compatibilité** :
+- **Orafce** : extension PostgreSQL qui implémente de nombreuses fonctions Oracle (`SYSDATE`, `DBMS_OUTPUT`, `DECODE`, `NVL`…). Indispensable pour les migrations.
+- **EDB Postgres Advanced Server (PostgreSQL+EDB)** : distribution commerciale d'EnterpriseDB qui ajoute une couche de compatibilité Oracle plus poussée (PL/SQL exact, packages, etc.). Solution intermédiaire si la réécriture totale est trop coûteuse.
+- **ora2pg** : convertit automatiquement le schéma, les données et une partie du code PL/SQL vers PostgreSQL.
 
 #### 5. Support et Écosystème
 
@@ -492,7 +521,7 @@ TOTAL :                       16 800 000 €
 - ✅ Équipes dédiées pour gros clients  
 - ✅ Patches prioritaires  
 - ✅ Documentation exhaustive  
-- ⚠️ Coût de maintenance très élevé (22% des licences/an)
+- ⚠️ Coût de maintenance très élevé (22 % des licences/an)
 
 **PostgreSQL**
 
@@ -501,7 +530,7 @@ TOTAL :                       16 800 000 €
 - ✅ Support commercial disponible (EDB, Crunchy Data, Percona)  
 - ✅ Patches de sécurité rapides (communauté réactive)  
 - ⚠️ Pas de SLA avec support gratuit  
-- ✅ Coût du support commercial : 10-20% du prix Oracle
+- ✅ Coût du support commercial : 10 à 20 % du prix Oracle
 
 **Verdict :** Oracle offre le support le plus premium, mais à un coût élevé. PostgreSQL propose plusieurs niveaux adaptés à tous budgets.
 
@@ -535,9 +564,9 @@ TOTAL :                       16 800 000 €
 - Cloud providers favorisent PostgreSQL
 
 📈 **PostgreSQL gagne du terrain**
-- Croissance +15-20% par an
+- Croissance +15 à 20 % par an
 - Adoptions par Fortune 500
-- Alternative crédible pour 90% des cas Oracle
+- Alternative crédible pour 90 % des cas Oracle
 
 **Exemples de migrations notables :**
 - Nombreuses administrations publiques
@@ -589,7 +618,7 @@ SQL Server est le SGBD dominant dans l'écosystème Microsoft Windows.
 - ✅ Complètement agnostique de plateforme  
 - ✅ Excellente intégration avec tous langages/frameworks
 
-**Verdict :** SQL Server plus adapté si vous êtes 100% Microsoft, PostgreSQL si vous voulez la flexibilité totale.
+**Verdict :** SQL Server plus adapté si vous êtes 100 % Microsoft, PostgreSQL si vous voulez la flexibilité totale.
 
 #### 2. Fonctionnalités
 
@@ -694,7 +723,7 @@ Plusieurs éditions avec coûts variables :
 - Usage : Développement, petites applications
 
 **Standard Edition :**
-- 💰 ~4 000 € par cœur (ou ~1 000 € par cal)
+- 💰 ~4 000 € par cœur (ou ~1 000 € par **CAL**, *Client Access License*)
 - Fonctionnalités standard complètes
 - Limité à 128 GB RAM
 - Usage : PME, applications moyennes
@@ -706,7 +735,7 @@ Plusieurs éditions avec coûts variables :
 - Usage : Grandes entreprises, mission critique
 
 **Azure SQL Database :**
-- 💰 Modèle pay-as-you-go (cloud)
+- 💰 Modèle *pay-as-you-go* (paiement à l'usage, cloud)
 - 50-5000+ € / mois selon ressources
 
 **PostgreSQL**
@@ -742,12 +771,12 @@ Plusieurs éditions avec coûts variables :
 **Benchmarks (ordre de grandeur) :**
 
 | Charge de travail | PostgreSQL | SQL Server |
-|------------------|-----------|------------|
-| OLTP (transactionnel) | 100% | 100% |
-| OLAP (analytique) | 100% | 95% |
-| Requêtes complexes | 100% | 95% |
-| Écriture massive | 95% | 100% |
-| JSON | 100% | 85% |
+|-------------------|------------|------------|
+| OLTP (transactionnel) | 100 % | 100 % |
+| OLAP (analytique) | 100 % | 95 % |
+| Requêtes complexes | 100 % | 95 % |
+| Écriture massive | 95 % | 100 % |
+| JSON | 100 % | 85 % |
 
 **Verdict :** Performances globalement équivalentes, PostgreSQL légèrement en tête sur analytics et JSON.
 
@@ -814,7 +843,7 @@ Plusieurs éditions avec coûts variables :
 
 **Choisissez SQL Server si :**
 
-- ✅ Vous êtes 100% dans l'écosystème Microsoft  
+- ✅ Vous êtes 100 % dans l'écosystème Microsoft
 - ✅ Vous utilisez .NET Framework (legacy)  
 - ✅ Vous avez besoin de SSIS/SSAS/SSRS intégrés  
 - ✅ Votre infrastructure est Active Directory  
@@ -891,11 +920,59 @@ Plusieurs éditions avec coûts variables :
 | Aspect | PostgreSQL | MySQL | Oracle | SQL Server |
 |--------|-----------|-------|--------|------------|
 | **Licence** | Permissive (BSD-like) | GPL / Commercial | Propriétaire | Propriétaire |
-| **Open Source** | ✅ 100% | ⚠️ Dual | ❌ Non | ❌ Non |
+| **Open Source** | ✅ 100 % | ⚠️ Dual | ❌ Non | ❌ Non |
 | **Propriétaire** | Communauté | Oracle Corp | Oracle Corp | Microsoft |
 | **Vendor Lock-in** | ❌ Aucun | ⚠️ Oracle | ✅ Fort | ✅ Modéré |
 | **Conformité standards** | ✅ Excellente | ⚠️ Moyenne | ✅ Bonne | ✅ Bonne |
 | **Audit risque** | ❌ Jamais | ⚠️ Possible | ✅ Fréquent | ⚠️ Possible |
+
+---
+
+## PostgreSQL « standard » vs PostgreSQL-compatible
+
+Avec le succès de PostgreSQL, de nombreux produits ont émergé qui se présentent comme **« PostgreSQL-compatible »**. La nuance est importante pour les décideurs : tous ne sont pas le « vrai » PostgreSQL communautaire.
+
+### Le « vrai » PostgreSQL communautaire
+
+Distribué via :
+- Les paquets officiels (`apt`, `yum`, `dnf`)
+- Le site postgresql.org
+- Les images Docker officielles (`docker.io/postgres`)
+- Sources Git officielles
+
+C'est le PostgreSQL que vous installez chez vous, sur votre serveur ou dans Kubernetes (via les operators standards). **100 % open source**, géré par la communauté.
+
+### Forks et distributions
+
+Distributions **dérivées du code source** PostgreSQL, qui ajoutent des fonctionnalités sans casser la compatibilité :
+
+| Produit | Éditeur | Particularités |
+|---------|---------|----------------|
+| **EDB Postgres Advanced Server** | EnterpriseDB | Compatibilité Oracle renforcée, outils enterprise |
+| **Greenplum** | Broadcom (ex-VMware) | OLAP massif parallèle, fork ancien (PG 9.4) |
+| **CitusDB → Microsoft** | Microsoft | Sharding distribué (extension, pas un fork) |
+| **TimescaleDB** | Timescale Inc. | Séries temporelles (extension, pas un fork) |
+
+### PostgreSQL-compatible : compatibles au protocole, pas au code
+
+Ces produits **réimplémentent** le protocole wire PostgreSQL pour permettre aux clients existants (`psql`, drivers JDBC, `libpq`…) de s'y connecter, mais **leur moteur n'est pas PostgreSQL**.
+
+| Produit | Éditeur | Moteur réel | Note |
+|---------|---------|-------------|------|
+| **Aurora PostgreSQL** | AWS | Stockage distribué propriétaire AWS | API compatible PG, cluster optimisé |
+| **AlloyDB** | Google | Stockage propriétaire Google | API compatible PG, OLAP renforcé |
+| **CockroachDB** | Cockroach Labs | Moteur distribué original (Go) | NewSQL, géo-réplication active-active |
+| **YugabyteDB** | Yugabyte Inc. | Moteur distribué inspiré de Spanner | NewSQL, multi-région |
+| **Neon** | Neon Inc. | Storage séparé de compute (custom) | Serverless, branching |
+| **Tembo, Crunchy Bridge** | Divers | PostgreSQL standard managé | Vraies distributions PG |
+
+> ⚠️ **Pourquoi c'est important** : avec un produit « PostgreSQL-compatible mais pas PostgreSQL », vous bénéficiez de l'écosystème client, mais :  
+> - Certaines extensions PostgreSQL (PostGIS, pgvector…) peuvent ne pas fonctionner  
+> - Les comportements peuvent différer sur les cas limites (verrouillage, niveaux d'isolation…)  
+> - Vous êtes lié à l'éditeur, pas à la communauté open source  
+> - La migration vers un autre fournisseur peut nécessiter du travail
+
+**Recommandation** : pour la majorité des cas, préférez le **vrai PostgreSQL** (auto-hébergé, ou managé via AWS RDS / Azure Database / Google Cloud SQL qui proposent du PostgreSQL standard, pas un fork). Considérez les compatibles seulement pour des besoins très spécifiques (sharding extrême, multi-région actif/actif, serverless).
 
 ---
 
@@ -954,7 +1031,7 @@ Plusieurs éditions avec coûts variables :
 
 ## Conclusion
 
-### Le Paysage des SGBD en 2025
+### Le Paysage des SGBD en 2025-2026
 
 Le marché des bases de données relationnelles évolue rapidement :
 
@@ -1009,7 +1086,7 @@ Le marché des bases de données relationnelles évolue rapidement :
 
 ### Le Meilleur Choix pour la Plupart des Cas
 
-**Pour 80-90% des projets, PostgreSQL est le meilleur choix :**
+**Pour 80 à 90 % des projets, PostgreSQL est le meilleur choix :**
 
 - ✅ Gratuit mais professionnel  
 - ✅ Performant et fiable  
@@ -1019,9 +1096,9 @@ Le marché des bases de données relationnelles évolue rapidement :
 - ✅ Communauté active  
 - ✅ Pérenne
 
-**Les 10-20% restants :**
+**Les 10 à 20 % restants :**
 - Legacy Oracle massif (migration progressive recommandée)
-- Écosystème Microsoft 100% (SQL Server logique)
+- Écosystème Microsoft 100 % (SQL Server logique)
 - Application web ultra-simple (MySQL acceptable)
 
 ### Votre Prochaine Étape
@@ -1032,7 +1109,7 @@ Maintenant que vous comprenez le positionnement de PostgreSQL face à ses concur
 2. **Tester par vous-même** (installation au chapitre 3)  
 3. **Comparer dans votre contexte** avec cas réels
 
-PostgreSQL n'est pas parfait, mais c'est le SGBD relationnel qui offre le meilleur équilibre entre puissance, flexibilité, coût et pérennité pour la grande majorité des projets en 2025.
+PostgreSQL n'est pas parfait, mais c'est le SGBD relationnel qui offre le meilleur équilibre entre puissance, flexibilité, coût et pérennité pour la grande majorité des projets aujourd'hui.
 
 ---
 

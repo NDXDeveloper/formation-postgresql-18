@@ -8,6 +8,30 @@ Vous êtes sur le point de découvrir PostgreSQL, l'un des systèmes de gestion 
 
 Ce chapitre est conçu pour vous donner une compréhension complète de **qui est PostgreSQL**, d'où il vient, ce qui le distingue, et pourquoi il mérite votre attention. Avant de plonger dans les aspects techniques et pratiques dans les chapitres suivants, il est essentiel de comprendre l'ADN de PostgreSQL : son histoire, sa philosophie, son positionnement dans l'industrie, et l'écosystème unique qui l'entoure.
 
+### En une frise : 40 ans d'histoire
+
+```
+1970 ──┬── INGRES (Berkeley) — Stonebraker invente l'un des premiers SGBDR
+       │
+1986 ──┼── POSTGRES — papier fondateur « The Design of POSTGRES »
+       │
+1994 ──┼── Andrew Yu et Jolly Chen ajoutent SQL → Postgres95
+       │
+1996 ──┼── Renommage en PostgreSQL, licence permissive, open source
+       │
+2001 ──┼── v7.1 : WAL (Write-Ahead Logging) — fondation de la durabilité
+       │
+2010 ──┼── v9.0 : réplication streaming, Hot Standby
+       │
+2014 ──┼── v9.4 : JSONB — Stonebraker reçoit le Prix Turing
+       │
+2017 ──┼── v10 : partitionnement déclaratif, réplication logique
+       │
+2022 ──┼── v15 : MERGE SQL standard
+       │
+2025 ──┴── v18 : I/O asynchrone, OAuth 2.0, UUIDv7, colonnes virtuelles  ← Nous sommes ici
+```
+
 ---
 
 ## Pourquoi Ce Chapitre Est Important
@@ -49,13 +73,13 @@ Si vous devez choisir un SGBD pour votre organisation, ce chapitre vous fournira
 
 Ce chapitre est organisé en cinq sections complémentaires qui, ensemble, dressent un portrait complet de PostgreSQL :
 
-### **2.1. Histoire et Philosophie : Le SGBD "Objet-Relationnel"**
+### **2.1. Histoire et Philosophie : Le SGBD « objet-relationnel »**
 
 Dans cette section, nous remonterons aux origines de PostgreSQL :
 
 - Les racines académiques du projet (Berkeley, années 1980)
 - L'évolution de POSTGRES à PostgreSQL
-- La philosophie "objet-relationnel" et ce qu'elle signifie concrètement
+- La philosophie « objet-relationnel » et ce qu'elle signifie concrètement
 - Les valeurs qui guident le développement (standards, fiabilité, extensibilité)
 - Pourquoi comprendre cette histoire vous aide à mieux utiliser PostgreSQL
 
@@ -90,7 +114,7 @@ Dans cette section, vous découvrirez la polyvalence de PostgreSQL :
 
 Cette section explore le modèle unique de PostgreSQL :
 
-- La licence PostgreSQL (permissive, BSD-like)
+- La licence PostgreSQL (permissive, de type BSD)
 - La gouvernance communautaire (PGDG)
 - Comment fonctionne la communauté mondiale
 - Le processus de développement et de contribution
@@ -194,7 +218,7 @@ Ce chapitre est **théorique** et **contextuel**. Il pose les fondations concept
 
 ## Un Investissement Rentable
 
-Vous pourriez être tenté de "sauter" ce chapitre pour aller directement aux aspects pratiques (installation, requêtes SQL, etc.). Nous vous déconseillons fortement cette approche.
+Vous pourriez être tenté de « sauter » ce chapitre pour aller directement aux aspects pratiques (installation, requêtes SQL, etc.). Nous vous déconseillons fortement cette approche.
 
 ### Pourquoi Ce Chapitre N'Est Pas Optionnel
 
@@ -238,22 +262,37 @@ Abordez ce chapitre avec curiosité et ouverture :
 
 ### ✅ Adoptez Une Perspective Critique
 
-PostgreSQL n'est pas parfait. Nous présenterons ses forces **et** ses limitations de manière objective. L'objectif n'est pas de "vendre" PostgreSQL, mais de vous aider à comprendre s'il convient à vos besoins.
+PostgreSQL n'est pas parfait. Nous présenterons ses forces **et** ses limitations de manière objective. L'objectif n'est pas de « vendre » PostgreSQL, mais de vous aider à comprendre s'il convient à vos besoins.
 
 ### ✅ Pensez à Votre Contexte
 
 Pendant votre lecture, réfléchissez à vos propres projets et contraintes :
 - Quels sont vos cas d'usage ?
 - Quelles sont vos contraintes (budget, équipe, infrastructure) ?
-- Quels sont vos objectifs techniques et business ?
+- Quels sont vos objectifs techniques et métier ?
 
 ### ✅ Gardez l'Esprit Ouvert
 
-Si vous venez d'un autre SGBD, vous découvrirez peut-être des approches différentes. Ces différences ne sont ni "meilleures" ni "pires" en absolu, elles sont adaptées à des philosophies et des contextes différents.
+Si vous venez d'un autre SGBD, vous découvrirez peut-être des approches différentes. Ces différences ne sont ni « meilleures » ni « pires » en absolu, elles sont adaptées à des philosophies et des contextes différents.
 
 ### ✅ Préparez-vous aux Chapitres Pratiques
 
 Les concepts que vous découvrirez ici seront appliqués dans les chapitres suivants. Vous comprendrez mieux **pourquoi** faire les choses d'une certaine manière, pas seulement **comment**.
+
+---
+
+## Idées Reçues à Abandonner
+
+Si vous découvrez PostgreSQL avec en tête certains a priori, ce chapitre va probablement les corriger. Voici les plus fréquents :
+
+| Idée reçue | Réalité |
+|------------|---------|
+| « PostgreSQL, c'est gratuit donc c'est moins pro que Oracle » | PostgreSQL équipe Apple, Instagram, Spotify, Reddit, Twitch, la NASA, le CERN, des gouvernements et des banques. Sa licence permissive ne dit rien sur sa qualité, qui est précisément l'un de ses points forts. |
+| « PostgreSQL c'est lent par rapport à MySQL » | Sur les requêtes complexes (jointures, analytics, JSON), PostgreSQL est généralement **plus rapide**. Sur les requêtes simples, l'écart est négligeable. Cette idée date d'il y a 15 ans. |
+| « C'est juste un MySQL en plus complet » | PostgreSQL et MySQL ont des philosophies différentes : objet-relationnel et conformité stricte pour PostgreSQL, simplicité pour MySQL. Ce sont deux logiciels distincts, pas des forks. |
+| « C'est compliqué à installer » | `apt install postgresql` ou `docker run postgres`. C'est aussi simple que n'importe quel autre SGBD. |
+| « Je ne peux pas faire de NoSQL avec » | PostgreSQL embarque JSONB (documents), arrays, key-value (hstore), pgvector (IA), PostGIS (géospatial), TimescaleDB (séries temporelles)… Souvent il remplace plusieurs systèmes à la fois. |
+| « Il n'y a pas de support pro disponible » | EDB, Crunchy Data, Percona, Aiven proposent du support 24/7 avec SLA. Plus économique qu'un contrat Oracle, à qualité équivalente. |
 
 ---
 
@@ -262,13 +301,18 @@ Les concepts que vous découvrirez ici seront appliqués dans les chapitres suiv
 Tout au long de ce chapitre, nous ferons référence à **PostgreSQL 18**, la dernière version majeure sortie en septembre 2025.
 
 Cette version apporte des innovations majeures :
-- 🚀 I/O asynchrone (jusqu'à 3× plus rapide)  
-- 🆕 Colonnes générées virtuelles  
-- 🔐 Authentification OAuth 2.0  
-- 🛡️ Data checksums activés par défaut  
-- 🧠 Optimisations du planificateur de requêtes
 
-Ces nouveautés seront détaillées dans la section 2.2, mais gardez à l'esprit que PostgreSQL évolue constamment. La version 19 sera développée pendant l'année 2026, et ainsi de suite. Cette dynamique d'innovation continue est l'une des forces de PostgreSQL.
+- 🚀 **I/O asynchrone** (AIO) — jusqu'à 3× plus rapide en lecture sur stockage moderne
+- 🆕 **Colonnes générées virtuelles** — calculs à la volée, sans surcoût de stockage
+- 🔐 **Authentification OAuth 2.0** — intégration native avec les fournisseurs d'identité (Azure AD, Okta, Keycloak…)
+- 🛡️ **Data checksums activés par défaut** — détection précoce de la corruption disque
+- 🧠 **Optimisations du planificateur** — auto-élimination des self-joins, transformation OR → ANY, Skip Scan
+- 🆔 **UUIDv7** — identifiants ordonnés temporellement, plus performants que UUIDv4 en index
+- 📅 **Contraintes temporelles** — clés primaires et étrangères avec dimension de validité dans le temps
+- 🔁 **OLD / NEW dans RETURNING** — accès aux valeurs avant/après dans `UPDATE`, `DELETE`, `MERGE`
+- ♻️ **`pg_upgrade --swap`** — mises à jour majeures considérablement accélérées
+
+Ces nouveautés seront détaillées dans la section 2.2, mais gardez à l'esprit que PostgreSQL évolue constamment. La version 19 est développée pendant l'année 2026 (sortie prévue en septembre 2026), et ainsi de suite. Cette dynamique d'innovation continue est l'une des forces de PostgreSQL.
 
 ---
 
@@ -299,7 +343,7 @@ Nous vous recommandons de les lire dans l'ordre pour une compréhension optimale
 
 Vous avez maintenant une vue d'ensemble de ce qui vous attend dans ce chapitre. Nous allons explorer ensemble :
 
-- 🏛️ Les 40+ ans d'histoire qui ont façonné PostgreSQL  
+- 🏛️ Les plus de 40 ans d'histoire qui ont façonné PostgreSQL
 - 🧬 Les gènes qui le rendent unique  
 - 🌍 Son impact dans l'industrie mondiale  
 - 👥 La communauté qui le fait vivre  
@@ -309,7 +353,7 @@ Ces connaissances feront de vous non seulement un meilleur utilisateur de Postgr
 
 **L'aventure PostgreSQL commence maintenant.**
 
-Passez à la section suivante : **2.1. Histoire et Philosophie : Le SGBD "Objet-Relationnel"**
+Passez à la section suivante : **2.1. Histoire et Philosophie : Le SGBD « objet-relationnel »**
 
 ---
 
@@ -319,7 +363,7 @@ Avant de plonger dans les détails, voici les messages essentiels de ce chapitre
 
 ✅ **PostgreSQL est un projet unique** : Open source, communautaire, indépendant de toute entreprise
 
-✅ **Il est polyvalent** : Un SGBD pour de multiples cas d'usage (OLTP, OLAP, GIS, IoT, IA...)
+✅ **Il est polyvalent** : Un SGBD pour de multiples cas d'usage (OLTP, OLAP, GIS, IoT, IA…)
 
 ✅ **Il est gratuit mais professionnel** : Utilisé par les plus grandes entreprises du monde
 
@@ -335,6 +379,6 @@ Ces points seront développés et justifiés dans les sections qui suivent. Bonn
 
 ---
 
-**Prochaine section : 2.1. Histoire et Philosophie : Le SGBD "Objet-Relationnel"**
+**Prochaine section : 2.1. Histoire et Philosophie : Le SGBD « objet-relationnel »**
 
-⏭️ [Histoire et philosophie : Le SGBD "objet-relationnel"](/02-presentation-de-postgresql/01-histoire-et-philosophie.md)
+⏭️ [Histoire et philosophie : Le SGBD « objet-relationnel »](/02-presentation-de-postgresql/01-histoire-et-philosophie.md)

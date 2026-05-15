@@ -1,6 +1,6 @@
 🔝 Retour au [Sommaire](/SOMMAIRE.md)
 
-# 2.2. Gestion des Versions et Cycle de Vie (PostgreSQL 18 : Septembre 2025)
+# 2.2. Gestion des Versions et Cycle de Vie (PostgreSQL 18 : septembre 2025)
 
 ## Introduction
 
@@ -83,6 +83,17 @@ Exemple : `PostgreSQL 18.3`
 
 ⚠️ **Important :** Les mises à jour mineures sont **toujours** rétrocompatibles. Vous pouvez (et devez) les appliquer sans procédure complexe.
 
+> 🔄 **Coordination des releases mineures**  
+>  
+> Quand la communauté PostgreSQL publie un cycle de patches, **toutes les versions supportées sortent en même temps**. Par exemple, le jour de la sortie de 18.2, on aura aussi 17.6, 16.10, 15.14, 14.19.  
+>  
+> Pour les ops, cela signifie :  
+> - Toutes vos instances peuvent être patchées dans la même fenêtre de maintenance  
+> - Les correctifs de sécurité s'appliquent partout en même temps (cohérence du parc)  
+> - La planification annuelle des fenêtres de maintenance peut s'aligner sur ce rythme trimestriel  
+>  
+> Les dates planifiées sont publiées un an à l'avance sur https://www.postgresql.org/developer/roadmap/. Hors cycle, des releases « hors-bande » peuvent être publiées pour les CVE critiques (rare mais possible).
+
 ### Comment Identifier Votre Version ?
 
 Dans `psql` ou n'importe quel client PostgreSQL :
@@ -116,6 +127,20 @@ SHOW server_version;
 
 ## Le Cycle de Vie d'une Version PostgreSQL
 
+### Vue d'ensemble visuelle
+
+```
+                                                          ╱─────── Support actif (5 ans) ───────╲
+                                                         ╱                                       ╲
+                                                        ╱                                         ╲
+Phase de développement      Beta 1, 2, 3        RC      GA              Mineures (18.1, 18.2…)      EOL
+├─ 12 mois ──────────────┼─ 3-4 mois ─────────┼─ 1-2 mois ─┼──────── ~ 5 ans ────────┤
+                                                       ⬇                                          ⬇
+                                              PG 18.0 (sept. 2025)              PG 18 EOL (nov. 2030)
+
+   ↑ Code instable        ↑ Tests communauté   ↑ Bugs fix    ↑ Prod    ↑ Patches sécurité/bugs    ↑ Plus de patches
+```
+
 ### Les Phases d'une Version
 
 Chaque version majeure de PostgreSQL passe par plusieurs phases :
@@ -134,10 +159,10 @@ Chaque version majeure de PostgreSQL passe par plusieurs phases :
 
 #### 2. Phase Bêta (environ 3-4 mois)
 
-**Période :** Mai/Juin jusqu'à septembre
+**Période :** mai/juin jusqu'à septembre
 
 **Activités :**
-- Publication de versions bêta (Beta 1, Beta 2, Beta 3...)
+- Publication de versions bêta (Beta 1, Beta 2, Beta 3…)
 - Tests par la communauté
 - Corrections de bugs découverts
 - Stabilisation du code
@@ -147,7 +172,7 @@ Chaque version majeure de PostgreSQL passe par plusieurs phases :
 
 #### 3. Release Candidate (1-2 mois)
 
-**Période :** Août/Septembre
+**Période :** août/septembre
 
 **Activités :**
 - Version presque finale
@@ -159,9 +184,9 @@ Chaque version majeure de PostgreSQL passe par plusieurs phases :
 
 #### 4. Release Finale (GA - General Availability)
 
-**Date typique :** Septembre/Octobre
+**Date typique :** septembre/octobre
 
-**Exemple :** PostgreSQL 18.0 - Septembre 2025
+**Exemple :** PostgreSQL 18.0 — septembre 2025
 
 **Caractéristiques :**
 - Version stable prête pour la production
@@ -175,7 +200,7 @@ Chaque version majeure de PostgreSQL passe par plusieurs phases :
 **Activités :**
 - Corrections de bugs régulières
 - Patches de sécurité
-- Mises à jour mineures (18.1, 18.2, 18.3...)
+- Mises à jour mineures (18.1, 18.2, 18.3…)
 - Support communautaire actif
 
 **Fréquence des patches :** Environ tous les 2-3 mois, avec des releases coordonnées pour toutes les versions supportées
@@ -196,23 +221,57 @@ Chaque version majeure de PostgreSQL passe par plusieurs phases :
 
 PostgreSQL maintient officiellement les **5 dernières versions majeures**.
 
-**En novembre 2025, les versions supportées sont :**
+**Au moment de cette mise à jour de la formation (mai 2026), les versions supportées sont :**
 
 | Version | Date de Release | Fin de Support (EOL) | Statut |
-|---------|----------------|---------------------|---------|
-| PostgreSQL 18 | Septembre 2025 | Novembre 2030 | ✅ **Actuelle** |
-| PostgreSQL 17 | Septembre 2024 | Novembre 2029 | ✅ Supportée |
-| PostgreSQL 16 | Septembre 2023 | Novembre 2028 | ✅ Supportée |
-| PostgreSQL 15 | Octobre 2022 | Novembre 2027 | ✅ Supportée |
-| PostgreSQL 14 | Septembre 2021 | Novembre 2026 | ✅ Supportée |
-| PostgreSQL 13 | Septembre 2020 | Novembre 2025 | ⚠️ Fin de vie imminente |
-| PostgreSQL 12 | Octobre 2019 | Novembre 2024 | ❌ EOL |
+|---------|-----------------|----------------------|--------|
+| PostgreSQL 18 | septembre 2025 | novembre 2030 | ✅ **Actuelle** |
+| PostgreSQL 17 | septembre 2024 | novembre 2029 | ✅ Supportée |
+| PostgreSQL 16 | septembre 2023 | novembre 2028 | ✅ Supportée |
+| PostgreSQL 15 | octobre 2022   | novembre 2027 | ✅ Supportée |
+| PostgreSQL 14 | septembre 2021 | novembre 2026 | ⚠️ Fin de vie imminente |
+| PostgreSQL 13 | septembre 2020 | novembre 2025 | ❌ EOL |
+| PostgreSQL 12 | octobre 2019   | novembre 2024 | ❌ EOL |
 
-**Important :** Même si une version est techniquement fonctionnelle après sa fin de vie, continuer à l'utiliser en production expose votre système à des risques de sécurité.
+**Important :** même si une version est techniquement fonctionnelle après sa fin de vie, continuer à l'utiliser en production expose votre système à des risques de sécurité.
+
+> 📌 **Note de lecture** : ce tableau est un cliché à un moment donné. PostgreSQL 19 sortira en septembre 2026, et le calendrier se décalera d'un cran : PG 19 sera la version actuelle, et PG 14 atteindra sa fin de vie en novembre 2026. Consultez https://www.postgresql.org/support/versioning/ pour la liste à jour.
+
+### « À partir de quelle version ? » — fonctionnalités clés
+
+Repère rapide pour savoir si votre cluster supporte une fonctionnalité donnée :
+
+| Fonctionnalité | Disponible depuis |
+|----------------|:-----------------:|
+| `WAL` (durabilité) | 7.1 (2001) |
+| `Hot Standby` (lecture sur réplica) | 9.0 (2010) |
+| `Extensions` (CREATE EXTENSION) | 9.1 (2011) |
+| Fonctions JSON | 9.2 (2012) |
+| Vues matérialisées | 9.3 (2013) |
+| `JSONB` (JSON binaire indexable) | 9.4 (2014) |
+| `BRIN` (index Block Range) | 9.5 (2015) |
+| `INSERT … ON CONFLICT` (upsert) | 9.5 (2015) |
+| Partitionnement déclaratif | 10 (2017) |
+| Réplication logique native | 10 (2017) |
+| Procédures stockées (`CALL`) | 11 (2018) |
+| JIT compilation | 11 (2018) |
+| `GENERATED ALWAYS AS … STORED` | 12 (2019) |
+| `MERGE` (standard SQL) | 15 (2022) |
+| Compression LZ4 (TOAST) | 15 (2022) |
+| Réplication logique depuis un standby | 16 (2023) |
+| `incremental backup` (`pg_basebackup`) | 17 (2024) |
+| I/O asynchrone (AIO) | 18 (2025) |
+| `GENERATED ALWAYS AS … VIRTUAL` | 18 (2025) |
+| Authentification OAuth 2.0 | 18 (2025) |
+| `uuidv7()` | 18 (2025) |
+| Contraintes temporelles | 18 (2025) |
+| `OLD` / `NEW` dans `RETURNING` | 18 (2025) |
+
+> 💡 Avant d'utiliser une fonctionnalité dans votre code, vérifiez la version cible la plus basse de votre parc. Cette table vous évite des erreurs `syntax error` surprenantes sur les vieilles instances.
 
 ---
 
-## PostgreSQL 18 : La Version Actuelle (Septembre 2025)
+## PostgreSQL 18 : La Version Actuelle (septembre 2025)
 
 ### Vue d'Ensemble
 
@@ -514,15 +573,34 @@ RETURNING OLD.prix as ancien_prix, NEW.prix as nouveau_prix;
 **Principe :** Réplication vers une nouvelle instance PostgreSQL 18, puis bascule.
 
 **Avantages :**
-- ✅ Downtime quasi nul (quelques secondes)  
-- ✅ Possibilité de rollback facile  
+- ✅ Downtime quasi nul (quelques secondes)
+- ✅ Possibilité de rollback facile
 - ✅ Idéal pour la production critique
 
 **Inconvénients :**
-- ❌ Plus complexe à mettre en œuvre  
+- ❌ Plus complexe à mettre en œuvre
 - ❌ Nécessite plus de ressources (2 clusters en parallèle)
 
 **Cas d'usage :** Production critique, haute disponibilité requise
+
+### Plan de Rollback : à ne JAMAIS négliger
+
+Une migration majeure réussit dans 99 % des cas — mais c'est le 1 % qui ruine une carrière. Avant de lancer un `pg_upgrade`, préparez un plan de retour en arrière :
+
+**Checklist minimale avant migration :**
+
+- [ ] **Sauvegarde physique complète** (`pg_basebackup` + WAL) effectuée et **testée** (restauration sur un autre serveur)
+- [ ] **Sauvegarde logique** (`pg_dumpall`) en complément, par sécurité
+- [ ] **Espace disque** suffisant sur la machine pour conserver les deux clusters (ancien + nouveau) jusqu'à validation
+- [ ] **Plan documenté** : quelles commandes lancer en cas de pépin, qui décide du rollback, dans quel délai
+- [ ] **Tests pré-migration** : exécuter votre suite de tests sur une copie restaurée
+- [ ] **Fenêtre de communication** : prévenir les équipes en aval (applications, support, métier)
+- [ ] **Monitoring renforcé** dans les 24-48h suivant le passage (latences, erreurs, statistiques)
+- [ ] **Critères de rollback objectifs** : taux d'erreur > X %, latence p99 > Y ms, etc.
+
+**Avec `pg_upgrade --link` (mode rapide)** : si vous activez ce mode, le rollback est impossible (les fichiers sont partagés). Privilégier `--copy` ou la réplication logique si vous voulez garder la possibilité de revenir.
+
+**Avec réplication logique** : la bascule est facile à inverser tant que l'ancienne base reste accessible. C'est pour cela que cette méthode est préférée en production critique.
 
 ### Compatibilité et Changements Cassants
 
@@ -544,7 +622,7 @@ Chaque version majeure peut contenir des changements de comportement :
 - Dépréciation de certaines fonctionnalités
 - Changements dans les paramètres par défaut
 
-**Bonne pratique :** Lisez **toujours** les release notes, section "Migration to Version X".
+**Bonne pratique :** lisez **toujours** les release notes, section *« Migration to Version X »*.
 
 ---
 
@@ -628,17 +706,18 @@ Vous y trouverez :
 
 ### Scénario 1 : Nouvelle Application
 
-**Situation :** Vous démarrez un nouveau projet en novembre 2025.
+**Situation :** vous démarrez un nouveau projet en 2026.
 
-**Question :** Quelle version choisir ?
+**Question :** quelle version choisir ?
 
-**Réponse :** ✅ **PostgreSQL 18** (dernière version majeure)
+**Réponse :** ✅ **PostgreSQL 18** (dernière version majeure stable)
 
 **Raisons :**
-- Support jusqu'en 2030
+- Support jusqu'en novembre 2030
 - Dernières fonctionnalités et optimisations
-- Vous bénéficierez des améliorations les plus récentes
+- Vous bénéficierez des améliorations les plus récentes (AIO, UUIDv7, OAuth…)
 - Pas de migration immédiate à prévoir
+- Les premiers patches (18.1, 18.2, 18.3) ont déjà corrigé les bugs initiaux
 
 ### Scénario 2 : Production Stable
 
@@ -656,21 +735,23 @@ Vous y trouverez :
 
 ### Scénario 3 : Version en Fin de Vie
 
-**Situation :** Votre application tourne sur PostgreSQL 13 en novembre 2025.
+**Situation :** votre application tourne encore sur PostgreSQL 13 ou plus ancien en 2026.
 
-**Question :** Que faire ?
+**Question :** que faire ?
 
 **Réponse :** 🚨 **Urgence ! Migrez immédiatement**
 
 **Raisons :**
-- PostgreSQL 13 atteint sa fin de vie en novembre 2025
-- Plus de support de sécurité après cette date
-- Exposition à des vulnérabilités non patchées
+- PostgreSQL 13 a atteint sa fin de vie en novembre 2025
+- Plus aucun patch de sécurité publié
+- Exposition à toute vulnérabilité découverte depuis
+- Audit de conformité (PCI-DSS, ISO 27001) susceptible de bloquer
 
 **Actions :**
-1. Planifiez une migration vers PostgreSQL 17 ou 18 dans les 3 prochains mois  
-2. Priorisez cette migration sur les autres développements  
+1. Planifiez une migration vers PostgreSQL 17 ou 18 dans les semaines qui suivent
+2. Priorisez cette migration sur les autres développements
 3. Testez exhaustivement avant la migration
+4. Si la migration est impossible à court terme, isolez la base derrière un proxy/firewall et limitez fortement les accès
 
 ### Scénario 4 : Patch de Sécurité
 

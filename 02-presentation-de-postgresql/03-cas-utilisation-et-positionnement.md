@@ -4,7 +4,7 @@
 
 ## Introduction
 
-PostgreSQL est souvent décrit comme "le couteau suisse des bases de données". Cette réputation n'est pas usurpée : grâce à sa conception modulaire, son extensibilité et sa robustesse, PostgreSQL s'adapte à une incroyable variété de cas d'utilisation.
+PostgreSQL est souvent décrit comme « le couteau suisse des bases de données ». Cette réputation n'est pas usurpée : grâce à sa conception modulaire, son extensibilité et sa robustesse, PostgreSQL s'adapte à une incroyable variété de cas d'utilisation.
 
 Dans ce chapitre, nous allons explorer les principaux domaines où PostgreSQL excelle, comprendre pourquoi de grandes entreprises lui font confiance, et découvrir comment il se positionne face à ses concurrents dans l'industrie.
 
@@ -150,19 +150,23 @@ Applications manipulant des données géographiques et spatiales :
 
 #### Pourquoi PostgreSQL Excelle Ici ?
 
-- ✅ **PostGIS** : L'extension SIG de référence mondiale (utilisée par 99% des projets SIG open source)  
-- ✅ **Conformité OGC** : Respect des standards géospatiaux  
-- ✅ **Index spatiaux** : GiST et SP-GiST pour requêtes géométriques ultra-rapides  
-- ✅ **Fonctions riches** : Plus de 400 fonctions spatiales (distance, intersection, buffer, etc.)  
-- ✅ **Support 3D** : Gestion de l'altitude et volumes  
+- ✅ **PostGIS** : l'extension SIG de référence dans l'open source, standard de facto
+- ✅ **Conformité OGC** : respect des standards géospatiaux (Open Geospatial Consortium)
+- ✅ **Index spatiaux** : GiST et SP-GiST pour requêtes géométriques ultra-rapides
+- ✅ **Fonctions riches** : plus de 400 fonctions spatiales (distance, intersection, buffer…)
+- ✅ **Support 3D** : gestion de l'altitude et volumes
 - ✅ **Intégrations** : QGIS, ArcGIS, GeoServer, MapServer
 
 **PostGIS transforme PostgreSQL en base de données géospatiale de niveau professionnel.**
 
 **Exemples réels :**
-- **Uber** : Calcul d'itinéraires et zones de tarification  
-- **OpenStreetMap** : Stockage de la plus grande carte collaborative du monde  
-- **Gouvernements** : Cadastres nationaux (France, Canada, etc.)
+- **OpenStreetMap** : la plus grande carte collaborative du monde, base entièrement PostgreSQL/PostGIS
+- **IGN (France)** : cartographie nationale française
+- **Cadastres nationaux** : France, Canada, plusieurs États américains
+- **Mapbox** : tiles et données vectorielles
+- **Mappy, Geoportail, Bilbomática** : portails cartographiques européens
+
+> 📌 **Note historique** : Uber a longtemps été un exemple emblématique de PostgreSQL/PostGIS, mais a migré vers MySQL en 2016. L'écosystème géospatial moderne s'appuie principalement sur PostGIS pour les besoins SIG.
 
 ---
 
@@ -490,21 +494,22 @@ Recherche académique et industrielle nécessitant rigueur :
 
 #### Classements et Reconnaissance
 
-**DB-Engines Ranking (Novembre 2025) :**
+**DB-Engines Ranking (début 2026) :**
 
-1. Oracle (Commercial)  
-2. MySQL (Open Source, Oracle)  
-3. Microsoft SQL Server (Commercial)  
-4. **PostgreSQL** (Open Source, Communautaire)  
-5. MongoDB (Open Source/Commercial, NoSQL)
+1. Oracle (commercial)
+2. MySQL (open source, Oracle)
+3. Microsoft SQL Server (commercial)
+4. **PostgreSQL** (open source, communautaire)
+5. MongoDB (open source / commercial, NoSQL)
 
 **Tendances :**
-- PostgreSQL est le SGBD qui progresse le plus rapidement
-- Seul SGBD open source dans le top 4
-- Gagne régulièrement des parts de marché
+- PostgreSQL est le SGBD relationnel qui **gagne le plus de points** année après année
+- MySQL perd des points sur la même période
+- PostgreSQL est le seul SGBD open source communautaire (non lié à un éditeur) dans le top 4
+- À ce rythme, l'écart avec MySQL pourrait se réduire considérablement dans les prochaines années
 
-**StackOverflow Developer Survey :**
-- Un des SGBD les plus **aimés** par les développeurs
+**Stack Overflow Developer Survey :**
+- **SGBD le plus utilisé** par les développeurs depuis 2023 (≈ 49 % en 2024)
 - Forte adoption dans les nouvelles startups
 - Migration croissante depuis MySQL et Oracle
 
@@ -661,11 +666,6 @@ Recherche académique et industrielle nécessitant rigueur :
 
 #### Startups et Scale-ups Notables
 
-**Discord**
-- Messagerie temps réel
-- Serveurs et canaux
-- Millions d'utilisateurs concurrents
-
 **Notion**
 - Workspace collaboratif
 - Documents et bases de données
@@ -745,8 +745,54 @@ Recherche académique et industrielle nécessitant rigueur :
 
 ⚠️ **Recherche full-text ultra-avancée**
 - Faceting complexe, ML ranking
-- → Elasticsearch reste supérieur  
-- (Mais PostgreSQL FTS suffit pour 80% des cas)
+- → Elasticsearch reste supérieur
+- (Mais PostgreSQL FTS suffit pour 80 % des cas)
+
+---
+
+## PostgreSQL comme « hub » d'une architecture polyglotte
+
+Le débat entre **« polyglot persistence »** (un SGBD par cas d'usage) et **« one database to rule them all »** (un seul SGBD pour tout) est récurrent dans l'industrie. La réalité observée dans les architectures modernes est nuancée : **PostgreSQL devient souvent le hub central, complété par quelques systèmes spécialisés pour des besoins précis.**
+
+```
+                          ┌──────────────────────┐
+                          │   Vos applications   │
+                          │  (web, mobile, API)  │
+                          └──────────┬───────────┘
+                                     │
+              ┌──────────────────────┼──────────────────────┐
+              │                      │                      │
+        ┌─────▼─────┐         ┌──────▼──────┐        ┌──────▼─────┐
+        │   Redis   │         │ PostgreSQL  │        │ ClickHouse │
+        │  (cache,  │◄────────┤  (source de │───────►│  (analytics│
+        │ sessions) │         │   vérité)   │        │   massif)  │
+        └───────────┘         └──────┬──────┘        └────────────┘
+                                     │
+                              ┌──────▼──────┐
+                              │Elasticsearch│
+                              │ (recherche  │
+                              │  avancée)   │
+                              └─────────────┘
+```
+
+**PostgreSQL au centre** :
+- Source de vérité (transactionnel ACID)
+- Données métier critiques
+- Schéma cohérent et durable
+- Sauvegarde et reprise unique
+
+**Systèmes périphériques selon les besoins** :
+
+| Système | Quand l'ajouter | Comment l'alimenter |
+|---------|-----------------|---------------------|
+| **Redis** | Cache d'objets sérialisés, sessions, rate-limiting, files d'attente légères | Application en write-through, ou cache miss → PostgreSQL |
+| **ClickHouse / DuckDB** | Analytics > 100 TB, agrégations OLAP massives sur historique | CDC (Debezium) depuis le WAL PostgreSQL |
+| **Elasticsearch / OpenSearch** | Recherche multilingue avec faceting complexe, ML ranking | Logical replication / synchro applicative |
+| **Kafka** | Streaming événementiel, intégrations multiples | Outbox pattern dans PostgreSQL, lu par Debezium |
+| **Vector DB dédié (Pinecone, Milvus)** | Vecteurs > 1 milliard avec latence < 10 ms | Quand pgvector n'est plus suffisant (rare) |
+| **S3 / object storage** | Fichiers binaires lourds (images, vidéos, PDF) | Stocker l'URL dans PostgreSQL, le binaire dans S3 |
+
+> 💡 **La règle du « PostgreSQL d'abord »** : démarrez avec **PostgreSQL seul**, et n'ajoutez un système spécialisé que lorsqu'une **mesure objective** prouve que PostgreSQL est devenu le goulot d'étranglement pour ce cas d'usage précis. Beaucoup d'équipes ajoutent trop tôt des dépendances qu'elles auraient pu éviter pendant des années.
 
 ---
 
@@ -823,7 +869,7 @@ Recherche académique et industrielle nécessitant rigueur :
 
 ### Adoption Croissante
 
-📈 **Croissance continue** : +15-20% d'adoption annuelle
+📈 **Croissance continue** : +15-20 % d'adoption annuelle
 
 📈 **Migration depuis Oracle/MySQL** : Mouvement accéléré
 
@@ -843,7 +889,7 @@ Recherche académique et industrielle nécessitant rigueur :
 
 **Tendances observées :**
 - PostgreSQL mange les parts de marché d'Oracle et MySQL
-- Devient le "default choice" pour nouveaux projets
+- Devient le choix par défaut pour les nouveaux projets
 - Consolidation : un SGBD pour tous les besoins
 
 ---
@@ -859,12 +905,12 @@ PostgreSQL s'est imposé comme l'un des SGBD les plus polyvalents et fiables de 
 - Intelligence artificielle
 - Recherche plein texte
 
-...en fait un choix stratégique pour la plupart des organisations.
+… en fait un choix stratégique pour la plupart des organisations.
 
 ### Points Clés à Retenir
 
 - ✅ **Polyvalence** : PostgreSQL s'adapte à presque tous les cas d'usage  
-- ✅ **Fiabilité** : Utilisé par les plus grandes entreprises tech  
+- ✅ **Fiabilité** : utilisé par les plus grandes entreprises technologiques
 - ✅ **Économie** : Gratuit, sans licence, réduit le TCO  
 - ✅ **Standards** : SQL conforme, portabilité garantie  
 - ✅ **Communauté** : Écosystème riche, indépendant, actif  
@@ -874,7 +920,7 @@ PostgreSQL s'est imposé comme l'un des SGBD les plus polyvalents et fiables de 
 
 ### En Résumé
 
-**PostgreSQL n'est pas juste "un bon SGBD open source".**
+**PostgreSQL n'est pas juste « un bon SGBD open source ».**
 
 C'est devenu **le** SGBD de référence pour :
 - Nouveaux projets
