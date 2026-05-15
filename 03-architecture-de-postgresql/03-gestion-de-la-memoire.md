@@ -102,7 +102,10 @@ SHARED BUFFERS (en mémoire)
     Shared Buffers → "Page 12345 non trouvée" ❌ (CACHE MISS)
 
 ÉTAPE 3 : Lecture depuis le disque
-    Disque → Lecture de la page 12345 (LENT : ~5-10 ms)
+    Disque → Lecture de la page 12345
+             HDD classique : ~5-10 ms (LENT)
+             SSD SATA      : ~0,1-0,5 ms
+             NVMe          : ~0,01-0,1 ms
 
 ÉTAPE 4 : Stockage dans Shared Buffers
     Page 12345 est mise en cache
@@ -111,7 +114,7 @@ SHARED BUFFERS (en mémoire)
     Backend reçoit la page
 ```
 
-**Coût** : ~5-10 millisecondes (latence disque)
+**Coût** : variable selon le stockage (HDD lent, NVMe très rapide), mais toujours plus lent que la RAM
 
 #### 2. Lecture d'une Page (Cache Hit)
 
@@ -126,9 +129,9 @@ SHARED BUFFERS (en mémoire)
     Backend reçoit la page immédiatement
 ```
 
-**Coût** : ~0.001-0.01 millisecondes (accès RAM)
+**Coût** : ~0,001-0,01 millisecondes (accès RAM)
 
-**Vitesse** : **500 à 1000 fois plus rapide** qu'une lecture disque !
+**Vitesse** : **10× à 10 000× plus rapide** qu'une lecture disque (selon le type de stockage)
 
 ### Le Cache Hit Ratio : Métrique Essentielle
 
@@ -138,7 +141,7 @@ Le **Cache Hit Ratio** mesure le pourcentage de lectures satisfaites depuis le c
 Cache Hit Ratio = (Lectures en cache / Total lectures) × 100
 ```
 
-**Objectif** : > 95% (idéalement > 99%)
+**Objectif** : > 95 % (idéalement > 99 %)
 
 #### Exemple de Calcul
 
@@ -159,9 +162,9 @@ Résultat :
 ```
 
 **Interprétation** :
-- **> 99%** : Excellent, les shared_buffers sont bien dimensionnés  
-- **95-99%** : Bon, peut-être augmenter légèrement  
-- **< 95%** : Problème, augmenter shared_buffers ou optimiser les requêtes
+- **> 99 %** : excellent, les `shared_buffers` sont bien dimensionnés
+- **95-99 %** : bon, peut-être augmenter légèrement
+- **< 95 %** : problème, augmenter `shared_buffers` ou optimiser les requêtes
 
 ### Politique d'Éviction (Replacement Policy)
 
@@ -185,17 +188,17 @@ PostgreSQL utilise une variante de l'algorithme **LRU (Least Recently Used)** ap
 ```
 
 **Principe** :
-1. Chaque page a un compteur d'usage (0 à 5)  
-2. À chaque accès, le compteur augmente (max 5)  
-3. Le "balayeur" (clock sweep) parcourt les pages  
-4. Il décrémente les compteurs  
-5. Quand compteur = 0, la page peut être évincée
+1. Chaque page a un compteur d'usage (0 à 5)
+2. À chaque accès, le compteur augmente (max 5)
+3. Le « balayeur » (clock sweep) parcourt les pages
+4. Il décrémente les compteurs
+5. Quand le compteur = 0, la page peut être évincée
 
 **Avantage** : Les pages fréquemment utilisées restent en cache.
 
-### Pages "Sales" (Dirty Pages)
+### Pages « sales » (*dirty pages*)
 
-Une page est **"sale"** (dirty) si elle a été modifiée en mémoire mais pas encore écrite sur disque.
+Une page est **« sale »** (*dirty*) si elle a été modifiée en mémoire mais pas encore écrite sur disque.
 
 ```
 SHARED BUFFERS
@@ -210,8 +213,8 @@ SHARED BUFFERS
 ```
 
 **Processus d'écriture** :
-1. **Backend** modifie la page en mémoire → Page devient "sale"  
-2. **Background Writer** écrit progressivement les pages sales  
+1. **Backend** modifie la page en mémoire → page devient « sale »
+2. **Background Writer** écrit progressivement les pages sales
 3. **Checkpointer** force l'écriture de toutes les pages sales périodiquement
 
 ### Configuration des Shared Buffers
@@ -227,17 +230,19 @@ shared_buffers = 4GB
 
 **Environnement Serveur Dédié** :
 ```
-shared_buffers = 25% de la RAM totale
+shared_buffers = 25 % de la RAM totale
 ```
 
 **Exemples** :
-- RAM = 16 GB → `shared_buffers = 4GB`
-- RAM = 32 GB → `shared_buffers = 8GB`
-- RAM = 64 GB → `shared_buffers = 16GB`
+- RAM = 16 Go → `shared_buffers = 4GB`
+- RAM = 32 Go → `shared_buffers = 8GB`
+- RAM = 64 Go → `shared_buffers = 16GB`
 
-**⚠️ Attention** : Ne pas dépasser ~40% de la RAM totale
+**⚠️ Attention** : ne pas dépasser ~40 % de la RAM totale
 
-**Pourquoi pas 100% ?**
+> 💡 La recommandation des « 25 % » date de l'époque où PostgreSQL utilisait fortement le cache du système d'exploitation pour compléter les `shared_buffers`. Sur des serveurs très bien dotés en RAM (≥ 128 Go) et avec un cache OS encore utile, certains administrateurs montent à 30-40 %. Mesurez le *cache hit ratio* avant de tuner.
+
+**Pourquoi pas 100 % ?**
 - PostgreSQL utilise aussi le cache du système d'exploitation (OS cache)
 - Il faut de la RAM pour les processus locaux (work_mem)
 - Il faut de la RAM pour le système d'exploitation
@@ -260,7 +265,52 @@ LECTURE D'UNE PAGE
                              └─> NON TROUVÉE → Lecture DISQUE (lent)
 ```
 
-**Avantage** : Deux niveaux de cache augmentent les chances d'éviter le disque.
+**Avantage** : deux niveaux de cache augmentent les chances d'éviter le disque.
+
+### Huge Pages : optimiser la mémoire sur les grosses instances
+
+Sur Linux, la mémoire est gérée par défaut en **pages de 4 Ko**. Pour un `shared_buffers = 16 Go`, cela représente **4 millions de pages** à suivre dans le *page table* du noyau — un surcoût CPU non négligeable.
+
+Les **Huge Pages** (2 Mo ou 1 Go sur x86_64) réduisent ce nombre par un facteur 512 ou 262 144 :
+
+```
+shared_buffers = 16 Go avec :
+- Pages 4 Ko classiques : 4 194 304 entrées dans la page table
+- Huge Pages 2 Mo      :     8 192 entrées (÷ 512)
+- Huge Pages 1 Go      :        16 entrées (÷ 262 144)
+```
+
+**Gains observés** : **3 à 10 % de performance CPU**, particulièrement visibles sur :
+- Grosses instances (`shared_buffers > 8 Go`)
+- Workloads OLTP intensifs
+- Serveurs avec beaucoup de cœurs
+
+#### Configuration
+
+**Côté Linux** (root) :
+
+```bash
+# Calculer le nombre de huge pages nécessaires
+# Pour shared_buffers = 16 Go avec huge pages de 2 Mo :
+# 16 * 1024 / 2 = 8192 pages, + 10 % de marge = ~9000
+sysctl -w vm.nr_hugepages=9000
+
+# Rendre persistant
+echo "vm.nr_hugepages=9000" >> /etc/sysctl.conf
+```
+
+**Côté PostgreSQL** (`postgresql.conf`) :
+
+```ini
+huge_pages = try       # Essaie d'utiliser huge pages, sinon retombe sur 4 Ko (défaut)
+# huge_pages = on      # Échec si huge pages indisponibles (strict)
+# huge_pages = off     # N'utilise jamais huge pages
+
+# Sur PG 15+ : taille des huge pages explicite
+huge_page_size = 2MB   # Ou 1GB sur très grosses instances
+```
+
+> 💡 Vérifiez après démarrage avec `SELECT * FROM pg_shmem_allocations;` ou regardez `/proc/meminfo` (`HugePages_Total`, `HugePages_Free`).
 
 ---
 
@@ -429,6 +479,31 @@ work_mem = RAM Totale / (max_connections × 2)
 - Démarrer avec une valeur conservatrice globalement
 - Augmenter dynamiquement pour des requêtes spécifiques
 
+#### `hash_mem_multiplier` : booster les hash joins sans risque (PG 13+)
+
+Depuis PostgreSQL 13, un paramètre peu connu permet d'**allouer plus de mémoire spécifiquement aux opérations de hachage** (Hash Join, Hash Aggregate) sans augmenter `work_mem` pour les autres opérations.
+
+```ini
+work_mem = 16MB                # Pour tri, etc.  
+hash_mem_multiplier = 2.0      # Hash peut utiliser 2 × work_mem = 32 MB (défaut PG 15+ : 2.0)  
+```
+
+**Pourquoi cette distinction ?**
+
+Les opérations de hachage bénéficient **disproportionnellement** d'avoir plus de mémoire :
+- Hash Aggregate : si la table de hachage ne tient pas en mémoire, PostgreSQL passe à un mode disque coûteux
+- Hash Join : permet un *single-pass hash join* au lieu d'un *multi-batch* lent
+
+**Cas d'usage** : valeur de `2.0` à `4.0` est souvent un excellent compromis pour les workloads mixtes — vous obtenez des jointures rapides sans gonfler la consommation des tris simples.
+
+```sql
+-- Pour les workloads analytiques
+ALTER SYSTEM SET hash_mem_multiplier = 4.0;  
+SELECT pg_reload_conf();  
+```
+
+> ⚠️ Comme pour `work_mem`, cette mémoire peut être utilisée plusieurs fois par requête et par connexion. Le calcul du worst-case devient donc : `max_connections × work_mem × hash_mem_multiplier`.
+
 ---
 
 ### 2. `maintenance_work_mem` : Opérations de Maintenance
@@ -535,8 +610,8 @@ effective_cache_size faible
 #### Configuration
 
 ```sql
--- Recommandation : 50-75% de la RAM totale
-effective_cache_size = 12GB  -- Pour un serveur de 16 GB RAM
+-- Recommandation : 50-75 % de la RAM totale
+effective_cache_size = 12GB  -- Pour un serveur de 16 Go RAM
 ```
 
 **Règle** :
@@ -601,7 +676,7 @@ SELECT
 FROM pg_stat_database;
 ```
 
-**Objectif** : > 99%
+**Objectif** : > 99 %
 
 ### 2. Identifier les Sorts sur Disque
 
@@ -634,7 +709,47 @@ WHERE state != 'idle'
 ORDER BY query_start;  
 ```
 
-### 4. Statistiques par Requête (pg_stat_statements)
+### 4. Observer le Contenu des Shared Buffers avec `pg_buffercache`
+
+L'extension `pg_buffercache` (fournie avec PostgreSQL) permet d'**inspecter ce qu'il y a réellement dans le cache** à un instant T. Très utile pour comprendre quelles tables/index sont chauds.
+
+```sql
+-- Installation
+CREATE EXTENSION pg_buffercache;
+
+-- Quelles relations occupent le plus de buffers ?
+SELECT
+    c.relname,
+    pg_size_pretty(count(*) * 8192) as cached,
+    round(100.0 * count(*) / (SELECT setting::int FROM pg_settings WHERE name='shared_buffers'), 2) as pct_cache,
+    round(100.0 * count(*) * 8192 / pg_relation_size(c.oid), 2) as pct_table_in_cache
+FROM pg_buffercache b  
+JOIN pg_class c ON b.relfilenode = pg_relation_filenode(c.oid)  
+WHERE b.reldatabase IN (0, (SELECT oid FROM pg_database WHERE datname = current_database()))  
+GROUP BY c.relname, c.oid  
+ORDER BY count(*) DESC  
+LIMIT 10;  
+```
+
+**Sortie typique** :
+
+```
+       relname        | cached  | pct_cache | pct_table_in_cache
+----------------------+---------+-----------+--------------------
+ users                | 450 MB  |     11.0  |       95.5     ← Table très chaude
+ orders               | 320 MB  |      7.8  |       42.3
+ idx_orders_user_id   | 180 MB  |      4.4  |      100.0     ← Index entièrement en cache
+ ...
+```
+
+**Interprétations** :
+- `pct_table_in_cache = 100 %` → la table tient entièrement en mémoire, accès optimal
+- `pct_table_in_cache < 10 %` → table partiellement en cache, performance variable
+- Tables avec haut `pct_cache` mais peu requêtées → peut-être à invalider
+
+> 💡 **Mise en pratique** : utilisez aussi l'extension `pg_prewarm` pour **réchauffer** le cache après un redémarrage, ce qui évite la dégradation de performance liée au cache froid.
+
+### 5. Statistiques par Requête (pg_stat_statements)
 
 ```sql
 -- Activer l'extension
@@ -666,10 +781,10 @@ LIMIT 10;
 
 **Configuration** :
 ```ini
-shared_buffers = 4GB          # 25% RAM  
+shared_buffers = 4GB          # 25 % RAM  
 work_mem = 16MB               # Petite valeur (beaucoup de connexions)  
 maintenance_work_mem = 1GB  
-effective_cache_size = 12GB   # 75% RAM  
+effective_cache_size = 12GB   # 75 % RAM  
 max_connections = 200  
 ```
 
@@ -682,7 +797,7 @@ max_connections = 200
 
 **Configuration** :
 ```ini
-shared_buffers = 8GB          # 50% RAM  
+shared_buffers = 8GB          # 50 % RAM  
 work_mem = 512MB              # Grande valeur (peu de connexions)  
 maintenance_work_mem = 4GB  
 effective_cache_size = 14GB  
@@ -735,14 +850,14 @@ work_mem = 16MB
 -- Réduire max_connections + utiliser PgBouncer
 max_connections = 50
 
--- Vérifier shared_buffers (max 40% RAM)
-shared_buffers = 4GB  -- Pour 16 GB RAM
+-- Vérifier shared_buffers (max 40 % RAM)
+shared_buffers = 4GB  -- Pour 16 Go RAM
 ```
 
 ### Problème 2 : Cache Hit Ratio Faible
 
 **Symptômes** :
-- Cache hit ratio < 95%
+- Cache hit ratio < 95 %
 - Requêtes lentes
 - I/O disque élevé
 
@@ -753,7 +868,7 @@ shared_buffers = 4GB  -- Pour 16 GB RAM
 
 **Solutions** :
 ```sql
--- Augmenter shared_buffers (max 25-40% RAM)
+-- Augmenter shared_buffers (max 25-40 % RAM)
 shared_buffers = 8GB
 
 -- Ajouter des index appropriés
@@ -816,7 +931,7 @@ CREATE INDEX idx_huge_table ON huge_table(column);
 # postgresql.conf
 
 # === MÉMOIRE PARTAGÉE ===
-shared_buffers = 4GB                    # 25% RAM
+shared_buffers = 4GB                    # 25 % RAM
 
 # === MÉMOIRE LOCALE ===
 work_mem = 64MB                         # Ajuster selon workload  
@@ -824,7 +939,7 @@ maintenance_work_mem = 1GB              # Pour VACUUM/INDEX
 temp_buffers = 8MB                      # Rarement modifié  
 
 # === PLANIFICATEUR ===
-effective_cache_size = 12GB             # 75% RAM
+effective_cache_size = 12GB             # 75 % RAM
 
 # === AUTRES ===
 max_connections = 100                   # Ajuster + utiliser PgBouncer
@@ -854,8 +969,8 @@ FROM pg_stat_database;
 - ✅ **Cache principal** de PostgreSQL  
 - ✅ Partagé entre **tous les processus**  
 - ✅ Stocke les **pages de données** (8 KB)  
-- ✅ Dimensionnement : **25% de la RAM** (serveur dédié)  
-- ✅ Objectif : **Cache Hit Ratio > 99%**
+- ✅ Dimensionnement : **25 % de la RAM** (serveur dédié)
+- ✅ Objectif : **Cache Hit Ratio > 99 %**
 
 ### Local Memory (Mémoire Privée)
 
@@ -863,7 +978,7 @@ FROM pg_stat_database;
 - ✅ `work_mem` : Sorts, Hash, Joins → **16-64 MB** (OLTP), **256 MB-1 GB** (OLAP)  
 - ✅ `maintenance_work_mem` : VACUUM, INDEX → **1-4 GB**  
 - ✅ `temp_buffers` : Tables temporaires → **8-16 MB**  
-- ✅ `effective_cache_size` : Indicateur planificateur → **50-75% RAM**
+- ✅ `effective_cache_size` : indicateur planificateur → **50-75 % RAM**
 
 ### Calcul Mémoire Totale
 
@@ -874,7 +989,7 @@ RAM Totale = shared_buffers + (max_connections × work_mem) + overhead
 ### Pièges à Éviter
 
 - ❌ Ne pas sous-estimer la multiplication de `work_mem`  
-- ❌ Ne pas allouer > 40% RAM aux `shared_buffers`  
+- ❌ Ne pas allouer > 40 % RAM aux `shared_buffers`
 - ❌ Ne pas ignorer les sorts sur disque (logs `temporary file`)  
 - ❌ Ne pas négliger `maintenance_work_mem` pour de grosses bases
 
@@ -888,7 +1003,7 @@ RAM Totale = shared_buffers + (max_connections × work_mem) + overhead
 
 3. **Le disque est 1000× plus lent que la RAM** : Éviter les sorts/hash sur disque à tout prix.
 
-4. **Cache Hit Ratio > 99%** : C'est l'indicateur #1 à surveiller.
+4. **Cache Hit Ratio > 99 %** : c'est l'indicateur n° 1 à surveiller.
 
 5. **effective_cache_size n'alloue PAS de mémoire** : C'est juste un hint pour le planificateur.
 

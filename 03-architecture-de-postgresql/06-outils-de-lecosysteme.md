@@ -353,6 +353,47 @@ WHERE u.created_at > '2024-01-01';
 
 ---
 
+### Alternative moderne : `pgcli`
+
+`pgcli` est un **client en ligne de commande alternatif** écrit en Python, qui apporte une expérience moderne tout en restant proche de psql :
+
+```bash
+# Installation
+pip install pgcli
+# ou
+apt install pgcli
+```
+
+**Fonctionnalités phares** :
+
+- ✨ **Auto-complétion intelligente** : tables, colonnes, fonctions, mots-clés SQL
+- 🎨 **Coloration syntaxique** dans le terminal
+- 📋 **Suggestions contextuelles** : après `SELECT`, propose les colonnes ; après `FROM`, propose les tables
+- 📜 **Historique multiligne** : éditer une requête sur plusieurs lignes facilement
+- 🎯 **Format adapté** : affichage tabulaire optimisé pour le terminal
+- 🔄 **Compatible avec les méta-commandes psql** (`\d`, `\dt`, etc.)
+
+**Quand préférer pgcli à psql ?**
+
+- ✅ Sessions interactives de développement / exploration
+- ✅ Si vous tapez beaucoup de SQL à la main
+- ✅ Si vous découvrez un schéma inconnu
+
+**Quand garder psql ?**
+
+- ✅ Scripts automatiques (CI/CD, cron) : psql est universellement installé
+- ✅ Connexions SSH sur serveurs minimalistes
+- ✅ Compatibilité absolue avec les meta-commandes officielles
+
+```bash
+# Lancer pgcli
+pgcli -h localhost -U myuser -d mydb
+
+# Auto-complétion en action :
+mydb> SELECT user|
+                ↑ Tab → Propose : user_id, user_name, username, ...
+```
+
 ### Configuration de psql
 
 #### Fichier .psqlrc
@@ -486,28 +527,28 @@ Tableau de bord avec métriques en temps réel :
 
 #### Cas 1 : Exploration Rapide
 
-1. **Naviguer** : Cliquer dans l'arborescence jusqu'à la table  
-2. **Visualiser** : Clic droit → "View/Edit Data" → "All Rows"  
-3. **Filtrer** : Utiliser les filtres en haut de la grille  
-4. **Exporter** : Bouton "Download" → CSV
+1. **Naviguer** : cliquer dans l'arborescence jusqu'à la table
+2. **Visualiser** : clic droit → *« View/Edit Data »* → *« All Rows »*
+3. **Filtrer** : utiliser les filtres en haut de la grille
+4. **Exporter** : bouton *« Download »* → CSV
 
 #### Cas 2 : Développement de Requêtes
 
-1. **Ouvrir Query Tool** : Clic droit sur base → "Query Tool"  
-2. **Écrire requête** : Avec auto-complétion  
-3. **Exécuter** : F5 ou bouton "Execute"  
-4. **Analyser** : Bouton "EXPLAIN" pour voir le plan
+1. **Ouvrir Query Tool** : clic droit sur base → *« Query Tool »*
+2. **Écrire requête** : avec auto-complétion
+3. **Exécuter** : F5 ou bouton *« Execute »*
+4. **Analyser** : bouton *« EXPLAIN »* pour voir le plan
 
 #### Cas 3 : Administration
 
 1. **Créer un utilisateur** :
-   - Serveur → Login/Group Roles → Clic droit → "Create"
+   - Serveur → Login/Group Roles → clic droit → *« Create »*
    - Remplir le formulaire (nom, mot de passe, permissions)
 
 2. **Faire un backup** :
-   - Clic droit sur base → "Backup"
+   - Clic droit sur base → *« Backup »*
    - Choisir format, emplacement
-   - "Backup" → Télécharger
+   - *« Backup »* → télécharger
 
 ---
 
@@ -628,7 +669,7 @@ DBeaver peut gérer simultanément :
 
 #### Cas 3 : Exploration de Schema
 
-1. **Clic droit sur base** → "View Diagram"  
+1. **Clic droit sur base** → *« View Diagram »*
 2. **DBeaver génère** un diagramme ER automatique  
 3. **Voir** toutes les relations (FK)  
 4. **Exporter** en PNG pour documentation
@@ -689,7 +730,7 @@ Un **Connection Pooler** est un proxy entre les applications et PostgreSQL qui *
 #### Caractéristiques
 
 - **Léger** : Écrit en C, très performant (~1-2 MB RAM)  
-- **Rapide** : Overhead quasi-nul (<1% latence)  
+- **Rapide** : overhead quasi-nul (< 1 % de latence)
 - **Modes de pooling** : Transaction, Session, Statement  
 - **Mature** : Utilisé massivement en production  
 - **Open Source** : Gratuit
@@ -906,6 +947,42 @@ pgbouncer=# SHOW STATS;
 
 ---
 
+### 🆕 PgBouncer 1.21+ : Prepared Statements en Mode Transaction
+
+Pendant des années, le **mode `transaction`** de PgBouncer (le plus efficace) était incompatible avec les **prepared statements nommées** : impossible de garantir que la prochaine requête réutiliserait la même connexion serveur, donc la déclaration `PREPARE` était perdue.
+
+**Depuis PgBouncer 1.21 (sortie en octobre 2023)**, le support natif des prepared statements en mode transaction a été ajouté. PgBouncer maintient un cache des déclarations préparées et les rejoue automatiquement sur la connexion serveur sélectionnée.
+
+```ini
+# pgbouncer.ini
+pool_mode = transaction  
+max_prepared_statements = 100   # Active le support (0 = désactivé, défaut)  
+```
+
+**Impact** : les ORMs modernes (Hibernate, Sequelize, SQLAlchemy 2+, EF Core) qui utilisent intensivement les prepared statements peuvent maintenant tourner derrière PgBouncer en mode transaction. C'est un changement majeur qui rend PgBouncer compatible avec presque toutes les stacks modernes.
+
+> 🎯 **Si vous configurez PgBouncer aujourd'hui** : assurez-vous d'utiliser au moins la version 1.21, et activez `max_prepared_statements` selon votre charge (100-500 typique).
+
+### Alternatives modernes à PgBouncer
+
+PgBouncer reste la référence, mais plusieurs alternatives ont émergé ces dernières années, écrites dans des langages modernes et avec des fonctionnalités étendues :
+
+| Outil | Langage | Particularités |
+|-------|---------|----------------|
+| **PgBouncer** | C | Référence, ultra-léger, mature |
+| **Pgpool-II** | C | Plus complet (load balancing, query routing, parallel query), plus complexe |
+| **Odyssey** | C | Développé par Yandex, multi-threadé (PgBouncer est mono-thread) |
+| **PgCat** | Rust | Pooling + load balancing read/write, sharding intégré, mirroring |
+| **Supavisor** | Erlang | Développé par Supabase, scalable horizontalement (millions de connexions) |
+
+**Quand envisager une alternative ?**
+
+- **PgCat** : si vous avez plusieurs réplicas et voulez du load balancing automatique des lectures
+- **Supavisor** : si vous gérez des dizaines de milliers de connexions concurrentes (multi-tenants, serverless)
+- **Odyssey** : si PgBouncer mono-thread sature un cœur CPU (rare)
+
+> 💡 Pour 95 % des cas d'usage, **PgBouncer reste le meilleur choix** : maturité, simplicité opérationnelle, écosystème mature, documentation abondante. N'envisagez une alternative que si un besoin spécifique le justifie.
+
 ### Quand Utiliser PgBouncer ?
 
 #### ✅ Cas d'Usage Favorables
@@ -1105,7 +1182,7 @@ max_client_conn = 1000
 
 4. **PgBouncer est essentiel en production** : Ne pas l'utiliser = saturation garantie avec plus de 50 utilisateurs.
 
-5. **Transaction mode pour le pooling** : C'est le mode recommandé pour 95% des applications web/API.
+5. **Transaction mode pour le pooling** : c'est le mode recommandé pour 95 % des applications web/API.
 
 6. **Un outil par tâche** :
    - Développement → DBeaver

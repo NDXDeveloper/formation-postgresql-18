@@ -44,7 +44,7 @@ Pour comprendre le stockage physique, imaginez une bibliothèque :
 
 **Tables (Heap Files)** = **Étagères principales**
 - Chaque livre (ligne) est rangé séquentiellement
-- Les livres sont regroupés dans des "pages" (étagères)
+- Les livres sont regroupés dans des « pages » (étagères)
 
 **TOAST** = **Entrepôt annexe**
 - Les très gros livres (encyclopédies) sont stockés ailleurs
@@ -60,7 +60,7 @@ Pour comprendre le stockage physique, imaginez une bibliothèque :
 
 ### Qu'est-ce qu'un Heap File ?
 
-Un **Heap File** (fichier de tas) est la structure de données physique où PostgreSQL stocke les **lignes d'une table**. Le terme "heap" signifie que les lignes sont stockées **sans ordre particulier** (contrairement à un index).
+Un **Heap File** (fichier de tas) est la structure de données physique où PostgreSQL stocke les **lignes d'une table**. Le terme « heap » signifie que les lignes sont stockées **sans ordre particulier** (contrairement à un index).
 
 ### Structure Hiérarchique du Stockage
 
@@ -215,7 +215,7 @@ Page 1
 
 ### Fragmentation et Bloat
 
-Avec le temps, les pages se remplissent de tuples "morts" :
+Avec le temps, les pages se remplissent de tuples « morts » :
 
 ```
 PAGE (avant VACUUM)
@@ -229,7 +229,7 @@ PAGE (avant VACUUM)
 └────────────────────────────────────────┘
 ```
 
-**Problème** : Table "gonflée" (bloat) → Performance dégradée
+**Problème** : table « gonflée » (*bloat*) → performance dégradée
 
 **Solution** : VACUUM récupère l'espace :
 
@@ -245,6 +245,77 @@ PAGE (après VACUUM)
 
 ---
 
+### `fillfactor` et HOT updates : optimiser MVCC
+
+#### Le paramètre `fillfactor`
+
+Le `fillfactor` est un paramètre par table (et par index) qui indique **quel pourcentage d'une page PostgreSQL peut être rempli lors de l'insertion**. L'espace restant est réservé pour les futurs UPDATE.
+
+```sql
+-- Créer une table avec fillfactor = 80 %
+-- (PostgreSQL ne remplira chaque page qu'à 80 %, laissant 20 % pour les UPDATE)
+CREATE TABLE compteurs (
+    id INTEGER PRIMARY KEY,
+    valeur INTEGER NOT NULL,
+    last_updated TIMESTAMP
+) WITH (fillfactor = 80);
+
+-- Pour une table existante
+ALTER TABLE compteurs SET (fillfactor = 80);  
+VACUUM FULL compteurs;  -- Pour appliquer immédiatement  
+```
+
+**Valeurs par défaut** :
+- Tables : `100` (remplissage complet, optimal pour les INSERT-only / append-only)
+- Index B-tree : `90` (laisse 10 % de marge pour les insertions ordonnées)
+
+#### HOT updates : *Heap-Only Tuples*
+
+C'est ici que `fillfactor` devient utile. Quand vous faites un UPDATE sur une ligne :
+
+**Cas classique (sans HOT)** :
+1. Une nouvelle version du tuple est créée (MVCC)
+2. **Toutes les entrées d'index** pointant vers cette ligne doivent être mises à jour
+3. Coût : 1 INSERT + N INSERT d'index + invalidation de l'ancien
+
+**HOT update** :
+1. Si la nouvelle version tient **dans la même page** que l'ancienne
+2. **Et** si aucune colonne indexée n'a changé
+3. Alors PostgreSQL crée la nouvelle version dans la même page, et la chaîne aux index existants
+4. Coût : 1 INSERT seulement, **les index ne sont pas touchés**
+
+```
+Page AVANT update (fillfactor = 80 %, 20 % d'espace libre) :
+┌─────────────────────────────────────┐
+│ tuple v1 (id=1, valeur=100)         │
+│ ── ESPACE LIBRE 20 % ──             │  ← Espace pour HOT
+└─────────────────────────────────────┘
+         ↓ UPDATE valeur = 101 (colonne non indexée)
+
+Page APRÈS update :
+┌─────────────────────────────────────┐
+│ tuple v1 (id=1, valeur=100) DEAD    │  ← Ancien, sera vacuumé
+│ tuple v2 (id=1, valeur=101) LIVE    │  ← Nouveau (HOT)
+└─────────────────────────────────────┘
+       Index pointe toujours sur v1, qui chaîne vers v2
+```
+
+**Gains observés** : pour des tables avec beaucoup d'UPDATE sur des colonnes non indexées (compteurs, statuts, timestamps), `fillfactor = 80` peut **multiplier les performances par 2 à 5×** et réduire massivement la pression sur les index.
+
+```sql
+-- Mesurer le ratio HOT/non-HOT (besoin de pg_stat_user_tables)
+SELECT
+    relname,
+    n_tup_upd as total_updates,
+    n_tup_hot_upd as hot_updates,
+    round(100.0 * n_tup_hot_upd / NULLIF(n_tup_upd, 0), 2) as hot_ratio_pct
+FROM pg_stat_user_tables  
+WHERE n_tup_upd > 0  
+ORDER BY n_tup_upd DESC;  
+```
+
+> 🎯 **Règle pratique** : si votre table subit beaucoup d'UPDATE sur des colonnes non indexées et que le `hot_ratio_pct` est bas (< 50 %), abaissez `fillfactor` à 70-90 et observez l'amélioration.
+
 ### Free Space Map (FSM) et Visibility Map (VM)
 
 PostgreSQL maintient deux fichiers annexes pour chaque table :
@@ -258,10 +329,10 @@ Fichier : `24576_fsm`
 ```
 FSM
 ┌──────────────────────────────────┐
-│  Page 1 : 20% libre              │
-│  Page 2 : 80% libre  ← INSERT ici│
-│  Page 3 : 10% libre              │
-│  Page 4 : 100% libre             │
+│  Page 1 :  20 % libre            │
+│  Page 2 :  80 % libre  ← INSERT  │
+│  Page 3 :  10 % libre            │
+│  Page 4 : 100 % libre            │
 └──────────────────────────────────┘
 ```
 
@@ -283,7 +354,7 @@ VM
 └──────────────────────────────────┘
 ```
 
-**Utilité** : VACUUM peut **éviter de scanner** les pages marquées "all-visible" → Plus rapide.
+**Utilité** : VACUUM peut **éviter de scanner** les pages marquées « all-visible » → plus rapide.
 
 ---
 
@@ -299,7 +370,52 @@ Table de 3.5 GB
 └─> 24576.3     (500 MB)
 ```
 
-**Raison** : Portabilité (certains systèmes de fichiers ont des limites) et gestion plus simple.
+**Raison** : portabilité (certains systèmes de fichiers ont des limites) et gestion plus simple.
+
+### 🛡️ Data Checksums : détecter la corruption silencieuse
+
+Chaque page de 8 Ko inclut dans son en-tête un **checksum CRC-32C** calculé à l'écriture et vérifié à chaque lecture. Si le checksum ne correspond pas, PostgreSQL le signale immédiatement par une erreur :
+
+```
+ERROR: invalid page in block 1234 of relation base/16384/24576
+```
+
+**À quoi cela sert-il ?** À détecter la **corruption silencieuse** (*silent data corruption*, *bit rot*) qui peut survenir :
+- Disques défaillants (secteurs corrompus non remontés)
+- Erreurs RAM (sans ECC)
+- Bugs de stockage (firmware SSD, contrôleur RAID)
+- Erreurs réseau sur stockage distant (SAN, NAS)
+
+#### Nouveauté PG 18 : activé par défaut
+
+Historiquement, `initdb` créait les clusters **sans** checksums (`--data-checksums` optionnel). Cela par crainte du surcoût (~ 2-5 % de CPU). En PostgreSQL 18, **les data checksums sont activés par défaut** lors de l'initialisation. Pour désactiver (déconseillé) :
+
+```bash
+initdb --no-data-checksums -D /var/lib/postgresql/18/main
+```
+
+#### Vérifier l'état actuel
+
+```sql
+SHOW data_checksums;
+-- on  → activés (recommandé, défaut PG 18)
+-- off → désactivés (anciens clusters PG ≤ 17)
+```
+
+#### Activer après coup (sur un cluster existant)
+
+```bash
+# Arrêter PostgreSQL puis :
+pg_checksums --enable -D /var/lib/postgresql/18/main
+```
+
+Opération longue (lecture/écriture de toutes les pages) mais utile pour les clusters migrés.
+
+> 📊 **Surveiller les corruptions détectées** :  
+> ```sql  
+> SELECT * FROM pg_stat_database WHERE checksum_failures > 0;  
+> ```  
+> Une valeur non nulle indique un problème de stockage à investiguer **immédiatement**.
 
 ---
 
@@ -330,7 +446,7 @@ INSERT INTO articles (title, content) VALUES
 
 #### Seuil de TOASTage
 
-PostgreSQL "TOAST" une valeur si elle dépasse **~2 KB** (le seuil exact dépend du contexte).
+PostgreSQL TOAST une valeur si elle dépasse **~2 KB** (le seuil exact, `TOAST_TUPLE_THRESHOLD`, vaut 2 032 octets par défaut).
 
 #### Stratégies TOAST
 
@@ -1094,7 +1210,7 @@ SELECT pg_size_pretty(sum(size)) FROM pg_ls_waldir();
 
 2. **MVCC crée des versions multiples** : Les updates ne modifient pas en place, ils créent de nouvelles versions.
 
-3. **VACUUM est vital** : Sans lui, les tables "gonflent" et les performances se dégradent.
+3. **VACUUM est vital** : sans lui, les tables « gonflent » et les performances se dégradent.
 
 4. **TOAST gère automatiquement les grandes valeurs** : Mais cela a un coût en performance.
 

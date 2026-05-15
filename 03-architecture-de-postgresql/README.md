@@ -8,7 +8,7 @@ Bienvenue dans la section consacrée à l'**architecture de PostgreSQL** ! Aprè
 
 ### Pourquoi Étudier l'Architecture ?
 
-Vous pourriez vous demander : *"Pourquoi dois-je comprendre comment PostgreSQL fonctionne en interne ? Ne puis-je pas simplement l'utiliser ?"*
+Vous pourriez vous demander : « *Pourquoi dois-je comprendre comment PostgreSQL fonctionne en interne ? Ne puis-je pas simplement l'utiliser ?* »
 
 La réponse est **oui et non**. Vous pouvez certainement utiliser PostgreSQL sans connaître tous les détails de son architecture. Cependant, comprendre son fonctionnement interne vous apportera des avantages considérables :
 
@@ -150,6 +150,42 @@ SELECT * FROM users WHERE id = 123;
    └─> Envoi des résultats au client
 ```
 
+### 📖 Mini-glossaire : les termes que vous allez rencontrer
+
+Avant de plonger dans le détail, voici le vocabulaire essentiel du chapitre. Vous pouvez revenir à ce glossaire à tout moment.
+
+| Terme | Signification courte |
+|-------|---------------------|
+| **Instance** | Ensemble des processus PostgreSQL en mémoire qui gèrent une ou plusieurs bases |
+| **Cluster** | Synonyme d'instance dans la doc PostgreSQL (à ne pas confondre avec un cluster réseau) |
+| **Postmaster** | Le processus parent qui supervise tous les autres |
+| **Backend** | Un processus dédié à une connexion client (un par connexion) |
+| **Shared Buffers** | Cache de pages partagé entre tous les processus (en RAM) |
+| **WAL** | *Write-Ahead Log*, journal des transactions garantissant la durabilité |
+| **MVCC** | *Multiversion Concurrency Control*, mécanisme de gestion des versions de lignes |
+| **Heap** | Stockage physique d'une table (lignes sans ordre particulier) |
+| **TOAST** | *The Oversized-Attribute Storage Technique*, gestion des grandes valeurs |
+| **Page** | Unité de base du stockage, 8 Ko par défaut |
+| **Tuple** | Synonyme de « ligne » (terme issu de la théorie relationnelle) |
+| **Checkpoint** | Point de cohérence où toutes les pages sales sont écrites sur disque |
+| **VACUUM** | Opération de maintenance qui récupère l'espace des tuples morts |
+| **AIO** | *Asynchronous I/O*, sous-système d'I/O asynchrone (nouveauté PG 18) |
+| **LSN** | *Log Sequence Number*, identifiant unique de position dans le WAL |
+
+### 🆚 PostgreSQL 17 vs PostgreSQL 18 — vue d'ensemble
+
+Pour les lecteurs qui connaissent déjà PostgreSQL, voici ce qui change avec la version 18 sur les sujets de ce chapitre :
+
+| Sujet | PostgreSQL ≤ 17 | PostgreSQL 18 |
+|-------|----------------|---------------|
+| **I/O disque** | Synchrone uniquement | **Asynchrone (AIO) par défaut** |
+| `io_method` | N'existe pas | `worker` (défaut), `sync`, `io_uring` |
+| `effective_io_concurrency` | Défaut = 1 | **Défaut = 16** |
+| **Wire Protocol** | 3.0 (depuis 2003) | **3.2** (cancel keys 256 bits) |
+| **Statistiques I/O** | `pg_stat_io` global (PG 16+) | **Par backend** via `pg_stat_get_backend_io()` |
+| **Autovacuum workers** | Pool fixe | **Slots dynamiques** (`autovacuum_worker_slots`) |
+| **Authentification** | SCRAM, MD5, cert, LDAP, GSSAPI | **+ OAuth 2.0** |
+
 ### Les Questions Auxquelles Cette Section Répond
 
 En étudiant l'architecture, vous trouverez des réponses à des questions comme :
@@ -201,10 +237,10 @@ Comprendre la communication client-serveur vous aidera à diagnostiquer les prob
 - Les processus d'arrière-plan essentiels :
   - Background Writer, Checkpointer, WAL Writer
   - Autovacuum, Stats Collector
-  - Et bien d'autres...
+  - Et bien d'autres…
 
 **Pourquoi c'est important :**
-Savoir quels processus existent et leur rôle vous permettra de comprendre ce qui se passe "sous le capot" et d'identifier les problèmes de ressources.
+Savoir quels processus existent et leur rôle vous permettra de comprendre ce qui se passe « sous le capot » et d'identifier les problèmes de ressources.
 
 ### 3.3. Gestion de la Mémoire : Shared Buffers vs Local Memory
 **Ce que vous apprendrez :**
@@ -277,16 +313,16 @@ Cette section suit une logique de **haut en bas** :
 ### 2. Faites le Lien avec la Pratique
 
 Après chaque sous-section, demandez-vous :
-- *"Comment cela affecte-t-il mes applications ?"*  
-- *"Quelles optimisations puis-je appliquer immédiatement ?"*  
-- *"Quels problèmes cela m'aide-t-il à résoudre ?"*
+- « Comment cela affecte-t-il mes applications ? »
+- « Quelles optimisations puis-je appliquer immédiatement ? »
+- « Quels problèmes cela m'aide-t-il à résoudre ? »
 
 ### 3. Prenez des Notes
 
 Notez particulièrement :
 - Les paramètres de configuration importants
 - Les commandes et outils utiles
-- Les règles de dimensionnement (ex: shared_buffers = 25% RAM)
+- Les règles de dimensionnement (ex. : `shared_buffers = 25 %` de la RAM)
 - Les erreurs courantes à éviter
 
 ### 4. Expérimentez (Sur un Environnement de Test)
@@ -346,9 +382,9 @@ Pour aller plus loin (après avoir étudié cette section) :
 - [PostgreSQL Wiki - Architecture](https://wiki.postgresql.org/wiki/Main_Page)
 
 ### Livres Recommandés
-- *"PostgreSQL: Up and Running"* par Regina Obe & Leo Hsu  
-- *"The Art of PostgreSQL"* par Dimitri Fontaine  
-- *"PostgreSQL 14 Administration Cookbook"* par Simon Riggs
+- *« PostgreSQL: Up and Running »* par Regina Obe & Leo Hsu
+- *« The Art of PostgreSQL »* par Dimitri Fontaine
+- *« PostgreSQL 14 Administration Cookbook »* par Simon Riggs
 
 ### Blogs et Articles
 - Blog officiel PostgreSQL : [postgresql.org/about/news/](https://www.postgresql.org/about/news/)

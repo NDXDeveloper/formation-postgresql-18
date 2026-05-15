@@ -214,9 +214,9 @@ CARACTÉRISTIQUES :
 ```
 
 **Pourquoi io_uring ?**
-- **Performance** : 10-20% plus rapide que les anciennes API (AIO POSIX)  
-- **Moderne** : Activement développé et optimisé  
-- **Flexible** : Supporte tous types d'I/O (fichiers, réseau, etc.)
+- **Performance** : 10 à 20 % plus rapide que les anciennes API (AIO POSIX)
+- **Moderne** : activement développé et optimisé
+- **Flexible** : supporte tous types d'I/O (fichiers, réseau, etc.)
 
 #### 2. **Workers dédiés (toutes plateformes)**
 
@@ -314,19 +314,19 @@ L'AIO apporte les gains les plus importants dans ces scénarios :
 
 1. **Requêtes entièrement en cache (Shared Buffers)**
    - Pas d'I/O disque → AIO inutile
-   - Gain : 0%
+   - Gain : 0 %
 
 2. **Sequential Scans de petites tables**
    - Déjà optimisé avec prefetch
-   - Gain : 10-20%
+   - Gain : 10 à 20 %
 
 3. **Single-row lookups (PK lookup)**
    - Une seule lecture
-   - Gain : 0-5%
+   - Gain : 0 à 5 %
 
 4. **Transactions OLTP très simples**
    - Peu d'I/O
-   - Gain : 0-10%
+   - Gain : 0 à 10 %
 
 ---
 
@@ -374,7 +374,62 @@ io_method = 'worker'
 # io_method = 'sync'
 ```
 
-**Note** : Le nombre de workers I/O est contrôlé par le paramètre `io_workers` (défaut : 3).
+**Note** : le nombre de workers I/O est contrôlé par le paramètre `io_workers` (défaut : 3).
+
+#### Le paramètre `io_workers` en détail
+
+`io_workers` détermine le nombre de **processus dédiés à l'exécution des I/O asynchrones** quand `io_method = 'worker'`. Ces workers tournent en permanence et reçoivent les requêtes I/O des backends via une file d'attente partagée.
+
+```ini
+# postgresql.conf
+io_method = 'worker'  
+io_workers = 3        # Défaut : 3, plage : 1 à 32  
+```
+
+**Comment dimensionner `io_workers` ?**
+
+| Workload | Recommandation `io_workers` |
+|----------|----------------------------|
+| Petit serveur (< 8 cœurs CPU, peu de concurrence) | 3 (défaut) |
+| Serveur moyen (16-32 cœurs, charge soutenue) | 4 à 8 |
+| Gros serveur OLAP (> 32 cœurs, gros scans) | 8 à 16 |
+| Stockage très rapide (NVMe haut de gamme) | 8 à 16 |
+
+> ⚙️ **Méthode empirique** : commencez avec le défaut (3), surveillez `pg_stat_io` pour voir si les workers sont saturés (`io_workers_concurrent_max`), augmentez progressivement.  
+>  
+> ⚠️ Trop de workers gaspille des ressources sans gain. Sur des bases avec un cache hit ratio > 99 %, augmenter `io_workers` n'aura aucun effet (les I/O sont rares).
+
+#### Activer `io_uring` sur Linux : checklist
+
+Le mode `io_uring` offre **les meilleures performances** mais demande quelques vérifications :
+
+```bash
+# 1. Vérifier la version du kernel (≥ 5.1 obligatoire, ≥ 5.10 recommandé)
+uname -r
+# 5.15.0-78-generic  ← OK
+
+# 2. Vérifier que io_uring n'est pas désactivé par sécurité
+sysctl kernel.io_uring_disabled
+# kernel.io_uring_disabled = 0  ← 0 = activé, 1 = désactivé, 2 = restreint
+# (Sur certaines distributions sécurisées, io_uring est désactivé par défaut)
+
+# 3. Vérifier que la bibliothèque liburing est installée
+ldconfig -p | grep liburing
+# liburing.so.2 (libc6,x86-64) => /usr/lib/x86_64-linux-gnu/liburing.so.2
+
+# 4. Vérifier que PostgreSQL a été compilé avec le support io_uring
+postgres --version  
+postgres -C io_method  # Doit accepter 'io_uring' comme valeur  
+```
+
+Si tout est OK, activez :
+
+```sql
+ALTER SYSTEM SET io_method = 'io_uring';
+-- Redémarrage requis (io_method est postmaster context)
+```
+
+> 🔒 **Note sécurité** : certaines distributions (notamment dans le cloud sécurisé : Google COS, AWS Bottlerocket) désactivent `io_uring` par défaut suite à des CVE historiques. Vérifiez la politique de sécurité de votre OS avant.
 
 ### Vérification de l'AIO Actif
 
@@ -477,7 +532,7 @@ Ce paramètre existait avant PG 18, mais devient **beaucoup plus important** ave
 
 ```sql
 -- Nombre de requêtes I/O simultanées que le disque peut traiter
-effective_io_concurrency = 200  -- Défaut : 1 (PG 17), 200 (PG 18)
+effective_io_concurrency = 200  -- Défaut : 1 (PG ≤ 17), 16 (PG 18)
 ```
 
 **Interprétation** :
@@ -508,7 +563,7 @@ effective_io_concurrency = 500
 maintenance_io_concurrency = 500  
 
 # Augmenter les buffers (plus de cache = moins d'I/O)
-shared_buffers = 8GB  # 25-40% RAM
+shared_buffers = 8GB  # 25-40 % RAM
 
 # Permettre plus de WAL
 max_wal_size = 4GB
@@ -625,31 +680,49 @@ L'AIO nécessite un support du système d'exploitation :
 
 1. **Base entièrement en mémoire (cache)**
    - Si tout tient dans `shared_buffers`
-   - Cache hit ratio > 99.9%
-   - Gain AIO : 0%
+   - Cache hit ratio > 99,9 %
+   - Gain AIO : 0 %
 
 2. **Workload très simple (OLTP léger)**
    - Requêtes très rapides (< 1 ms)
    - Peu d'I/O par requête
-   - Gain AIO : 0-5%
+   - Gain AIO : 0 à 5 %
 
 3. **Disques lents (HDD vieux)**
    - HDD ne peuvent pas paralléliser les I/O
-   - Gain AIO : 0-10%
+   - Gain AIO : 0 à 10 %
 
 ### Overhead Potentiel
 
 Dans certains cas rares, AIO peut avoir un **léger overhead** :
 
 ```
-Scénario : Très petites requêtes avec 1 seule lecture
+Scénario : très petites requêtes avec 1 seule lecture
 - Sync : 1 ms (direct)
-- AIO  : 1.05 ms (overhead de gestion de queue)
+- AIO  : 1,05 ms (overhead de gestion de queue)
 
-Overhead : 5% (négligeable)
+Overhead : 5 % (négligeable)
 ```
 
-**Conclusion** : L'overhead est **négligeable** comparé aux gains dans les cas favorables.
+**Conclusion** : l'overhead est **négligeable** comparé aux gains dans les cas favorables.
+
+### 📍 Limites actuelles de l'AIO en PostgreSQL 18
+
+PostgreSQL 18 est la **première version** à introduire l'I/O asynchrone — le sous-système est donc encore en évolution. Voici ce qu'il faut savoir pour cadrer ses attentes :
+
+**Ce que l'AIO PG 18 fait** :
+- ✅ Lectures asynchrones pour les `seq scan`, `bitmap heap scan`, `vacuum`, `analyze`
+- ✅ Prefetch (lecture anticipée) sur index scan
+- ✅ Lectures pour `pg_prewarm`, `pg_basebackup`
+
+**Ce que l'AIO PG 18 ne fait PAS (encore)** :
+- ❌ **Écritures asynchrones** (les `INSERT`/`UPDATE`/`DELETE` utilisent toujours l'I/O classique)
+- ❌ Écriture asynchrone du WAL (toujours synchrone, c'est nécessaire pour la durabilité)
+- ❌ Écriture des pages sales par le Background Writer (synchrone)
+
+**Roadmap** : la communauté PostgreSQL travaille sur l'AIO pour les écritures (background writer, checkpointer) pour les versions 19 et 20. Le potentiel de gain est important pour les workloads d'écriture intensive.
+
+> 🎯 **À retenir pour aujourd'hui** : si votre workload est **lecture-intensive** (analytics, web read-heavy), PG 18 vous apportera des gains visibles dès la migration. Si c'est de l'**écriture massive** (logging, IoT ingestion), les gains seront plus modestes pour cette version — mais les versions futures continueront sur cette lancée.
 
 ---
 
@@ -760,13 +833,13 @@ GAIN : 2.7× plus rapide ⚡
 **Avant PG 18** :
 ```
 Latence p95 des requêtes : 450 ms  
-Requêtes lentes (> 1s) : 15%  
+Requêtes lentes (> 1 s) : 15 %  
 ```
 
 **Avec PG 18 + AIO** :
 ```
 Latence p95 des requêtes : 180 ms  
-Requêtes lentes (> 1s) : 3%  
+Requêtes lentes (> 1 s) : 3 %  
 
 GAIN : 2.5× plus rapide ⚡
 ```
@@ -939,7 +1012,7 @@ SELECT * FROM pg_stat_io;  -- Statistiques I/O
 
 3. **io_uring sur Linux** : Technologie moderne du kernel Linux pour I/O haute performance.
 
-4. **Auto-détection** : `io_method = 'auto'` choisit automatiquement la meilleure méthode.
+4. **Trois méthodes** : `sync` (PG ≤ 17 historique), `worker` (défaut PG 18, multi-plateforme), `io_uring` (Linux 5.1+, performances maximales). Il n'y a **pas** de valeur `auto`.
 
 5. **Pas de changement de code** : Vos requêtes SQL existantes bénéficient automatiquement de l'AIO.
 

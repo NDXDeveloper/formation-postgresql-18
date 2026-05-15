@@ -97,11 +97,11 @@ Un **protocole** est un ensemble de règles qui définit comment deux systèmes 
 
 Quand vous téléphonez, vous suivez un protocole implicite :
 
-1. **Vous composez** le numéro (établissement de connexion)  
-2. **Vous dites "Allô"** (salutation initiale)  
-3. **Vous posez votre question** (requête)  
-4. **Votre interlocuteur répond** (réponse)  
-5. **Vous dites "Au revoir"** (fermeture de connexion)
+1. **Vous composez** le numéro (établissement de connexion)
+2. **Vous dites « Allô »** (salutation initiale)
+3. **Vous posez votre question** (requête)
+4. **Votre interlocuteur répond** (réponse)
+5. **Vous dites « Au revoir »** (fermeture de connexion)
 
 PostgreSQL fonctionne de manière similaire, mais de façon beaucoup plus structurée.
 
@@ -111,7 +111,7 @@ PostgreSQL fonctionne de manière similaire, mais de façon beaucoup plus struct
 
 ### Qu'est-ce que le Wire Protocol ?
 
-Le **Wire Protocol** (littéralement "protocole du câble") est le langage de communication standardisé entre un client PostgreSQL et le serveur. La version actuelle est **3.2**, introduite dans PostgreSQL 18.
+Le **Wire Protocol** (littéralement « protocole du câble ») est le langage de communication standardisé entre un client PostgreSQL et le serveur. La version actuelle est **3.2**, introduite dans PostgreSQL 18 — c'est la première mise à jour majeure du protocole depuis la version 3.0 de PostgreSQL 7.4 en 2003.
 
 ### Caractéristiques du Wire Protocol 3.2
 
@@ -158,9 +158,9 @@ CLIENT                                          SERVEUR
 ```
 
 **Ce qui se passe :**
-- Le client envoie une **requête SQL** encapsulée dans un message de type "Query"
+- Le client envoie une **requête SQL** encapsulée dans un message de type « Query »
 - Le message contient :
-  - Le type de message (Query = 'Q')
+  - Le type de message (Query = `'Q'`)
   - La longueur du message
   - La requête SQL en texte
 
@@ -188,7 +188,7 @@ CLIENT                                          SERVEUR
 **Ce qui se passe :**
 1. **RowDescription** : Le serveur décrit les colonnes (nom, type, taille)  
 2. **DataRow** : Le serveur envoie chaque ligne de résultat  
-3. **CommandComplete** : Le serveur signale la fin (ex: "SELECT 2" pour 2 lignes)  
+3. **CommandComplete** : le serveur signale la fin (ex. : `SELECT 2` pour 2 lignes)
 4. **ReadyForQuery** : Le serveur indique qu'il est prêt pour une nouvelle requête
 
 ### Étape 4 : Fermeture de la Connexion
@@ -209,7 +209,7 @@ Chaque message échangé suit une structure précise :
 
 ```
 ┌─────────────────────────────────────┐
-│  Type de Message (1 byte)           │  Ex: 'Q' pour Query, 'D' pour DataRow
+│  Type de Message (1 byte)           │  Ex. : 'Q' pour Query, 'D' pour DataRow
 ├─────────────────────────────────────┤
 │  Longueur du Message (4 bytes)      │  Taille totale en octets
 ├─────────────────────────────────────┤
@@ -217,7 +217,7 @@ Chaque message échangé suit une structure précise :
 └─────────────────────────────────────┘
 ```
 
-### Exemple Concret : Message "Query"
+### Exemple Concret : Message « Query »
 
 ```
 Type:     'Q' (Query)  
@@ -247,6 +247,47 @@ Contenu:  "SELECT * FROM users;\0"  ← \0 = caractère null de fin
 | `Z`  | ReadyForQuery    | Serveur prêt pour nouvelle requête           |
 | `E`  | ErrorResponse    | Message d'erreur                             |
 | `N`  | NoticeResponse   | Message d'avertissement                      |
+
+### Le Protocole Étendu : Parse / Bind / Execute
+
+Le message `Q` (Query simple) suffit pour exécuter une requête, mais expose à deux problèmes :
+1. **Injection SQL** si les paramètres sont concaténés dans la chaîne SQL
+2. **Re-parsing** à chaque appel même pour des requêtes identiques (gaspillage CPU)
+
+Le **protocole étendu** résout les deux en séparant la requête en trois étapes :
+
+```
+CLIENT                                          SERVEUR
+  |                                               |
+  |──── Parse ('P') ───────────────────────────>  |
+  |     "INSERT INTO users(name) VALUES ($1)"     |
+  |     ↑ La requête est analysée et planifiée    |
+  |                                               |
+  |──── Bind ('B') ────────────────────────────>  |
+  |     $1 = "Alice"                              |
+  |     ↑ Les paramètres sont liés à la requête   |
+  |                                               |
+  |──── Execute ('E') ─────────────────────────>  |
+  |     ↑ La requête est exécutée                 |
+  |                                               |
+  | <──── CommandComplete ('C') ──────────────────|
+```
+
+**Avantages** :
+- ✅ **Anti-injection SQL** : les valeurs des paramètres ne sont jamais interprétées comme du SQL
+- ✅ **Réutilisation** : la même `Parse` peut être suivie de plusieurs `Bind`/`Execute` avec des valeurs différentes
+- ✅ **Plans préparés** : PostgreSQL peut mettre en cache le plan d'exécution (`generic_plan`)
+- ✅ **Types explicites** : pas de conversion ambiguë
+
+C'est ce que font automatiquement la plupart des drivers modernes (psycopg3, pgx, JDBC) quand vous utilisez des requêtes paramétrées :
+
+```python
+# psycopg3 — utilise automatiquement le protocole étendu
+cur.execute("INSERT INTO users(name) VALUES (%s)", ("Alice",))
+#                                            ↑ $1 côté serveur
+```
+
+> ⚠️ **Implication pour PgBouncer en mode `transaction`** : les prepared statements *nommées* étaient historiquement incompatibles avec ce mode (perdues entre transactions). Depuis PgBouncer 1.21+ (2023), un support natif des prepared statements en mode transaction a été ajouté — détail au chapitre 16.
 
 ---
 
@@ -279,7 +320,36 @@ CLIENT                                          SERVEUR
   |         (OK ou Erreur)                        |
 ```
 
-**Avantage** : Le mot de passe n'est jamais transmis en clair sur le réseau.
+**Avantage** : le mot de passe n'est jamais transmis en clair sur le réseau.
+
+### Chiffrement en Transit : TLS/SSL
+
+L'authentification protège l'identité, mais pas le contenu des requêtes et résultats. Pour cela, PostgreSQL supporte **TLS** (souvent encore appelé « SSL » par tradition).
+
+**Le mode `sslmode` côté client** détermine comment l'application traite TLS :
+
+| `sslmode` | Comportement | Quand l'utiliser |
+|-----------|--------------|------------------|
+| `disable` | Pas de TLS | Jamais en production, jamais sur internet |
+| `allow` | Essaie sans TLS, puis avec | Dépannage |
+| `prefer` | Essaie TLS, retombe en clair si refusé | Défaut historique, peu sûr |
+| `require` | TLS obligatoire, mais ne vérifie pas le certificat | Réseau interne de confiance |
+| `verify-ca` | TLS + vérification de la chaîne de certification | Production standard |
+| `verify-full` | TLS + vérif chaîne **et** correspondance du nom d'hôte | **Recommandé en production**, surtout sur internet |
+
+> 🔐 **Bonne pratique** : utilisez **`verify-full`** dès que possible. Sans cette vérification, un attaquant en position d'homme-du-milieu (MITM) peut présenter son propre certificat TLS et intercepter vos données — même si le mot de passe SCRAM reste protégé, vos requêtes et résultats sont lisibles.
+
+**Configuration côté serveur** (`postgresql.conf`) :
+
+```ini
+ssl = on  
+ssl_cert_file = '/etc/postgresql/server.crt'  
+ssl_key_file  = '/etc/postgresql/server.key'  
+ssl_ca_file   = '/etc/postgresql/root.crt'  # Pour valider les certificats clients (cert auth)  
+ssl_min_protocol_version = 'TLSv1.2'         # Refuser TLS 1.0 / 1.1 (vulnérables)  
+```
+
+**Nouveauté PostgreSQL 18** : paramètre `ssl_tls13_ciphers` pour configurer finement les suites cryptographiques TLS 1.3 (utile pour la conformité FIPS, environnements gouvernementaux ou financiers).
 
 ---
 
@@ -368,6 +438,53 @@ CLIENT (Machine A)                   SERVEUR PostgreSQL (Machine B)
 - Le serveur doit écouter sur l'interface réseau (`listen_addresses = '*'`)
 - Le pare-feu doit autoriser le port 5432
 - Le fichier `pg_hba.conf` doit autoriser les connexions distantes
+
+### Connection Strings : exprimer une connexion en une chaîne
+
+PostgreSQL accepte deux formats pour exprimer une URL de connexion. Tous les drivers majeurs (`libpq`, `psycopg`, JDBC, `pgx`, Npgsql…) les comprennent.
+
+**Format URI (recommandé, lisible)** :
+
+```
+postgresql://utilisateur:motdepasse@hote:port/base?param1=valeur1&param2=valeur2
+```
+
+**Exemples** :
+
+```bash
+# Connexion simple
+postgresql://alice@localhost/mydb
+
+# Avec mot de passe et port
+postgresql://alice:secret@db.example.com:5432/production
+
+# Avec paramètres : SSL obligatoire, timeout, application name
+postgresql://alice:secret@db.example.com/prod?sslmode=require&connect_timeout=10&application_name=batch_job
+
+# Socket Unix (chemin entre crochets)
+postgresql:///mydb?host=/var/run/postgresql
+
+# Multi-hôtes (failover automatique côté client)
+postgresql://alice@host1,host2,host3:5432/mydb?target_session_attrs=primary
+```
+
+**Format key-value (historique, parfois plus lisible pour beaucoup d'options)** :
+
+```
+host=db.example.com port=5432 dbname=production user=alice password=secret sslmode=require
+```
+
+**Paramètres utiles** :
+
+| Paramètre | Rôle |
+|-----------|------|
+| `sslmode` | `disable`, `prefer`, `require`, `verify-ca`, `verify-full` |
+| `connect_timeout` | Timeout en secondes pour établir la connexion |
+| `application_name` | Nom apparaissant dans `pg_stat_activity` (très utile pour le debug) |
+| `target_session_attrs` | `any`, `read-write`, `read-only`, `primary`, `standby` (failover) |
+| `options` | Options de session, ex. `-c search_path=app,public` |
+
+> 💡 **`application_name` est sous-utilisé** : positionnez-le systématiquement dans vos applications (`SET application_name = 'mon_service'` ou via la connection string). Lors d'un incident en production, savoir quelle application a lancé une requête bloquante vous fait gagner un temps fou.
 
 ---
 
