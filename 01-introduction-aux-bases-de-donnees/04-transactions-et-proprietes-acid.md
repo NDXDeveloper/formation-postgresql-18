@@ -50,11 +50,11 @@ Dans une transaction, si l'Étape 2 échoue, le système **annule** automatiquem
 En SQL, une transaction se déclare avec trois commandes principales :
 
 ```sql
-BEGIN;  -- Début de la transaction
+BEGIN;  -- Début de la transaction (équivalent : START TRANSACTION)
 
     -- Vos opérations ici
-    UPDATE compte SET solde = solde - 100 WHERE id = 1;  -- Retrait
-    UPDATE compte SET solde = solde + 100 WHERE id = 2;  -- Dépôt
+    UPDATE comptes SET solde = solde - 100 WHERE id = 1;  -- Retrait
+    UPDATE comptes SET solde = solde + 100 WHERE id = 2;  -- Dépôt
 
 COMMIT;  -- Valider la transaction (tout est OK)
 ```
@@ -64,13 +64,39 @@ Si un problème survient :
 ```sql
 BEGIN;
 
-    UPDATE compte SET solde = solde - 100 WHERE id = 1;
-    -- ERREUR : Le compte 2 n'existe pas !
-    UPDATE compte SET solde = solde + 100 WHERE id = 999;
+    UPDATE comptes SET solde = solde - 100 WHERE id = 1;
+    -- ERREUR : Le compte 999 n'existe pas !
+    UPDATE comptes SET solde = solde + 100 WHERE id = 999;
 
 ROLLBACK;  -- Annuler TOUTE la transaction
 -- Le solde du compte 1 est revenu à son état initial
 ```
+
+### L'autocommit : chaque requête est déjà une transaction
+
+Concept fondamental à comprendre dès le départ : **dans PostgreSQL, chaque commande SQL exécutée hors d'un bloc `BEGIN…COMMIT` est automatiquement enveloppée dans sa propre transaction**. C'est ce qu'on appelle le mode **autocommit**.
+
+```sql
+-- Ces deux UPDATE sont DEUX transactions distinctes :
+UPDATE comptes SET solde = solde - 100 WHERE id = 1;  -- Transaction A : commitée immédiatement  
+UPDATE comptes SET solde = solde + 100 WHERE id = 2;  -- Transaction B : commitée immédiatement  
+
+-- ⚠️ Si la deuxième échoue, la première a déjà été validée !
+-- Alice est débitée mais Bob n'est jamais crédité.
+```
+
+Pour qu'un ensemble d'opérations soit atomique (tout ou rien), il **faut** les encapsuler dans `BEGIN…COMMIT` :
+
+```sql
+-- ✅ Les deux UPDATE forment UNE SEULE transaction :
+BEGIN;
+    UPDATE comptes SET solde = solde - 100 WHERE id = 1;
+    UPDATE comptes SET solde = solde + 100 WHERE id = 2;
+COMMIT;
+-- Soit les deux réussissent, soit aucun.
+```
+
+> 💡 **À retenir** : il n'y a **jamais** d'opérations « hors transaction » dans PostgreSQL. La question est seulement : *« est-ce une transaction explicite (que je contrôle avec BEGIN/COMMIT) ou implicite (une par commande) ? »*
 
 ### Exemple concret : Le virement bancaire
 
@@ -116,10 +142,12 @@ BEGIN;
 
     -- PANNE DE COURANT ! 💥
 
--- Quand le système redémarre, PostgreSQL détecte que la transaction
--- n'a pas été validée (pas de COMMIT) et effectue un ROLLBACK automatique
+-- Au redémarrage, PostgreSQL relit le WAL (Write-Ahead Log).
+-- Les modifications de cette transaction n'ont jamais été validées
+-- (aucun COMMIT n'a été écrit dans le WAL avant la panne),
+-- donc elles ne sont pas rejouées et restent invisibles.
 
--- Résultat : Le solde d'Alice est revenu à 500 € ✅
+-- Résultat : Le solde d'Alice reste à 500 € ✅
 ```
 
 **Sans transaction** (système catastrophique) :
@@ -132,10 +160,11 @@ Après redémarrage : Alice = 400 €, Bob = 200 €
 
 **Avec transaction** (système fiable) :
 ```
-Après Étape 1 : Alice = 400 € (changement temporaire, non validé)
+Après Étape 1 : Alice = 400 € (changement non encore validé dans le WAL)
 💥 PANNE
 Après redémarrage : Alice = 500 €, Bob = 200 €
-→ ROLLBACK automatique, rien n'est perdu ! ✅
+→ La transaction n'avait pas été COMMITée, ses modifications
+  sont écartées au WAL recovery. Rien n'est perdu ! ✅
 ```
 
 ---
@@ -161,7 +190,7 @@ Explorons chacune de ces propriétés en détail.
 
 L'**atomicité** garantit qu'une transaction est **indivisible** : soit **toutes** les opérations sont exécutées, soit **aucune**.
 
-**"Atomique"** vient du grec *atomos* = "qui ne peut être divisé".
+**« Atomique »** vient du grec *atomos* = « qui ne peut être divisé ».
 
 ### Principe : Tout ou rien
 
@@ -381,11 +410,11 @@ Chaque transaction ne voit pas les modifications **non validées** (non COMMITé
 
 **Sans isolation** (catastrophique) :
 ```
-Les deux transactions lisent "500€" en même temps,  
+Les deux transactions lisent « 500 € » en même temps,  
 retirent leur montant séparément,  
 et écrivent chacune leur résultat.  
 
-Résultat final : 450€ ❌ (un retrait est perdu !)
+Résultat final : 450 € ❌ (un retrait est perdu !)
 ```
 
 ### Exemple : Réservation de places de cinéma
@@ -430,18 +459,32 @@ COMMIT;
 
 ### Les niveaux d'isolation
 
-PostgreSQL propose plusieurs **niveaux d'isolation**, du plus permissif au plus strict :
+La norme SQL définit 4 niveaux d'isolation, du plus permissif au plus strict. Voici le tableau **selon la norme ANSI** :
 
-| Niveau | Description | Performances | Anomalies possibles |
-|--------|-------------|--------------|---------------------|
-| **Read Uncommitted** | Lit les données non validées | Très rapide | Dirty Read |
-| **Read Committed** | Lit uniquement les données validées (défaut PG) | Rapide | Non-Repeatable Read |
-| **Repeatable Read** | Lecture cohérente dans la transaction | Moyen | Phantom Read |
-| **Serializable** | Transactions complètement isolées | Plus lent | Aucune |
+| Niveau (norme SQL) | Dirty Read | Non-Repeatable Read | Phantom Read | Anomalie de sérialisation |
+|--------------------|:----------:|:-------------------:|:------------:|:-------------------------:|
+| **Read Uncommitted** | Possible | Possible | Possible | Possible |
+| **Read Committed** | Non | Possible | Possible | Possible |
+| **Repeatable Read** | Non | Non | Possible | Possible |
+| **Serializable** | Non | Non | Non | Non |
+
+Et voici ce que **PostgreSQL fait réellement** (plus strict que la norme) :
+
+| Niveau (dans PostgreSQL) | Dirty Read | Non-Repeatable Read | Phantom Read | Anomalie de sérialisation |
+|--------------------------|:----------:|:-------------------:|:------------:|:-------------------------:|
+| **Read Uncommitted** *(traité comme Read Committed)* | Non | Possible | Possible | Possible |
+| **Read Committed** *(défaut PG)* | Non | Possible | Possible | Possible |
+| **Repeatable Read** *(Snapshot Isolation)* | Non | Non | **Non** | Possible |
+| **Serializable** *(SSI : Serializable Snapshot Isolation)* | Non | Non | Non | Non |
 
 PostgreSQL utilise **Read Committed** par défaut, ce qui est un bon compromis pour la plupart des applications.
 
-> 💡 **Note PostgreSQL** : Même si vous demandez le niveau *Read Uncommitted*, PostgreSQL l'exécutera comme *Read Committed*. Les *dirty reads* sont **impossibles** dans PostgreSQL, quel que soit le niveau d'isolation choisi. Les niveaux d'isolation seront détaillés au chapitre 12.
+> 💡 **Notes importantes sur PostgreSQL** :  
+>  
+> - Les *dirty reads* sont **impossibles** quel que soit le niveau d'isolation choisi. Le niveau « Read Uncommitted » est silencieusement traité comme « Read Committed ».  
+> - Le niveau **Repeatable Read** est implémenté via **Snapshot Isolation**, ce qui empêche aussi les *phantom reads* — c'est plus strict que ce que la norme SQL exige.  
+> - Le niveau **Serializable** utilise **SSI** (*Serializable Snapshot Isolation*), une technique qui détecte les conflits sérialisation au moment du COMMIT.  
+> - Tous ces niveaux reposent sur **MVCC** (*Multiversion Concurrency Control*), le mécanisme qui permet à PostgreSQL de gérer des versions de lignes par transaction sans verrous bloquants en lecture. Le détail est exploré au chapitre 12.
 
 ### Analogie : Les cabines d'essayage
 
@@ -513,6 +556,14 @@ PostgreSQL utilise le **WAL** (*Write-Ahead Log*) ou **journal des transactions*
 → Aucune perte de données ✅
 ```
 
+> ⚙️ **Le paramètre `synchronous_commit`** module ce comportement :  
+>  
+> - `on` (défaut) : le COMMIT n'est confirmé au client qu'après que le WAL ait été *physiquement* écrit sur disque (`fsync`). Garantie de durabilité maximale.  
+> - `off` : le COMMIT est confirmé immédiatement ; le WAL est écrit peu après. Bien plus rapide, mais en cas de crash très précoce, on peut perdre les toutes dernières transactions (jamais d'incohérence, juste de la perte). Acceptable pour des données « best effort » (logs, statistiques).  
+> - `local`, `remote_write`, `remote_apply` : niveaux intermédiaires utilisés avec la **réplication** (chapitre 17).  
+>  
+> Cette flexibilité permet de doser durabilité ↔ performance selon le besoin.
+
 ### Exemple : Paiement en ligne
 
 ```sql
@@ -535,7 +586,7 @@ COMMIT;  -- Tout est écrit dans le WAL et synchronisé
 14h30:00 - Client valide le paiement
 14h30:01 - PostgreSQL écrit dans le WAL
 14h30:02 - COMMIT → Synchronisation du WAL sur disque ✅
-14h30:03 - "Paiement confirmé" affiché au client
+14h30:03 - « Paiement confirmé » affiché au client
 14h30:04 - 💥 PANNE DE COURANT !
 
 14h35:00 - Redémarrage du serveur
@@ -543,7 +594,7 @@ COMMIT;  -- Tout est écrit dans le WAL et synchronisé
 14h35:10 - La commande, le débit et l'expédition sont présents ✅
 ```
 
-Le client a vu "Paiement confirmé", et c'est garanti. Il ne perdra pas sa commande.
+Le client a vu « Paiement confirmé », et c'est garanti. Il ne perdra pas sa commande.
 
 ### Analogie : Le notaire
 
@@ -633,7 +684,7 @@ Les bases NoSQL utilisent souvent un modèle différent appelé **BASE** :
 11h05 - Ses amis à Tokyo ne la voient pas encore ⏳
 11h10 - Ses amis à Tokyo la voient enfin ✅
 
-→ Cohérence "à terme" (eventually consistent)
+→ Cohérence « à terme » (eventually consistent)
 ```
 
 **Exemple ACID** (PostgreSQL) :
@@ -647,10 +698,17 @@ Les bases NoSQL utilisent souvent un modèle différent appelé **BASE** :
 ```
 
 **Principe** :
-- **ACID** : Cohérence > Performance  
+- **ACID** : Cohérence > Performance
 - **BASE** : Disponibilité > Cohérence stricte
 
 Pour des données transactionnelles critiques (argent, santé, inventaire), **ACID est essentiel**.
+
+> 🔄 **Lien avec le théorème CAP** (vu à la section 1.3) : en environnement distribué, le théorème CAP impose un compromis entre cohérence et disponibilité en cas de partition réseau.  
+>  
+> - Les systèmes **ACID** (PostgreSQL) privilégient la **cohérence** : un nœud isolé refusera les écritures plutôt que de risquer un état incohérent.  
+> - Les systèmes **BASE** (Cassandra, DynamoDB) privilégient la **disponibilité** : tous les nœuds acceptent les requêtes, mais la cohérence est atteinte « à terme ».  
+>  
+> ACID et BASE ne sont donc pas en opposition philosophique : ils sont deux réponses différentes au compromis imposé par le théorème CAP, adaptées à des besoins différents.
 
 ---
 
@@ -691,7 +749,7 @@ Pour des données transactionnelles critiques (argent, santé, inventaire), **AC
 Système de billetterie de concert :
 - 1000 places disponibles
 - 10 000 personnes réservent en même temps
-- Sans isolation : 3000 places "vendues"
+- Sans isolation : 3000 places « vendues »
 → 2000 personnes se présentent sans place ! ❌
 
 Système bancaire :
@@ -768,11 +826,13 @@ COMMIT;
 BEGIN TRANSACTION ISOLATION LEVEL SERIALIZABLE;
 
     -- Transaction strictement isolée
-    SELECT * FROM compte WHERE id = 1 FOR UPDATE;
-    UPDATE compte SET solde = solde - 100 WHERE id = 1;
+    SELECT * FROM comptes WHERE id = 1 FOR UPDATE;
+    UPDATE comptes SET solde = solde - 100 WHERE id = 1;
 
 COMMIT;
 ```
+
+> 💡 En **Serializable**, le `FOR UPDATE` n'est pas obligatoire : PostgreSQL détecte automatiquement les conflits de sérialisation et fera échouer une des transactions concurrentes au COMMIT (erreur `40001`) si l'ordre des transactions ne peut pas être prouvé sérialisable. L'application doit alors **réessayer** la transaction. Le détail est vu au chapitre 12.
 
 ---
 

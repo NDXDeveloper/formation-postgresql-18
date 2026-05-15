@@ -1,0 +1,1008 @@
+diff --git a/01-introduction-aux-bases-de-donnees/01-quest-ce-quune-donnee.md b/01-introduction-aux-bases-de-donnees/01-quest-ce-quune-donnee.md
+index 9b06b87..219b3ca 100644
+--- a/01-introduction-aux-bases-de-donnees/01-quest-ce-quune-donnee.md
++++ b/01-introduction-aux-bases-de-donnees/01-quest-ce-quune-donnee.md
+@@ -22,42 +22,73 @@ Pour le dire autrement : une donnée, c'est simplement **un morceau d'informatio
+ 
+ Voici des exemples de données que vous manipulez tous les jours :
+ 
+-- **Votre nom** : "Marie Dupont"  
+-- **Votre âge** : 28  
+-- **Votre adresse e-mail** : marie.dupont@example.com  
+-- **La température extérieure** : 15°C  
+-- **Le prix d'un produit** : 49,99 €  
+-- **Une date** : 19 novembre 2025  
+-- **Un numéro de téléphone** : 06 12 34 56 78  
++- **Votre nom** : « Marie Dupont »
++- **Votre âge** : 28
++- **Votre adresse e-mail** : marie.dupont@example.com
++- **La température extérieure** : 15 °C
++- **Le prix d'un produit** : 49,99 €
++- **Une date** : 19 novembre 2025
++- **Un numéro de téléphone** : 06 12 34 56 78
+ - **Une photo** : un fichier JPEG de votre dernier voyage
+ 
+ ### Les caractéristiques d'une donnée
+ 
+ Une donnée possède plusieurs caractéristiques importantes :
+ 
+-1. **Elle est atomique** : C'est une unité d'information indivisible dans son contexte. Par exemple, "Jean" est une donnée (un prénom), "Dupont" en est une autre (un nom de famille).
++1. **Elle est atomique** : c'est une unité d'information indivisible dans son contexte. Par exemple, « Jean » est une donnée (un prénom), « Dupont » en est une autre (un nom de famille). On évite de mélanger plusieurs informations dans une seule valeur (« Jean Dupont, Paris, 35 ans »).
+ 
+-2. **Elle a un type** : Les données peuvent être de différentes natures :  
+-   - **Numériques** : 42, 3.14, -17  
+-   - **Textuelles** : "Bonjour", "PostgreSQL"  
+-   - **Temporelles** : 2025-11-19, 14:30:00  
+-   - **Booléennes** : Vrai ou Faux  
+-   - **Binaires** : Images, vidéos, fichiers
++   > 📐 Ce principe d'atomicité est à la base de la **première forme normale (1NF)**, fondement de la modélisation relationnelle. Il sera approfondi au chapitre 11.
+ 
+-3. **Elle a un sens dans un contexte** : Le nombre "42" seul ne signifie pas grand-chose. Mais "42 ans" (âge), "42 €" (prix), ou "42 km" (distance) ont tous un sens différent.
++2. **Elle a un type** : les données peuvent être de différentes natures :
++   - **Numériques** : entiers (`42`, `-17`) ou décimaux (`3.14`, `49.99`)
++   - **Textuelles** : « Bonjour », « PostgreSQL »
++   - **Temporelles** : `2025-11-19`, `14:30:00`, intervalles (`1 day 2 hours`)
++   - **Booléennes** : Vrai / Faux
++   - **Binaires** : images, vidéos, fichiers (type `BYTEA` en PostgreSQL)
++   - **Structurées** : JSON, tableaux, géométries…
++   - **`NULL`** : l'**absence** de valeur (différent de zéro ou de chaîne vide ; détaillé au chapitre 5)
++
++3. **Elle a un sens dans un contexte** : le nombre « 42 » seul ne signifie pas grand-chose. Mais « 42 ans » (âge), « 42 € » (prix), ou « 42 km » (distance) ont tous un sens différent. C'est le **schéma** de la base (nom de la colonne, type, contrainte) qui donne ce contexte.
+ 
+ ### Données vs Information
+ 
+ Il est important de distinguer **donnée** et **information** :
+ 
+-- **Donnée** : Élément brut, sans contexte. Exemple : "25", "Paris", "2025-11-19"  
+-- **Information** : Donnée avec du contexte et du sens. Exemple : "Marie a 25 ans, elle habite à Paris, et son rendez-vous est le 19 novembre 2025"
++- **Donnée** : Élément brut, sans contexte. Exemple : « 25 », « Paris », « 2025-11-19 »
++- **Information** : Donnée avec du contexte et du sens. Exemple : « Marie a 25 ans, elle habite à Paris, et son rendez-vous est le 19 novembre 2025 »
+ 
+ Les données deviennent de l'information lorsqu'elles sont organisées, structurées et mises en relation.
+ 
++#### La pyramide DIKW (pour aller un peu plus loin)
++
++Les sciences de l'information formalisent cette distinction avec la **pyramide DIKW**, popularisée par Russell Ackoff (1989) :
++
++```
++                  ▲
++                 ╱ ╲              W — Wisdom (Sagesse)
++                ╱ W ╲             « Faut-il agir ainsi ? »
++               ╱─────╲
++              ╱   K   ╲           K — Knowledge (Connaissance)
++             ╱─────────╲          « Comment l'utiliser ? »
++            ╱     I     ╲         I — Information
++           ╱─────────────╲        « Que signifie cette donnée ? »
++          ╱       D       ╲       D — Data (Donnée)
++         ╱─────────────────╲      « Quel est ce fait brut ? »
++        ─────────────────────
++```
++
++| Niveau | Définition | Exemple |
++|--------|------------|---------|
++| **D** — Donnée | Fait brut, sans contexte | `38.5` |
++| **I** — Information | Donnée + contexte | « Le patient a 38,5 °C de fièvre » |
++| **K** — Connaissance | Information appliquée | « Une fièvre > 38 °C nécessite surveillance » |
++| **W** — Sagesse | Connaissance évaluée | « Avec cet historique, je consulte un médecin » |
++
++👉 Une base de données stocke des **données**. C'est l'application (et son utilisateur) qui les transforme progressivement en information, connaissance, puis sagesse.
++
+ ### Pourquoi les données sont-elles importantes ?
+ 
+-Dans notre monde numérique, les données sont devenues le **pétrole du 21ème siècle** :
++Dans notre monde numérique, les données sont devenues le **pétrole du 21e siècle** (expression popularisée par Clive Humby en 2006) :
+ 
+ - Les entreprises utilisent les données pour **prendre des décisions**
+ - Les applications web et mobiles **stockent vos préférences** sous forme de données
+@@ -75,7 +106,7 @@ Sans un moyen efficace de stocker, organiser et récupérer ces données, nos ap
+ 
+ Une **base de données** (en anglais : *database*) est un **ensemble organisé de données** structurées de manière à faciliter leur stockage, leur gestion, leur recherche et leur utilisation.
+ 
+-Pensez à une base de données comme à une **bibliothèque numérique** où chaque livre (donnée) est classé de manière logique, avec un système de catalogage qui permet de retrouver rapidement l'information recherchée.
++Pensez à une base de données comme à une **bibliothèque numérique** où chaque livre est classé de manière logique, avec un système de catalogage qui permet de retrouver rapidement l'information recherchée.
+ 
+ ### Pourquoi avons-nous besoin de bases de données ?
+ 
+@@ -84,7 +115,7 @@ Imaginez que vous gérez une petite entreprise avec 10 clients. Vous pourriez no
+ ```
+ Client 1 : Jean Dupont, 35 ans, jean.dupont@email.com, Paris  
+ Client 2 : Marie Martin, 28 ans, marie.martin@email.com, Lyon  
+-...
++…
+ ```
+ 
+ C'est gérable ! Mais maintenant, imaginez avec **10 000 clients**, ou **1 million de clients**, et que vous devez :
+@@ -121,6 +152,8 @@ Les données sont organisées de manière logique, généralement sous forme de
+ 
+ Grâce aux **index** (comme l'index d'un livre), une base de données peut retrouver une information parmi des millions d'enregistrements en quelques millisecondes.
+ 
++> ⚡ **Ordre de grandeur** : sans index, retrouver une ligne dans 1 million d'enregistrements nécessite jusqu'à **1 000 000 comparaisons** (lecture séquentielle, complexité *O(N)*). Avec un index B-Tree, il suffit d'environ **20 comparaisons** (complexité *O(log N)*). Sur 1 milliard de lignes, on passe d'un milliard d'opérations à seulement ~30. C'est ce gain logarithmique qui rend les bases de données aussi performantes — l'indexation est explorée en détail au chapitre 13.
++
+ #### 3. **Intégrité des données**
+ 
+ La base de données garantit que les données restent **cohérentes** et **valides**. Par exemple :
+@@ -170,19 +203,24 @@ C'est le type le plus courant et celui sur lequel nous allons nous concentrer da
+ 
+ #### 2. **Bases de données NoSQL**
+ 
+-Conçues pour des données non structurées ou semi-structurées, avec une flexibilité accrue.
++Conçues pour des données non structurées ou semi-structurées, avec une flexibilité accrue. On distingue quatre grandes familles :
+ 
+-**Exemples** : MongoDB (documents), Redis (clé-valeur), Cassandra (colonnes), Neo4j (graphes)
++- **Documents** : MongoDB, CouchDB (documents JSON/BSON)
++- **Clé-valeur** : Redis, DynamoDB, etcd (paires clé/valeur simples)
++- **Wide-column (familles de colonnes)** : Cassandra, HBase, Bigtable (lignes à colonnes variables, optimisées écritures massives)
++- **Graphes** : Neo4j, ArangoDB (nœuds et relations interconnectés)
+ 
+ **Cas d'usage** : Big data, réseaux sociaux, systèmes temps réel, IoT
+ 
+-#### 3. **Bases de données en colonnes**
++> 💡 **Attention à la confusion** : les bases « wide-column » (comme Cassandra) sont des bases NoSQL orientées **lignes** avec colonnes flexibles. Elles ne sont **pas** la même chose que les bases « columnar » (présentées juste après), qui partitionnent réellement chaque colonne pour l'analytique.
++
++#### 3. **Bases de données columnar (orientées colonnes)**
+ 
+-Optimisées pour l'analyse de grandes quantités de données (data warehousing).
++Optimisées pour l'analyse de grandes quantités de données (OLAP, data warehousing). Contrairement aux bases NoSQL wide-column, ces bases partitionnent verticalement chaque colonne, ce qui permet une compression et des agrégations bien plus efficaces sur de gros volumes.
+ 
+-**Exemples** : ClickHouse, Amazon Redshift, Google BigQuery, DuckDB
++**Exemples** : ClickHouse, Amazon Redshift, Google BigQuery, DuckDB, Snowflake
+ 
+-**Cas d'usage** : Analytique, business intelligence, reporting
++**Cas d'usage** : Analytique, business intelligence, reporting, data warehousing
+ 
+ #### 4. **Bases de données en mémoire**
+ 
+@@ -192,6 +230,16 @@ Stockent les données en RAM pour des performances ultra-rapides.
+ 
+ **Cas d'usage** : Cache, sessions utilisateur, compteurs temps réel
+ 
++#### 5. **Bases de données vectorielles**
++
++Spécialisées dans le stockage et la recherche de **vecteurs** (embeddings), ces données numériques de haute dimension produites par les modèles d'IA. Indispensables pour les applications modernes d'intelligence artificielle (RAG, recherche sémantique).
++
++**Exemples** : Pinecone, Weaviate, Qdrant, Milvus, Chroma — et **PostgreSQL avec l'extension pgvector**
++
++**Cas d'usage** : Recherche sémantique, systèmes de recommandation, RAG (Retrieval-Augmented Generation), détection de similarité
++
++> 🐘 PostgreSQL est l'un des rares SGBDR à couvrir nativement **plusieurs** de ces familles : relationnel (par défaut), documents (JSONB), géospatial (PostGIS), vectoriel (pgvector), séries temporelles (TimescaleDB). C'est l'une des raisons de sa popularité.
++
+ ---
+ 
+ ## Analogie pour bien comprendre
+@@ -200,13 +248,14 @@ Imaginons une **bibliothèque municipale** :
+ 
+ | Concept | Bibliothèque | Base de données |
+ |---------|--------------|-----------------|
+-| **Donnée** | Un livre individuel | Un enregistrement (ligne de table) |
+ | **Base de données** | Toute la bibliothèque | L'ensemble de la base |
+ | **Table** | Une étagère thématique (Romans, Sciences, etc.) | Une table (Clients, Produits, etc.) |
+-| **Champ/Colonne** | Information du livre (Titre, Auteur, ISBN) | Colonne d'une table (Nom, Email, Âge) |
++| **Enregistrement (ligne)** | Un livre individuel | Une ligne de table |
++| **Champ / Colonne** | Catégorie d'information (Titre, Auteur, ISBN) | Une colonne d'une table (Nom, Email, Âge) |
++| **Donnée (valeur)** | Une information précise du livre (« Les Misérables ») | Une cellule (valeur unique dans une ligne) |
+ | **Index** | Le catalogue de recherche | Index de base de données |
+ | **Bibliothécaire** | Personne qui gère les livres | SGBD (PostgreSQL) |
+-| **Lecteur** | Personne qui consulte les livres | Application/Utilisateur |
++| **Lecteur** | Personne qui consulte les livres | Application / Utilisateur |
+ 
+ Tout comme vous ne stockeriez pas 10 000 livres en vrac dans une cave (impossible de retrouver quoi que ce soit !), vous ne stockez pas des millions de données dans un simple fichier texte. Vous utilisez une base de données, qui est comme une bibliothèque ultra-moderne et automatisée.
+ 
+diff --git a/01-introduction-aux-bases-de-donnees/02-concept-de-sgbd.md b/01-introduction-aux-bases-de-donnees/02-concept-de-sgbd.md
+index 846394e..de56c23 100644
+--- a/01-introduction-aux-bases-de-donnees/02-concept-de-sgbd.md
++++ b/01-introduction-aux-bases-de-donnees/02-concept-de-sgbd.md
+@@ -76,7 +76,7 @@ Le SGBD décide comment les données sont physiquement enregistrées sur le disq
+ 
+ **Exemple** :
+ ```
+-Vous créez une table "Clients" avec 1 million d'entrées.
++Vous créez une table « Clients » avec 1 million d'entrées.
+ → Le SGBD décide de la meilleure façon de stocker ces données sur le disque.
+ → Vous, vous voyez simplement une table propre et organisée.
+ ```
+@@ -107,18 +107,24 @@ Le SGBD **traduit** ces commandes SQL en opérations complexes sur les fichiers
+ 
+ Le SGBD permet à **plusieurs utilisateurs ou applications** d'accéder aux données **en même temps**, sans conflit.
+ 
+-**Scénario du problème** :
++**Scénario du problème** (cas classique du *lost update*, mise à jour perdue) :
+ ```
+ 10h00 : Alice lit le solde du compte : 1000 €
+-10h00 : Bob lit le solde du compte : 1000 €
+-10h01 : Alice retire 200 € → Nouveau solde : 800 €
+-10h01 : Bob retire 300 € → Nouveau solde : 700 €
++10h00 : Bob   lit le solde du compte : 1000 €
++10h01 : Alice écrit le nouveau solde après retrait de 200 € → 800 €
++10h01 : Bob   écrit le nouveau solde après retrait de 300 € → 700 €
+ 
+-Problème : Le solde devrait être 500 € (1000 - 200 - 300), pas 700 € !
++Problème : le solde devrait être 500 € (1000 - 200 - 300), pas 700 € !
++→ Le retrait d'Alice a été « écrasé » par celui de Bob : 200 € se sont volatilisés.
+ ```
+ 
+ **Solution du SGBD** :
+-Le SGBD utilise des mécanismes de **verrouillage** (*locks*) et de **transactions** pour garantir que les opérations simultanées ne créent pas de chaos.
++Le SGBD utilise plusieurs mécanismes pour empêcher ce type d'anomalie :
++- **Verrouillage** (*locks*) : empêche temporairement deux transactions d'écrire au même endroit
++- **MVCC** (*Multiversion Concurrency Control*) : permet à PostgreSQL de servir des lectures sans bloquer les écritures
++- **Niveaux d'isolation** des transactions (Read Committed, Repeatable Read, Serializable)
++
++Ces mécanismes sont étudiés en détail au chapitre 12. Pour l'instant, retenez que **le SGBD vous protège** contre les anomalies de concurrence.
+ 
+ ### 4. **Transactions et propriétés ACID**
+ 
+@@ -193,11 +199,11 @@ Le SGBD optimise automatiquement les requêtes pour qu'elles s'exécutent le plu
+ 
+ **Exemple** :
+ ```
+-Vous demandez : "Trouver tous les clients de Paris qui ont commandé en 2025"
++Vous demandez : « Trouver tous les clients de Paris qui ont commandé en 2025 »
+ 
+ Le SGBD analyse la requête et décide :
+-- Utiliser l'index sur la colonne "ville" pour filtrer rapidement
+-- Puis utiliser l'index sur la colonne "date_commande"
++- Utiliser l'index sur la colonne « ville » pour filtrer rapidement
++- Puis utiliser l'index sur la colonne « date_commande »
+ - Joindre les résultats de manière optimale
+ 
+ Tout cela en millisecondes, même avec des millions de lignes !
+@@ -207,21 +213,25 @@ Tout cela en millisecondes, même avec des millions de lignes !
+ 
+ Le SGBD offre des mécanismes pour **sauvegarder** et **restaurer** les données :
+ 
+-- **Sauvegardes automatiques** : Copie régulière des données  
+-- **Journalisation** (*Write-Ahead Log*) : Enregistrement de toutes les modifications  
+-- **Récupération après crash** : Restauration de l'état cohérent après une panne
++- **Sauvegardes logiques** (`pg_dump`) : export SQL portable
++- **Sauvegardes physiques** (`pg_basebackup`) : copie binaire à chaud
++- **Journalisation** (*Write-Ahead Log*, WAL) : enregistrement de toutes les modifications avant qu'elles ne soient appliquées
++- **Récupération après crash** (*crash recovery*) : au redémarrage, PostgreSQL rejoue le WAL pour ramener la base à un état cohérent
++- **PITR** (*Point-In-Time Recovery*) : restaurer la base à un instant T précis (par exemple « 10h27 juste avant le DELETE catastrophique »)
+ 
+-**Scénario** :
++**Scénario PITR** :
+ ```
+-10h00 : Vous faites une sauvegarde
+-11h00 : Vous travaillez normalement
+-11h30 : PANNE DE SERVEUR !
+-11h35 : Redémarrage du serveur
+-
+-→ Le SGBD utilise le journal pour rejouer les opérations depuis 11h00
+-→ Aucune donnée n'est perdue !
++00h00 : Sauvegarde de base (pg_basebackup)
++00h00 → 11h30 : Le WAL archive toutes les modifications, en continu
++11h25 : Une mauvaise requête DELETE supprime des données critiques
++11h30 : Vous décidez de revenir à l'état d'avant l'incident
++11h35 : Restauration de la sauvegarde + rejeu du WAL jusqu'à 11h24:59
++       → Tous les changements postérieurs sont écartés
++       → La base est revenue à l'état d'avant le DELETE ✅
+ ```
+ 
++Les stratégies de sauvegarde et la PITR sont étudiées au chapitre 16.
++
+ ---
+ 
+ ## Types de SGBD
+@@ -234,11 +244,14 @@ Les plus courants, basés sur le **modèle relationnel** (tables avec lignes et
+ 
+ | SGBD | Caractéristiques | Cas d'usage typiques |
+ |------|------------------|----------------------|
+-| **PostgreSQL** | Open source, très performant, riche en fonctionnalités | Applications web, systèmes transactionnels, data warehousing |
+-| **MySQL** | Open source, simple, rapide en lecture | Sites web, e-commerce, applications LAMP |
++| **PostgreSQL** | Open source, objet-relationnel, très performant, riche en fonctionnalités | Applications web, systèmes transactionnels, data warehousing |
++| **MySQL** | Open source (Oracle), simple, rapide en lecture | Sites web, e-commerce, applications LAMP |
++| **MariaDB** | Open source, fork communautaire de MySQL (par les créateurs originaux) | Alternative drop-in à MySQL, beaucoup d'hébergeurs |
+ | **Oracle Database** | Commercial, très puissant, pour grandes entreprises | Systèmes bancaires, ERP, applications critiques |
+ | **Microsoft SQL Server** | Commercial, intégration Microsoft | Applications .NET, entreprises Microsoft-centric |
+-| **SQLite** | Ultra-léger, embarqué, sans serveur | Applications mobiles, logiciels desktop, prototypes |
++| **SQLite** | Ultra-léger, embarqué, sans serveur (un seul fichier) | Applications mobiles, logiciels desktop, prototypes, navigateurs |
++
++> 🐘 **PostgreSQL est un SGBD « objet-relationnel »** (*ORDBMS*) : en plus du modèle relationnel pur, il supporte l'héritage de tables, les types de données personnalisés, les fonctions définies par l'utilisateur, et des concepts orientés objet hérités de son ancêtre **Postgres** (Berkeley, 1986). Cette particularité historique explique en partie sa polyvalence et sa richesse fonctionnelle — détail au chapitre 2.
+ 
+ ### SGBD NoSQL
+ 
+@@ -247,46 +260,70 @@ Conçus pour des données non structurées ou des besoins spécifiques :
+ | Type | Exemple | Cas d'usage |
+ |------|---------|-------------|
+ | **Document** | MongoDB, CouchDB | Données JSON, applications web modernes |
+-| **Clé-Valeur** | Redis, Memcached | Cache, sessions, compteurs temps réel |
+-| **Colonnes** | Cassandra, HBase | Big data, analyses massives |
+-| **Graphe** | Neo4j, ArangoDB | Réseaux sociaux, recommandations |
++| **Clé-valeur** | Redis, DynamoDB, etcd | Cache, sessions, compteurs temps réel, configuration distribuée |
++| **Wide-column (familles de colonnes)** | Cassandra, HBase, Bigtable | Écritures massives, big data temps réel, IoT |
++| **Graphe** | Neo4j, ArangoDB | Réseaux sociaux, recommandations, détection de fraude |
++
++> ⚠️ Les bases **wide-column** (Cassandra…) sont orientées lignes avec colonnes flexibles. Elles diffèrent des bases **columnar / orientées colonnes** (ClickHouse, Redshift, BigQuery, DuckDB) qui partitionnent chaque colonne pour l'analyse OLAP.
+ 
+ ### SGBD spécialisés
+ 
+ | Type | Exemple | Cas d'usage |
+ |------|---------|-------------|
+-| **Séries temporelles** | InfluxDB, TimescaleDB | IoT, monitoring, métriques |
+-| **Recherche** | Elasticsearch, Solr | Moteurs de recherche, full-text search |
++| **Columnar / OLAP** | ClickHouse, Amazon Redshift, BigQuery, Snowflake, DuckDB | Data warehousing, analytique, BI |
++| **Séries temporelles** | InfluxDB, TimescaleDB (extension PostgreSQL) | IoT, monitoring, métriques |
++| **Vectorielles** | Pinecone, Weaviate, Qdrant, Milvus, **pgvector** | IA, embeddings, RAG, recherche sémantique |
++| **Géospatiales** | **PostGIS** (extension PostgreSQL), Spatialite | SIG, cartographie, géolocalisation |
++| **Recherche** | Elasticsearch, OpenSearch, Solr | Moteurs de recherche, full-text search |
+ | **En mémoire** | Redis, Memcached | Ultra-haute performance, cache |
+ 
++> 🐘 PostgreSQL, par son écosystème d'extensions, peut remplir nativement plusieurs de ces rôles : géospatial (PostGIS), vectoriel (pgvector), séries temporelles (TimescaleDB), recherche full-text (intégrée). C'est l'un des arguments clés de sa polyvalence.
++
+ ---
+ 
+ ## Pourquoi PostgreSQL ?
+ 
+-Vous vous demandez peut-être : "Pourquoi apprendre PostgreSQL plutôt qu'un autre SGBD ?"
++Vous vous demandez peut-être : « Pourquoi apprendre PostgreSQL plutôt qu'un autre SGBD ? »
+ 
+ ### Les points forts de PostgreSQL
+ 
+-1. **Open source et gratuit** : Pas de licence coûteuse, communauté active  
+-2. **Conforme aux standards SQL** : Respecte les normes officielles  
+-3. **Très riche en fonctionnalités** : Types de données avancés (JSON, tableaux, géométrie)  
+-4. **Extensible** : Ajout de fonctionnalités via des extensions (PostGIS, pg_vector)  
+-5. **Fiable et robuste** : Respecte strictement les propriétés ACID  
+-6. **Performant** : Optimisé pour les lectures et écritures complexes  
+-7. **Portable** : Fonctionne sur Linux, Windows, macOS  
+-8. **Bien documenté** : Documentation officielle excellente
++1. **Open source et gratuit** : licence permissive (PostgreSQL License, proche de MIT/BSD), communauté active, aucun coût caché
++2. **Conforme aux standards SQL** : respecte rigoureusement la norme SQL et propose des extensions avancées
++3. **Très riche en fonctionnalités** : types de données avancés (JSONB, tableaux, géométrie, UUID, intervalles, types personnalisés…)
++4. **Extensible** : ajout de fonctionnalités via des extensions (PostGIS pour le géospatial, pgvector pour l'IA, TimescaleDB pour les séries temporelles, pg_cron pour la planification…)
++5. **Fiable et robuste** : respecte strictement les propriétés ACID, contrôle intégral du WAL
++6. **Performant** : optimisé pour les lectures et écritures complexes, planificateur sophistiqué
++7. **Portable** : fonctionne sur Linux, Windows, macOS, BSD
++8. **Bien documenté** : documentation officielle parmi les plus complètes et appréciées de l'industrie
++
++### Et avec PostgreSQL 18 (septembre 2025) ?
++
++La version 18 apporte un ensemble de nouveautés majeures qui renforcent encore ces points forts :
++
++- ⚡ **I/O asynchrone (AIO)** : jusqu'à 3× plus rapide sur les opérations I/O
++- 🔐 **OAuth 2.0 natif** : authentification moderne intégrée à `pg_hba.conf`
++- 🆕 **UUIDv7** : identifiants triables temporellement, idéaux pour clés primaires
++- 🧮 **Colonnes générées virtuelles** : calculs à la lecture sans stockage
++- 📅 **Contraintes temporelles** : validation d'unicité et de référence sur des périodes
++- 🔁 **OLD/NEW dans RETURNING** : retour des valeurs avant/après dans `INSERT/UPDATE/DELETE/MERGE`
++- 🔄 **`pg_upgrade --swap`** : mise à jour majeure beaucoup plus rapide
++
++Ces nouveautés seront détaillées tout au long de la formation et marquées d'un 🆕.
+ 
+ ### Qui utilise PostgreSQL ?
+ 
+-De nombreuses entreprises de renom utilisent PostgreSQL :
++De nombreuses entreprises de renom utilisent PostgreSQL pour de nombreux besoins critiques :
++
++- **Apple** : usage interne très large (services et outils)
++- **Instagram** : l'un des plus grands déploiements PostgreSQL au monde (utilisateurs, métadonnées)
++- **Spotify** : nombreux services de stockage et données utilisateurs
++- **Reddit** : données utilisateurs, commentaires, votes, statistiques (modèle « ThingDB »)
++- **Twitch** : la majorité de leurs ~125 bases (utilisateurs, diffusions, sauvegardes)
++- **Skype** (Microsoft) : annuaire utilisateurs historique
++- **TripAdvisor** : avis et données géographiques
++- **Heroku, Supabase, Neon** : services managés basés sur PostgreSQL
+ 
+-- **Apple** : iCloud, App Store  
+-- **Instagram** : Stockage des photos et métadonnées  
+-- **Spotify** : Gestion des playlists et recommandations  
+-- **Reddit** : Discussions et votes  
+-- **Twitch** : Chat et streaming  
+-- **Uber** : Géolocalisation et trajets  
+-- **Netflix** : Recommandations et analytics
++> 📌 **Note historique** : Uber a migré de PostgreSQL vers MySQL en 2016, pour des raisons liées à leur charge spécifique d'écriture et de réplication à l'époque. De nombreuses limitations alors invoquées ont été corrigées depuis (versions 11 à 18). Cette migration reste un cas d'école souvent discuté dans la communauté.
+ 
+ ---
+ 
+@@ -361,15 +398,15 @@ Récapitulons pourquoi utiliser un SGBD plutôt que de simples fichiers :
+ 
+ | Critère | Fichiers simples (CSV, Excel) | SGBD (PostgreSQL) |
+ |---------|-------------------------------|-------------------|
+-| **Volume de données** | Limité (quelques milliers de lignes) | Illimité (milliards de lignes) |
+-| **Vitesse de recherche** | Très lent pour grandes données | Très rapide (index) |
+-| **Accès concurrent** | Problématique (conflits) | Géré automatiquement |
+-| **Intégrité** | Aucune garantie | Contraintes appliquées |
+-| **Sécurité** | Faible | Forte (permissions, chiffrement) |
++| **Volume de données** | Limité (Excel ≈ 1 million de lignes/feuille, et devient très lent bien avant) | Pratiquement illimité (milliards de lignes) |
++| **Vitesse de recherche** | Linéaire *O(N)*, lent pour grandes données | Logarithmique *O(log N)* avec index |
++| **Accès concurrent** | Verrouillage du fichier entier, conflits | Géré finement (MVCC + locks) |
++| **Intégrité** | Aucune garantie | Contraintes appliquées (CHECK, FK, UNIQUE…) |
++| **Sécurité** | Faible (fichier ouvert ou pas) | Forte (rôles, permissions, chiffrement, RLS) |
+ | **Transactions** | Non supporté | ACID garanti |
+-| **Sauvegarde** | Manuelle | Automatique et fiable |
++| **Sauvegarde** | Manuelle, copie de fichier | Automatique, à chaud, PITR possible |
+ | **Requêtes complexes** | Très difficile | Facile avec SQL |
+-| **Performance** | Dégradée avec volume | Optimisée automatiquement |
++| **Performance** | Dégradée avec volume | Optimisée par le planificateur |
+ 
+ **Conclusion** : Pour tout projet sérieux manipulant des données, un SGBD est indispensable.
+ 
+@@ -379,8 +416,8 @@ Récapitulons pourquoi utiliser un SGBD plutôt que de simples fichiers :
+ 
+ Imaginons un orchestre symphonique :
+ 
+-- **Les musiciens** = Vos données (violons, pianos, trompettes...)  
+-- **Le chef d'orchestre** = Le SGBD  
++- **Les musiciens** = Vos données (violons, pianos, trompettes…)
++- **Le chef d'orchestre** = Le SGBD
+ - **La partition** = Vos requêtes SQL
+ 
+ Sans chef d'orchestre, les musiciens joueraient n'importe comment, créant un chaos sonore. Le chef d'orchestre coordonne tout, assure l'harmonie, gère le timing, et produit une belle symphonie.
+diff --git a/01-introduction-aux-bases-de-donnees/03-modele-relationnel-vs-nosql.md b/01-introduction-aux-bases-de-donnees/03-modele-relationnel-vs-nosql.md
+index 9e8f79f..4989479 100644
+--- a/01-introduction-aux-bases-de-donnees/03-modele-relationnel-vs-nosql.md
++++ b/01-introduction-aux-bases-de-donnees/03-modele-relationnel-vs-nosql.md
+@@ -18,7 +18,12 @@ PostgreSQL appartient à la famille des SGBDR (Systèmes de Gestion de Bases de
+ 
+ ### Origine et philosophie
+ 
+-Le modèle relationnel a été inventé en **1970 par Edgar F. Codd**, un informaticien chez IBM. Son idée révolutionnaire : organiser les données sous forme de **tables** (aussi appelées "relations" en mathématiques), où chaque ligne représente un enregistrement et chaque colonne un attribut.
++Le modèle relationnel a été inventé en **1970 par Edgar F. Codd**, un informaticien chez IBM, dans son article fondateur *« A Relational Model of Data for Large Shared Data Banks »* publié dans *Communications of the ACM*. Son idée révolutionnaire : organiser les données sous forme de **tables** (formellement appelées *relations* en mathématiques, d'où le nom), où chaque ligne représente un enregistrement et chaque colonne un attribut. Codd reçut le **Prix Turing en 1981** pour cette contribution majeure.
++
++Le modèle s'appuie sur :
++- **L'algèbre relationnelle** (sélection, projection, jointure, union, etc.) — bases mathématiques du langage SQL
++- **Les formes normales** (1NF, 2NF, 3NF, BCNF) qui guident la conception d'un schéma sans redondance — détaillées au chapitre 11
++- **L'indépendance physique/logique** : l'utilisateur travaille sur un modèle logique, le SGBD gère la représentation physique
+ 
+ ### Le concept de table
+ 
+@@ -36,14 +41,14 @@ Une **table** est comme un tableau Excel structuré :
+ ```
+ 
+ **Caractéristiques** :
+-- Chaque **ligne** (ou "tuple") = un enregistrement unique (un client)
+-- Chaque **colonne** = un attribut spécifique (nom, âge, email...)
++- Chaque **ligne** (ou « tuple ») = un enregistrement unique (un client)
++- Chaque **colonne** = un attribut spécifique (nom, âge, email…)
+ - Chaque **cellule** = une valeur unique d'un type précis
+ - Chaque table a une **clé primaire** (id) qui identifie de manière unique chaque ligne
+ 
+ ### Le concept de relation entre tables
+ 
+-L'aspect **"relationnel"** vient du fait que les tables peuvent être **reliées entre elles** via des **clés étrangères**.
++L'aspect **« relationnel »** vient du fait que les tables peuvent être **reliées entre elles** via des **clés étrangères**.
+ 
+ **Exemple** : Un système de e-commerce
+ 
+@@ -200,12 +205,14 @@ Malgré ses nombreux avantages, le modèle relationnel a certaines limites :
+ 
+ ### Origine et philosophie
+ 
+-**NoSQL** signifie **"Not Only SQL"** (pas seulement SQL). Ce mouvement est né dans les années 2000 pour répondre aux besoins du web moderne :
++Le terme **NoSQL** est apparu en 1998 (Carlo Strozzi), puis a été réintroduit en 2009 par Johan Oskarsson pour désigner les bases de données distribuées non-relationnelles. À l'origine compris comme **« No SQL »** (sans SQL), il a été progressivement réinterprété comme **« Not Only SQL »** (pas seulement SQL) — beaucoup de bases NoSQL proposent aujourd'hui des langages d'interrogation inspirés de SQL.
++
++Ce mouvement est né dans les années 2000 pour répondre aux besoins du web moderne, sous l'impulsion notamment des articles fondateurs de Google sur **Bigtable** (2006) et d'Amazon sur **Dynamo** (2007) :
+ 
+-- **Volume massif** de données (Big Data)  
+-- **Flexibilité** du schéma (données changeantes)  
+-- **Performance** en lecture/écriture à très grande échelle  
+-- **Distribution** sur de nombreux serveurs
++- **Volume massif** de données (Big Data)
++- **Flexibilité** du schéma (données changeantes)
++- **Performance** en lecture/écriture à très grande échelle
++- **Distribution** sur de nombreux serveurs (sharding, réplication)
+ 
+ NoSQL ne remplace pas le relationnel, il offre des **alternatives** pour des cas d'usage spécifiques.
+ 
+@@ -309,7 +316,7 @@ Famille de colonnes "activite" :
+ 
+ > 💡 À ne pas confondre avec les bases **columnar** analytiques (ClickHouse, BigQuery, DuckDB) qui stockent physiquement les données colonne par colonne pour optimiser les agrégations. Ce sont deux concepts différents.
+ 
+-**Exemples** : Cassandra, HBase, ScyllaDB
++**Exemples** : Cassandra, HBase, Bigtable (Google), ScyllaDB
+ 
+ **Cas d'usage** :
+ - Données massives distribuées (Big Data)
+@@ -373,16 +380,57 @@ Réseau social :
+ | Critère | Relationnel (SGBDR) | NoSQL |
+ |---------|---------------------|-------|
+ | **Schéma** | Fixe et défini à l'avance | Flexible et dynamique |
+-| **Structure** | Tables avec lignes et colonnes | Variable (documents, graphes...) |
++| **Structure** | Tables avec lignes et colonnes | Variable (documents, graphes…) |
+ | **Relations** | Jointures explicites | Imbrication ou références |
+-| **Transactions** | ACID garanti | Variable (souvent BASE*) |
+-| **Scalabilité** | Verticale (serveur plus puissant) | Horizontale (plus de serveurs) |
++| **Transactions** | ACID garanti | Variable (souvent BASE\*) |
++| **Scalabilité** | Verticale par défaut, horizontale via réplication/partitionnement/Citus | Horizontale native (sharding intégré) |
+ | **Requêtes** | SQL puissant et standardisé | API spécifiques par type |
+ | **Intégrité** | Forte (contraintes) | Plus faible (responsabilité app) |
+ | **Cas d'usage** | Transactionnel, cohérence critique | Big Data, flexibilité, performance |
+ | **Exemples** | PostgreSQL, MySQL, Oracle | MongoDB, Redis, Cassandra, Neo4j |
+ 
+-*BASE = **B**asically **A**vailable, **S**oft state, **E**ventually consistent (cohérence "à terme")
++\*BASE = **B**asically **A**vailable, **S**oft state, **E**ventually consistent (cohérence « à terme »)
++
++> 💡 **Une troisième voie : NewSQL.** Des SGBD comme **CockroachDB**, **YugabyteDB**, **TiDB** ou **Google Spanner** combinent SQL standard et propriétés ACID avec une scalabilité horizontale native (sharding automatique, consensus distribué). Plusieurs sont compatibles avec le protocole PostgreSQL (CockroachDB, YugabyteDB), ce qui permet de réutiliser les drivers et une partie de l'écosystème.
++
++### Le théorème CAP : la clé pour comprendre les compromis
++
++Pour bien choisir entre SQL et NoSQL en environnement distribué, il faut connaître le **théorème CAP**, formulé par Eric Brewer en 2000 et démontré formellement par Gilbert et Lynch en 2002.
++
++Le théorème énonce qu'**un système distribué ne peut garantir simultanément que deux des trois propriétés suivantes** :
++
++| Lettre | Propriété | Définition |
++|:------:|-----------|------------|
++| **C** | **Consistency** (cohérence) | Tous les nœuds voient les mêmes données au même moment |
++| **A** | **Availability** (disponibilité) | Toute requête reçoit une réponse (sans garantie de fraîcheur) |
++| **P** | **Partition tolerance** (tolérance au partitionnement) | Le système fonctionne même si le réseau coupe la communication entre nœuds |
++
++En pratique, **P (les coupures réseau) est inévitable** dans un système distribué. Le vrai choix se fait donc entre **C** et **A** :
++
++```
++                    P (inévitable)
++                       ▲
++                      ╱ ╲
++                     ╱   ╲
++                    ╱     ╲
++              CP   ╱       ╲   AP
++        ╔════════ ╱─────────╲ ══════════╗
++        ║ PostgreSQL,        Cassandra  ║
++        ║ MongoDB primary,   DynamoDB   ║
++        ║ HBase             CouchDB     ║
++        ║ → Cohérence       → Dispo     ║
++        ║   stricte           toujours  ║
++        ╚═══════════════════════════════╝
++
++(CA n'existe pas vraiment en distribué : il faut abandonner P)
++```
++
++- **Systèmes CP** (cohérence prioritaire) : PostgreSQL en mode réplication synchrone, MongoDB par défaut, HBase. En cas de coupure, certains nœuds refusent les requêtes pour éviter d'avoir des données obsolètes.
++- **Systèmes AP** (disponibilité prioritaire) : Cassandra, DynamoDB, CouchDB. En cas de coupure, tous les nœuds répondent, quitte à fournir des données légèrement obsolètes (« eventually consistent »).
++
++> 🔄 **Et PACELC ?** Le théorème **PACELC** (Abadi, 2010) complète CAP : *« en cas de Partition (P), il faut choisir entre Availability (A) et Consistency (C) ; sinon (E for Else), il faut choisir entre Latency (L) et Consistency (C). »* Plus pertinent que CAP pour les systèmes cloud modernes.
++
++**Pour PostgreSQL en pratique** : sur un seul serveur (configuration la plus courante), le théorème CAP ne s'applique pas — vous bénéficiez de la cohérence sans compromis. C'est seulement avec la **réplication distribuée** (chapitre 17) que le compromis se pose.
+ 
+ ### Quand utiliser le modèle relationnel (SGBDR) ?
+ 
+@@ -404,7 +452,7 @@ Réseau social :
+    - Exemple : E-commerce (clients ↔ commandes ↔ produits)
+ 
+ 6. **Vous voulez un langage standardisé (SQL)**
+-   - SQL fonctionne sur PostgreSQL, MySQL, Oracle...
++   - SQL fonctionne sur PostgreSQL, MySQL, Oracle…
+ 
+ ### Quand utiliser NoSQL ?
+ 
+@@ -428,6 +476,8 @@ Réseau social :
+ 6. **Vous avez besoin de scalabilité horizontale massive**
+    - Exemple : Application mondiale, millions d'utilisateurs
+ 
++> ⚖️ **Réflexe à avoir** : avant de partir sur un NoSQL « parce que c'est tendance », demandez-vous si PostgreSQL ne pourrait pas répondre au besoin. Avec JSONB (documents), pgvector (vectoriel), PostGIS (géospatial), TimescaleDB (séries temporelles), `LISTEN/NOTIFY` (événements), `LATERAL` et CTE récursives (graphes simples), PostgreSQL couvre une très large gamme de cas d'usage tout en gardant les garanties ACID. Un seul SGBD à exploiter, à sauvegarder et à surveiller, c'est un gain opérationnel énorme.
++
+ ---
+ 
+ ## PostgreSQL : Le meilleur des deux mondes ?
+@@ -436,8 +486,8 @@ Réseau social :
+ 
+ PostgreSQL est avant tout un **SGBDR** puissant et conforme aux standards :
+ - Tables relationnelles
+-- SQL complet (jointures, sous-requêtes, CTE...)
+-- Contraintes d'intégrité (PK, FK, CHECK...)
++- SQL complet (jointures, sous-requêtes, CTE…)
++- Contraintes d'intégrité (PK, FK, CHECK…)
+ - Transactions ACID strictes
+ 
+ ### PostgreSQL avec des capacités NoSQL
+@@ -446,8 +496,17 @@ Mais PostgreSQL offre **aussi** des fonctionnalités NoSQL !
+ 
+ #### 1. **Type JSONB : Base de données documentaire**
+ 
++PostgreSQL propose **deux types JSON** :
++
++| Type | Stockage | Performance lecture | Indexable | Préserve l'ordre des clés / espaces |
++|------|----------|---------------------|-----------|--------------------------------------|
++| `JSON` | Texte brut | Re-parsing à chaque accès | Non efficacement | Oui |
++| `JSONB` | Binaire décomposé | Accès direct, très rapide | Oui (GIN, B-Tree sur expression) | Non |
++
++👉 **Utilisez `JSONB` dans 99 % des cas.** Le type `JSON` (texte) ne se justifie que si vous devez conserver exactement le texte d'origine.
++
+ ```sql
+--- Stocker des documents JSON
++-- Stocker des documents JSON binaires
+ CREATE TABLE produits (
+     id SERIAL PRIMARY KEY,
+     nom VARCHAR(100),
+@@ -471,12 +530,18 @@ INSERT INTO produits (nom, details) VALUES
+ SELECT nom, details->>'marque' as marque  
+ FROM produits  
+ WHERE (details->'ram')::int >= 16;  
++
++-- Index GIN pour accélérer les recherches dans le JSON
++CREATE INDEX idx_produits_details ON produits USING gin (details);
+ ```
+ 
+ **Avantages** :
+-- Flexibilité du schéma pour certains champs
+-- Index GIN pour performance sur JSON
+-- Possibilité de combiner relationnel et NoSQL
++- Flexibilité du schéma pour les champs semi-structurés
++- Index GIN très performants pour les recherches `?`, `?&`, `@>`
++- Combinaison naturelle de relationnel (colonnes fixes) et NoSQL (JSONB)
++- Toutes les garanties ACID s'appliquent au JSONB
++
++Le détail des opérateurs JSONB et de leur indexation est vu aux chapitres 4 et 13.
+ 
+ #### 2. **Type ARRAY : Tableaux**
+ 
+@@ -534,26 +599,27 @@ Pour la plupart des applications, une approche **hybride** est idéale :
+ 
+ ## Mythes et réalités
+ 
+-### ❌ Mythe 1 : "NoSQL est plus rapide que SQL"
++### ❌ Mythe 1 : « NoSQL est plus rapide que SQL »
+ 
+-**Réalité** : Cela dépend du cas d'usage.
++**Réalité** : cela dépend du cas d'usage.
+ - Redis est ultra-rapide pour le cache (données en RAM)
+ - PostgreSQL avec index bien conçus est extrêmement performant
+ - Pour des requêtes complexes avec jointures, SQL est souvent plus rapide
+ 
+-### ❌ Mythe 2 : "NoSQL remplace SQL"
++### ❌ Mythe 2 : « NoSQL remplace SQL »
+ 
+ **Réalité** : Non, ils sont complémentaires.
+-- SQL reste dominant pour applications transactionnelles
+-- 70%+ des entreprises utilisent des SGBDR
++- SQL reste dominant pour les applications transactionnelles
++- En 2025, les bases relationnelles représentent encore **environ 57 %** du marché des SGBD (source : analyses sectorielles)
++- PostgreSQL est, selon le *Stack Overflow Developer Survey 2024*, le **SGBD le plus utilisé par les développeurs** (≈ 49 %), devant MongoDB (≈ 25 %)
+ - NoSQL est un outil additionnel, pas un remplacement
+ 
+-### ❌ Mythe 3 : "NoSQL n'a pas besoin de schéma"
++### ❌ Mythe 3 : « NoSQL n'a pas besoin de schéma »
+ 
+-**Réalité** : Le schéma existe, il est juste implicite.
++**Réalité** : le schéma existe, il est juste implicite.
+ - Votre application doit quand même connaître la structure des données
+ - Pas de contraintes = plus de validation côté application
+-- "Schemaless" ne signifie pas "sans structure"
++- « Schemaless » ne signifie pas « sans structure »
+ 
+ ### ✅ Réalité : Choisissez l'outil adapté au besoin
+ 
+@@ -672,7 +738,7 @@ db.articles.findOne({ _id: "article_1" })
+ 
+ ✅ **PostgreSQL est relationnel** mais possède aussi des capacités NoSQL (JSONB, ARRAYS, extensions)
+ 
+-✅ **Il n'y a pas de "meilleur" modèle** : tout dépend du cas d'usage
++✅ **Il n'y a pas de « meilleur » modèle** : tout dépend du cas d'usage
+ 
+ ✅ **Une approche hybride** (PostgreSQL + Redis, par exemple) est souvent optimale
+ 
+diff --git a/01-introduction-aux-bases-de-donnees/04-transactions-et-proprietes-acid.md b/01-introduction-aux-bases-de-donnees/04-transactions-et-proprietes-acid.md
+index f42cd75..399beec 100644
+--- a/01-introduction-aux-bases-de-donnees/04-transactions-et-proprietes-acid.md
++++ b/01-introduction-aux-bases-de-donnees/04-transactions-et-proprietes-acid.md
+@@ -50,11 +50,11 @@ Dans une transaction, si l'Étape 2 échoue, le système **annule** automatiquem
+ En SQL, une transaction se déclare avec trois commandes principales :
+ 
+ ```sql
+-BEGIN;  -- Début de la transaction
++BEGIN;  -- Début de la transaction (équivalent : START TRANSACTION)
+ 
+     -- Vos opérations ici
+-    UPDATE compte SET solde = solde - 100 WHERE id = 1;  -- Retrait
+-    UPDATE compte SET solde = solde + 100 WHERE id = 2;  -- Dépôt
++    UPDATE comptes SET solde = solde - 100 WHERE id = 1;  -- Retrait
++    UPDATE comptes SET solde = solde + 100 WHERE id = 2;  -- Dépôt
+ 
+ COMMIT;  -- Valider la transaction (tout est OK)
+ ```
+@@ -64,14 +64,40 @@ Si un problème survient :
+ ```sql
+ BEGIN;
+ 
+-    UPDATE compte SET solde = solde - 100 WHERE id = 1;
+-    -- ERREUR : Le compte 2 n'existe pas !
+-    UPDATE compte SET solde = solde + 100 WHERE id = 999;
++    UPDATE comptes SET solde = solde - 100 WHERE id = 1;
++    -- ERREUR : Le compte 999 n'existe pas !
++    UPDATE comptes SET solde = solde + 100 WHERE id = 999;
+ 
+ ROLLBACK;  -- Annuler TOUTE la transaction
+ -- Le solde du compte 1 est revenu à son état initial
+ ```
+ 
++### L'autocommit : chaque requête est déjà une transaction
++
++Concept fondamental à comprendre dès le départ : **dans PostgreSQL, chaque commande SQL exécutée hors d'un bloc `BEGIN…COMMIT` est automatiquement enveloppée dans sa propre transaction**. C'est ce qu'on appelle le mode **autocommit**.
++
++```sql
++-- Ces deux UPDATE sont DEUX transactions distinctes :
++UPDATE comptes SET solde = solde - 100 WHERE id = 1;  -- Transaction A : commitée immédiatement  
++UPDATE comptes SET solde = solde + 100 WHERE id = 2;  -- Transaction B : commitée immédiatement  
++
++-- ⚠️ Si la deuxième échoue, la première a déjà été validée !
++-- Alice est débitée mais Bob n'est jamais crédité.
++```
++
++Pour qu'un ensemble d'opérations soit atomique (tout ou rien), il **faut** les encapsuler dans `BEGIN…COMMIT` :
++
++```sql
++-- ✅ Les deux UPDATE forment UNE SEULE transaction :
++BEGIN;
++    UPDATE comptes SET solde = solde - 100 WHERE id = 1;
++    UPDATE comptes SET solde = solde + 100 WHERE id = 2;
++COMMIT;
++-- Soit les deux réussissent, soit aucun.
++```
++
++> 💡 **À retenir** : il n'y a **jamais** d'opérations « hors transaction » dans PostgreSQL. La question est seulement : *« est-ce une transaction explicite (que je contrôle avec BEGIN/COMMIT) ou implicite (une par commande) ? »*
++
+ ### Exemple concret : Le virement bancaire
+ 
+ Reprenons notre exemple de virement :
+@@ -116,10 +142,12 @@ BEGIN;
+ 
+     -- PANNE DE COURANT ! 💥
+ 
+--- Quand le système redémarre, PostgreSQL détecte que la transaction
+--- n'a pas été validée (pas de COMMIT) et effectue un ROLLBACK automatique
++-- Au redémarrage, PostgreSQL relit le WAL (Write-Ahead Log).
++-- Les modifications de cette transaction n'ont jamais été validées
++-- (aucun COMMIT n'a été écrit dans le WAL avant la panne),
++-- donc elles ne sont pas rejouées et restent invisibles.
+ 
+--- Résultat : Le solde d'Alice est revenu à 500 € ✅
++-- Résultat : Le solde d'Alice reste à 500 € ✅
+ ```
+ 
+ **Sans transaction** (système catastrophique) :
+@@ -132,10 +160,11 @@ Après redémarrage : Alice = 400 €, Bob = 200 €
+ 
+ **Avec transaction** (système fiable) :
+ ```
+-Après Étape 1 : Alice = 400 € (changement temporaire, non validé)
++Après Étape 1 : Alice = 400 € (changement non encore validé dans le WAL)
+ 💥 PANNE
+ Après redémarrage : Alice = 500 €, Bob = 200 €
+-→ ROLLBACK automatique, rien n'est perdu ! ✅
++→ La transaction n'avait pas été COMMITée, ses modifications
++  sont écartées au WAL recovery. Rien n'est perdu ! ✅
+ ```
+ 
+ ---
+@@ -161,7 +190,7 @@ Explorons chacune de ces propriétés en détail.
+ 
+ L'**atomicité** garantit qu'une transaction est **indivisible** : soit **toutes** les opérations sont exécutées, soit **aucune**.
+ 
+-**"Atomique"** vient du grec *atomos* = "qui ne peut être divisé".
++**« Atomique »** vient du grec *atomos* = « qui ne peut être divisé ».
+ 
+ ### Principe : Tout ou rien
+ 
+@@ -381,11 +410,11 @@ Chaque transaction ne voit pas les modifications **non validées** (non COMMITé
+ 
+ **Sans isolation** (catastrophique) :
+ ```
+-Les deux transactions lisent "500€" en même temps,  
++Les deux transactions lisent « 500 € » en même temps,  
+ retirent leur montant séparément,  
+ et écrivent chacune leur résultat.  
+ 
+-Résultat final : 450€ ❌ (un retrait est perdu !)
++Résultat final : 450 € ❌ (un retrait est perdu !)
+ ```
+ 
+ ### Exemple : Réservation de places de cinéma
+@@ -430,18 +459,32 @@ COMMIT;
+ 
+ ### Les niveaux d'isolation
+ 
+-PostgreSQL propose plusieurs **niveaux d'isolation**, du plus permissif au plus strict :
++La norme SQL définit 4 niveaux d'isolation, du plus permissif au plus strict. Voici le tableau **selon la norme ANSI** :
++
++| Niveau (norme SQL) | Dirty Read | Non-Repeatable Read | Phantom Read | Anomalie de sérialisation |
++|--------------------|:----------:|:-------------------:|:------------:|:-------------------------:|
++| **Read Uncommitted** | Possible | Possible | Possible | Possible |
++| **Read Committed** | Non | Possible | Possible | Possible |
++| **Repeatable Read** | Non | Non | Possible | Possible |
++| **Serializable** | Non | Non | Non | Non |
+ 
+-| Niveau | Description | Performances | Anomalies possibles |
+-|--------|-------------|--------------|---------------------|
+-| **Read Uncommitted** | Lit les données non validées | Très rapide | Dirty Read |
+-| **Read Committed** | Lit uniquement les données validées (défaut PG) | Rapide | Non-Repeatable Read |
+-| **Repeatable Read** | Lecture cohérente dans la transaction | Moyen | Phantom Read |
+-| **Serializable** | Transactions complètement isolées | Plus lent | Aucune |
++Et voici ce que **PostgreSQL fait réellement** (plus strict que la norme) :
++
++| Niveau (dans PostgreSQL) | Dirty Read | Non-Repeatable Read | Phantom Read | Anomalie de sérialisation |
++|--------------------------|:----------:|:-------------------:|:------------:|:-------------------------:|
++| **Read Uncommitted** *(traité comme Read Committed)* | Non | Possible | Possible | Possible |
++| **Read Committed** *(défaut PG)* | Non | Possible | Possible | Possible |
++| **Repeatable Read** *(Snapshot Isolation)* | Non | Non | **Non** | Possible |
++| **Serializable** *(SSI : Serializable Snapshot Isolation)* | Non | Non | Non | Non |
+ 
+ PostgreSQL utilise **Read Committed** par défaut, ce qui est un bon compromis pour la plupart des applications.
+ 
+-> 💡 **Note PostgreSQL** : Même si vous demandez le niveau *Read Uncommitted*, PostgreSQL l'exécutera comme *Read Committed*. Les *dirty reads* sont **impossibles** dans PostgreSQL, quel que soit le niveau d'isolation choisi. Les niveaux d'isolation seront détaillés au chapitre 12.
++> 💡 **Notes importantes sur PostgreSQL** :  
++>  
++> - Les *dirty reads* sont **impossibles** quel que soit le niveau d'isolation choisi. Le niveau « Read Uncommitted » est silencieusement traité comme « Read Committed ».  
++> - Le niveau **Repeatable Read** est implémenté via **Snapshot Isolation**, ce qui empêche aussi les *phantom reads* — c'est plus strict que ce que la norme SQL exige.  
++> - Le niveau **Serializable** utilise **SSI** (*Serializable Snapshot Isolation*), une technique qui détecte les conflits sérialisation au moment du COMMIT.  
++> - Tous ces niveaux reposent sur **MVCC** (*Multiversion Concurrency Control*), le mécanisme qui permet à PostgreSQL de gérer des versions de lignes par transaction sans verrous bloquants en lecture. Le détail est exploré au chapitre 12.
+ 
+ ### Analogie : Les cabines d'essayage
+ 
+@@ -513,6 +556,14 @@ PostgreSQL utilise le **WAL** (*Write-Ahead Log*) ou **journal des transactions*
+ → Aucune perte de données ✅
+ ```
+ 
++> ⚙️ **Le paramètre `synchronous_commit`** module ce comportement :  
++>  
++> - `on` (défaut) : le COMMIT n'est confirmé au client qu'après que le WAL ait été *physiquement* écrit sur disque (`fsync`). Garantie de durabilité maximale.  
++> - `off` : le COMMIT est confirmé immédiatement ; le WAL est écrit peu après. Bien plus rapide, mais en cas de crash très précoce, on peut perdre les toutes dernières transactions (jamais d'incohérence, juste de la perte). Acceptable pour des données « best effort » (logs, statistiques).  
++> - `local`, `remote_write`, `remote_apply` : niveaux intermédiaires utilisés avec la **réplication** (chapitre 17).  
++>  
++> Cette flexibilité permet de doser durabilité ↔ performance selon le besoin.
++
+ ### Exemple : Paiement en ligne
+ 
+ ```sql
+@@ -535,7 +586,7 @@ COMMIT;  -- Tout est écrit dans le WAL et synchronisé
+ 14h30:00 - Client valide le paiement
+ 14h30:01 - PostgreSQL écrit dans le WAL
+ 14h30:02 - COMMIT → Synchronisation du WAL sur disque ✅
+-14h30:03 - "Paiement confirmé" affiché au client
++14h30:03 - « Paiement confirmé » affiché au client
+ 14h30:04 - 💥 PANNE DE COURANT !
+ 
+ 14h35:00 - Redémarrage du serveur
+@@ -543,7 +594,7 @@ COMMIT;  -- Tout est écrit dans le WAL et synchronisé
+ 14h35:10 - La commande, le débit et l'expédition sont présents ✅
+ ```
+ 
+-Le client a vu "Paiement confirmé", et c'est garanti. Il ne perdra pas sa commande.
++Le client a vu « Paiement confirmé », et c'est garanti. Il ne perdra pas sa commande.
+ 
+ ### Analogie : Le notaire
+ 
+@@ -633,7 +684,7 @@ Les bases NoSQL utilisent souvent un modèle différent appelé **BASE** :
+ 11h05 - Ses amis à Tokyo ne la voient pas encore ⏳
+ 11h10 - Ses amis à Tokyo la voient enfin ✅
+ 
+-→ Cohérence "à terme" (eventually consistent)
++→ Cohérence « à terme » (eventually consistent)
+ ```
+ 
+ **Exemple ACID** (PostgreSQL) :
+@@ -647,11 +698,18 @@ Les bases NoSQL utilisent souvent un modèle différent appelé **BASE** :
+ ```
+ 
+ **Principe** :
+-- **ACID** : Cohérence > Performance  
++- **ACID** : Cohérence > Performance
+ - **BASE** : Disponibilité > Cohérence stricte
+ 
+ Pour des données transactionnelles critiques (argent, santé, inventaire), **ACID est essentiel**.
+ 
++> 🔄 **Lien avec le théorème CAP** (vu à la section 1.3) : en environnement distribué, le théorème CAP impose un compromis entre cohérence et disponibilité en cas de partition réseau.  
++>  
++> - Les systèmes **ACID** (PostgreSQL) privilégient la **cohérence** : un nœud isolé refusera les écritures plutôt que de risquer un état incohérent.  
++> - Les systèmes **BASE** (Cassandra, DynamoDB) privilégient la **disponibilité** : tous les nœuds acceptent les requêtes, mais la cohérence est atteinte « à terme ».  
++>  
++> ACID et BASE ne sont donc pas en opposition philosophique : ils sont deux réponses différentes au compromis imposé par le théorème CAP, adaptées à des besoins différents.
++
+ ---
+ 
+ ## Pourquoi ACID est crucial
+@@ -691,7 +749,7 @@ Pour des données transactionnelles critiques (argent, santé, inventaire), **AC
+ Système de billetterie de concert :
+ - 1000 places disponibles
+ - 10 000 personnes réservent en même temps
+-- Sans isolation : 3000 places "vendues"
++- Sans isolation : 3000 places « vendues »
+ → 2000 personnes se présentent sans place ! ❌
+ 
+ Système bancaire :
+@@ -768,12 +826,14 @@ COMMIT;
+ BEGIN TRANSACTION ISOLATION LEVEL SERIALIZABLE;
+ 
+     -- Transaction strictement isolée
+-    SELECT * FROM compte WHERE id = 1 FOR UPDATE;
+-    UPDATE compte SET solde = solde - 100 WHERE id = 1;
++    SELECT * FROM comptes WHERE id = 1 FOR UPDATE;
++    UPDATE comptes SET solde = solde - 100 WHERE id = 1;
+ 
+ COMMIT;
+ ```
+ 
++> 💡 En **Serializable**, le `FOR UPDATE` n'est pas obligatoire : PostgreSQL détecte automatiquement les conflits de sérialisation et fera échouer une des transactions concurrentes au COMMIT (erreur `40001`) si l'ordre des transactions ne peut pas être prouvé sérialisable. L'application doit alors **réessayer** la transaction. Le détail est vu au chapitre 12.
++
+ ---
+ 
+ ## Récapitulatif
+diff --git a/01-introduction-aux-bases-de-donnees/README.md b/01-introduction-aux-bases-de-donnees/README.md
+index 534c600..682dc37 100644
+--- a/01-introduction-aux-bases-de-donnees/README.md
++++ b/01-introduction-aux-bases-de-donnees/README.md
+@@ -22,7 +22,7 @@ Même si vous ne vous en rendez pas compte, vous interagissez avec des bases de
+ - 📧 Vous recevez un email → Une base de données stocke vos messages  
+ - 🎵 Vous écoutez de la musique sur Spotify → Une base de données enregistre vos préférences  
+ - 🎮 Vous jouez en ligne → Une base de données sauvegarde votre progression  
+-- 🚗 Vous réservez un Uber → Une base de données matche les chauffeurs et les passagers
++- 🚗 Vous commandez un Uber → Une base de données met en relation les chauffeurs et les passagers
+ 
+ **Les bases de données sont le cœur invisible de notre monde numérique.** Sans elles, aucune application moderne ne pourrait fonctionner.
+ 
+@@ -52,7 +52,7 @@ Nous commencerons par le commencement : qu'est-ce qu'une donnée ? Comment disti
+ 
+ **Vous découvrirez :**
+ - La définition claire d'une donnée et ses caractéristiques
+-- Les différents types de données (nombres, texte, dates, images...)
++- Les différents types de données (nombres, texte, dates, images…)
+ - Ce qu'est une base de données et pourquoi elle est indispensable
+ - Les avantages d'une base de données par rapport à de simples fichiers
+ - Des exemples concrets de bases de données dans la vie quotidienne
+@@ -67,13 +67,13 @@ Une fois que vous comprendrez ce qu'est une base de données, la question suivan
+ 
+ **Vous découvrirez :**
+ - Ce qu'est un SGBD et son rôle central
+-- La différence cruciale entre "base de données" et "SGBD"
+-- Les 8 fonctions essentielles d'un SGBD (stockage, SQL, sécurité, transactions...)
++- La différence cruciale entre « base de données » et « SGBD »
++- Les 8 fonctions essentielles d'un SGBD (stockage, SQL, sécurité, transactions…)
+ - Les différents types de SGBD (relationnels, NoSQL, spécialisés)
+ - Pourquoi PostgreSQL est un excellent choix
+ - Comment un SGBD s'insère entre l'utilisateur et les données
+ 
+-**Objectif** : Comprendre que PostgreSQL n'est pas "juste une base de données" mais un système complexe et intelligent qui orchestre tout.
++**Objectif** : comprendre que PostgreSQL n'est pas « juste une base de données » mais un système complexe et intelligent qui orchestre tout.
+ 
+ ---
+ 
+@@ -84,9 +84,10 @@ Il existe plusieurs façons d'organiser les données. Les deux grandes familles
+ **Vous découvrirez :**
+ - Le modèle relationnel : tables, lignes, colonnes, relations
+ - Les avantages du relationnel : normalisation, intégrité, SQL
+-- Les 4 familles NoSQL : clé-valeur, documents, colonnes, graphes
++- Les 4 familles NoSQL : clé-valeur, documents, wide-column, graphes
++- La différence entre wide-column (Cassandra) et columnar/OLAP (ClickHouse)
+ - Quand utiliser du relationnel vs du NoSQL
+-- Pourquoi PostgreSQL combine le meilleur des deux mondes (JSONB, arrays...)
++- Pourquoi PostgreSQL combine le meilleur des deux mondes (JSONB, arrays, pgvector, PostGIS…)
+ - La comparaison ACID vs BASE
+ 
+ **Objectif** : Savoir quand PostgreSQL est le bon choix et comprendre son positionnement dans l'écosystème des bases de données.
+@@ -104,7 +105,7 @@ La fiabilité des données est critique, surtout pour les applications important
+   - **C**ohérence : Respect des règles  
+   - **I**solation : Transactions indépendantes  
+   - **D**urabilité : Modifications permanentes
+-- Comment PostgreSQL garantit chaque propriété (WAL, verrous, contraintes...)
++- Comment PostgreSQL garantit chaque propriété (WAL, verrous, contraintes…)
+ - Pourquoi ACID est crucial pour les applications critiques
+ - Les commandes SQL des transactions (BEGIN, COMMIT, ROLLBACK)
+ 
+@@ -145,13 +146,13 @@ Ces concepts peuvent sembler théoriques, mais ils sont **fondamentaux**. Ne vou
+ ### Lisez de manière active
+ 
+ Ne vous contentez pas de lire passivement. Posez-vous des questions :
+-- "Est-ce que je comprends vraiment ce concept ?"  
+-- "Puis-je expliquer cela à quelqu'un d'autre avec mes propres mots ?"  
+-- "Comment cela s'applique-t-il aux applications que j'utilise ou que je développe ?"
++- « Est-ce que je comprends vraiment ce concept ? »
++- « Puis-je expliquer cela à quelqu'un d'autre avec mes propres mots ? »
++- « Comment cela s'applique-t-il aux applications que j'utilise ou que je développe ? »
+ 
+ ### Utilisez les analogies
+ 
+-Nous utilisons beaucoup d'**analogies** (bibliothèque, chef d'orchestre, notaire...) pour rendre les concepts abstraits plus concrets. N'hésitez pas à créer vos propres analogies si celles proposées ne résonnent pas avec vous.
++Nous utilisons beaucoup d'**analogies** (bibliothèque, chef d'orchestre, notaire…) pour rendre les concepts abstraits plus concrets. N'hésitez pas à créer vos propres analogies si celles proposées ne résonnent pas avec vous.
+ 
+ ### Revenez-y si nécessaire
+ 
+@@ -183,9 +184,9 @@ Ces connaissances vont vous donner la **confiance et la clarté** nécessaires p
+ 
+ Vous n'avez pas besoin de mémoriser tous les détails. L'objectif est de **comprendre les concepts**. Les détails techniques viendront naturellement avec la pratique.
+ 
+-### Concentrez-vous sur le "Pourquoi"
++### Concentrez-vous sur le « pourquoi »
+ 
+-Chaque fois que vous apprenez quelque chose, demandez-vous **pourquoi** c'est important. C'est le "pourquoi" qui vous aidera à vraiment comprendre et à retenir l'information.
++Chaque fois que vous apprenez quelque chose, demandez-vous **pourquoi** c'est important. C'est le « pourquoi » qui vous aidera à vraiment comprendre et à retenir l'information.
+ 
+ ### Soyez curieux
+ 

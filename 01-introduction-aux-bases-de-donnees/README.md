@@ -22,7 +22,7 @@ Même si vous ne vous en rendez pas compte, vous interagissez avec des bases de 
 - 📧 Vous recevez un email → Une base de données stocke vos messages  
 - 🎵 Vous écoutez de la musique sur Spotify → Une base de données enregistre vos préférences  
 - 🎮 Vous jouez en ligne → Une base de données sauvegarde votre progression  
-- 🚗 Vous réservez un Uber → Une base de données matche les chauffeurs et les passagers
+- 🚗 Vous commandez un Uber → Une base de données met en relation les chauffeurs et les passagers
 
 **Les bases de données sont le cœur invisible de notre monde numérique.** Sans elles, aucune application moderne ne pourrait fonctionner.
 
@@ -52,7 +52,7 @@ Nous commencerons par le commencement : qu'est-ce qu'une donnée ? Comment disti
 
 **Vous découvrirez :**
 - La définition claire d'une donnée et ses caractéristiques
-- Les différents types de données (nombres, texte, dates, images...)
+- Les différents types de données (nombres, texte, dates, images…)
 - Ce qu'est une base de données et pourquoi elle est indispensable
 - Les avantages d'une base de données par rapport à de simples fichiers
 - Des exemples concrets de bases de données dans la vie quotidienne
@@ -67,13 +67,13 @@ Une fois que vous comprendrez ce qu'est une base de données, la question suivan
 
 **Vous découvrirez :**
 - Ce qu'est un SGBD et son rôle central
-- La différence cruciale entre "base de données" et "SGBD"
-- Les 8 fonctions essentielles d'un SGBD (stockage, SQL, sécurité, transactions...)
+- La différence cruciale entre « base de données » et « SGBD »
+- Les 8 fonctions essentielles d'un SGBD (stockage, SQL, sécurité, transactions…)
 - Les différents types de SGBD (relationnels, NoSQL, spécialisés)
 - Pourquoi PostgreSQL est un excellent choix
 - Comment un SGBD s'insère entre l'utilisateur et les données
 
-**Objectif** : Comprendre que PostgreSQL n'est pas "juste une base de données" mais un système complexe et intelligent qui orchestre tout.
+**Objectif** : comprendre que PostgreSQL n'est pas « juste une base de données » mais un système complexe et intelligent qui orchestre tout.
 
 ---
 
@@ -84,9 +84,10 @@ Il existe plusieurs façons d'organiser les données. Les deux grandes familles 
 **Vous découvrirez :**
 - Le modèle relationnel : tables, lignes, colonnes, relations
 - Les avantages du relationnel : normalisation, intégrité, SQL
-- Les 4 familles NoSQL : clé-valeur, documents, colonnes, graphes
+- Les 4 familles NoSQL : clé-valeur, documents, wide-column, graphes
+- La différence entre wide-column (Cassandra) et columnar/OLAP (ClickHouse)
 - Quand utiliser du relationnel vs du NoSQL
-- Pourquoi PostgreSQL combine le meilleur des deux mondes (JSONB, arrays...)
+- Pourquoi PostgreSQL combine le meilleur des deux mondes (JSONB, arrays, pgvector, PostGIS…)
 - La comparaison ACID vs BASE
 
 **Objectif** : Savoir quand PostgreSQL est le bon choix et comprendre son positionnement dans l'écosystème des bases de données.
@@ -104,7 +105,7 @@ La fiabilité des données est critique, surtout pour les applications important
   - **C**ohérence : Respect des règles  
   - **I**solation : Transactions indépendantes  
   - **D**urabilité : Modifications permanentes
-- Comment PostgreSQL garantit chaque propriété (WAL, verrous, contraintes...)
+- Comment PostgreSQL garantit chaque propriété (WAL, verrous, contraintes…)
 - Pourquoi ACID est crucial pour les applications critiques
 - Les commandes SQL des transactions (BEGIN, COMMIT, ROLLBACK)
 
@@ -145,13 +146,13 @@ Ces concepts peuvent sembler théoriques, mais ils sont **fondamentaux**. Ne vou
 ### Lisez de manière active
 
 Ne vous contentez pas de lire passivement. Posez-vous des questions :
-- "Est-ce que je comprends vraiment ce concept ?"  
-- "Puis-je expliquer cela à quelqu'un d'autre avec mes propres mots ?"  
-- "Comment cela s'applique-t-il aux applications que j'utilise ou que je développe ?"
+- « Est-ce que je comprends vraiment ce concept ? »
+- « Puis-je expliquer cela à quelqu'un d'autre avec mes propres mots ? »
+- « Comment cela s'applique-t-il aux applications que j'utilise ou que je développe ? »
 
 ### Utilisez les analogies
 
-Nous utilisons beaucoup d'**analogies** (bibliothèque, chef d'orchestre, notaire...) pour rendre les concepts abstraits plus concrets. N'hésitez pas à créer vos propres analogies si celles proposées ne résonnent pas avec vous.
+Nous utilisons beaucoup d'**analogies** (bibliothèque, chef d'orchestre, notaire…) pour rendre les concepts abstraits plus concrets. N'hésitez pas à créer vos propres analogies si celles proposées ne résonnent pas avec vous.
 
 ### Revenez-y si nécessaire
 
@@ -183,9 +184,9 @@ Ces connaissances vont vous donner la **confiance et la clarté** nécessaires p
 
 Vous n'avez pas besoin de mémoriser tous les détails. L'objectif est de **comprendre les concepts**. Les détails techniques viendront naturellement avec la pratique.
 
-### Concentrez-vous sur le "Pourquoi"
+### Concentrez-vous sur le « pourquoi »
 
-Chaque fois que vous apprenez quelque chose, demandez-vous **pourquoi** c'est important. C'est le "pourquoi" qui vous aidera à vraiment comprendre et à retenir l'information.
+Chaque fois que vous apprenez quelque chose, demandez-vous **pourquoi** c'est important. C'est le « pourquoi » qui vous aidera à vraiment comprendre et à retenir l'information.
 
 ### Soyez curieux
 

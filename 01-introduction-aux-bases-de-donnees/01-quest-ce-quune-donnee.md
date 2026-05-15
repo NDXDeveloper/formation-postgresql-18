@@ -22,42 +22,73 @@ Pour le dire autrement : une donnée, c'est simplement **un morceau d'informatio
 
 Voici des exemples de données que vous manipulez tous les jours :
 
-- **Votre nom** : "Marie Dupont"  
-- **Votre âge** : 28  
-- **Votre adresse e-mail** : marie.dupont@example.com  
-- **La température extérieure** : 15°C  
-- **Le prix d'un produit** : 49,99 €  
-- **Une date** : 19 novembre 2025  
-- **Un numéro de téléphone** : 06 12 34 56 78  
+- **Votre nom** : « Marie Dupont »
+- **Votre âge** : 28
+- **Votre adresse e-mail** : marie.dupont@example.com
+- **La température extérieure** : 15 °C
+- **Le prix d'un produit** : 49,99 €
+- **Une date** : 19 novembre 2025
+- **Un numéro de téléphone** : 06 12 34 56 78
 - **Une photo** : un fichier JPEG de votre dernier voyage
 
 ### Les caractéristiques d'une donnée
 
 Une donnée possède plusieurs caractéristiques importantes :
 
-1. **Elle est atomique** : C'est une unité d'information indivisible dans son contexte. Par exemple, "Jean" est une donnée (un prénom), "Dupont" en est une autre (un nom de famille).
+1. **Elle est atomique** : c'est une unité d'information indivisible dans son contexte. Par exemple, « Jean » est une donnée (un prénom), « Dupont » en est une autre (un nom de famille). On évite de mélanger plusieurs informations dans une seule valeur (« Jean Dupont, Paris, 35 ans »).
 
-2. **Elle a un type** : Les données peuvent être de différentes natures :  
-   - **Numériques** : 42, 3.14, -17  
-   - **Textuelles** : "Bonjour", "PostgreSQL"  
-   - **Temporelles** : 2025-11-19, 14:30:00  
-   - **Booléennes** : Vrai ou Faux  
-   - **Binaires** : Images, vidéos, fichiers
+   > 📐 Ce principe d'atomicité est à la base de la **première forme normale (1NF)**, fondement de la modélisation relationnelle. Il sera approfondi au chapitre 11.
 
-3. **Elle a un sens dans un contexte** : Le nombre "42" seul ne signifie pas grand-chose. Mais "42 ans" (âge), "42 €" (prix), ou "42 km" (distance) ont tous un sens différent.
+2. **Elle a un type** : les données peuvent être de différentes natures :
+   - **Numériques** : entiers (`42`, `-17`) ou décimaux (`3.14`, `49.99`)
+   - **Textuelles** : « Bonjour », « PostgreSQL »
+   - **Temporelles** : `2025-11-19`, `14:30:00`, intervalles (`1 day 2 hours`)
+   - **Booléennes** : Vrai / Faux
+   - **Binaires** : images, vidéos, fichiers (type `BYTEA` en PostgreSQL)
+   - **Structurées** : JSON, tableaux, géométries…
+   - **`NULL`** : l'**absence** de valeur (différent de zéro ou de chaîne vide ; détaillé au chapitre 5)
+
+3. **Elle a un sens dans un contexte** : le nombre « 42 » seul ne signifie pas grand-chose. Mais « 42 ans » (âge), « 42 € » (prix), ou « 42 km » (distance) ont tous un sens différent. C'est le **schéma** de la base (nom de la colonne, type, contrainte) qui donne ce contexte.
 
 ### Données vs Information
 
 Il est important de distinguer **donnée** et **information** :
 
-- **Donnée** : Élément brut, sans contexte. Exemple : "25", "Paris", "2025-11-19"  
-- **Information** : Donnée avec du contexte et du sens. Exemple : "Marie a 25 ans, elle habite à Paris, et son rendez-vous est le 19 novembre 2025"
+- **Donnée** : Élément brut, sans contexte. Exemple : « 25 », « Paris », « 2025-11-19 »
+- **Information** : Donnée avec du contexte et du sens. Exemple : « Marie a 25 ans, elle habite à Paris, et son rendez-vous est le 19 novembre 2025 »
 
 Les données deviennent de l'information lorsqu'elles sont organisées, structurées et mises en relation.
 
+#### La pyramide DIKW (pour aller un peu plus loin)
+
+Les sciences de l'information formalisent cette distinction avec la **pyramide DIKW**, popularisée par Russell Ackoff (1989) :
+
+```
+                  ▲
+                 ╱ ╲              W — Wisdom (Sagesse)
+                ╱ W ╲             « Faut-il agir ainsi ? »
+               ╱─────╲
+              ╱   K   ╲           K — Knowledge (Connaissance)
+             ╱─────────╲          « Comment l'utiliser ? »
+            ╱     I     ╲         I — Information
+           ╱─────────────╲        « Que signifie cette donnée ? »
+          ╱       D       ╲       D — Data (Donnée)
+         ╱─────────────────╲      « Quel est ce fait brut ? »
+        ─────────────────────
+```
+
+| Niveau | Définition | Exemple |
+|--------|------------|---------|
+| **D** — Donnée | Fait brut, sans contexte | `38.5` |
+| **I** — Information | Donnée + contexte | « Le patient a 38,5 °C de fièvre » |
+| **K** — Connaissance | Information appliquée | « Une fièvre > 38 °C nécessite surveillance » |
+| **W** — Sagesse | Connaissance évaluée | « Avec cet historique, je consulte un médecin » |
+
+👉 Une base de données stocke des **données**. C'est l'application (et son utilisateur) qui les transforme progressivement en information, connaissance, puis sagesse.
+
 ### Pourquoi les données sont-elles importantes ?
 
-Dans notre monde numérique, les données sont devenues le **pétrole du 21ème siècle** :
+Dans notre monde numérique, les données sont devenues le **pétrole du 21e siècle** (expression popularisée par Clive Humby en 2006) :
 
 - Les entreprises utilisent les données pour **prendre des décisions**
 - Les applications web et mobiles **stockent vos préférences** sous forme de données
@@ -75,7 +106,7 @@ Sans un moyen efficace de stocker, organiser et récupérer ces données, nos ap
 
 Une **base de données** (en anglais : *database*) est un **ensemble organisé de données** structurées de manière à faciliter leur stockage, leur gestion, leur recherche et leur utilisation.
 
-Pensez à une base de données comme à une **bibliothèque numérique** où chaque livre (donnée) est classé de manière logique, avec un système de catalogage qui permet de retrouver rapidement l'information recherchée.
+Pensez à une base de données comme à une **bibliothèque numérique** où chaque livre est classé de manière logique, avec un système de catalogage qui permet de retrouver rapidement l'information recherchée.
 
 ### Pourquoi avons-nous besoin de bases de données ?
 
@@ -84,7 +115,7 @@ Imaginez que vous gérez une petite entreprise avec 10 clients. Vous pourriez no
 ```
 Client 1 : Jean Dupont, 35 ans, jean.dupont@email.com, Paris  
 Client 2 : Marie Martin, 28 ans, marie.martin@email.com, Lyon  
-...
+…
 ```
 
 C'est gérable ! Mais maintenant, imaginez avec **10 000 clients**, ou **1 million de clients**, et que vous devez :
@@ -120,6 +151,8 @@ Les données sont organisées de manière logique, généralement sous forme de 
 #### 2. **Rapidité de recherche**
 
 Grâce aux **index** (comme l'index d'un livre), une base de données peut retrouver une information parmi des millions d'enregistrements en quelques millisecondes.
+
+> ⚡ **Ordre de grandeur** : sans index, retrouver une ligne dans 1 million d'enregistrements nécessite jusqu'à **1 000 000 comparaisons** (lecture séquentielle, complexité *O(N)*). Avec un index B-Tree, il suffit d'environ **20 comparaisons** (complexité *O(log N)*). Sur 1 milliard de lignes, on passe d'un milliard d'opérations à seulement ~30. C'est ce gain logarithmique qui rend les bases de données aussi performantes — l'indexation est explorée en détail au chapitre 13.
 
 #### 3. **Intégrité des données**
 
@@ -170,19 +203,24 @@ C'est le type le plus courant et celui sur lequel nous allons nous concentrer da
 
 #### 2. **Bases de données NoSQL**
 
-Conçues pour des données non structurées ou semi-structurées, avec une flexibilité accrue.
+Conçues pour des données non structurées ou semi-structurées, avec une flexibilité accrue. On distingue quatre grandes familles :
 
-**Exemples** : MongoDB (documents), Redis (clé-valeur), Cassandra (colonnes), Neo4j (graphes)
+- **Documents** : MongoDB, CouchDB (documents JSON/BSON)
+- **Clé-valeur** : Redis, DynamoDB, etcd (paires clé/valeur simples)
+- **Wide-column (familles de colonnes)** : Cassandra, HBase, Bigtable (lignes à colonnes variables, optimisées écritures massives)
+- **Graphes** : Neo4j, ArangoDB (nœuds et relations interconnectés)
 
 **Cas d'usage** : Big data, réseaux sociaux, systèmes temps réel, IoT
 
-#### 3. **Bases de données en colonnes**
+> 💡 **Attention à la confusion** : les bases « wide-column » (comme Cassandra) sont des bases NoSQL orientées **lignes** avec colonnes flexibles. Elles ne sont **pas** la même chose que les bases « columnar » (présentées juste après), qui partitionnent réellement chaque colonne pour l'analytique.
 
-Optimisées pour l'analyse de grandes quantités de données (data warehousing).
+#### 3. **Bases de données columnar (orientées colonnes)**
 
-**Exemples** : ClickHouse, Amazon Redshift, Google BigQuery, DuckDB
+Optimisées pour l'analyse de grandes quantités de données (OLAP, data warehousing). Contrairement aux bases NoSQL wide-column, ces bases partitionnent verticalement chaque colonne, ce qui permet une compression et des agrégations bien plus efficaces sur de gros volumes.
 
-**Cas d'usage** : Analytique, business intelligence, reporting
+**Exemples** : ClickHouse, Amazon Redshift, Google BigQuery, DuckDB, Snowflake
+
+**Cas d'usage** : Analytique, business intelligence, reporting, data warehousing
 
 #### 4. **Bases de données en mémoire**
 
@@ -192,6 +230,16 @@ Stockent les données en RAM pour des performances ultra-rapides.
 
 **Cas d'usage** : Cache, sessions utilisateur, compteurs temps réel
 
+#### 5. **Bases de données vectorielles**
+
+Spécialisées dans le stockage et la recherche de **vecteurs** (embeddings), ces données numériques de haute dimension produites par les modèles d'IA. Indispensables pour les applications modernes d'intelligence artificielle (RAG, recherche sémantique).
+
+**Exemples** : Pinecone, Weaviate, Qdrant, Milvus, Chroma — et **PostgreSQL avec l'extension pgvector**
+
+**Cas d'usage** : Recherche sémantique, systèmes de recommandation, RAG (Retrieval-Augmented Generation), détection de similarité
+
+> 🐘 PostgreSQL est l'un des rares SGBDR à couvrir nativement **plusieurs** de ces familles : relationnel (par défaut), documents (JSONB), géospatial (PostGIS), vectoriel (pgvector), séries temporelles (TimescaleDB). C'est l'une des raisons de sa popularité.
+
 ---
 
 ## Analogie pour bien comprendre
@@ -200,13 +248,14 @@ Imaginons une **bibliothèque municipale** :
 
 | Concept | Bibliothèque | Base de données |
 |---------|--------------|-----------------|
-| **Donnée** | Un livre individuel | Un enregistrement (ligne de table) |
 | **Base de données** | Toute la bibliothèque | L'ensemble de la base |
 | **Table** | Une étagère thématique (Romans, Sciences, etc.) | Une table (Clients, Produits, etc.) |
-| **Champ/Colonne** | Information du livre (Titre, Auteur, ISBN) | Colonne d'une table (Nom, Email, Âge) |
+| **Enregistrement (ligne)** | Un livre individuel | Une ligne de table |
+| **Champ / Colonne** | Catégorie d'information (Titre, Auteur, ISBN) | Une colonne d'une table (Nom, Email, Âge) |
+| **Donnée (valeur)** | Une information précise du livre (« Les Misérables ») | Une cellule (valeur unique dans une ligne) |
 | **Index** | Le catalogue de recherche | Index de base de données |
 | **Bibliothécaire** | Personne qui gère les livres | SGBD (PostgreSQL) |
-| **Lecteur** | Personne qui consulte les livres | Application/Utilisateur |
+| **Lecteur** | Personne qui consulte les livres | Application / Utilisateur |
 
 Tout comme vous ne stockeriez pas 10 000 livres en vrac dans une cave (impossible de retrouver quoi que ce soit !), vous ne stockez pas des millions de données dans un simple fichier texte. Vous utilisez une base de données, qui est comme une bibliothèque ultra-moderne et automatisée.
 

@@ -76,7 +76,7 @@ Le SGBD décide comment les données sont physiquement enregistrées sur le disq
 
 **Exemple** :
 ```
-Vous créez une table "Clients" avec 1 million d'entrées.
+Vous créez une table « Clients » avec 1 million d'entrées.
 → Le SGBD décide de la meilleure façon de stocker ces données sur le disque.
 → Vous, vous voyez simplement une table propre et organisée.
 ```
@@ -107,18 +107,24 @@ Le SGBD **traduit** ces commandes SQL en opérations complexes sur les fichiers 
 
 Le SGBD permet à **plusieurs utilisateurs ou applications** d'accéder aux données **en même temps**, sans conflit.
 
-**Scénario du problème** :
+**Scénario du problème** (cas classique du *lost update*, mise à jour perdue) :
 ```
 10h00 : Alice lit le solde du compte : 1000 €
-10h00 : Bob lit le solde du compte : 1000 €
-10h01 : Alice retire 200 € → Nouveau solde : 800 €
-10h01 : Bob retire 300 € → Nouveau solde : 700 €
+10h00 : Bob   lit le solde du compte : 1000 €
+10h01 : Alice écrit le nouveau solde après retrait de 200 € → 800 €
+10h01 : Bob   écrit le nouveau solde après retrait de 300 € → 700 €
 
-Problème : Le solde devrait être 500 € (1000 - 200 - 300), pas 700 € !
+Problème : le solde devrait être 500 € (1000 - 200 - 300), pas 700 € !
+→ Le retrait d'Alice a été « écrasé » par celui de Bob : 200 € se sont volatilisés.
 ```
 
 **Solution du SGBD** :
-Le SGBD utilise des mécanismes de **verrouillage** (*locks*) et de **transactions** pour garantir que les opérations simultanées ne créent pas de chaos.
+Le SGBD utilise plusieurs mécanismes pour empêcher ce type d'anomalie :
+- **Verrouillage** (*locks*) : empêche temporairement deux transactions d'écrire au même endroit
+- **MVCC** (*Multiversion Concurrency Control*) : permet à PostgreSQL de servir des lectures sans bloquer les écritures
+- **Niveaux d'isolation** des transactions (Read Committed, Repeatable Read, Serializable)
+
+Ces mécanismes sont étudiés en détail au chapitre 12. Pour l'instant, retenez que **le SGBD vous protège** contre les anomalies de concurrence.
 
 ### 4. **Transactions et propriétés ACID**
 
@@ -193,11 +199,11 @@ Le SGBD optimise automatiquement les requêtes pour qu'elles s'exécutent le plu
 
 **Exemple** :
 ```
-Vous demandez : "Trouver tous les clients de Paris qui ont commandé en 2025"
+Vous demandez : « Trouver tous les clients de Paris qui ont commandé en 2025 »
 
 Le SGBD analyse la requête et décide :
-- Utiliser l'index sur la colonne "ville" pour filtrer rapidement
-- Puis utiliser l'index sur la colonne "date_commande"
+- Utiliser l'index sur la colonne « ville » pour filtrer rapidement
+- Puis utiliser l'index sur la colonne « date_commande »
 - Joindre les résultats de manière optimale
 
 Tout cela en millisecondes, même avec des millions de lignes !
@@ -207,20 +213,24 @@ Tout cela en millisecondes, même avec des millions de lignes !
 
 Le SGBD offre des mécanismes pour **sauvegarder** et **restaurer** les données :
 
-- **Sauvegardes automatiques** : Copie régulière des données  
-- **Journalisation** (*Write-Ahead Log*) : Enregistrement de toutes les modifications  
-- **Récupération après crash** : Restauration de l'état cohérent après une panne
+- **Sauvegardes logiques** (`pg_dump`) : export SQL portable
+- **Sauvegardes physiques** (`pg_basebackup`) : copie binaire à chaud
+- **Journalisation** (*Write-Ahead Log*, WAL) : enregistrement de toutes les modifications avant qu'elles ne soient appliquées
+- **Récupération après crash** (*crash recovery*) : au redémarrage, PostgreSQL rejoue le WAL pour ramener la base à un état cohérent
+- **PITR** (*Point-In-Time Recovery*) : restaurer la base à un instant T précis (par exemple « 10h27 juste avant le DELETE catastrophique »)
 
-**Scénario** :
+**Scénario PITR** :
 ```
-10h00 : Vous faites une sauvegarde
-11h00 : Vous travaillez normalement
-11h30 : PANNE DE SERVEUR !
-11h35 : Redémarrage du serveur
+00h00 : Sauvegarde de base (pg_basebackup)
+00h00 → 11h30 : Le WAL archive toutes les modifications, en continu
+11h25 : Une mauvaise requête DELETE supprime des données critiques
+11h30 : Vous décidez de revenir à l'état d'avant l'incident
+11h35 : Restauration de la sauvegarde + rejeu du WAL jusqu'à 11h24:59
+       → Tous les changements postérieurs sont écartés
+       → La base est revenue à l'état d'avant le DELETE ✅
+```
 
-→ Le SGBD utilise le journal pour rejouer les opérations depuis 11h00
-→ Aucune donnée n'est perdue !
-```
+Les stratégies de sauvegarde et la PITR sont étudiées au chapitre 16.
 
 ---
 
@@ -234,11 +244,14 @@ Les plus courants, basés sur le **modèle relationnel** (tables avec lignes et 
 
 | SGBD | Caractéristiques | Cas d'usage typiques |
 |------|------------------|----------------------|
-| **PostgreSQL** | Open source, très performant, riche en fonctionnalités | Applications web, systèmes transactionnels, data warehousing |
-| **MySQL** | Open source, simple, rapide en lecture | Sites web, e-commerce, applications LAMP |
+| **PostgreSQL** | Open source, objet-relationnel, très performant, riche en fonctionnalités | Applications web, systèmes transactionnels, data warehousing |
+| **MySQL** | Open source (Oracle), simple, rapide en lecture | Sites web, e-commerce, applications LAMP |
+| **MariaDB** | Open source, fork communautaire de MySQL (par les créateurs originaux) | Alternative drop-in à MySQL, beaucoup d'hébergeurs |
 | **Oracle Database** | Commercial, très puissant, pour grandes entreprises | Systèmes bancaires, ERP, applications critiques |
 | **Microsoft SQL Server** | Commercial, intégration Microsoft | Applications .NET, entreprises Microsoft-centric |
-| **SQLite** | Ultra-léger, embarqué, sans serveur | Applications mobiles, logiciels desktop, prototypes |
+| **SQLite** | Ultra-léger, embarqué, sans serveur (un seul fichier) | Applications mobiles, logiciels desktop, prototypes, navigateurs |
+
+> 🐘 **PostgreSQL est un SGBD « objet-relationnel »** (*ORDBMS*) : en plus du modèle relationnel pur, il supporte l'héritage de tables, les types de données personnalisés, les fonctions définies par l'utilisateur, et des concepts orientés objet hérités de son ancêtre **Postgres** (Berkeley, 1986). Cette particularité historique explique en partie sa polyvalence et sa richesse fonctionnelle — détail au chapitre 2.
 
 ### SGBD NoSQL
 
@@ -247,46 +260,70 @@ Conçus pour des données non structurées ou des besoins spécifiques :
 | Type | Exemple | Cas d'usage |
 |------|---------|-------------|
 | **Document** | MongoDB, CouchDB | Données JSON, applications web modernes |
-| **Clé-Valeur** | Redis, Memcached | Cache, sessions, compteurs temps réel |
-| **Colonnes** | Cassandra, HBase | Big data, analyses massives |
-| **Graphe** | Neo4j, ArangoDB | Réseaux sociaux, recommandations |
+| **Clé-valeur** | Redis, DynamoDB, etcd | Cache, sessions, compteurs temps réel, configuration distribuée |
+| **Wide-column (familles de colonnes)** | Cassandra, HBase, Bigtable | Écritures massives, big data temps réel, IoT |
+| **Graphe** | Neo4j, ArangoDB | Réseaux sociaux, recommandations, détection de fraude |
+
+> ⚠️ Les bases **wide-column** (Cassandra…) sont orientées lignes avec colonnes flexibles. Elles diffèrent des bases **columnar / orientées colonnes** (ClickHouse, Redshift, BigQuery, DuckDB) qui partitionnent chaque colonne pour l'analyse OLAP.
 
 ### SGBD spécialisés
 
 | Type | Exemple | Cas d'usage |
 |------|---------|-------------|
-| **Séries temporelles** | InfluxDB, TimescaleDB | IoT, monitoring, métriques |
-| **Recherche** | Elasticsearch, Solr | Moteurs de recherche, full-text search |
+| **Columnar / OLAP** | ClickHouse, Amazon Redshift, BigQuery, Snowflake, DuckDB | Data warehousing, analytique, BI |
+| **Séries temporelles** | InfluxDB, TimescaleDB (extension PostgreSQL) | IoT, monitoring, métriques |
+| **Vectorielles** | Pinecone, Weaviate, Qdrant, Milvus, **pgvector** | IA, embeddings, RAG, recherche sémantique |
+| **Géospatiales** | **PostGIS** (extension PostgreSQL), Spatialite | SIG, cartographie, géolocalisation |
+| **Recherche** | Elasticsearch, OpenSearch, Solr | Moteurs de recherche, full-text search |
 | **En mémoire** | Redis, Memcached | Ultra-haute performance, cache |
+
+> 🐘 PostgreSQL, par son écosystème d'extensions, peut remplir nativement plusieurs de ces rôles : géospatial (PostGIS), vectoriel (pgvector), séries temporelles (TimescaleDB), recherche full-text (intégrée). C'est l'un des arguments clés de sa polyvalence.
 
 ---
 
 ## Pourquoi PostgreSQL ?
 
-Vous vous demandez peut-être : "Pourquoi apprendre PostgreSQL plutôt qu'un autre SGBD ?"
+Vous vous demandez peut-être : « Pourquoi apprendre PostgreSQL plutôt qu'un autre SGBD ? »
 
 ### Les points forts de PostgreSQL
 
-1. **Open source et gratuit** : Pas de licence coûteuse, communauté active  
-2. **Conforme aux standards SQL** : Respecte les normes officielles  
-3. **Très riche en fonctionnalités** : Types de données avancés (JSON, tableaux, géométrie)  
-4. **Extensible** : Ajout de fonctionnalités via des extensions (PostGIS, pg_vector)  
-5. **Fiable et robuste** : Respecte strictement les propriétés ACID  
-6. **Performant** : Optimisé pour les lectures et écritures complexes  
-7. **Portable** : Fonctionne sur Linux, Windows, macOS  
-8. **Bien documenté** : Documentation officielle excellente
+1. **Open source et gratuit** : licence permissive (PostgreSQL License, proche de MIT/BSD), communauté active, aucun coût caché
+2. **Conforme aux standards SQL** : respecte rigoureusement la norme SQL et propose des extensions avancées
+3. **Très riche en fonctionnalités** : types de données avancés (JSONB, tableaux, géométrie, UUID, intervalles, types personnalisés…)
+4. **Extensible** : ajout de fonctionnalités via des extensions (PostGIS pour le géospatial, pgvector pour l'IA, TimescaleDB pour les séries temporelles, pg_cron pour la planification…)
+5. **Fiable et robuste** : respecte strictement les propriétés ACID, contrôle intégral du WAL
+6. **Performant** : optimisé pour les lectures et écritures complexes, planificateur sophistiqué
+7. **Portable** : fonctionne sur Linux, Windows, macOS, BSD
+8. **Bien documenté** : documentation officielle parmi les plus complètes et appréciées de l'industrie
+
+### Et avec PostgreSQL 18 (septembre 2025) ?
+
+La version 18 apporte un ensemble de nouveautés majeures qui renforcent encore ces points forts :
+
+- ⚡ **I/O asynchrone (AIO)** : jusqu'à 3× plus rapide sur les opérations I/O
+- 🔐 **OAuth 2.0 natif** : authentification moderne intégrée à `pg_hba.conf`
+- 🆕 **UUIDv7** : identifiants triables temporellement, idéaux pour clés primaires
+- 🧮 **Colonnes générées virtuelles** : calculs à la lecture sans stockage
+- 📅 **Contraintes temporelles** : validation d'unicité et de référence sur des périodes
+- 🔁 **OLD/NEW dans RETURNING** : retour des valeurs avant/après dans `INSERT/UPDATE/DELETE/MERGE`
+- 🔄 **`pg_upgrade --swap`** : mise à jour majeure beaucoup plus rapide
+
+Ces nouveautés seront détaillées tout au long de la formation et marquées d'un 🆕.
 
 ### Qui utilise PostgreSQL ?
 
-De nombreuses entreprises de renom utilisent PostgreSQL :
+De nombreuses entreprises de renom utilisent PostgreSQL pour de nombreux besoins critiques :
 
-- **Apple** : iCloud, App Store  
-- **Instagram** : Stockage des photos et métadonnées  
-- **Spotify** : Gestion des playlists et recommandations  
-- **Reddit** : Discussions et votes  
-- **Twitch** : Chat et streaming  
-- **Uber** : Géolocalisation et trajets  
-- **Netflix** : Recommandations et analytics
+- **Apple** : usage interne très large (services et outils)
+- **Instagram** : l'un des plus grands déploiements PostgreSQL au monde (utilisateurs, métadonnées)
+- **Spotify** : nombreux services de stockage et données utilisateurs
+- **Reddit** : données utilisateurs, commentaires, votes, statistiques (modèle « ThingDB »)
+- **Twitch** : la majorité de leurs ~125 bases (utilisateurs, diffusions, sauvegardes)
+- **Skype** (Microsoft) : annuaire utilisateurs historique
+- **TripAdvisor** : avis et données géographiques
+- **Heroku, Supabase, Neon** : services managés basés sur PostgreSQL
+
+> 📌 **Note historique** : Uber a migré de PostgreSQL vers MySQL en 2016, pour des raisons liées à leur charge spécifique d'écriture et de réplication à l'époque. De nombreuses limitations alors invoquées ont été corrigées depuis (versions 11 à 18). Cette migration reste un cas d'école souvent discuté dans la communauté.
 
 ---
 
@@ -361,15 +398,15 @@ Récapitulons pourquoi utiliser un SGBD plutôt que de simples fichiers :
 
 | Critère | Fichiers simples (CSV, Excel) | SGBD (PostgreSQL) |
 |---------|-------------------------------|-------------------|
-| **Volume de données** | Limité (quelques milliers de lignes) | Illimité (milliards de lignes) |
-| **Vitesse de recherche** | Très lent pour grandes données | Très rapide (index) |
-| **Accès concurrent** | Problématique (conflits) | Géré automatiquement |
-| **Intégrité** | Aucune garantie | Contraintes appliquées |
-| **Sécurité** | Faible | Forte (permissions, chiffrement) |
+| **Volume de données** | Limité (Excel ≈ 1 million de lignes/feuille, et devient très lent bien avant) | Pratiquement illimité (milliards de lignes) |
+| **Vitesse de recherche** | Linéaire *O(N)*, lent pour grandes données | Logarithmique *O(log N)* avec index |
+| **Accès concurrent** | Verrouillage du fichier entier, conflits | Géré finement (MVCC + locks) |
+| **Intégrité** | Aucune garantie | Contraintes appliquées (CHECK, FK, UNIQUE…) |
+| **Sécurité** | Faible (fichier ouvert ou pas) | Forte (rôles, permissions, chiffrement, RLS) |
 | **Transactions** | Non supporté | ACID garanti |
-| **Sauvegarde** | Manuelle | Automatique et fiable |
+| **Sauvegarde** | Manuelle, copie de fichier | Automatique, à chaud, PITR possible |
 | **Requêtes complexes** | Très difficile | Facile avec SQL |
-| **Performance** | Dégradée avec volume | Optimisée automatiquement |
+| **Performance** | Dégradée avec volume | Optimisée par le planificateur |
 
 **Conclusion** : Pour tout projet sérieux manipulant des données, un SGBD est indispensable.
 
@@ -379,8 +416,8 @@ Récapitulons pourquoi utiliser un SGBD plutôt que de simples fichiers :
 
 Imaginons un orchestre symphonique :
 
-- **Les musiciens** = Vos données (violons, pianos, trompettes...)  
-- **Le chef d'orchestre** = Le SGBD  
+- **Les musiciens** = Vos données (violons, pianos, trompettes…)
+- **Le chef d'orchestre** = Le SGBD
 - **La partition** = Vos requêtes SQL
 
 Sans chef d'orchestre, les musiciens joueraient n'importe comment, créant un chaos sonore. Le chef d'orchestre coordonne tout, assure l'harmonie, gère le timing, et produit une belle symphonie.

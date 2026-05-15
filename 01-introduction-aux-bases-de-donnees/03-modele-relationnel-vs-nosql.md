@@ -18,7 +18,12 @@ PostgreSQL appartient à la famille des SGBDR (Systèmes de Gestion de Bases de 
 
 ### Origine et philosophie
 
-Le modèle relationnel a été inventé en **1970 par Edgar F. Codd**, un informaticien chez IBM. Son idée révolutionnaire : organiser les données sous forme de **tables** (aussi appelées "relations" en mathématiques), où chaque ligne représente un enregistrement et chaque colonne un attribut.
+Le modèle relationnel a été inventé en **1970 par Edgar F. Codd**, un informaticien chez IBM, dans son article fondateur *« A Relational Model of Data for Large Shared Data Banks »* publié dans *Communications of the ACM*. Son idée révolutionnaire : organiser les données sous forme de **tables** (formellement appelées *relations* en mathématiques, d'où le nom), où chaque ligne représente un enregistrement et chaque colonne un attribut. Codd reçut le **Prix Turing en 1981** pour cette contribution majeure.
+
+Le modèle s'appuie sur :
+- **L'algèbre relationnelle** (sélection, projection, jointure, union, etc.) — bases mathématiques du langage SQL
+- **Les formes normales** (1NF, 2NF, 3NF, BCNF) qui guident la conception d'un schéma sans redondance — détaillées au chapitre 11
+- **L'indépendance physique/logique** : l'utilisateur travaille sur un modèle logique, le SGBD gère la représentation physique
 
 ### Le concept de table
 
@@ -36,14 +41,14 @@ Une **table** est comme un tableau Excel structuré :
 ```
 
 **Caractéristiques** :
-- Chaque **ligne** (ou "tuple") = un enregistrement unique (un client)
-- Chaque **colonne** = un attribut spécifique (nom, âge, email...)
+- Chaque **ligne** (ou « tuple ») = un enregistrement unique (un client)
+- Chaque **colonne** = un attribut spécifique (nom, âge, email…)
 - Chaque **cellule** = une valeur unique d'un type précis
 - Chaque table a une **clé primaire** (id) qui identifie de manière unique chaque ligne
 
 ### Le concept de relation entre tables
 
-L'aspect **"relationnel"** vient du fait que les tables peuvent être **reliées entre elles** via des **clés étrangères**.
+L'aspect **« relationnel »** vient du fait que les tables peuvent être **reliées entre elles** via des **clés étrangères**.
 
 **Exemple** : Un système de e-commerce
 
@@ -200,12 +205,14 @@ Malgré ses nombreux avantages, le modèle relationnel a certaines limites :
 
 ### Origine et philosophie
 
-**NoSQL** signifie **"Not Only SQL"** (pas seulement SQL). Ce mouvement est né dans les années 2000 pour répondre aux besoins du web moderne :
+Le terme **NoSQL** est apparu en 1998 (Carlo Strozzi), puis a été réintroduit en 2009 par Johan Oskarsson pour désigner les bases de données distribuées non-relationnelles. À l'origine compris comme **« No SQL »** (sans SQL), il a été progressivement réinterprété comme **« Not Only SQL »** (pas seulement SQL) — beaucoup de bases NoSQL proposent aujourd'hui des langages d'interrogation inspirés de SQL.
 
-- **Volume massif** de données (Big Data)  
-- **Flexibilité** du schéma (données changeantes)  
-- **Performance** en lecture/écriture à très grande échelle  
-- **Distribution** sur de nombreux serveurs
+Ce mouvement est né dans les années 2000 pour répondre aux besoins du web moderne, sous l'impulsion notamment des articles fondateurs de Google sur **Bigtable** (2006) et d'Amazon sur **Dynamo** (2007) :
+
+- **Volume massif** de données (Big Data)
+- **Flexibilité** du schéma (données changeantes)
+- **Performance** en lecture/écriture à très grande échelle
+- **Distribution** sur de nombreux serveurs (sharding, réplication)
 
 NoSQL ne remplace pas le relationnel, il offre des **alternatives** pour des cas d'usage spécifiques.
 
@@ -309,7 +316,7 @@ Famille de colonnes "activite" :
 
 > 💡 À ne pas confondre avec les bases **columnar** analytiques (ClickHouse, BigQuery, DuckDB) qui stockent physiquement les données colonne par colonne pour optimiser les agrégations. Ce sont deux concepts différents.
 
-**Exemples** : Cassandra, HBase, ScyllaDB
+**Exemples** : Cassandra, HBase, Bigtable (Google), ScyllaDB
 
 **Cas d'usage** :
 - Données massives distribuées (Big Data)
@@ -373,16 +380,57 @@ Réseau social :
 | Critère | Relationnel (SGBDR) | NoSQL |
 |---------|---------------------|-------|
 | **Schéma** | Fixe et défini à l'avance | Flexible et dynamique |
-| **Structure** | Tables avec lignes et colonnes | Variable (documents, graphes...) |
+| **Structure** | Tables avec lignes et colonnes | Variable (documents, graphes…) |
 | **Relations** | Jointures explicites | Imbrication ou références |
-| **Transactions** | ACID garanti | Variable (souvent BASE*) |
-| **Scalabilité** | Verticale (serveur plus puissant) | Horizontale (plus de serveurs) |
+| **Transactions** | ACID garanti | Variable (souvent BASE\*) |
+| **Scalabilité** | Verticale par défaut, horizontale via réplication/partitionnement/Citus | Horizontale native (sharding intégré) |
 | **Requêtes** | SQL puissant et standardisé | API spécifiques par type |
 | **Intégrité** | Forte (contraintes) | Plus faible (responsabilité app) |
 | **Cas d'usage** | Transactionnel, cohérence critique | Big Data, flexibilité, performance |
 | **Exemples** | PostgreSQL, MySQL, Oracle | MongoDB, Redis, Cassandra, Neo4j |
 
-*BASE = **B**asically **A**vailable, **S**oft state, **E**ventually consistent (cohérence "à terme")
+\*BASE = **B**asically **A**vailable, **S**oft state, **E**ventually consistent (cohérence « à terme »)
+
+> 💡 **Une troisième voie : NewSQL.** Des SGBD comme **CockroachDB**, **YugabyteDB**, **TiDB** ou **Google Spanner** combinent SQL standard et propriétés ACID avec une scalabilité horizontale native (sharding automatique, consensus distribué). Plusieurs sont compatibles avec le protocole PostgreSQL (CockroachDB, YugabyteDB), ce qui permet de réutiliser les drivers et une partie de l'écosystème.
+
+### Le théorème CAP : la clé pour comprendre les compromis
+
+Pour bien choisir entre SQL et NoSQL en environnement distribué, il faut connaître le **théorème CAP**, formulé par Eric Brewer en 2000 et démontré formellement par Gilbert et Lynch en 2002.
+
+Le théorème énonce qu'**un système distribué ne peut garantir simultanément que deux des trois propriétés suivantes** :
+
+| Lettre | Propriété | Définition |
+|:------:|-----------|------------|
+| **C** | **Consistency** (cohérence) | Tous les nœuds voient les mêmes données au même moment |
+| **A** | **Availability** (disponibilité) | Toute requête reçoit une réponse (sans garantie de fraîcheur) |
+| **P** | **Partition tolerance** (tolérance au partitionnement) | Le système fonctionne même si le réseau coupe la communication entre nœuds |
+
+En pratique, **P (les coupures réseau) est inévitable** dans un système distribué. Le vrai choix se fait donc entre **C** et **A** :
+
+```
+                    P (inévitable)
+                       ▲
+                      ╱ ╲
+                     ╱   ╲
+                    ╱     ╲
+              CP   ╱       ╲   AP
+        ╔════════ ╱─────────╲ ══════════╗
+        ║ PostgreSQL,        Cassandra  ║
+        ║ MongoDB primary,   DynamoDB   ║
+        ║ HBase             CouchDB     ║
+        ║ → Cohérence       → Dispo     ║
+        ║   stricte           toujours  ║
+        ╚═══════════════════════════════╝
+
+(CA n'existe pas vraiment en distribué : il faut abandonner P)
+```
+
+- **Systèmes CP** (cohérence prioritaire) : PostgreSQL en mode réplication synchrone, MongoDB par défaut, HBase. En cas de coupure, certains nœuds refusent les requêtes pour éviter d'avoir des données obsolètes.
+- **Systèmes AP** (disponibilité prioritaire) : Cassandra, DynamoDB, CouchDB. En cas de coupure, tous les nœuds répondent, quitte à fournir des données légèrement obsolètes (« eventually consistent »).
+
+> 🔄 **Et PACELC ?** Le théorème **PACELC** (Abadi, 2010) complète CAP : *« en cas de Partition (P), il faut choisir entre Availability (A) et Consistency (C) ; sinon (E for Else), il faut choisir entre Latency (L) et Consistency (C). »* Plus pertinent que CAP pour les systèmes cloud modernes.
+
+**Pour PostgreSQL en pratique** : sur un seul serveur (configuration la plus courante), le théorème CAP ne s'applique pas — vous bénéficiez de la cohérence sans compromis. C'est seulement avec la **réplication distribuée** (chapitre 17) que le compromis se pose.
 
 ### Quand utiliser le modèle relationnel (SGBDR) ?
 
@@ -404,7 +452,7 @@ Réseau social :
    - Exemple : E-commerce (clients ↔ commandes ↔ produits)
 
 6. **Vous voulez un langage standardisé (SQL)**
-   - SQL fonctionne sur PostgreSQL, MySQL, Oracle...
+   - SQL fonctionne sur PostgreSQL, MySQL, Oracle…
 
 ### Quand utiliser NoSQL ?
 
@@ -428,6 +476,8 @@ Réseau social :
 6. **Vous avez besoin de scalabilité horizontale massive**
    - Exemple : Application mondiale, millions d'utilisateurs
 
+> ⚖️ **Réflexe à avoir** : avant de partir sur un NoSQL « parce que c'est tendance », demandez-vous si PostgreSQL ne pourrait pas répondre au besoin. Avec JSONB (documents), pgvector (vectoriel), PostGIS (géospatial), TimescaleDB (séries temporelles), `LISTEN/NOTIFY` (événements), `LATERAL` et CTE récursives (graphes simples), PostgreSQL couvre une très large gamme de cas d'usage tout en gardant les garanties ACID. Un seul SGBD à exploiter, à sauvegarder et à surveiller, c'est un gain opérationnel énorme.
+
 ---
 
 ## PostgreSQL : Le meilleur des deux mondes ?
@@ -436,8 +486,8 @@ Réseau social :
 
 PostgreSQL est avant tout un **SGBDR** puissant et conforme aux standards :
 - Tables relationnelles
-- SQL complet (jointures, sous-requêtes, CTE...)
-- Contraintes d'intégrité (PK, FK, CHECK...)
+- SQL complet (jointures, sous-requêtes, CTE…)
+- Contraintes d'intégrité (PK, FK, CHECK…)
 - Transactions ACID strictes
 
 ### PostgreSQL avec des capacités NoSQL
@@ -446,8 +496,17 @@ Mais PostgreSQL offre **aussi** des fonctionnalités NoSQL !
 
 #### 1. **Type JSONB : Base de données documentaire**
 
+PostgreSQL propose **deux types JSON** :
+
+| Type | Stockage | Performance lecture | Indexable | Préserve l'ordre des clés / espaces |
+|------|----------|---------------------|-----------|--------------------------------------|
+| `JSON` | Texte brut | Re-parsing à chaque accès | Non efficacement | Oui |
+| `JSONB` | Binaire décomposé | Accès direct, très rapide | Oui (GIN, B-Tree sur expression) | Non |
+
+👉 **Utilisez `JSONB` dans 99 % des cas.** Le type `JSON` (texte) ne se justifie que si vous devez conserver exactement le texte d'origine.
+
 ```sql
--- Stocker des documents JSON
+-- Stocker des documents JSON binaires
 CREATE TABLE produits (
     id SERIAL PRIMARY KEY,
     nom VARCHAR(100),
@@ -471,12 +530,18 @@ INSERT INTO produits (nom, details) VALUES
 SELECT nom, details->>'marque' as marque  
 FROM produits  
 WHERE (details->'ram')::int >= 16;  
+
+-- Index GIN pour accélérer les recherches dans le JSON
+CREATE INDEX idx_produits_details ON produits USING gin (details);
 ```
 
 **Avantages** :
-- Flexibilité du schéma pour certains champs
-- Index GIN pour performance sur JSON
-- Possibilité de combiner relationnel et NoSQL
+- Flexibilité du schéma pour les champs semi-structurés
+- Index GIN très performants pour les recherches `?`, `?&`, `@>`
+- Combinaison naturelle de relationnel (colonnes fixes) et NoSQL (JSONB)
+- Toutes les garanties ACID s'appliquent au JSONB
+
+Le détail des opérateurs JSONB et de leur indexation est vu aux chapitres 4 et 13.
 
 #### 2. **Type ARRAY : Tableaux**
 
@@ -534,26 +599,27 @@ Pour la plupart des applications, une approche **hybride** est idéale :
 
 ## Mythes et réalités
 
-### ❌ Mythe 1 : "NoSQL est plus rapide que SQL"
+### ❌ Mythe 1 : « NoSQL est plus rapide que SQL »
 
-**Réalité** : Cela dépend du cas d'usage.
+**Réalité** : cela dépend du cas d'usage.
 - Redis est ultra-rapide pour le cache (données en RAM)
 - PostgreSQL avec index bien conçus est extrêmement performant
 - Pour des requêtes complexes avec jointures, SQL est souvent plus rapide
 
-### ❌ Mythe 2 : "NoSQL remplace SQL"
+### ❌ Mythe 2 : « NoSQL remplace SQL »
 
 **Réalité** : Non, ils sont complémentaires.
-- SQL reste dominant pour applications transactionnelles
-- 70%+ des entreprises utilisent des SGBDR
+- SQL reste dominant pour les applications transactionnelles
+- En 2025, les bases relationnelles représentent encore **environ 57 %** du marché des SGBD (source : analyses sectorielles)
+- PostgreSQL est, selon le *Stack Overflow Developer Survey 2024*, le **SGBD le plus utilisé par les développeurs** (≈ 49 %), devant MongoDB (≈ 25 %)
 - NoSQL est un outil additionnel, pas un remplacement
 
-### ❌ Mythe 3 : "NoSQL n'a pas besoin de schéma"
+### ❌ Mythe 3 : « NoSQL n'a pas besoin de schéma »
 
-**Réalité** : Le schéma existe, il est juste implicite.
+**Réalité** : le schéma existe, il est juste implicite.
 - Votre application doit quand même connaître la structure des données
 - Pas de contraintes = plus de validation côté application
-- "Schemaless" ne signifie pas "sans structure"
+- « Schemaless » ne signifie pas « sans structure »
 
 ### ✅ Réalité : Choisissez l'outil adapté au besoin
 
@@ -672,7 +738,7 @@ db.articles.findOne({ _id: "article_1" })
 
 ✅ **PostgreSQL est relationnel** mais possède aussi des capacités NoSQL (JSONB, ARRAYS, extensions)
 
-✅ **Il n'y a pas de "meilleur" modèle** : tout dépend du cas d'usage
+✅ **Il n'y a pas de « meilleur » modèle** : tout dépend du cas d'usage
 
 ✅ **Une approche hybride** (PostgreSQL + Redis, par exemple) est souvent optimale
 
