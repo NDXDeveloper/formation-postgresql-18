@@ -18,12 +18,12 @@ Un **namespace** (espace de noms) est un conteneur logique qui permet d'éviter 
 
 Imaginez que vous travaillez dans une grande entreprise avec plusieurs départements :
 
-- **Département Marketing** : Il y a un employé nommé "Jean Dupont"  
-- **Département IT** : Il y a aussi un employé nommé "Jean Dupont"
+- **Département Marketing** : il y a un employé nommé « Jean Dupont »  
+- **Département IT** : il y a aussi un employé nommé « Jean Dupont »
 
 Comment faire la différence entre les deux ? On utilise le département (namespace) :
-- "Jean Dupont du Marketing"  
-- "Jean Dupont de l'IT"
+- « Jean Dupont du Marketing »  
+- « Jean Dupont de l'IT »
 
 Dans PostgreSQL, c'est exactement pareil :
 - `marketing.clients` (table clients dans le schéma marketing)  
@@ -188,8 +188,8 @@ C'est similaire à la variable `PATH` dans les systèmes Unix/Linux, qui indique
 
 Imaginez que vous cherchez un livre dans une bibliothèque :
 
-- **Sans search_path** : Vous devez dire exactement "Je veux le livre X dans la salle Y, dans l'étagère Z"  
-- **Avec search_path** : Vous dites "Je veux le livre X" et le bibliothécaire cherche automatiquement dans les salles que vous avez configurées (d'abord la salle A, puis la salle B, etc.)
+- **Sans search_path** : vous devez dire exactement « Je veux le livre X dans la salle Y, dans l'étagère Z »  
+- **Avec search_path** : vous dites « Je veux le livre X » et le bibliothécaire cherche automatiquement dans les salles que vous avez configurées (d'abord la salle A, puis la salle B, etc.)
 
 ### Voir le search_path actuel
 
@@ -450,7 +450,7 @@ Ce mécanisme permet de créer des environnements isolés pour chaque utilisateu
 CREATE SCHEMA alice;  
 CREATE SCHEMA bob;  
 
--- Créer une table "privée" pour chaque utilisateur
+-- Créer une table « privée » pour chaque utilisateur
 CREATE TABLE alice.notes (
     id SERIAL PRIMARY KEY,
     contenu TEXT
@@ -483,8 +483,9 @@ PostgreSQL possède plusieurs schémas système qui contiennent des métadonnée
 Le schéma **`pg_catalog`** contient toutes les tables système et les fonctions internes de PostgreSQL.
 
 ```sql
--- Ce schéma est TOUJOURS dans le search_path (implicitement en premier)
--- C'est pourquoi vous pouvez utiliser des fonctions sans préfixe
+-- Ce schéma est implicitement inclus dans le search_path en PREMIÈRE position,
+-- SAUF s'il est explicitement listé (auquel cas il prend la position indiquée).
+-- C'est pourquoi vous pouvez utiliser des fonctions sans préfixe.
 
 SELECT current_timestamp; -- Équivalent à pg_catalog.current_timestamp  
 SELECT version();         -- Équivalent à pg_catalog.version()  
@@ -494,6 +495,29 @@ SELECT * FROM pg_catalog.pg_tables;      -- Liste de toutes les tables
 SELECT * FROM pg_catalog.pg_namespace;   -- Liste de tous les schémas  
 SELECT * FROM pg_catalog.pg_class;       -- Liste de tous les objets  
 ```
+
+> 💡 **Le piège de redéfinition** : comme `pg_catalog` est implicitement en tête, on ne peut **pas** masquer une fonction système comme `count()` ou `now()` en créant un objet du même nom dans `public`. Sauf si vous déplacez `public` avant `pg_catalog` :  
+>  
+> ```sql  
+> SET search_path = public, pg_catalog;  
+> -- Désormais, public.count() (si elle existait) primerait sur pg_catalog.count()  
+> ```  
+> **Ne le faites jamais en production.**
+
+### 1bis. `pg_temp` (schéma temporaire par session)
+
+Chaque session qui crée une **table temporaire** (`CREATE TEMP TABLE …`) se voit attribuer un schéma `pg_temp_<N>` propre, accessible via l'alias `pg_temp`. Ce schéma est implicitement en **tête** du search_path (encore avant `pg_catalog`), ce qui rend les tables temporaires prioritaires :
+
+```sql
+-- Session A
+CREATE TEMP TABLE notes (id INT);  
+SELECT * FROM notes;        -- Lit la table temp de la session A  
+-- ↑ Équivalent à : SELECT * FROM pg_temp.notes;
+
+-- Une autre session B ne voit PAS cette table notes — chaque session a son propre pg_temp.
+```
+
+> ⚠️ **Sécurité** : comme pour `pg_catalog`, ce comportement implicite peut être exploité dans les fonctions `SECURITY DEFINER` (voir piège 4 plus bas). Toujours `SET search_path = …, pg_temp` (en fin) pour neutraliser cette priorité dans les fonctions sensibles.
 
 ### 2. `information_schema`
 
@@ -777,7 +801,7 @@ SET search_path TO schema1, schema2, public;
 SELECT * FROM users;  -- Utilise schema1.users ou schema2.users ?
 ```
 
-✅ **Solution** : Toujours qualifier les noms en cas de doute :
+✅ **Solution** : toujours qualifier les noms en cas de doute :
 ```sql
 SELECT * FROM schema1.users;
 ```
@@ -792,7 +816,7 @@ CREATE FUNCTION get_user_count() RETURNS INT AS $$
 $$ LANGUAGE SQL;
 ```
 
-✅ **Solution** : Toujours qualifier ou définir le search_path dans la fonction :
+✅ **Solution** : toujours qualifier ou définir le `search_path` dans la fonction :
 ```sql
 CREATE FUNCTION get_user_count() RETURNS INT AS $$
     SELECT COUNT(*) FROM public.users;
@@ -804,7 +828,44 @@ CREATE FUNCTION get_user_count() RETURNS INT AS $$
 $$ LANGUAGE SQL SET search_path = public;
 ```
 
-### Piège 4 : Privilèges manquants sur le schéma
+### Piège 4 : `search_path` mutable et attaques d'injection
+
+C'est un piège **de sécurité** souvent ignoré. Si une fonction est créée avec `SECURITY DEFINER` (s'exécute avec les privilèges de son propriétaire) et qu'elle utilise des objets non qualifiés, un attaquant peut créer un schéma malveillant et le placer en tête du `search_path` pour intercepter les appels.
+
+**Vulnérabilité** :
+
+```sql
+-- Fonction admin qui lit une table d'admins
+-- (on suppose une fonction métier app_user_id() qui retourne l'ID applicatif)
+CREATE FUNCTION verifie_droits() RETURNS BOOLEAN AS $$
+    SELECT count(*) > 0 FROM admins WHERE user_id = app_user_id();
+$$ LANGUAGE SQL SECURITY DEFINER;  -- ⚠️ search_path non défini !
+
+-- Un attaquant qui dispose du droit CREATE sur la base peut faire :
+CREATE SCHEMA evil;  
+CREATE TABLE evil.admins (user_id INTEGER);  
+INSERT INTO evil.admins VALUES (42);   -- son propre user_id  
+CREATE FUNCTION evil.app_user_id() RETURNS INTEGER AS $$ SELECT 42 $$ LANGUAGE SQL;  
+SET search_path TO evil, public;  
+SELECT verifie_droits();  
+-- → TRUE : la fonction a lu evil.admins ET evil.app_user_id() au lieu des objets légitimes !
+```
+
+✅ **Solution** : toujours figer le `search_path` sur les fonctions `SECURITY DEFINER` :
+
+```sql
+CREATE FUNCTION verifie_droits() RETURNS BOOLEAN AS $$
+    SELECT count(*) > 0 FROM admins WHERE user_id = app_user_id();
+$$ LANGUAGE SQL
+   SECURITY DEFINER
+   SET search_path = public, pg_temp;  -- 🔐 Search_path immuable pour cette fonction
+```
+
+> 🔐 La règle universelle : **toute fonction `SECURITY DEFINER` doit avoir un `SET search_path`** explicite, sans exception. C'est l'un des durcissements les plus importants en sécurité PostgreSQL.  
+>  
+> 💡 **Pourquoi inclure `pg_temp` à la fin ?** Sans cela, un attaquant pourrait créer une fonction du même nom dans le schéma `pg_temp` (toujours implicitement en tête du search_path) pour intercepter les appels. En listant `pg_temp` explicitement **à la fin**, on lui retire sa position privilégiée.
+
+### Piège 5 : Privilèges manquants sur le schéma
 
 ```sql
 -- Créer un schéma
@@ -815,7 +876,7 @@ CREATE SCHEMA my_schema;
 SELECT * FROM my_schema.table1;  -- ERROR: permission denied for schema my_schema
 ```
 
-✅ **Solution** : Accorder les privilèges nécessaires :
+✅ **Solution** : accorder les privilèges nécessaires :
 ```sql
 GRANT USAGE ON SCHEMA my_schema TO other_user;  
 GRANT SELECT ON ALL TABLES IN SCHEMA my_schema TO other_user;  
@@ -899,7 +960,7 @@ ERROR: relation "sales_summary" does not exist
 
 5. **`pg_catalog` est toujours prioritaire** : Il contient les fonctions et tables système et est toujours cherché en premier (implicitement).
 
-6. **Spécifiez le schéma pour plus de clarté** : En production, utilisez toujours `schema.table` pour éviter les ambiguïtés.
+6. **Spécifiez le schéma pour plus de clarté** : en production, utilisez toujours `schema.table` pour éviter les ambiguïtés.
 
 ### Commandes Essentielles
 

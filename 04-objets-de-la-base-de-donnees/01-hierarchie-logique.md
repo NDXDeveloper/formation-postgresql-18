@@ -31,11 +31,14 @@ Imaginez un immeuble de bureaux. L'instance PostgreSQL, c'est tout l'immeuble. C
 
 ### Caractéristiques d'une instance
 
-- **Une seule instance par installation** : Généralement, vous avez une instance PostgreSQL qui tourne sur un serveur (bien qu'il soit techniquement possible d'en avoir plusieurs sur le même serveur, avec des ports différents).  
-- **Port d'écoute** : Par défaut, PostgreSQL écoute sur le port **5432**.  
-- **Processus principal** : Le processus principal s'appelle `postmaster` ou `postgres` selon le contexte.  
-- **Fichiers de configuration** : L'instance possède ses propres fichiers de configuration (`postgresql.conf`, `pg_hba.conf`).  
-- **Mémoire partagée** : Tous les utilisateurs connectés à cette instance partagent certaines zones mémoire (comme le `shared_buffers`).
+- **Une seule instance par installation** : généralement, vous avez une instance PostgreSQL qui tourne sur un serveur (bien qu'il soit techniquement possible d'en avoir plusieurs sur le même serveur, avec des ports différents et des `PGDATA` distincts).
+- **Port d'écoute** : par défaut, PostgreSQL écoute sur le port **5432**.
+- **Processus principal** : aujourd'hui le binaire et le processus principal s'appellent **`postgres`**. Le nom historique **`postmaster`** est encore très utilisé dans la communauté et dans certains logs, mais le symlink `postmaster` a été **supprimé en PostgreSQL 16**. Vous verrez le processus listé comme `postgres` dans `ps aux`.
+- **Fichiers de configuration** : l'instance possède ses propres fichiers de configuration (`postgresql.conf`, `pg_hba.conf`, `pg_ident.conf`).
+- **Mémoire partagée** : tous les utilisateurs connectés à cette instance partagent certaines zones mémoire (comme le `shared_buffers`).
+- **Répertoire de données** : tout le contenu de l'instance (toutes les bases, le WAL, les configs) réside dans le dossier `PGDATA` (souvent `/var/lib/postgresql/18/main/` sur Debian/Ubuntu).
+
+> 📚 **Terminologie** : la documentation officielle PostgreSQL utilise parfois le terme **« cluster »** (ou *database cluster*) comme synonyme d'**instance**. Ce *cluster* désigne l'ensemble des bases de données gérées par une instance, **pas un cluster réseau** au sens habituel (plusieurs serveurs). Si vous lisez la doc en anglais, ne confondez pas avec un cluster de haute disponibilité comme Patroni.
 
 ### Exemple visuel
 
@@ -70,7 +73,7 @@ Si l'instance est un immeuble, une database est un **étage entier** de cet imme
 
 ### Caractéristiques d'une database
 
-- **Isolation** : Les databases sont **isolées** les unes des autres. Vous ne pouvez pas effectuer de requête SQL qui joint directement des tables de deux databases différentes (sauf avec des outils avancés comme les Foreign Data Wrappers).  
+- **Isolation** : les databases sont **isolées** les unes des autres. Vous ne pouvez pas effectuer de requête SQL qui joint directement des tables de deux databases différentes (sauf avec des outils avancés comme les Foreign Data Wrappers).  
 - **Connexion unique** : Quand vous vous connectez à PostgreSQL, vous vous connectez toujours à **une seule database à la fois**.  
 - **Databases système** : Par défaut, PostgreSQL crée trois databases système :  
   - `postgres` : Database par défaut, utilisée pour les connexions administratives  
@@ -79,9 +82,11 @@ Si l'instance est un immeuble, une database est un **étage entier** de cet imme
 
 ### Cas d'usage typiques
 
-- **Séparation par projet** : Une database pour chaque application (ex: `ecommerce_db`, `blog_db`, `analytics_db`)  
-- **Séparation par environnement** : Une database pour le développement, une pour les tests, une pour la production  
-- **Séparation par client** : Dans une application multi-tenant, chaque client peut avoir sa propre database
+- **Séparation par projet** : une database pour chaque application (ex. : `ecommerce_db`, `blog_db`, `analytics_db`)
+- **Séparation par environnement** : Une database pour le développement, une pour les tests, une pour la production
+- **Séparation par client (multi-tenant)** : approche possible mais **coûteuse** dès que le nombre de tenants grandit (chaque database a son propre catalogue, ses connexions, ses caches…). Pour du multi-tenant à grande échelle, les approches alternatives sont :
+  - **Un schéma par tenant** dans une seule database (compromis raisonnable jusqu'à quelques centaines de tenants)
+  - **Une colonne `tenant_id`** dans des tables partagées (le plus scalable, demande une discipline RLS — Row-Level Security)
 
 ### Exemple de création
 
@@ -131,20 +136,46 @@ Si la database est un étage d'immeuble, un schema est un **bureau** ou une **sa
 
 Les schémas permettent :
 
-1. **Organisation logique** : Regrouper des objets liés (ex: toutes les tables de facturation dans un schéma `billing`)  
+1. **Organisation logique** : regrouper des objets liés (ex. : toutes les tables de facturation dans un schéma `billing`)  
 2. **Éviter les conflits de noms** : Vous pouvez avoir une table `users` dans le schéma `public` et une autre table `users` dans le schéma `admin`  
 3. **Gestion des permissions** : Attribuer des droits d'accès différents par schéma  
 4. **Isolation fonctionnelle** : Séparer différentes parties d'une application
 
-### Le schéma `public`
+### Les schémas système
 
-Par défaut, PostgreSQL crée un schéma appelé **`public`** dans chaque nouvelle database. C'est le schéma par défaut où les objets sont créés si vous ne spécifiez pas de schéma explicitement.
+À la création d'une database, PostgreSQL met en place plusieurs schémas spéciaux :
+
+| Schéma | Rôle | Visible dans `\dn` ? |
+|--------|------|----------------------|
+| `public` | Schéma par défaut, libre pour vos objets | ✅ Oui |
+| `pg_catalog` | Catalogue système : toutes les vues `pg_class`, `pg_attribute`, `pg_proc`… | ❌ Non par défaut |
+| `information_schema` | Vues conformes au standard SQL (`tables`, `columns`, `key_column_usage`…) — portable entre SGBD | ✅ Oui |
+| `pg_toast` | Stockage interne des grandes valeurs (TOAST) | ❌ Non (interne) |
+| `pg_temp_<N>`, `pg_toast_temp_<N>` | Schémas temporaires créés à la volée pour les `TEMP TABLE` de chaque session | ❌ Non (par session) |
 
 ```sql
--- Ces deux commandes sont équivalentes
+-- Voir tous les schémas (y compris système)
+SELECT schema_name FROM information_schema.schemata;
+
+-- Voir les schémas non-système
+\dn
+```
+
+### Le schéma `public`
+
+`public` est le schéma par défaut où les objets sont créés si vous ne spécifiez pas de schéma explicitement (et si `public` est dans votre `search_path` — voir section [4.2](/04-objets-de-la-base-de-donnees/02-concept-de-schema.md)).
+
+```sql
+-- Avec un search_path par défaut '"$user", public',
+-- ces deux commandes sont équivalentes :
 CREATE TABLE users (id INT);  
 CREATE TABLE public.users (id INT);  
 ```
+
+> 🔐 **Changement important depuis PostgreSQL 15** : avant PG 15, le schéma `public` accordait par défaut le droit `CREATE` à tout utilisateur authentifié (`PUBLIC`). C'était une faille de sécurité historique (un utilisateur lambda pouvait créer des objets dans `public`). **Depuis PG 15**, seul le propriétaire de la base peut créer des objets dans `public` par défaut. Pour rétablir l'ancien comportement (déconseillé) :  
+> ```sql  
+> GRANT CREATE ON SCHEMA public TO PUBLIC;  
+> ```
 
 ### Le search_path
 
@@ -169,8 +200,8 @@ CREATE SCHEMA ventes;
 
 -- Créer une table dans ce schéma
 CREATE TABLE ventes.commandes (
-    id SERIAL PRIMARY KEY,
-    montant DECIMAL(10, 2)
+    id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    montant NUMERIC(10, 2)
 );
 
 -- Accéder à la table en spécifiant le schéma
@@ -252,10 +283,10 @@ Une table est composée de :
 ```sql
 -- Créer une table simple
 CREATE TABLE public.utilisateurs (
-    id SERIAL PRIMARY KEY,
+    id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     nom VARCHAR(100) NOT NULL,
     email VARCHAR(255) UNIQUE NOT NULL,
-    date_inscription TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    date_inscription TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- Insérer des données
@@ -386,27 +417,27 @@ CREATE SCHEMA production;
 
 -- Table dans le schéma ressources_humaines
 CREATE TABLE ressources_humaines.employes (
-    id SERIAL PRIMARY KEY,
+    id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     nom VARCHAR(100),
     prenom VARCHAR(100),
     poste VARCHAR(100),
-    salaire DECIMAL(10, 2)
+    salaire NUMERIC(10, 2)
 );
 
 -- Table dans le schéma comptabilite
 CREATE TABLE comptabilite.factures (
-    id SERIAL PRIMARY KEY,
+    id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     numero VARCHAR(50),
-    montant DECIMAL(10, 2),
+    montant NUMERIC(10, 2),
     date_emission DATE
 );
 
 -- Table dans le schéma production
 CREATE TABLE production.produits (
-    id SERIAL PRIMARY KEY,
+    id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     nom VARCHAR(200),
     reference VARCHAR(50),
-    stock INT
+    stock INTEGER
 );
 
 -- 6. Insérer des données
@@ -462,7 +493,7 @@ SELECT * FROM production.produits;
 
 ### Règles importantes
 
-1. **Connexion à une database** : Vous devez vous connecter à une database spécifique. Vous ne pouvez pas être "connecté à l'instance" sans être dans une database.
+1. **Connexion à une database** : vous devez vous connecter à une database spécifique. Vous ne pouvez pas être « connecté à l'instance » sans être dans une database.
 
 2. **Pas de requêtes inter-databases** : Vous ne pouvez pas faire une jointure entre deux tables de databases différentes dans une requête SQL standard.
 

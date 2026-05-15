@@ -31,7 +31,7 @@ Crée un nouvel objet dans la base de données.
 
 ```sql
 CREATE TABLE utilisateurs (
-    id SERIAL PRIMARY KEY,
+    id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     nom VARCHAR(100)
 );
 ```
@@ -52,10 +52,16 @@ DROP TABLE utilisateurs_temp;
 ```
 
 #### 4. **TRUNCATE**
-Vide une table de toutes ses données (techniquement un mix DDL/DML).
+Vide une table de toutes ses données. PostgreSQL le classe avec le **DDL** (au même titre que `CREATE`, `ALTER`, `DROP`) car il ne fonctionne pas comme un `DELETE` ligne à ligne : il agit au niveau des fichiers physiques, sans générer d'enregistrements WAL par ligne et sans déclencher par défaut les triggers `AFTER DELETE`. Cette classification influence aussi la gestion des permissions (`GRANT TRUNCATE`).
 
 ```sql
 TRUNCATE TABLE logs;
+
+-- Variante : remettre aussi les séquences IDENTITY à 1
+TRUNCATE TABLE logs RESTART IDENTITY;
+
+-- Variante : propager aux tables dépendantes via FK
+TRUNCATE TABLE commandes, lignes_commande CASCADE;
 ```
 
 ### DDL vs DML vs DQL
@@ -64,11 +70,11 @@ Il est important de comprendre la distinction entre les différents types de com
 
 | Catégorie | Signification | Rôle | Exemples de Commandes |
 |-----------|---------------|------|----------------------|
-| **DDL** | Data Definition Language | Définir la **structure** | CREATE, ALTER, DROP |
-| **DML** | Data Manipulation Language | Manipuler les **données** | INSERT, UPDATE, DELETE |
+| **DDL** | Data Definition Language | Définir la **structure** | CREATE, ALTER, DROP, TRUNCATE |
+| **DML** | Data Manipulation Language | Manipuler les **données** | INSERT, UPDATE, DELETE, MERGE |
 | **DQL** | Data Query Language | Interroger les **données** | SELECT |
 | **DCL** | Data Control Language | Gérer les **permissions** | GRANT, REVOKE |
-| **TCL** | Transaction Control Language | Gérer les **transactions** | BEGIN, COMMIT, ROLLBACK |
+| **TCL** | Transaction Control Language | Gérer les **transactions** | BEGIN, COMMIT, ROLLBACK, SAVEPOINT |
 
 **Analogie simple :**
 - **DDL** = Construire les étagères et les tiroirs d'une bibliothèque  
@@ -88,7 +94,7 @@ Dans ce chapitre, nous nous concentrons exclusivement sur le **DDL**.
 Le DDL définit **l'architecture** de votre base de données. Une bonne conception initiale vous fera gagner des mois de travail et d'optimisation plus tard. Une mauvaise conception peut rendre votre application lente, difficile à maintenir, et coûteuse à faire évoluer.
 
 **Exemple concret :**
-- Une table mal conçue sans index appropriés peut transformer une requête de 10ms en 10 secondes
+- Une table mal conçue sans index appropriés peut transformer une requête de 10 ms en 10 secondes
 - Des types de données inappropriés peuvent gaspiller de l'espace disque et ralentir les performances
 - Des contraintes manquantes peuvent conduire à des données incohérentes et corrompues
 
@@ -247,24 +253,61 @@ Avant de commencer à créer des objets, établissons quelques conventions de no
 - **Pluriel ou Singulier ?** Les deux approches existent. Choisissez une convention et restez cohérent.
   - Pluriel : `utilisateurs`, `commandes`, `produits`
   - Singulier : `utilisateur`, `commande`, `produit`
-- **Casse :** Préférez les minuscules avec underscores (snake_case)  
+- **Casse** : préférez les minuscules avec underscores (snake_case)  
   - ✅ `utilisateurs`, `details_commande`  
   - ❌ `Utilisateurs`, `detailsCommande`, `UtilisateursDetails`
 
 ### Colonnes
 - **Descriptives et claires :** `prenom`, `date_naissance`, `montant_total`  
 - **Évitez les abréviations obscures :** Préférez `numero_telephone` à `num_tel`  
-- **ID de clé primaire :** Généralement `id` ou `nom_table_id`
+- **ID de clé primaire** : généralement `id` ou `nom_table_id`
 
 ### Contraintes
-- **Clés primaires :** `pk_nom_table` (ex: `pk_utilisateurs`)  
-- **Clés étrangères :** `fk_table_colonne` (ex: `fk_commandes_utilisateur`)  
-- **Contraintes UNIQUE :** `uk_table_colonne` (ex: `uk_utilisateurs_email`)  
-- **Contraintes CHECK :** `ck_table_condition` (ex: `ck_produits_prix_positif`)
+- **Clés primaires :** `pk_nom_table` (ex. : `pk_utilisateurs`)  
+- **Clés étrangères :** `fk_table_colonne` (ex. : `fk_commandes_utilisateur`)  
+- **Contraintes UNIQUE :** `uk_table_colonne` (ex. : `uk_utilisateurs_email`)  
+- **Contraintes CHECK :** `ck_table_condition` (ex. : `ck_produits_prix_positif`)
 
 ### Index
-- **Index standards :** `idx_table_colonne` (ex: `idx_utilisateurs_email`)  
-- **Index composites :** `idx_table_col1_col2` (ex: `idx_commandes_date_statut`)
+- **Index standards :** `idx_table_colonne` (ex. : `idx_utilisateurs_email`)  
+- **Index composites :** `idx_table_col1_col2` (ex. : `idx_commandes_date_statut`)
+
+### Schémas
+- **Minuscules courtes :** `auth`, `billing`, `analytics`, `archive`
+- Évitez les schémas hyper-spécifiques qui risquent de proliférer (`utilisateurs_v2_test_dev_2025`…)
+
+### Pourquoi snake_case et minuscules ? (le piège du « folding »)
+
+PostgreSQL applique une règle de **folding** (pliage de casse) sur les identifiants **non quotés** : `CREATE TABLE Utilisateurs (…)` crée en réalité une table nommée `utilisateurs` (en minuscules). Le SQL standard fait l'inverse (folding vers les majuscules), mais PostgreSQL a choisi les minuscules historiquement.
+
+```sql
+-- Ces deux commandes sont identiques pour PostgreSQL :
+CREATE TABLE Utilisateurs (id INT);  
+CREATE TABLE utilisateurs (id INT);  -- ERROR: relation "utilisateurs" already exists  
+
+-- En revanche, avec des guillemets doubles, la casse est préservée :
+CREATE TABLE "Utilisateurs" (id INT);  -- Différente de "utilisateurs" !  
+SELECT * FROM Utilisateurs;  -- ❌ Cherche "utilisateurs" (folding), pas "Utilisateurs"  
+SELECT * FROM "Utilisateurs";  -- ✅ OK, accède bien à la table avec majuscule  
+```
+
+> ⚠️ **Conseil pratique** : restez **toujours en snake_case sans guillemets**. Cela évite les confusions, simplifie les outils et empêche les conflits avec le folding.
+
+### Éviter les mots réservés SQL
+
+Certains noms sont des **mots réservés** SQL ou PostgreSQL (`user`, `order`, `select`, `group`, `table`…). Les utiliser comme nom de table ou colonne force le quoting partout dans le code :
+
+```sql
+-- ❌ Forcer le quoting partout est un casse-tête
+CREATE TABLE "order" (id INT, "user" VARCHAR(100));  
+SELECT * FROM "order" WHERE "user" = 'alice';  
+
+-- ✅ Préférez des noms non-réservés
+CREATE TABLE commandes (id INT, utilisateur VARCHAR(100));  
+SELECT * FROM commandes WHERE utilisateur = 'alice';  
+```
+
+La liste complète des mots réservés est disponible dans la [doc PostgreSQL — SQL Key Words](https://www.postgresql.org/docs/18/sql-keywords-appendix.html).
 
 ---
 
@@ -335,7 +378,7 @@ Seulement ensuite, traduisez votre modèle en commandes CREATE TABLE.
 
 ## Un Mot sur les Transactions et le DDL
 
-**Point important :** Dans PostgreSQL, contrairement à d'autres SGBD (comme MySQL), les commandes DDL sont **transactionnelles**.
+**Point important** : dans PostgreSQL, contrairement à d'autres SGBD (comme MySQL), les commandes DDL sont **transactionnelles**.
 
 Cela signifie que vous pouvez faire :
 
@@ -351,7 +394,23 @@ ROLLBACK; -- Annule toutes les créations
 
 Cette caractéristique est extrêmement utile pour tester des modifications de schéma en toute sécurité.
 
-**Exception :** Certaines opérations DDL ne peuvent pas être annulées, comme `CREATE DATABASE` et `DROP DATABASE`.
+**Exception :** certaines opérations ne peuvent **pas** être exécutées dans un bloc transactionnel explicite :
+- `CREATE DATABASE` / `DROP DATABASE` / `ALTER DATABASE … RENAME` (les autres variantes d'`ALTER DATABASE` sont transactionnelles)
+- `CREATE TABLESPACE` / `DROP TABLESPACE`
+- `CREATE INDEX CONCURRENTLY` / `REINDEX … CONCURRENTLY` / `DROP INDEX CONCURRENTLY`
+- `VACUUM` (toutes formes), `ANALYZE` en variante autonome
+- `CLUSTER` (sans nom de table : recluster global)
+- `ALTER TYPE … ADD VALUE` sur un ENUM (dans certains cas, lorsque la nouvelle valeur est utilisée immédiatement après)
+- `ALTER SYSTEM`
+
+```sql
+BEGIN;  
+CREATE INDEX CONCURRENTLY idx_email ON utilisateurs(email);  
+-- ERROR: CREATE INDEX CONCURRENTLY cannot run inside a transaction block
+ROLLBACK;
+```
+
+Pour ces commandes, exécutez-les **en dehors** de tout `BEGIN ... COMMIT`.
 
 ---
 
@@ -365,7 +424,7 @@ Les commandes DDL que vous allez apprendre dans ce chapitre peuvent être exécu
 
 Nous aborderons ces aspects en détail dans la section 4.7 (Verrouillage) et dans les chapitres avancés sur l'administration.
 
-**Règle d'or :** Testez toujours vos modifications de schéma sur un environnement de test avant de les appliquer en production.
+**Règle d'or** : testez toujours vos modifications de schéma sur un environnement de test avant de les appliquer en production.
 
 ---
 
@@ -401,6 +460,17 @@ Gardez ce projet en tête tout au long du chapitre. Vous pourrez ainsi appliquer
 Le DDL est le fondement de tout travail avec PostgreSQL. C'est avec ces commandes que vous allez donner vie à votre modèle de données, structurer vos informations, et garantir leur intégrité.
 
 Ce chapitre va vous donner toutes les clés pour créer des bases de données robustes, performantes et évolutives. Prenez le temps de bien comprendre chaque section, car ces connaissances vous accompagneront tout au long de votre carrière de développeur ou d'administrateur de bases de données.
+
+### 🆕 Nouveautés PostgreSQL 18 abordées dans ce chapitre
+
+Ce chapitre intègre plusieurs nouveautés majeures de PostgreSQL 18 qui touchent au DDL :
+
+- **`UUIDv7`** (section 4.4) : nouveau type d'identifiant ordonné temporellement, idéal pour les clés primaires
+- **Colonnes générées virtuelles** (section 4.3) : `GENERATED ALWAYS AS … VIRTUAL`, calculs à la lecture sans coût de stockage
+- **Contraintes temporelles** (section 4.3) : `PRIMARY KEY (id, periode WITHOUT OVERLAPS)` et `FOREIGN KEY … PERIOD`
+- **Compatibilité accrue** : `IDENTITY` est désormais clairement le standard recommandé sur `SERIAL`
+
+Ces nouveautés seront signalées par 🆕 au fil du chapitre.
 
 **Prêt à commencer ?** Passons maintenant à la section 4.1 où nous allons explorer la hiérarchie logique des objets dans PostgreSQL : Instance → Database → Schema → Table.
 

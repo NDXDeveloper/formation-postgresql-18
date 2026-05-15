@@ -87,7 +87,7 @@ DROP COLUMN email CASCADE;
 -- Supprime aussi les index, contraintes et vues utilisant cette colonne
 ```
 
-⚠️ **Attention :** La suppression d'une colonne est une opération lourde qui nécessite un verrouillage exclusif et peut prendre du temps sur de grandes tables.
+⚠️ **Attention** : la suppression d'une colonne est une opération lourde qui nécessite un verrouillage exclusif et peut prendre du temps sur de grandes tables.
 
 #### 1.2.3. Modifier le Type d'une Colonne
 
@@ -119,7 +119,7 @@ ALTER COLUMN quantite TYPE INTEGER USING quantite::INTEGER;
 - PostgreSQL doit vérifier que toutes les valeurs existantes sont compatibles avec le nouveau type
 - Sur de grandes tables en production, cette opération peut causer des interruptions
 
-**Optimisation PostgreSQL :** Certains changements de type ne nécessitent pas de réécriture, par exemple :
+**Optimisation PostgreSQL** : certains changements de type ne nécessitent pas de réécriture, par exemple :
 - Augmenter la longueur d'un VARCHAR
 - Passer de VARCHAR(n) à TEXT
 
@@ -238,7 +238,7 @@ ALTER TABLE utilisateurs
 ALTER COLUMN pays DROP DEFAULT;  
 ```
 
-**Important :** Modifier la valeur par défaut n'affecte **que les nouvelles lignes**. Les lignes existantes conservent leurs valeurs actuelles.
+**Important** : modifier la valeur par défaut n'affecte **que les nouvelles lignes**. Les lignes existantes conservent leurs valeurs actuelles.
 
 ### 1.3. ALTER SCHEMA, SEQUENCE, TYPE...
 
@@ -387,7 +387,7 @@ DROP DOMAIN mon_domaine;
 
 PostgreSQL est un système **multi-utilisateurs** : plusieurs connexions peuvent travailler simultanément sur la même base. Pour garantir la **cohérence des données** lors des modifications, PostgreSQL utilise un système de **verrous** (locks).
 
-**Principe fondamental :** Quand vous modifiez la structure d'une table (ALTER ou DROP), PostgreSQL pose un verrou pour éviter que d'autres opérations n'interfèrent.
+**Principe fondamental** : quand vous modifiez la structure d'une table (`ALTER` ou `DROP`), PostgreSQL pose un verrou pour éviter que d'autres opérations n'interfèrent.
 
 ### 3.2. Types de Verrous pour ALTER et DROP
 
@@ -405,7 +405,7 @@ Il existe plusieurs niveaux de verrous en PostgreSQL. Voici les plus importants 
 - Utilisé par DROP TABLE, ALTER TABLE (la plupart des cas)
 - **Bloque toutes les autres opérations** sur la table, même les SELECT
 
-**Impact critique :** Pendant qu'un ALTER TABLE est en cours, **personne ne peut accéder à la table**, même en lecture. Sur une application en production, cela signifie une **indisponibilité**.
+**Impact critique** : pendant qu'un `ALTER TABLE` est en cours, **personne ne peut accéder à la table**, même en lecture. Sur une application en production, cela signifie une **indisponibilité**.
 
 ### 3.3. Quel Type de Verrou pour Quelle Opération ?
 
@@ -455,7 +455,7 @@ ADD COLUMN statut VARCHAR(20) NOT NULL DEFAULT 'en_attente';
 4. Cette opération peut prendre **plusieurs minutes**  
 5. Pendant ce temps, votre application est **figée** pour cette table
 
-**Conséquence :** Indisponibilité de service, utilisateurs mécontents, perte de revenus potentielle.
+**Conséquence** : indisponibilité de service, utilisateurs mécontents, perte de revenus potentielle.
 
 ### 3.6. Techniques pour Minimiser l'Impact
 
@@ -531,7 +531,69 @@ CREATE INDEX CONCURRENTLY idx_email ON utilisateurs(email);
 
 Cette opération est plus longue, mais n'empêche pas l'application de fonctionner.
 
-#### 3.6.5. Planifier les Opérations Lourdes
+> ⚠️ **Pièges de `CONCURRENTLY`** :  
+> 1. **Ne peut pas être exécuté dans une transaction** (`BEGIN ... COMMIT`). Le client doit l'envoyer comme commande autonome.  
+> 2. Si l'opération **échoue ou est interrompue**, l'index reste mais marqué `INVALID`. Il faut alors le supprimer (`DROP INDEX CONCURRENTLY`) et recommencer.  
+> 3. Vérifiez les index invalides : `SELECT * FROM pg_index WHERE indisvalid = false;`
+
+Les variantes `CONCURRENTLY` disponibles (toutes recommandées pour la production) :
+
+```sql
+CREATE INDEX CONCURRENTLY idx_email ON utilisateurs(email);  
+DROP INDEX CONCURRENTLY idx_email;  
+REINDEX INDEX CONCURRENTLY idx_email;       -- PG 12+  
+REINDEX TABLE CONCURRENTLY utilisateurs;    -- PG 12+  
+ALTER TABLE … DETACH PARTITION … CONCURRENTLY;  -- PG 14+  
+```
+
+#### 3.6.5. `lock_timeout` : Protéger la production contre les blocages
+
+En production, **toujours définir un `lock_timeout`** avant un `ALTER TABLE` lourd :
+
+```sql
+-- Échouer après 5 secondes plutôt que de bloquer toutes les autres requêtes
+SET lock_timeout = '5s';
+
+ALTER TABLE commandes ADD COLUMN traitee BOOLEAN DEFAULT FALSE;
+-- Si le verrou ACCESS EXCLUSIVE ne peut pas être obtenu en 5 s,
+-- la commande échoue avec une erreur, ce qui est MIEUX que de bloquer
+-- les milliers de connexions applicatives derrière.
+
+RESET lock_timeout;
+```
+
+> 💡 **Pattern recommandé pour les migrations production** :  
+> 1. `SET lock_timeout = '5s';`  
+> 2. Tenter le `ALTER TABLE`  
+> 3. Si échec → réessayer plus tard (hors heures de pointe)  
+> 4. Si succès → continuer avec les opérations suivantes  
+>  
+> C'est ce que font les outils comme **pg-migrate**, **Flyway** ou **Liquibase** quand ils sont configurés pour des déploiements zero-downtime.
+
+#### `statement_timeout` vs `lock_timeout` : ne pas confondre
+
+| Paramètre | Mesure | Quand échoue ? |
+|-----------|--------|----------------|
+| `lock_timeout` | Temps d'**attente** pour obtenir un verrou | Si le verrou n'est pas obtenu dans le délai |
+| `statement_timeout` | Temps total d'**exécution** d'une requête | Si la requête (verrou + exécution) dépasse le délai |
+| `idle_in_transaction_session_timeout` | Temps d'**inactivité** au milieu d'une transaction | Si une connexion garde une transaction ouverte sans rien faire |
+
+```sql
+-- Pour un ALTER TABLE robuste en production : combiner les deux
+SET lock_timeout = '5s';        -- ne pas attendre + de 5s pour le verrou  
+SET statement_timeout = '60s';  -- ne pas mettre + de 1 min à s'exécuter une fois le verrou obtenu  
+
+ALTER TABLE grosse_table ADD COLUMN nouveau_champ TEXT;
+-- Si verrou impossible en 5s → ERROR « canceling statement due to lock timeout »
+-- Si verrou obtenu mais ALTER dépasse 60s → ERROR « canceling statement due to statement timeout »
+
+RESET lock_timeout;  
+RESET statement_timeout;  
+```
+
+> ⚠️ **Piège classique des longues migrations** : sans `lock_timeout`, si une transaction longue détient un verrou SHARE sur la table (un simple `SELECT` qui dure), votre `ALTER TABLE` attend… **et tous les nouveaux `SELECT` attendent derrière lui** (chaîne d'attente). C'est l'un des scénarios de panne les plus courants en PostgreSQL. Le `lock_timeout` court casse ce cercle vicieux.
+
+#### 3.6.6. Planifier les Opérations Lourdes
 
 - **Fenêtre de maintenance** : Planifiez les ALTER lourds pendant les heures creuses  
 - **Blue-Green Deployment** : Créez une nouvelle version de la table, basculez, puis supprimez l'ancienne  
@@ -587,7 +649,7 @@ SELECT pg_terminate_backend(pid);
 
 **Checklist de sécurité :**
 
-1. ✅ **Sauvegarde** : Toujours faire un backup avant une modification lourde  
+1. ✅ **Sauvegarde** : toujours faire un backup avant une modification lourde  
 2. ✅ **Tester sur un environnement de staging** identique à la production  
 3. ✅ **Estimer la durée** : Testez sur une copie de la table de production  
 4. ✅ **Vérifier les dépendances** : Utilisez `\d+ nom_table` dans psql  
@@ -635,7 +697,7 @@ DROP TABLE utilisateurs_old;
 
 ### Exemple 1 : Migration de Schéma Sécurisée
 
-**Contexte :** Vous voulez ajouter une colonne `last_login` à une grande table `users`.
+**Contexte** : vous voulez ajouter une colonne `last_login` à une grande table `users`.
 
 ```sql
 -- ✅ Bonne approche
@@ -712,13 +774,19 @@ COMMIT;
 
 | Opération | Vitesse | Verrou | Impact Production | Recommandation |
 |-----------|---------|--------|-------------------|----------------|
-| ADD COLUMN (NULL) | ⚡ Rapide | Court | ✅ Faible | OK en production |
-| ADD COLUMN DEFAULT (PG 11+) | ⚡ Rapide | Court | ✅ Faible | OK en production |
-| DROP COLUMN | 🐌 Lent | Long | ❌ Élevé | Fenêtre de maintenance |
-| ALTER TYPE | 🐌 Très lent | Très long | ❌ Très élevé | Approche alternative |
-| RENAME COLUMN | ⚡ Instantané | Court | ✅ Négligeable | OK en production |
-| DROP TABLE | ⚡ Rapide | Court | ⚠️ Moyen | Vérifier dépendances |
-| ADD CONSTRAINT | 🐌 Lent | Long | ❌ Élevé | Utiliser NOT VALID |
+| ADD COLUMN (NULL) | ⚡ Rapide | ACCESS EXCLUSIVE court | ✅ Faible | OK en production |
+| ADD COLUMN DEFAULT (PG 11+) | ⚡ Rapide | ACCESS EXCLUSIVE court | ✅ Faible | OK en production |
+| ADD COLUMN NOT NULL DEFAULT (PG 11+) | ⚡ Rapide | ACCESS EXCLUSIVE court | ✅ Faible | OK en production |
+| DROP COLUMN | ⚡ Rapide* | ACCESS EXCLUSIVE | ⚠️ Moyen | *Marque comme supprimée ; réécriture par VACUUM |
+| ALTER COLUMN TYPE (réécriture) | 🐌 Très lent | ACCESS EXCLUSIVE long | ❌ Très élevé | Approche alternative (nouvelle colonne) |
+| ALTER COLUMN TYPE (binaire compatible) | ⚡ Instantané | ACCESS EXCLUSIVE court | ✅ Faible | VARCHAR(n)→TEXT, VARCHAR(n)→VARCHAR(m>n) |
+| RENAME COLUMN / RENAME TABLE | ⚡ Instantané | ACCESS EXCLUSIVE court | ⚠️ Faible | OK mais invalide les prepared statements |
+| DROP TABLE | ⚡ Rapide | ACCESS EXCLUSIVE | ⚠️ Moyen | Vérifier dépendances |
+| ADD CONSTRAINT (validé) | 🐌 Lent | ACCESS EXCLUSIVE long | ❌ Élevé | Utiliser NOT VALID + VALIDATE |
+| VALIDATE CONSTRAINT (séparé) | 🐌 Lent | SHARE UPDATE EXCLUSIVE | ✅ Faible | Permet INSERT/UPDATE/SELECT pendant |
+| CREATE INDEX (normal) | 🐌 Lent | SHARE | ⚠️ Bloque les écritures | Préférer CONCURRENTLY |
+| CREATE INDEX CONCURRENTLY | 🐌 Très lent | SHARE UPDATE EXCLUSIVE | ✅ Faible | Recommandé en production |
+| ALTER TABLE SET (UN)LOGGED | 🐌 Lent | ACCESS EXCLUSIVE long | ❌ Élevé | Réécrit la table entière |
 
 ---
 
@@ -732,10 +800,10 @@ COMMIT;
 
 ### Concepts Liés
 
-- **MVCC (Multiversion Concurrency Control)** : Le système de gestion de la concurrence de PostgreSQL (Chapitre 12)  
-- **Transactions** : Garantir l'atomicité des opérations (Chapitre 12)  
-- **VACUUM** : Maintenance et récupération d'espace (Chapitre 16)  
-- **Réplication** : Effectuer des migrations sans downtime (Chapitre 17)
+- **MVCC (Multiversion Concurrency Control)** : le système de gestion de la concurrence de PostgreSQL (Chapitre 12)  
+- **Transactions** : garantir l'atomicité des opérations (Chapitre 12)  
+- **VACUUM** : maintenance et récupération d'espace (Chapitre 16)  
+- **Réplication** : effectuer des migrations sans downtime (Chapitre 17)
 
 ---
 

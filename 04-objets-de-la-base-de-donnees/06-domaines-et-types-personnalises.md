@@ -28,11 +28,11 @@ Un **domaine** est un type de données personnalisé basé sur un type existant,
 ### Analogie
 
 Pensez à un domaine comme à un **moule personnalisé** :
-- Vous prenez un type de base (ex: VARCHAR)
-- Vous ajoutez des règles spécifiques (ex: format d'email)
+- Vous prenez un type de base (ex : VARCHAR)
+- Vous ajoutez des règles spécifiques (ex : format d'email)
 - Vous réutilisez ce moule partout où nécessaire
 
-**Avantage :** Au lieu de répéter les contraintes dans chaque table, vous les définissez une fois.
+**Avantage** : au lieu de répéter les contraintes dans chaque table, vous les définissez une fois.
 
 ### Syntaxe de Base
 
@@ -80,7 +80,7 @@ INSERT INTO utilisateurs (nom, email) VALUES ('Bob', 'email_invalide');
 -- ERROR: value for domain email_address violates check constraint
 ```
 
-**Avantage :** Si vous devez changer la validation, modifiez le domaine une seule fois !
+**Avantage** : si vous devez changer la validation, modifiez le domaine une seule fois !
 
 ### Exemples de Domaines Utiles
 
@@ -280,6 +280,21 @@ DROP DOMAIN email_address CASCADE;
 DROP DOMAIN IF EXISTS email_address;
 ```
 
+### Limites des DOMAINs
+
+Les domaines sont pratiques mais ont plusieurs limitations importantes à connaître :
+
+| Limitation | Détail | Contournement |
+|------------|--------|---------------|
+| Pas de `UNIQUE` dans le domaine | Le caractère unique se définit toujours **au niveau de la colonne** ou de la table | `UNIQUE` sur la colonne |
+| Pas de `PRIMARY KEY` / `FOREIGN KEY` | Idem, contraintes relationnelles au niveau table uniquement | `REFERENCES` sur la colonne |
+| `CHECK` sans référence externe | Le `CHECK (VALUE …)` ne peut référencer que la valeur (mot-clé `VALUE`), pas d'autres colonnes ni tables | Trigger ou contrainte de table |
+| `NOT NULL` peut être contourné | Une colonne qui utilise le domaine peut être déclarée `NULL` explicitement ; aussi, `INSERT … VALUES (DEFAULT)` peut produire NULL si pas de DEFAULT | Toujours doubler par `NOT NULL` sur la colonne pour les cas critiques |
+| `ALTER DOMAIN … TYPE` impossible | On ne peut pas changer le type de base d'un domaine existant | Recréer le domaine et migrer |
+| Cast implicite avec le type de base | Un domaine est interchangeable avec son type de base pour la plupart des opérations — pas de typage fort | Aucun (limitation inhérente) |
+
+> 💡 **Cas d'usage idéal des DOMAINs** : factoriser une **règle de validation** réutilisée à plusieurs endroits (format email, longueur de code postal, plage de notes…). Ne cherchez pas à les utiliser comme un mécanisme de typage fort à la C# ou Rust : PostgreSQL les traite comme des sucres syntaxiques au-dessus du type de base.
+
 ### Voir les Domaines
 
 ```sql
@@ -304,7 +319,7 @@ ORDER BY domain_name;
 
 ### Qu'est-ce qu'un Type Composite ?
 
-Un **type composite** est un type de données structuré contenant **plusieurs champs** de types différents. C'est similaire à une "struct" en C ou une "class" en POO (sans méthodes).
+Un **type composite** est un type de données structuré contenant **plusieurs champs** de types différents. C'est similaire à une « struct » en C ou une « class » en POO (sans méthodes).
 
 ### Syntaxe
 
@@ -369,7 +384,7 @@ SELECT * FROM personnes
 WHERE (adresse_principale).ville = 'Paris';  
 ```
 
-**Note :** Les parenthèses autour du nom de colonne sont nécessaires pour éviter l'ambiguïté.
+**Note** : les parenthèses autour du nom de colonne sont nécessaires pour éviter l'ambiguïté.
 
 ### Exemple : Coordonnées Géographiques
 
@@ -469,6 +484,25 @@ ALTER TYPE adresse_type RENAME ATTRIBUTE pays TO nom_pays;
 -- Renommer le type
 ALTER TYPE adresse_type RENAME TO adresse;
 ```
+
+> ⚠️ **Attention en production** : `ALTER TYPE … ADD/DROP/ALTER ATTRIBUTE` prend un **verrou ACCESS EXCLUSIVE** sur **toutes les tables** qui utilisent ce type, et peut **réécrire** ces tables sur de gros jeux de données. Sur une table de plusieurs millions de lignes utilisant un type composite, cette opération peut bloquer la production pendant plusieurs minutes. C'est l'une des raisons pour lesquelles **JSONB est souvent préféré aux types composites** quand l'évolution du schéma est attendue.
+
+### Limites des Types Composites
+
+| Limitation | Détail |
+|------------|--------|
+| Pas de contrainte `CHECK` interne | On ne peut pas définir `CHECK` directement sur le type ; il faut un domaine pour chaque champ ou une contrainte de table |
+| Pas de `FOREIGN KEY` sur un champ | Impossible de référencer une autre table depuis un champ d'un composite |
+| Index sur un champ : partiel | On peut indexer une expression `((col).champ)`, mais c'est limité |
+| Évolution coûteuse | `ALTER TYPE` peut bloquer et réécrire de nombreuses tables (voir avertissement ci-dessus) |
+| `NULL` versus composite vide | `ROW(NULL, NULL, NULL)` n'est **pas** NULL : c'est un composite avec tous ses champs à NULL. Subtil et source de bugs |
+| Comparaison `=` | Compare champ par champ ; les composites sont égaux si tous leurs champs sont égaux |
+
+> 💡 **Types composites vs JSONB** : pour des données **flexibles** ou **évolutives**, **préférez JSONB**. Les types composites brillent quand :  
+> 1. Le schéma est **stable** (rare de modifier les champs)  
+> 2. Vous avez besoin de **typage fort** (validation à l'insertion)  
+> 3. Vous voulez **réutiliser** la même structure à plusieurs endroits  
+> 4. Vous écrivez du PL/pgSQL et avez besoin de retourner des records typés
 
 ### Tableaux de Types Composites
 
@@ -680,9 +714,13 @@ SELECT 5 <@ '[1, 10]'::INT4RANGE;  -- true
 SELECT '[1, 5]'::INT4RANGE && '[3, 8]'::INT4RANGE;  -- true  
 SELECT '[1, 5]'::INT4RANGE && '[6, 10]'::INT4RANGE; -- false  
 
--- Adjacent
-SELECT '[1, 5]'::INT4RANGE -|- '[5, 10]'::INT4RANGE; -- true  
-SELECT '[1, 5]'::INT4RANGE -|- '[6, 10]'::INT4RANGE; -- false  
+-- Adjacent (sans aucun point commun, mais qui se touchent exactement)
+-- ⚠️ Avec INT4RANGE (type discret), PostgreSQL normalise les bornes en [) :
+--   [1, 5] devient [1, 6) et [5, 10] devient [5, 11)
+--   Ces deux plages contiennent toutes les deux 5 → elles se CHEVAUCHENT, pas adjacentes.
+SELECT '[1, 5]'::INT4RANGE -|- '[5, 10]'::INT4RANGE; -- false (chevauchement)  
+SELECT '[1, 5)'::INT4RANGE -|- '[5, 10]'::INT4RANGE; -- true  (vraiment adjacentes)  
+SELECT '[1, 5]'::INT4RANGE -|- '[7, 10]'::INT4RANGE; -- false (séparées par un trou)  
 
 -- Union
 SELECT '[1, 5]'::INT4RANGE + '[3, 8]'::INT4RANGE;  -- [1, 8]
@@ -787,16 +825,21 @@ WHERE plage_age @> 30;
 
 ### Créer un Type de Plage Personnalisé
 
+Le type natif `NUMRANGE` couvre déjà la plupart des cas. Mais si vous avez un **type personnalisé** (ex. : domaine de prix, type composite), vous pouvez créer votre propre RANGE :
+
 ```sql
--- Créer un type de plage pour un type personnalisé
+-- Cas 1 : RANGE simple sur un domaine (subtype_diff optionnel)
+CREATE DOMAIN prix_euro AS NUMERIC(10, 2) CHECK (VALUE >= 0);
+
 CREATE TYPE prix_range AS RANGE (
-    subtype = NUMERIC,
-    subtype_diff = float8mi  -- Fonction de différence
+    subtype = prix_euro
+    -- subtype_diff omis : le RANGE fonctionne, mais sans optimisation GiST
+    -- spécifique pour le calcul de longueur de plage.
 );
 
 -- Utilisation
 CREATE TABLE segments_prix (
-    id SERIAL PRIMARY KEY,
+    id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     categorie VARCHAR(50),
     plage_prix prix_range
 );
@@ -805,6 +848,44 @@ INSERT INTO segments_prix (categorie, plage_prix) VALUES
     ('Budget', '[0, 50)'::prix_range),
     ('Milieu', '[50, 200)'::prix_range),
     ('Premium', '[200, )'::prix_range);
+```
+
+> ⚠️ **Erreur courante** : `subtype_diff = float8mi` ne fonctionne **que pour `double precision`**. Pour `NUMERIC` ou un domaine basé sur `NUMERIC`, il faut soit omettre `subtype_diff`, soit écrire une fonction `subtype_diff` qui retourne un `float8` à partir de deux valeurs du sous-type.
+
+### Multirange Types (PostgreSQL 14+) 🆕
+
+PostgreSQL 14 a introduit les **multirange types** qui représentent **plusieurs plages disjointes** dans une seule valeur :
+
+| Type multirange | Type range correspondant |
+|-----------------|--------------------------|
+| `int4multirange` | `int4range` |
+| `int8multirange` | `int8range` |
+| `nummultirange` | `numrange` |
+| `tsmultirange` | `tsrange` |
+| `tstzmultirange` | `tstzrange` |
+| `datemultirange` | `daterange` |
+
+```sql
+-- Représenter plusieurs périodes d'indisponibilité d'une salle
+CREATE TABLE indisponibilites_salles (
+    salle_id INTEGER,
+    creneaux_indisponibles tstzmultirange
+);
+
+INSERT INTO indisponibilites_salles VALUES (
+    1,
+    '{[2025-12-01 09:00+01, 2025-12-01 11:00+01),
+      [2025-12-01 14:00+01, 2025-12-01 16:00+01),
+      [2025-12-02 09:00+01, 2025-12-02 12:00+01)}'::tstzmultirange
+);
+
+-- Opérations multirange
+SELECT '{[1,5), [10,15)}'::int4multirange + '{[3,7), [12,18)}'::int4multirange;
+-- Résultat : {[1,7), [10,18)}  (union, plages fusionnées si elles se touchent)
+
+-- Tester l'appartenance
+SELECT 4 <@ '{[1,5), [10,15)}'::int4multirange;  -- true  
+SELECT 7 <@ '{[1,5), [10,15)}'::int4multirange;  -- false  
 ```
 
 ---

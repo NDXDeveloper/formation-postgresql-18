@@ -26,7 +26,7 @@ Pensez aux types de données comme à des conteneurs spécialisés :
 
 ```
 📦 Type INTEGER    → Boîte pour nombres entiers    → 42, -15, 1000
-📦 Type TEXT       → Boîte pour du texte          → "Bonjour", "PostgreSQL"
+📦 Type TEXT       → Boîte pour du texte          → « Bonjour », « PostgreSQL »
 📦 Type DATE       → Boîte pour des dates         → 2025-11-19
 📦 Type BOOLEAN    → Boîte pour vrai/faux         → true, false
 ```
@@ -66,7 +66,7 @@ INSERT INTO personnes (nom, salaire)
 VALUES ('Dave', 45000.123);  -- Arrondi automatiquement à 45000.12  
 ```
 
-**Avantage :** PostgreSQL vous empêche d'insérer des données incorrectes !
+**Avantage** : PostgreSQL vous empêche d'insérer des données incorrectes !
 
 ### 2. Optimisation du Stockage
 
@@ -85,7 +85,7 @@ CREATE TABLE comparaison_tailles (
 
 -- Exemple : Stocker l'âge (0-120)
 -- SMALLINT suffit (2 octets) au lieu de INTEGER (4 octets)
--- Économie : 50% d'espace pour cette colonne
+-- Économie : 50 % d'espace pour cette colonne
 
 -- Pour 1 million de lignes :
 -- SMALLINT : 2 MB
@@ -93,7 +93,7 @@ CREATE TABLE comparaison_tailles (
 -- Économie : 2 MB sur cette seule colonne
 ```
 
-**Avantage :** Un bon choix de type économise de l'espace disque et améliore les performances !
+**Avantage** : un bon choix de type économise de l'espace disque et améliore les performances !
 
 ### 3. Opérations Adaptées
 
@@ -121,7 +121,7 @@ SELECT '{"nom": "Alice"}'::JSONB ->> 'nom';  -- 'Alice'
 SELECT '100' + 50;  -- ERREUR : operator does not exist: text + integer
 ```
 
-**Avantage :** Les types garantissent que vous utilisez les bonnes opérations !
+**Avantage** : les types garantissent que vous utilisez les bonnes opérations !
 
 ### 4. Lisibilité et Documentation
 
@@ -201,9 +201,12 @@ Pour stocker du texte de différentes longueurs.
 | `CHAR(n)` | Texte fixe (exactement n caractères) | Codes (rarement utilisé) |
 
 **Quand utiliser :**
-- Noms, emails, URLs : `VARCHAR(n)` avec limite appropriée
+- Noms, emails : `VARCHAR(n)` avec limite appropriée
+- URLs : `TEXT` (les URLs peuvent dépasser 2 000 caractères)
 - Contenu long (articles, descriptions) : `TEXT`
 - Codes de longueur fixe : `CHAR(n)` (rare)
+
+> 💡 **Particularité PostgreSQL** : contrairement à d'autres SGBD, `VARCHAR(n)` et `TEXT` ont **exactement les mêmes performances** dans PostgreSQL. La seule différence est la limite de longueur appliquée par `VARCHAR(n)`. Si vous n'avez pas besoin de cette limite, `TEXT` est tout aussi efficace. Le choix relève donc de la documentation et de la contrainte métier, pas de la performance.
 
 ### 3. Types Temporels ⏰
 
@@ -240,16 +243,18 @@ Types avancés uniques à PostgreSQL.
 
 | Type | Description | Cas d'Usage |
 |------|-------------|-------------|
-| `JSONB` | Documents JSON | Données flexibles, APIs |
+| `JSONB` | Documents JSON binaires | Données flexibles, APIs |
 | `ARRAY` | Tableaux | Tags, listes |
-| `UUID` | Identifiants uniques | IDs distribués |
+| `UUID` | Identifiants uniques | IDs distribués, API publiques |
+| `UUIDv7` 🆕 | UUID ordonnés temporellement | Clés primaires modernes (PG 18) |
 | `ENUM` | Valeurs énumérées | Statuts, catégories |
 | `INET` / `CIDR` | Adresses IP | Réseaux |
+| `MACADDR` / `MACADDR8` | Adresses MAC | Équipements réseau |
 
 **Quand utiliser :**
 - Données semi-structurées : `JSONB`
 - Listes simples : `ARRAY`
-- IDs globaux, API publiques : `UUID`
+- IDs globaux, API publiques : `UUID` (ou `UUIDv7` en PG 18 pour des clés primaires plus performantes)
 - Ensembles de valeurs fixes : `ENUM`
 
 ### 6. Types Géométriques et Spécialisés 🗺️
@@ -264,7 +269,7 @@ Types pour cas d'usage spécifiques.
 | `BYTEA` | Données binaires |
 | `XML` | Documents XML |
 
-**Note :** Ces types sont moins courants mais très utiles dans des contextes spécifiques.
+**Note** : ces types sont moins courants mais très utiles dans des contextes spécifiques.
 
 ---
 
@@ -274,7 +279,9 @@ Voici un guide rapide pour choisir le bon type selon vos besoins :
 
 | Je veux stocker... | Type Recommandé | Exemple |
 |-------------------|-----------------|---------|
-| Un identifiant unique auto-incrémenté | `SERIAL` ou `UUID` | `id SERIAL PRIMARY KEY` |
+| Un identifiant unique auto-incrémenté (nouveau code) | `INT GENERATED ALWAYS AS IDENTITY` | `id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY` |
+| Un identifiant unique auto-incrémenté (code hérité) | `SERIAL` | `id SERIAL PRIMARY KEY` |
+| Un ID distribué / d'API publique | `UUID DEFAULT uuidv7()` (PG 18) | `id UUID DEFAULT uuidv7() PRIMARY KEY` |
 | Un âge | `SMALLINT` | `age SMALLINT` |
 | Une quantité, un compteur | `INTEGER` | `quantite INTEGER` |
 | Un **prix, un montant d'argent** | `NUMERIC(10, 2)` | `prix NUMERIC(10, 2)` |
@@ -354,7 +361,7 @@ CREATE TABLE logs_risque (
 );
 ```
 
-**Conseil :** Anticipez la croissance de vos données.
+**Conseil** : anticipez la croissance de vos données.
 
 ### Principe 4 : Documenter avec les Types
 
@@ -417,7 +424,7 @@ SELECT * FROM bon_prix;
 -- Résultat : 0.30 (exact !)
 ```
 
-**Règle d'or :** JAMAIS FLOAT/REAL pour l'argent !
+**Règle d'or** : JAMAIS FLOAT/REAL pour l'argent !
 
 ### ❌ Erreur 3 : Types Trop Larges
 
@@ -461,7 +468,7 @@ Ce chapitre 4.4 est organisé en sous-sections détaillées, chacune explorant u
 6. **4.4.6. Types Binaires et XML** → BYTEA, XML
 
 **Conseil de lecture :**
-- Lisez d'abord **4.4.1**, **4.4.2** et **4.4.3** (fondamentaux, utilisés dans 90% des projets)
+- Lisez d'abord **4.4.1**, **4.4.2** et **4.4.3** (fondamentaux, utilisés dans 90 % des projets)
 - Explorez **4.4.4** (types modernes très utiles)
 - Consultez **4.4.5** et **4.4.6** selon vos besoins spécifiques
 
@@ -474,20 +481,20 @@ Voici un exemple de table utilisant divers types de manière appropriée :
 ```sql
 CREATE TABLE utilisateurs (
     -- Identifiant
-    id SERIAL PRIMARY KEY,
-    uuid UUID DEFAULT gen_random_uuid() UNIQUE,
+    id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    public_id UUID DEFAULT uuidv7() UNIQUE,  -- ID public, classable temporellement (PG 18)
 
     -- Informations personnelles
     prenom VARCHAR(100) NOT NULL,
     nom VARCHAR(100) NOT NULL,
     email VARCHAR(255) UNIQUE NOT NULL CHECK (email LIKE '%@%'),
     date_naissance DATE CHECK (date_naissance > '1900-01-01'),
-    age INTEGER GENERATED ALWAYS AS (
-        EXTRACT(YEAR FROM AGE(CURRENT_DATE, date_naissance))
-    ) STORED,
+    -- ⚠️ On ne peut PAS stocker l'âge en GENERATED STORED depuis date_naissance :
+    -- AGE(CURRENT_DATE, …) n'est pas IMMUTABLE. L'âge se calcule à la volée
+    -- (voir section 4.4.3 sur les types temporels pour le détail).
 
-    -- Authentification
-    password_hash BYTEA NOT NULL,
+    -- Authentification (hash bcrypt, recommandé : voir section 4.4.6)
+    password_hash TEXT NOT NULL,
 
     -- État et préférences
     est_actif BOOLEAN DEFAULT TRUE,
@@ -506,17 +513,22 @@ CREATE TABLE utilisateurs (
 );
 
 -- Ce schéma utilise :
--- - SERIAL pour l'ID auto-incrémenté
--- - UUID pour un identifiant global
+-- - IDENTITY pour l'ID auto-incrémenté (standard SQL:2003, recommandé)
+-- - UUIDv7 pour un identifiant public classable temporellement (PG 18 🆕)
 -- - VARCHAR avec limites pour les textes courts
 -- - DATE pour la date de naissance
--- - INTEGER généré pour l'âge (calculé automatiquement)
--- - BYTEA pour le hash du mot de passe
+-- - TEXT pour le hash de mot de passe (bcrypt produit un hash ASCII)
 -- - BOOLEAN pour les flags
 -- - JSONB pour des préférences flexibles
 -- - ARRAY pour une liste de rôles
 -- - TIMESTAMPTZ pour les horodatages (avec timezone !)
 -- - INET pour les adresses IP
+
+-- Vue calculée pour l'âge (au lieu d'une colonne GENERATED)
+CREATE VIEW utilisateurs_avec_age AS  
+SELECT *,  
+       EXTRACT(YEAR FROM AGE(date_naissance))::INTEGER AS age
+FROM utilisateurs;
 ```
 
 ---

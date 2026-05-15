@@ -77,7 +77,7 @@ Cette commande crée une table nommée `livres` avec 4 colonnes :
 - `titre` : Peut contenir jusqu'à 200 caractères  
 - `auteur` : Peut contenir jusqu'à 100 caractères  
 - `annee_publication` : Nombre entier  
-- `prix` : Nombre décimal avec 2 décimales (ex: 19.99)
+- `prix` : nombre décimal avec 2 décimales (ex. : 19.99)
 
 ### Vérifier que la table existe
 
@@ -140,14 +140,18 @@ Le type de données définit ce que la colonne peut contenir. Nous verrons les t
 
 | Type | Description | Exemple |
 |------|-------------|---------|
-| `INT` / `INTEGER` | Nombre entier | 42, -15, 1000 |
-| `SERIAL` | Entier auto-incrémenté | 1, 2, 3, ... |
+| `INT` / `INTEGER` | Nombre entier (32 bits) | 42, -15, 1000 |
+| `BIGINT` | Grand entier (64 bits) | 9 quintillions max |
+| `SERIAL` | Entier auto-incrémenté (legacy, voir IDENTITY) | 1, 2, 3, … |
 | `VARCHAR(n)` | Texte variable (max n caractères) | 'Bonjour', 'Alice' |
 | `TEXT` | Texte de longueur illimitée | Longs articles, descriptions |
-| `DECIMAL(p,s)` | Nombre décimal précis | 19.99, 1234.56 |
+| `NUMERIC(p,s)` / `DECIMAL(p,s)` | Nombre décimal précis (exact). `DECIMAL` est un **alias** de `NUMERIC`. | 19.99, 1234.56 |
 | `DATE` | Date (sans heure) | 2025-11-19 |
-| `TIMESTAMP` | Date et heure | 2025-11-19 14:30:00 |
+| `TIMESTAMP` | Date et heure (sans fuseau) | 2025-11-19 14:30:00 |
+| `TIMESTAMPTZ` | Date et heure avec fuseau (**recommandé**) | 2025-11-19 14:30:00+01 |
 | `BOOLEAN` | Vrai ou Faux | TRUE, FALSE |
+| `UUID` | Identifiant universellement unique (128 bits) | `01928c5e-…` |
+| `JSONB` | JSON binaire indexable | `'{"a": 1}'` |
 
 ```sql
 CREATE TABLE exemple_types (
@@ -205,7 +209,7 @@ Les **contraintes** sont des règles qui garantissent l'intégrité de vos donn�
 
 ### 1. NOT NULL
 
-**Objectif :** Empêcher les valeurs NULL (vides) dans une colonne.
+**Objectif** : empêcher les valeurs NULL (vides) dans une colonne.
 
 ```sql
 CREATE TABLE produits (
@@ -229,7 +233,7 @@ INSERT INTO produits (prix) VALUES (500.00);
 
 ### 2. DEFAULT
 
-**Objectif :** Fournir une valeur par défaut quand aucune valeur n'est spécifiée.
+**Objectif** : fournir une valeur par défaut quand aucune valeur n'est spécifiée.
 
 ```sql
 CREATE TABLE commandes (
@@ -263,7 +267,7 @@ id | numero_commande | statut     | date_commande         | montant
 
 ### 3. PRIMARY KEY (Clé Primaire)
 
-**Objectif :** Identifier de manière unique chaque ligne d'une table.
+**Objectif** : identifier de manière unique chaque ligne d'une table.
 
 Une clé primaire :
 - Ne peut **jamais** être NULL
@@ -288,37 +292,57 @@ INSERT INTO clients (id, nom, email) VALUES (1, 'Charlie', 'charlie@example.com'
 
 **Bonnes pratiques :**
 - Toute table devrait avoir une clé primaire
-- Utilisez généralement un `SERIAL` ou `BIGSERIAL` pour l'auto-incrémentation
+- En 2026, préférez `GENERATED ALWAYS AS IDENTITY` (standard SQL) à `SERIAL` (legacy PostgreSQL)
+- Pour les systèmes distribués ou exposés via API publique, considérez `UUID` (notamment `UUIDv7` en PG 18)
 - Nommez la colonne `id` par convention
 
 **Syntaxes alternatives :**
 
 ```sql
--- Méthode 1 : Inline (recommandée pour une seule colonne)
+-- Méthode 1 : SERIAL (héritage PostgreSQL, encore très utilisé)
 CREATE TABLE table1 (
     id SERIAL PRIMARY KEY,
     nom VARCHAR(100)
 );
 
--- Méthode 2 : Contrainte de table
+-- Méthode 2 : IDENTITY (standard SQL, recommandé depuis PG 10)
+CREATE TABLE table1_modern (
+    id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    nom VARCHAR(100)
+);
+
+-- Méthode 3 : Contrainte de table
 CREATE TABLE table2 (
-    id SERIAL,
+    id INTEGER GENERATED ALWAYS AS IDENTITY,
     nom VARCHAR(100),
     PRIMARY KEY (id)
 );
 
--- Méthode 3 : Clé primaire composée (plusieurs colonnes)
+-- Méthode 4 : Clé primaire composée (plusieurs colonnes)
 CREATE TABLE inscriptions (
     etudiant_id INT,
     cours_id INT,
     date_inscription DATE,
     PRIMARY KEY (etudiant_id, cours_id)
 );
+
+-- Méthode 5 : 🆕 UUIDv7 (PostgreSQL 18) — idéal pour les API publiques et les systèmes distribués
+CREATE TABLE table_distribuee (
+    id UUID PRIMARY KEY DEFAULT uuidv7(),
+    nom VARCHAR(100)
+);
 ```
+
+> 💡 **`SERIAL` vs `IDENTITY` : que choisir ?**  
+>  
+> - `SERIAL` est l'ancien mécanisme PostgreSQL : crée une séquence sous le capot, mais moins bien intégré au standard SQL. L'utilisateur peut « tricher » en insérant manuellement une valeur.  
+> - `IDENTITY` est conforme au **standard SQL:2003**, plus propre, mieux protégé. Avec `GENERATED ALWAYS`, l'utilisateur **ne peut pas** insérer manuellement une valeur dans cette colonne (sauf à utiliser `OVERRIDING SYSTEM VALUE`).  
+> - Pour un nouveau projet en PG 10+, **`IDENTITY` est le choix recommandé** par la communauté PostgreSQL.  
+> - Le sujet sera détaillé en section 4.5 (Séquences et génération automatique).
 
 ### 4. UNIQUE
 
-**Objectif :** Garantir qu'une valeur n'apparaît qu'une seule fois dans la colonne (mais NULL est autorisé plusieurs fois).
+**Objectif** : garantir qu'une valeur n'apparaît qu'une seule fois dans la colonne (mais NULL est autorisé plusieurs fois).
 
 ```sql
 CREATE TABLE utilisateurs (
@@ -352,7 +376,7 @@ INSERT INTO utilisateurs (nom, email, telephone) VALUES ('Eve', 'eve@example.com
 
 ### 5. CHECK
 
-**Objectif :** Définir une condition personnalisée que les valeurs doivent respecter.
+**Objectif** : définir une condition personnalisée que les valeurs doivent respecter.
 
 ```sql
 CREATE TABLE produits (
@@ -393,6 +417,78 @@ statut VARCHAR(20) CHECK (statut IN ('actif', 'inactif', 'suspendu'))
 -- Vérifier une relation entre colonnes
 date_fin DATE CHECK (date_fin > date_debut)
 ```
+
+---
+
+## Les Colonnes Générées (GENERATED COLUMNS)
+
+Depuis PostgreSQL 12, vous pouvez créer des **colonnes dont la valeur est calculée automatiquement** à partir d'autres colonnes de la même ligne. PostgreSQL 18 enrichit ce mécanisme avec un nouveau mode VIRTUAL.
+
+### Deux modes de calcul
+
+| Mode | Comportement | Disponible depuis | Coût |
+|------|--------------|-------------------|------|
+| `STORED` | Valeur calculée et **stockée sur disque** lors de l'INSERT/UPDATE | PG 12 | Espace disque + écriture |
+| `VIRTUAL` 🆕 | Valeur calculée **à chaque lecture**, jamais stockée | **PG 18** | CPU (à la lecture) |
+
+### Colonne générée STORED (PG 12+)
+
+```sql
+CREATE TABLE produits (
+    id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    nom VARCHAR(200) NOT NULL,
+    prix_ht NUMERIC(10, 2) NOT NULL,
+    tva NUMERIC(4, 3) DEFAULT 0.200,  -- 20 %
+    -- Colonne calculée et stockée sur disque
+    prix_ttc NUMERIC(10, 2)
+        GENERATED ALWAYS AS (prix_ht * (1 + tva)) STORED
+);
+
+INSERT INTO produits (nom, prix_ht) VALUES ('Livre', 10.00);  
+SELECT * FROM produits;  
+-- id | nom   | prix_ht | tva   | prix_ttc
+-- ---+-------+---------+-------+----------
+-- 1  | Livre | 10.00   | 0.200 | 12.00      ← calculé automatiquement
+```
+
+**Avantages STORED** : lecture instantanée, indexable.  
+**Inconvénient** : occupe de l'espace disque, recalculé à chaque UPDATE des colonnes sources.  
+
+### Colonne générée VIRTUAL (🆕 PG 18)
+
+```sql
+CREATE TABLE produits_v2 (
+    id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    nom VARCHAR(200) NOT NULL,
+    prix_ht NUMERIC(10, 2) NOT NULL,
+    tva NUMERIC(4, 3) DEFAULT 0.200,
+    -- Colonne calculée à chaque lecture, sans stockage
+    prix_ttc NUMERIC(10, 2)
+        GENERATED ALWAYS AS (prix_ht * (1 + tva)) VIRTUAL
+);
+```
+
+**Avantages VIRTUAL** :
+- Zéro espace disque supplémentaire
+- Toujours cohérent (recalculé à chaque accès)
+- Idéal pour les calculs simples consultés peu fréquemment
+
+**Inconvénients** :
+- CPU à chaque lecture
+- Non indexable directement (utiliser un index sur expression à la place)
+- Ne peut pas référencer d'autres colonnes générées
+
+### Cas d'usage typiques
+
+| Cas | Mode recommandé | Pourquoi |
+|-----|-----------------|----------|
+| Colonne fréquemment lue et filtrée | `STORED` | Indexable, lecture rapide |
+| Calcul lourd (concaténation, agrégation, sous-requête) | `STORED` | Évite de recalculer à chaque accès |
+| Colonne simple (multiplication, soustraction) | `VIRTUAL` | Économie d'espace, négligeable en CPU |
+| Schéma en évolution, économie de stockage | `VIRTUAL` | Modifiable plus facilement |
+| Migration depuis MySQL (qui supporte VIRTUAL natif) | `VIRTUAL` | Compatibilité directe |
+
+> ⚠️ **Restrictions** : une colonne générée ne peut pas avoir de `DEFAULT`, ne peut pas être utilisée dans une clé primaire (sauf `STORED`), et son expression doit être *immuable* (pas de fonctions volatiles comme `random()` ou `now()`).
 
 ---
 
@@ -532,37 +628,77 @@ Créer une table temporaire (disparaît à la fin de la session) :
 ```sql
 -- Table temporaire (supprimée automatiquement à la déconnexion)
 CREATE TEMPORARY TABLE temp_calculs (
-    id SERIAL PRIMARY KEY,
-    resultat DECIMAL(10, 2)
+    id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    resultat NUMERIC(10, 2)
 );
 
--- Ou avec l'alias
+-- Ou avec l'alias TEMP
 CREATE TEMP TABLE temp_stats (
     categorie VARCHAR(50),
-    total INT
+    total INTEGER
 );
+```
+
+#### Contrôle du cycle de vie : clause `ON COMMIT`
+
+Une table temporaire peut être configurée pour réagir au `COMMIT` d'une transaction :
+
+| Option | Comportement |
+|--------|--------------|
+| `ON COMMIT PRESERVE ROWS` (défaut) | Les données restent jusqu'à la fin de la **session** |
+| `ON COMMIT DELETE ROWS` | Les données sont vidées à chaque `COMMIT` (la table reste) |
+| `ON COMMIT DROP` | La table est **supprimée** au prochain `COMMIT` (utile pour une seule transaction) |
+
+```sql
+BEGIN;  
+CREATE TEMP TABLE batch_traitement (id INT, payload JSONB)  
+    ON COMMIT DROP;
+-- … traitements …
+COMMIT;
+-- batch_traitement n'existe plus
 ```
 
 **Utilité :**
 - Stockage temporaire pendant des traitements complexes
 - Tests sans affecter les données permanentes
-- Calculs intermédiaires
+- Calculs intermédiaires, agrégations multi-étapes
+- Sessions PL/pgSQL avec données isolées par utilisateur
+
+> 💡 **À savoir** : les tables temporaires vivent dans un schéma `pg_temp_<N>` propre à chaque session. Elles ne sont **pas répliquées**, ne déclenchent **aucune réplication logique**, et ne sont pas visibles depuis les autres sessions.
 
 ### Table UNLOGGED
 
-Table non journalisée (plus rapide mais pas de récupération après crash) :
+Table non journalisée (plus rapide en écriture, mais **vidée** après un crash et **non répliquée** en streaming) :
 
 ```sql
 CREATE UNLOGGED TABLE cache_donnees (
     cle VARCHAR(100) PRIMARY KEY,
     valeur TEXT,
-    expiration TIMESTAMP
+    expiration TIMESTAMPTZ
 );
 ```
 
-**Utilisation :** Cache, données temporaires non critiques.
+**Caractéristiques importantes :**
 
-⚠️ **Attention :** Les données sont perdues en cas de crash du serveur.
+| Aspect | UNLOGGED | Table normale |
+|--------|----------|---------------|
+| WAL généré | ❌ Non | ✅ Oui |
+| Performance INSERT/UPDATE | **2 à 4× plus rapide** | Référence |
+| Survit à un crash propre (shutdown) | ✅ Oui | ✅ Oui |
+| Survit à un crash brutal (kill -9, panne) | ❌ Non (vidée au redémarrage) | ✅ Oui |
+| Répliquée par streaming replication | ❌ Non | ✅ Oui |
+| Répliquée par logical replication | ❌ Non | ✅ Oui |
+| Utilisable comme PK / FK depuis tables normales | ✅ Oui | ✅ Oui |
+
+**Cas d'usage** : caches applicatifs, tables de staging ETL, indexes inversés rebuilt-able, agrégats reconstructibles.
+
+⚠️ **Attention** : les données sont perdues en cas de crash du serveur. Ne stockez jamais des données critiques en `UNLOGGED`.
+
+```sql
+-- Bascule possible dans les deux sens
+ALTER TABLE cache_donnees SET LOGGED;    -- réécrit la table, génère du WAL  
+ALTER TABLE ma_table SET UNLOGGED;       -- réécrit la table, abandonne le WAL  
+```
 
 ---
 
@@ -588,12 +724,15 @@ CREATE TABLE utilisateurs (
 - Plus facile à référencer dans ALTER TABLE
 - Meilleure documentation
 
-**Convention de nommage :**
-- `pk_` : Primary Key  
-- `fk_` : Foreign Key  
-- `uk_` : Unique Key  
-- `ck_` : Check constraint  
-- `df_` : Default
+**Convention de nommage (préfixes courants) :**
+- `pk_` : Primary Key (ex. : `pk_utilisateurs`)
+- `fk_` : Foreign Key (ex. : `fk_commandes_client`)
+- `uk_` : Unique Key (ex. : `uk_utilisateurs_email`)
+- `ck_` : Check constraint (ex. : `ck_produits_prix_positif`)
+- `idx_` : Index (ex. : `idx_commandes_date`)
+- `seq_` : Séquence (ex. : `seq_factures`)
+- `trg_` : Trigger (ex. : `trg_audit_modifications`)
+- `df_` : Contrainte de DEFAULT explicite (rare en PG)
 
 ---
 
@@ -925,7 +1064,7 @@ DROP TABLE test;
 DROP TABLE IF EXISTS test;  -- Pas d'erreur, juste un NOTICE
 ```
 
-⚠️ **Attention :** DROP TABLE est **irréversible**. Toutes les données sont perdues !
+⚠️ **Attention** : `DROP TABLE` est **irréversible**. Toutes les données sont perdues !
 
 ---
 

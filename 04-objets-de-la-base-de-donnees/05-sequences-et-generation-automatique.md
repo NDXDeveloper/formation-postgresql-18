@@ -7,11 +7,13 @@
 L'une des fonctionnalités les plus courantes dans les bases de données est la génération automatique d'identifiants uniques pour les lignes d'une table. PostgreSQL offre plusieurs mécanismes pour cela, principalement basés sur les **séquences**.
 
 Dans cette section, nous allons explorer :
-- **SEQUENCE** : Le mécanisme sous-jacent de génération de nombres  
-- **SERIAL** : Le raccourci PostgreSQL pour les identifiants auto-incrémentés  
-- **IDENTITY** : Le standard SQL pour la génération automatique (PostgreSQL 10+)
+- **SEQUENCE** : Le mécanisme sous-jacent de génération de nombres
+- **SERIAL** : Le raccourci PostgreSQL **historique** pour les identifiants auto-incrémentés
+- **IDENTITY** : Le standard SQL pour la génération automatique (PostgreSQL 10+) — **recommandé**
 - Les fonctions de manipulation des séquences
 - Les bonnes pratiques et pièges à éviter
+
+> 💡 **Note d'orientation** : pour tout nouveau code, **`GENERATED ALWAYS AS IDENTITY`** (ou `BY DEFAULT`) est l'approche recommandée car standard SQL:2003. `SERIAL` reste largement supporté pour le code existant mais ne sera plus recommandé pour les nouveaux projets. Les deux reposent sur le même objet `SEQUENCE` sous le capot, donc tout ce qui est expliqué ici sur les séquences s'applique aux deux.
 
 ---
 
@@ -110,7 +112,7 @@ CREATE TABLE logs_massifs (
 );
 ```
 
-**Recommandation :** Utilisez `SERIAL` par défaut, `BIGSERIAL` pour les logs et données massives.
+**Recommandation moderne :** pour tout nouveau code, **préférez `IDENTITY`** (`INTEGER GENERATED ALWAYS AS IDENTITY` ou `BIGINT GENERATED ALWAYS AS IDENTITY`). `SERIAL` reste valide mais est considéré comme un héritage. Voir la comparaison plus loin dans cette section.
 
 ---
 
@@ -254,7 +256,7 @@ SELECT nextval('seq_numero_facture');  -- 2025005
 -- Chaque appel incrémente la séquence
 ```
 
-**Important :** `nextval()` **consomme** une valeur, même hors transaction.
+**Important** : `nextval()` **consomme** une valeur, même hors transaction.
 
 ### currval() : Valeur Courante (Session)
 
@@ -267,7 +269,7 @@ SELECT currval('seq_autre');
 -- ERROR: currval of sequence "seq_autre" is not yet defined in this session
 ```
 
-**Important :** `currval()` est spécifique à la **session** (connexion).
+**Important** : `currval()` est spécifique à la **session** (connexion).
 
 ### setval() : Définir une Valeur
 
@@ -283,7 +285,7 @@ SELECT setval('seq_numero_facture', 5000, true);   -- Prochaine valeur : 5001
 SELECT setval('seq_numero_facture', 5000, false);  -- Prochaine valeur : 5000  
 ```
 
-**Cas d'usage :** Réinitialiser ou synchroniser une séquence.
+**Cas d'usage** : réinitialiser ou synchroniser une séquence.
 
 ### lastval() : Dernière Valeur (Toutes Séquences)
 
@@ -294,7 +296,7 @@ SELECT nextval('seq_numero_facture');  -- 2030002
 SELECT lastval();  -- 2030002 (dernière valeur appelée)  
 ```
 
-**Note :** `lastval()` est rarement utilisé.
+**Note** : `lastval()` est rarement utilisé.
 
 ### Exemple Complet
 
@@ -363,14 +365,27 @@ SELECT setval('produits_id_seq', 1, false);
 ### Réinitialiser Automatiquement au Maximum Actuel
 
 ```sql
--- Synchroniser la séquence avec la valeur max de la table
+-- ✅ Synchroniser la séquence avec la valeur max de la table (forme correcte)
 SELECT setval('produits_id_seq', (SELECT MAX(id) FROM produits));
 
--- Ou directement avec ALTER
-ALTER SEQUENCE produits_id_seq RESTART WITH (SELECT MAX(id) + 1 FROM produits);
+-- ❌ ATTENTION : la syntaxe ci-dessous N'EST PAS valide en PostgreSQL
+-- ALTER SEQUENCE … RESTART WITH attend une CONSTANTE, pas une sous-requête :
+-- ALTER SEQUENCE produits_id_seq RESTART WITH (SELECT MAX(id) + 1 FROM produits);
+-- ERROR: syntax error at or near "SELECT"
+
+-- ✅ Si vous voulez vraiment utiliser ALTER, calculez la valeur en deux temps
+DO $$  
+DECLARE  
+    v_max BIGINT;
+BEGIN
+    SELECT COALESCE(MAX(id), 0) + 1 INTO v_max FROM produits;
+    EXECUTE format('ALTER SEQUENCE produits_id_seq RESTART WITH %s', v_max);
+END $$;
 ```
 
-**Cas d'usage :** Après import de données avec IDs explicites.
+**Cas d'usage** : après import de données avec IDs explicites.
+
+> 💡 **Astuce** : `setval()` est presque toujours plus simple et plus court que de bricoler un `ALTER SEQUENCE RESTART` dynamique. Utilisez `setval()`.
 
 ### Réinitialiser Toutes les Séquences d'une Table
 
@@ -464,7 +479,7 @@ Résultat :
  100 | Produit B  | 20.00
 ```
 
-**⚠️ Important :** L'insertion manuelle n'affecte pas la séquence automatique !
+**⚠️ Important** : l'insertion manuelle n'affecte pas la séquence automatique !
 
 ### Options de IDENTITY
 
@@ -573,7 +588,7 @@ INSERT INTO test_manuel (nom) VALUES ('Auto 3');  -- id = 3 (pas 101 !)
 -- Quand la séquence atteindra 100...
 ```
 
-**Solution :** Synchroniser la séquence après insertion manuelle :
+**Solution** : synchroniser la séquence après insertion manuelle :
 
 ```sql
 SELECT setval('test_manuel_id_seq', (SELECT MAX(id) FROM test_manuel));
@@ -594,7 +609,33 @@ CREATE SEQUENCE seq_rapide
 -- Utile pour insertion massive
 ```
 
-**Trade-off :** Un cache élevé améliore les performances mais peut créer plus de trous en cas de crash serveur.
+**Trade-off** : un cache élevé améliore les performances mais peut créer plus de trous en cas de crash serveur (les valeurs pré-allouées non utilisées sont perdues).
+
+> ⚠️ **CACHE par session** : avec `CACHE 100`, chaque **session** pré-réserve 100 valeurs. Cela signifie que si 10 sessions consomment leur cache en parallèle, les IDs ne seront pas strictement séquentiels (session A obtient 1-100, session B obtient 101-200, etc., mais elles inséreront dans n'importe quel ordre). C'est rarement un problème mais peut surprendre lors du debug.
+
+### 5. Permissions sur les Séquences
+
+Une séquence est un **objet de base de données** avec ses propres permissions. Pour l'utiliser, un utilisateur doit avoir les bons droits :
+
+| Permission | Permet de… |
+|------------|------------|
+| `USAGE` | Appeler `nextval()` et `currval()` |
+| `SELECT` | Lire `last_value` et faire `SELECT * FROM seq` |
+| `UPDATE` | Appeler `setval()` |
+
+```sql
+-- Donner les droits standards (lecture + nextval) à un utilisateur applicatif
+GRANT USAGE, SELECT ON SEQUENCE produits_id_seq TO app_user;
+
+-- Pour les séquences créées automatiquement par SERIAL/IDENTITY :
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO app_user;
+
+-- Et pour les futures séquences (defaults) :
+ALTER DEFAULT PRIVILEGES IN SCHEMA public
+    GRANT USAGE, SELECT ON SEQUENCES TO app_user;
+```
+
+> 💡 **Piège fréquent** : un utilisateur a `INSERT` sur la table mais pas `USAGE` sur la séquence SERIAL → l'insert échoue avec `permission denied for sequence`. Toujours penser à granter sur les **deux** objets pour les tables avec SERIAL. **Bénéfice d'IDENTITY** : la séquence hérite automatiquement des permissions de la colonne, plus de gotcha.
 
 ---
 
@@ -647,7 +688,7 @@ INSERT INTO remboursements (montant) VALUES (50); -- id = 2
 INSERT INTO ventes (montant) VALUES (200);        -- id = 3  
 ```
 
-**Cas d'usage :** Numérotation unique pour transactions multi-types.
+**Cas d'usage** : numérotation unique pour transactions multi-types.
 
 ### 3. Séquence avec Reset Annuel
 
@@ -664,12 +705,22 @@ CREATE TABLE factures_annuelles (
 );
 
 -- Fonction pour obtenir le prochain numéro
+-- ⚠️ ATTENTION : cette implémentation N'EST PAS thread-safe.
+-- Deux transactions concurrentes peuvent calculer le même prochain_num
+-- avant que l'une ait inséré, provoquant un conflit sur la contrainte UNIQUE(annee, numero).
+-- En production, il faut soit :
+--   1. Verrouiller explicitement la table (LOCK TABLE … IN SHARE ROW EXCLUSIVE MODE)
+--   2. Utiliser une SEQUENCE dédiée par année (la solution la plus performante)
+--   3. Utiliser INSERT … ON CONFLICT DO NOTHING avec une boucle de retry
 CREATE OR REPLACE FUNCTION prochain_numero_facture()  
 RETURNS INTEGER AS $$  
 DECLARE  
     annee_courante INTEGER := EXTRACT(YEAR FROM CURRENT_DATE);
     prochain_num INTEGER;
 BEGIN
+    -- Verrou explicite pour éviter les collisions concurrentes
+    LOCK TABLE factures_annuelles IN SHARE ROW EXCLUSIVE MODE;
+
     SELECT COALESCE(MAX(numero), 0) + 1
     INTO prochain_num
     FROM factures_annuelles
@@ -679,9 +730,11 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Utilisation
+-- Utilisation (le LOCK est libéré à la fin de la transaction)
+BEGIN;  
 INSERT INTO factures_annuelles (numero, annee, montant)  
 VALUES (prochain_numero_facture(), EXTRACT(YEAR FROM CURRENT_DATE), 150.00);  
+COMMIT;  
 ```
 
 ### 4. Identifiants Composites
@@ -773,33 +826,53 @@ DROP TABLE produits;  -- Supprime aussi produits_id_seq
 
 ## Bonnes Pratiques
 
-### 1. Préférer SERIAL pour Simplicité
+### 1. Préférer IDENTITY pour Tout Nouveau Code
 
 ```sql
--- ✅ Simple et efficace
+-- ✅ RECOMMANDÉ : IDENTITY (standard SQL:2003, gestion automatique de la séquence)
 CREATE TABLE articles (
+    id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    titre VARCHAR(300)
+);
+
+-- ❓ ACCEPTABLE pour le code existant : SERIAL
+CREATE TABLE articles_legacy (
     id SERIAL PRIMARY KEY,
     titre VARCHAR(300)
 );
 ```
 
-### 2. Utiliser BIGSERIAL pour Logs et Données Massives
+### 2. Utiliser BIGINT IDENTITY pour Logs et Données Massives
 
 ```sql
--- ✅ Pour tables qui grossissent rapidement
+-- ✅ Pour tables qui grossissent rapidement (> 2 milliards de lignes)
 CREATE TABLE logs_application (
+    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    timestamp TIMESTAMPTZ,
+    message TEXT
+);
+
+-- Équivalent en SERIAL (ancien style)
+CREATE TABLE logs_legacy (
     id BIGSERIAL PRIMARY KEY,
     timestamp TIMESTAMPTZ,
     message TEXT
 );
 ```
 
-### 3. Utiliser IDENTITY pour Code Standard SQL
+### 3. Choisir Entre `ALWAYS` et `BY DEFAULT`
 
 ```sql
--- ✅ Pour portabilité vers autres SGBD
+-- GENERATED ALWAYS : empêche toute insertion manuelle accidentelle
+-- (Idéal pour les clés primaires sans cas particulier)
 CREATE TABLE clients (
     id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    nom VARCHAR(100)
+);
+
+-- GENERATED BY DEFAULT : autorise l'insertion manuelle (utile pour les imports)
+CREATE TABLE clients_import (
+    id INTEGER GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
     nom VARCHAR(100)
 );
 ```
@@ -930,15 +1003,16 @@ CREATE TABLE items_distribues (
 
 ## Comparaison Finale : SERIAL vs IDENTITY vs UUID
 
-| Aspect | SERIAL | IDENTITY | UUID |
-|--------|--------|----------|------|
-| Standard SQL | ❌ Non | ✅ Oui | ✅ Oui |
-| Taille | 4/8 octets | 4/8 octets | 16 octets |
-| Séquentialité | ✅ Oui | ✅ Oui | ❌ Non (v4) / ✅ Oui (v7) |
-| Distribution | ❌ Difficile | ❌ Difficile | ✅ Facile |
-| Performance | ✅✅ Excellente | ✅✅ Excellente | ✅ Bonne |
-| Lisibilité | ✅✅ Très bonne | ✅✅ Très bonne | ❌ Moyenne |
-| **Usage recommandé** | Standard PostgreSQL | Standard SQL | Systèmes distribués |
+| Aspect | SERIAL | IDENTITY | UUID v7 (PG 18) |
+|--------|--------|----------|-----------------|
+| Standard SQL | ❌ Non (spécifique PostgreSQL) | ✅ Oui (SQL:2003) | ✅ Oui (RFC 9562) |
+| Taille | 4 ou 8 octets | 4 ou 8 octets | 16 octets |
+| Séquentialité (insertion B-tree) | ✅ Oui | ✅ Oui | ✅ Oui (préfixe timestamp) |
+| Distribution multi-sites sans coordination | ❌ Difficile (conflits) | ❌ Difficile (conflits) | ✅ Facile |
+| Performance insertion | ✅✅ Excellente | ✅✅ Excellente | ✅ Bonne |
+| Lisibilité humaine | ✅✅ Très bonne | ✅✅ Très bonne | ❌ Moyenne |
+| Permissions séquence | Objet séparé | Liée à la colonne | N/A |
+| **Recommandation 2026** | Code hérité uniquement | **Tout nouveau code** | Systèmes distribués, API publiques |
 
 ---
 
@@ -979,13 +1053,13 @@ ALTER SEQUENCE seq RESTART WITH 1;
 
 ### Quand Utiliser Quoi ?
 
-| Besoin | Solution |
-|--------|----------|
-| ID simple, standard | `SERIAL` |
-| Code portable SQL | `IDENTITY` |
-| Très grande table | `BIGSERIAL` |
-| Système distribué | `UUID v7` |
-| Numérotation spéciale | `SEQUENCE` manuelle |
+| Besoin | Solution recommandée | Alternative historique |
+|--------|----------------------|------------------------|
+| ID auto-incrémenté (nouveau code) | `INT GENERATED ALWAYS AS IDENTITY` | `SERIAL` |
+| Très grande table (logs, événements) | `BIGINT GENERATED ALWAYS AS IDENTITY` | `BIGSERIAL` |
+| Code portable inter-SGBD | `IDENTITY` (standard SQL:2003) | — |
+| Système distribué, ID globalement unique | `UUID DEFAULT uuidv7()` (PG 18) ou `gen_random_uuid()` | — |
+| Numérotation métier (factures, références) | `SEQUENCE` manuelle (avec format) | — |
 
 ---
 
@@ -998,7 +1072,7 @@ Les séquences sont un mécanisme fondamental de PostgreSQL pour générer des i
 - ✅ Optimiser les performances  
 - ✅ Gérer correctement les cas complexes
 
-**Recommandation moderne :** Pour les nouveaux projets, utilisez `IDENTITY` pour la conformité au standard SQL, ou `UUID v7` (PostgreSQL 18+) pour les systèmes distribués.
+**Recommandation moderne** : pour les nouveaux projets, utilisez `IDENTITY` pour la conformité au standard SQL, ou `UUID v7` (PostgreSQL 18+) pour les systèmes distribués.
 
 Dans la prochaine section, nous explorerons les domaines et types personnalisés, qui permettent de créer vos propres types de données réutilisables.
 
