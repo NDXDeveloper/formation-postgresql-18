@@ -151,7 +151,7 @@ C'est-à-dire : **Seulement les clients qui ont passé des commandes**.
 
 ### Cas d'usage typiques
 
-1. **Afficher les relations existantes** : "Lister tous les clients qui ont commandé"  
+1. **Afficher les relations existantes** : « lister tous les clients qui ont commandé »  
 2. **Éviter les orphelins** : Exclure les données sans correspondance  
 3. **Analyses sur données complètes** : Calculer des statistiques sur des relations confirmées
 
@@ -251,7 +251,7 @@ Le LEFT JOIN garantit : **Toutes les lignes de la table de gauche sont présente
 
 ### Cas d'usage typiques
 
-1. **Identifier les absences** : "Quels clients n'ont jamais commandé ?"  
+1. **Identifier les absences** : « quels clients n'ont jamais commandé ? »  
 2. **Rapports complets** : Afficher tous les éléments, même sans données associées  
 3. **Analyses inclusives** : Inclure les éléments sans relation
 
@@ -756,11 +756,11 @@ Question : Que voulez-vous obtenir ?
 
 | Question | Jointure | Raison |
 |----------|----------|--------|
-| "Quels clients ont commandé ?" | INNER JOIN | Seulement ceux qui ont commandé |
-| "Liste de tous les clients avec leurs commandes (s'ils en ont)" | LEFT JOIN | Tous les clients, commandes optionnelles |
-| "Toutes les commandes avec infos client" | LEFT JOIN | Depuis commandes vers clients |
-| "Audit complet : tous les clients ET toutes les commandes" | FULL JOIN | Aucune perte d'information |
-| "Générer toutes les combinaisons produit × option" | CROSS JOIN | Besoin du produit cartésien |
+| « Quels clients ont commandé ? » | INNER JOIN | Seulement ceux qui ont commandé |
+| « Liste de tous les clients avec leurs commandes (s'ils en ont) » | LEFT JOIN | Tous les clients, commandes optionnelles |
+| « Toutes les commandes avec infos client » | LEFT JOIN | Depuis commandes vers clients |
+| « Audit complet : tous les clients ET toutes les commandes » | FULL JOIN | Aucune perte d'information |
+| « Générer toutes les combinaisons produit × option » | CROSS JOIN | Besoin du produit cartésien |
 
 ---
 
@@ -768,7 +768,7 @@ Question : Que voulez-vous obtenir ?
 
 ### Exemple 1 : Clients avec et sans Commandes
 
-**Objectif** : Afficher tous les clients avec un indicateur "a commandé" ou "n'a pas commandé"
+**Objectif** : afficher tous les clients avec un indicateur « a commandé » ou « n'a pas commandé »
 
 ```sql
 SELECT
@@ -935,23 +935,97 @@ LEFT JOIN lignes_commande ON commandes.id = lignes_commande.commande_id
 LEFT JOIN produits ON lignes_commande.produit_id = produits.id;  
 ```
 
-**Important** : L'ordre des jointures compte ! Si vous faites un LEFT JOIN suivi d'un INNER JOIN, le INNER JOIN peut annuler l'effet du LEFT JOIN.
+> ⚠️ **Important : un `INNER JOIN` après un `LEFT JOIN` "annule" le `LEFT`**
+>
+> Quand vous chaînez plusieurs jointures, faire un `INNER JOIN` sur une table issue d'un `LEFT JOIN` précédent **fait perdre les lignes sans correspondance** que le `LEFT` avait pourtant conservées.
 
 ### Règle : Cohérence des Jointures
 
 ```sql
--- ✅ BON : LEFT JOIN en cascade
+-- ✅ BON : LEFT JOIN en cascade — Charlie et Diana sont conservés
 FROM clients  
-LEFT JOIN commandes ON ...  
-LEFT JOIN lignes_commande ON ...  
+LEFT JOIN commandes      ON clients.id = commandes.client_id  
+LEFT JOIN lignes_commande ON commandes.id = lignes_commande.commande_id  
 
--- ⚠️ ATTENTION : LEFT puis INNER
+-- ❌ MAUVAIS : Charlie et Diana DISPARAISSENT
 FROM clients  
-LEFT JOIN commandes ON ...  
-INNER JOIN lignes_commande ON ...  -- Peut exclure des clients !  
+LEFT JOIN commandes       ON clients.id = commandes.client_id  
+INNER JOIN lignes_commande ON commandes.id = lignes_commande.commande_id  
 ```
 
-Le INNER JOIN sur `lignes_commande` ne retournera que les lignes où `lignes_commande` existe, annulant partiellement l'effet du LEFT JOIN précédent.
+**Pourquoi ?** Pour Charlie, `LEFT JOIN commandes` produit une ligne avec `commandes.id = NULL`. Ensuite, `INNER JOIN lignes_commande ON commandes.id = lignes_commande.commande_id` exige une correspondance : `NULL = X` est toujours `NULL`, donc la ligne est rejetée.
+
+**Solution** : si vous voulez préserver Charlie tout en filtrant les lignes de commande, **mettez le filtre dans le `ON`** (pas dans `WHERE`) :
+
+```sql
+-- ✅ Filtre côté ON : les clients sans commande sont préservés
+FROM clients  
+LEFT JOIN commandes       ON clients.id = commandes.client_id  
+LEFT JOIN lignes_commande ON commandes.id = lignes_commande.commande_id  
+                         AND lignes_commande.quantite > 0
+```
+
+> 💡 **Règle générale** : un prédicat dans `WHERE` filtre **après toutes les jointures** (et annule donc tout `LEFT JOIN` qu'il touche). Un prédicat dans `ON` filtre **avant** la fabrication de la ligne — il préserve les `NULL` du `LEFT`/`RIGHT JOIN`.
+
+---
+
+## 9 bis. `ON`, `USING` et `NATURAL JOIN` : trois manières d'exprimer la même chose
+
+Pour une **équi-jointure** (le cas le plus courant : `a.x = b.x`), SQL propose trois syntaxes. Elles diffèrent par la verbosité et le risque d'erreur.
+
+### `ON` — la forme explicite (recommandée par défaut)
+
+```sql
+SELECT c.nom, cmd.montant  
+FROM clients c  
+INNER JOIN commandes cmd ON c.id = cmd.client_id;  
+```
+
+- ✅ **Lisible** : on voit immédiatement quelles colonnes sont liées
+- ✅ **Robuste** : fonctionne même si les noms diffèrent (`c.id` ↔ `cmd.client_id`)
+- ✅ **Pas d'effets de surprise** quand le schéma évolue
+
+### `USING (col, …)` — la forme compacte pour mêmes noms
+
+Quand la colonne de jointure porte **le même nom** dans les deux tables :
+
+```sql
+-- Suppose que les deux tables ont une colonne nommée "client_id"
+SELECT *  
+FROM commandes  
+INNER JOIN paiements USING (client_id);  
+```
+
+Différences notables :
+- ✅ Plus court que `ON commandes.client_id = paiements.client_id`
+- 🆕 **La colonne fusionnée n'apparaît qu'une fois** dans le résultat de `SELECT *` (alors que `ON` la duplique : `commandes.client_id` ET `paiements.client_id`)
+- ⚠️ Fragile si l'une des tables renomme la colonne plus tard
+
+```sql
+-- Avec USING : "client_id" apparaît UNE fois dans le résultat
+SELECT * FROM commandes JOIN paiements USING (client_id);
+-- → colonnes : client_id, commande_id, ..., paiement_id, ...
+
+-- Avec ON équivalent : "client_id" apparaît DEUX fois
+SELECT * FROM commandes JOIN paiements ON commandes.client_id = paiements.client_id;
+-- → colonnes : ...client_id..., ...client_id... (ambiguës !)
+```
+
+### `NATURAL JOIN` — à éviter
+
+`NATURAL JOIN` joint automatiquement sur **toutes** les colonnes de même nom :
+
+```sql
+SELECT * FROM commandes NATURAL JOIN paiements;
+-- Équivalent à : JOIN paiements USING (toutes_les_colonnes_communes)
+```
+
+⚠️ **Pourquoi l'éviter** :
+- Si vous ajoutez plus tard une colonne `created_at` aux **deux tables**, votre `NATURAL JOIN` se met silencieusement à exiger qu'elle soit aussi égale — un comportement non voulu et difficile à débugger.
+- Les colonnes de jointure ne sont **pas explicites** dans la requête, ce qui complique la relecture du code.
+- Aucun garde-fou en cas de renommage maladroit.
+
+**Règle** : `ON` partout, sauf cas très simple où `USING` apporte un vrai gain de lisibilité. `NATURAL JOIN` : à laisser dans les manuels théoriques.
 
 ---
 
@@ -1040,22 +1114,73 @@ Cela montre :
 - Si les index sont utilisés
 - Le coût estimé et réel
 
-#### 3. Filtrer Avant de Joindre (WHERE)
+##### Les trois algorithmes de jointure de PostgreSQL
+
+PostgreSQL choisit dynamiquement l'algorithme qui semble le plus efficace pour chaque jointure :
+
+| Algorithme | Mécanique | Quand le planificateur le choisit |
+|------------|-----------|------------------------------------|
+| **Nested Loop** | Pour chaque ligne de la table extérieure, parcourir la table intérieure (de préférence via un index) | Une table est très petite **ou** un index sur la clé de jointure permet une recherche O(log n) côté intérieur |
+| **Hash Join** | Construit une table de hachage en mémoire à partir de la plus petite table, puis sonde la grande | Pas d'index utilisable, tables de taille moyenne/grande, mémoire `work_mem` suffisante |
+| **Merge Join** | Trie les deux tables sur la clé de jointure, puis les parcourt en parallèle comme un *zip* | Les deux tables sont déjà triées (par index), ou les trier reste rentable |
+
+**Lire un plan typique** :
+
+```
+Nested Loop  (cost=0.28..16.95 rows=3 width=68)
+  ->  Seq Scan on clients c  (cost=0.00..1.04 rows=4 width=36)
+  ->  Index Scan using idx_commandes_client_id on commandes cmd
+        (cost=0.28..3.97 rows=1 width=32)
+        Index Cond: (client_id = c.id)
+```
+
+- `Nested Loop` : algorithme choisi.
+- `->` : opérations enfants (les deux tables sources).
+- `Seq Scan on clients` : la table `clients` est petite, donc lue intégralement (séquentiellement).
+- `Index Scan using idx_commandes_client_id` : pour chaque ligne de `clients`, recherche dans `commandes` via l'index — c'est exactement le pattern qui rend ce plan rapide.
+- `cost=0.28..16.95` : coût estimé (démarrage..total). `rows=3` : nombre de lignes estimé. `width` : taille moyenne d'une ligne en octets.
+
+##### Avec `ANALYZE`, on obtient les vraies mesures
+
+```
+Nested Loop  (cost=0.28..16.95 rows=3 width=68) (actual time=0.018..0.045 rows=3 loops=1)
+  Buffers: shared hit=4
+```
+
+- `actual time=…` : temps réel (démarrage..total) en millisecondes.
+- `rows=3` (actual) : nombre de lignes réellement produites.
+- `loops=1` : nombre d'exécutions de ce nœud (utile dans les Nested Loop : le nœud intérieur peut avoir des centaines de `loops`).
+- `Buffers: shared hit=4` (avec `EXPLAIN (ANALYZE, BUFFERS)`) : nombre de pages disque lues, depuis le cache (`hit`) ou disque (`read`).
+
+> 💡 **Diagnostic rapide** : si vous voyez un `Seq Scan` sur une table volumineuse alors qu'un index existe sur la colonne de jointure, c'est souvent que :  
+> - les statistiques sont obsolètes (`ANALYZE table` pour les rafraîchir) ;  
+> - ou que la requête est trop peu sélective (l'index serait plus lent qu'un scan complet).
+
+#### 3. WHERE vs sous-requête : l'optimiseur s'en occupe
+
+Beaucoup d'articles anciens recommandent de « filtrer avant de joindre » via une sous-requête. **En PostgreSQL moderne, c'est inutile** : le planificateur applique automatiquement le « push-down » des prédicats `WHERE` au plus près de la source.
 
 ```sql
--- ⚠️ Moins efficace : Jointure puis filtrage
+-- Forme directe : claire et idiomatique
 SELECT *  
 FROM clients  
 INNER JOIN commandes ON clients.id = commandes.client_id  
 WHERE clients.ville = 'Paris';  
 
--- ✅ Plus efficace : Filtrage puis jointure (si possible)
+-- Forme « pré-filtrée » : strictement équivalente côté plan d'exécution
 SELECT *  
 FROM (SELECT * FROM clients WHERE ville = 'Paris') c  
 INNER JOIN commandes ON c.id = commandes.client_id;  
 ```
 
-**Note** : L'optimiseur de PostgreSQL fait souvent cette optimisation automatiquement.
+Vous pouvez le vérifier avec `EXPLAIN ANALYZE` sur les deux formes : les plans sont identiques, le coût aussi. **Privilégiez donc la forme la plus lisible** (la première).
+
+Quelques rares cas où le planificateur ne peut pas pousser un filtre :
+- Présence de fonctions volatiles (`random()`, `now()` selon le contexte) ;
+- Filtres très complexes mêlant plusieurs tables sans index ;
+- Vues non-*inlineables*.
+
+Dans ces cas, un CTE matérialisé (`WITH … AS MATERIALIZED`) ou une sous-requête explicite peuvent forcer l'évaluation à l'endroit voulu — mais ce sont vraiment des cas particuliers.
 
 #### 4. Attention au CROSS JOIN
 
@@ -1081,21 +1206,25 @@ SELECT * FROM clients INNER JOIN commandes ON clients.id = commandes.client_id;
 
 ### Erreur 1 : Colonnes Ambiguës
 
+`id` apparaît dans les deux tables (`clients.id` et `commandes.id`), donc l'écrire sans qualificateur déclenche une erreur :
+
 ```sql
--- ❌ Erreur : colonne "id" est ambiguë
+-- ❌ ERREUR : colonne "id" ambiguë (présente dans clients et commandes)
 SELECT id, nom, montant  
 FROM clients  
 INNER JOIN commandes ON clients.id = commandes.client_id;  
 -- ERROR: column reference "id" is ambiguous
 ```
 
-**Solution** : Qualifier les colonnes
+> 📌 Note : `nom` n'existe que dans `clients` et `montant` que dans `commandes` — ces deux-là pourraient rester non qualifiés. Seul `id` pose problème. Mais en pratique, qualifier **toutes** les colonnes (ou utiliser des alias courts) rend la requête plus lisible et robuste aux ajouts futurs de colonnes.
+
+**Solution** : qualifier les colonnes ou utiliser des alias :
 
 ```sql
 -- ✅ Correct
-SELECT clients.id, clients.nom, commandes.montant  
-FROM clients  
-INNER JOIN commandes ON clients.id = commandes.client_id;  
+SELECT c.id, c.nom, cmd.montant  
+FROM clients AS c  
+INNER JOIN commandes AS cmd ON c.id = cmd.client_id;  
 ```
 
 ### Erreur 2 : Oublier la Condition de Jointure

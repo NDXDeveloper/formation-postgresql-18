@@ -1,216 +1,167 @@
 🔝 Retour au [Sommaire](/SOMMAIRE.md)
 
-# 7.2. Nouveauté PostgreSQL 18 : Contraintes Temporelles (Temporal Constraints)
+# 7.2. Nouveauté PostgreSQL 18 : contraintes temporelles (*Temporal Constraints*)
 
 ## Introduction
 
-Les **contraintes temporelles** (Temporal Constraints) sont une fonctionnalité majeure introduite dans **PostgreSQL 18** (septembre 2025). Elles permettent de gérer des **périodes de validité** et d'empêcher les **chevauchements temporels** directement au niveau de la base de données.
+Les **contraintes temporelles** (*temporal constraints*) sont une fonctionnalité majeure introduite dans **PostgreSQL 18** (septembre 2025). Elles permettent de gérer des **périodes de validité** et d'empêcher les **chevauchements temporels** directement au niveau de la base de données, via deux mécanismes :
 
-Cette nouveauté révolutionnaire simplifie considérablement la gestion des données qui ont une **dimension temporelle**, comme les réservations, les historiques de prix, les contrats, ou les périodes d'emploi.
+1. **`UNIQUE` / `PRIMARY KEY … WITHOUT OVERLAPS`** : interdit le chevauchement de périodes pour une même valeur d'identifiant.
+2. **`FOREIGN KEY … PERIOD`** : une ligne enfant doit être *couverte* par une (ou plusieurs) ligne(s) parent(s) sur la dimension temporelle.
+
+Ces deux clauses font partie des **fonctionnalités temporelles du standard SQL:2011** et étaient jusqu'ici simulées via des contraintes d'exclusion (`EXCLUDE USING GIST`) et l'extension `btree_gist`.
 
 ### Pourquoi cette nouveauté ?
 
 Avant PostgreSQL 18, gérer les chevauchements de périodes nécessitait :
-- Des triggers complexes
-- Des contraintes CHECK avec des sous-requêtes (interdites)
-- De la logique applicative lourde et sujette à erreurs
-- Des index GIST avec des extensions tierces (btree_gist)
+- Des **contraintes d'exclusion** (`EXCLUDE USING gist (…)`) avec une syntaxe peu intuitive ;
+- Des **triggers** pour les règles plus complexes ;
+- De la **logique applicative** lourde et sujette aux *race conditions*.
 
-Avec PostgreSQL 18, la gestion temporelle devient **native**, **simple** et **performante**.
+Avec PostgreSQL 18, la gestion temporelle devient **déclarative, lisible et conforme au standard**.
 
 ---
 
-## Le Problème : Gérer les Périodes et les Chevauchements
+## 1. Le problème : gérer les périodes et leurs chevauchements
 
 ### Cas d'usage typiques
 
-Imaginons ces scénarios courants :
+| Scénario | Règle métier | Risque sans contrainte |
+|----------|-------------|-----------------------|
+| Réservations de salles | Une salle, un seul occupant à la fois | Double réservation |
+| Historique de prix | Un seul prix actif à un instant `t` | Ambiguïté de tarification |
+| Contrats d'emploi | Un contrat actif par employé à la fois | Cumul d'emploi non détecté |
+| Locations de véhicules | Pas deux locataires en même temps | Conflit physique |
+| Promotions | Pas de superposition pour un même produit | Réductions cumulées par erreur |
 
-1. **Réservations de salles** : Une salle ne peut pas être réservée par deux personnes en même temps  
-2. **Historique des prix** : Un produit ne peut avoir qu'un seul prix valide à une date donnée  
-3. **Contrats d'emploi** : Un employé ne peut avoir qu'un seul contrat actif simultanément  
-4. **Locations de véhicules** : Une voiture ne peut être louée par deux clients en même temps  
-5. **Périodes de validité** : Une promotion ne peut pas avoir deux périodes qui se chevauchent
+### Le défi : pourquoi `CHECK` ne suffit pas
 
-### Le défi avant PostgreSQL 18
+Une contrainte `CHECK` ne peut interroger **que la ligne en cours d'insertion** :
 
 ```sql
--- Structure classique pour gérer des périodes
-CREATE TABLE reservations (
-    id SERIAL PRIMARY KEY,
+CREATE TABLE reservations_naif (
+    id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     salle_id INTEGER NOT NULL,
-    utilisateur_id INTEGER NOT NULL,
-    date_debut TIMESTAMP NOT NULL,
-    date_fin TIMESTAMP NOT NULL,
-    CHECK (date_fin > date_debut)  -- OK : Vérifie la cohérence interne
+    debut TIMESTAMP NOT NULL,
+    fin TIMESTAMP NOT NULL,
+    CHECK (fin > debut)  -- ✅ OK : cohérence interne
 );
+
+-- ❌ ÉCHEC SILENCIEUX : ces deux lignes se chevauchent mais sont acceptées
+INSERT INTO reservations_naif (salle_id, debut, fin) VALUES
+    (1, '2025-01-10 14:00', '2025-01-10 16:00'),
+    (1, '2025-01-10 15:00', '2025-01-10 17:00');  -- pourtant invalide métier !
 ```
 
-**Problème** : Cette table ne peut pas empêcher deux réservations qui se chevauchent !
+Le `CHECK` ne peut pas voir les autres lignes : il faut une contrainte qui compare **plusieurs lignes** entre elles.
+
+### Solution pré-PG 18 : `EXCLUDE USING gist`
+
+Avant PG 18, on utilisait une **contrainte d'exclusion** sur un index GiST, en construisant un range à la volée :
 
 ```sql
--- ✅ Ces deux réservations se chevauchent, mais sont acceptées !
-INSERT INTO reservations (salle_id, utilisateur_id, date_debut, date_fin)  
-VALUES  
-    (1, 100, '2025-01-10 14:00', '2025-01-10 16:00'),
-    (1, 101, '2025-01-10 15:00', '2025-01-10 17:00');  -- Chevauchement !
-```
-
-Une contrainte `CHECK` ne peut pas résoudre ce problème car elle ne peut interroger que **la ligne courante**, pas les autres lignes de la table.
-
-### Solutions avant PostgreSQL 18
-
-#### Solution 1 : Extension btree_gist + contrainte d'exclusion
-
-```sql
--- Nécessite l'extension btree_gist
+-- Avant PG 18 (toujours valide en PG 18 mais plus verbeux)
 CREATE EXTENSION btree_gist;
 
-CREATE TABLE reservations (
-    id SERIAL PRIMARY KEY,
+CREATE TABLE reservations_legacy (
+    id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     salle_id INTEGER NOT NULL,
-    date_debut TIMESTAMP NOT NULL,
-    date_fin TIMESTAMP NOT NULL,
-    -- Contrainte d'exclusion avec opérateur &&
+    debut TIMESTAMP NOT NULL,
+    fin TIMESTAMP NOT NULL,
+    -- "Pas deux lignes où salle_id sont égaux ET les périodes se chevauchent"
     EXCLUDE USING gist (
         salle_id WITH =,
-        tsrange(date_debut, date_fin) WITH &&
+        tsrange(debut, fin, '[)') WITH &&
     )
 );
 ```
 
-**Inconvénients** :
-- Nécessite une extension externe
-- Syntaxe complexe pour les débutants
-- Moins optimisée que les nouvelles contraintes temporelles natives
-
-#### Solution 2 : Triggers personnalisés
-
-```sql
-CREATE OR REPLACE FUNCTION check_reservation_overlap()  
-RETURNS TRIGGER AS $$  
-BEGIN  
-    IF EXISTS (
-        SELECT 1 FROM reservations
-        WHERE salle_id = NEW.salle_id
-          AND id != NEW.id
-          AND (date_debut, date_fin) OVERLAPS (NEW.date_debut, NEW.date_fin)
-    ) THEN
-        RAISE EXCEPTION 'Chevauchement de réservation détecté';
-    END IF;
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE TRIGGER check_overlap_before_insert  
-BEFORE INSERT OR UPDATE ON reservations  
-FOR EACH ROW EXECUTE FUNCTION check_reservation_overlap();  
-```
-
-**Inconvénients** :
-- Code procédural complexe à maintenir
-- Risques de race conditions en haute concurrence
-- Performance moins optimale
-- Logique métier dispersée dans les triggers
+Cela fonctionnait, mais la syntaxe `EXCLUDE USING gist (col WITH op, …)` est cryptique pour les nouveaux venus, et l'on doit construire le range dans la déclaration.
 
 ---
 
-## La Solution PostgreSQL 18 : Contraintes Temporelles Natives
+## 2. Rappel : les types `range` de PostgreSQL
 
-PostgreSQL 18 introduit une **syntaxe native** pour gérer les contraintes temporelles de manière élégante et performante.
+Les contraintes temporelles PG 18 s'appuient sur les **types range** (existants depuis PostgreSQL 9.2). Ils représentent un **intervalle borné** d'une valeur scalaire.
 
-### Concept : Le Type de Données Range
+| Type | Sous-jacent | Exemple littéral |
+|------|-------------|------------------|
+| `int4range` | `INTEGER` | `'[1,10)'::int4range` |
+| `int8range` | `BIGINT` | `'[1000,2000)'::int8range` |
+| `numrange` | `NUMERIC` | `'[0.0,100.0]'::numrange` |
+| `tsrange` | `TIMESTAMP` | `'[2025-01-01,2025-12-31)'::tsrange` |
+| `tstzrange` | `TIMESTAMPTZ` | `'[2025-01-01 00:00+00,2025-12-31 23:59+00)'::tstzrange` |
+| `daterange` | `DATE` | `'[2025-01-01,2025-12-31]'::daterange` |
 
-Les contraintes temporelles s'appuient sur les **types Range** de PostgreSQL :
+### Notation des bornes
 
-| Type Range | Description | Exemple |
-|-----------|-------------|---------|
-| `int4range` | Intervalle d'entiers | `[1, 10)` |
-| `int8range` | Intervalle de grands entiers | `[1000, 2000)` |
-| `numrange` | Intervalle de décimaux | `[0.0, 100.0]` |
-| `tsrange` | Intervalle de timestamps | `['2025-01-01', '2025-12-31')` |
-| `tstzrange` | Intervalle de timestamps avec TZ | `['2025-01-01 00:00+00', '2025-12-31 23:59+00')` |
-| `daterange` | Intervalle de dates | `[2025-01-01, 2025-12-31]` |
+- `[a, b]` : inclusif des deux côtés
+- `[a, b)` : inclusif à gauche, exclusif à droite (**la convention recommandée pour des périodes contiguës**)
+- `(a, b)` : exclusif des deux côtés
+- `[a, infinity)` : ouvert à droite ; `(-infinity, b]` ouvert à gauche
 
-#### Syntaxe des Ranges
-
-```sql
--- Notation : [inclusif, exclusif)
-SELECT '[2025-01-10 14:00, 2025-01-10 16:00)'::tsrange;
-
--- Inclusif des deux côtés : [a, b]
-SELECT '[2025-01-10 14:00, 2025-01-10 16:00]'::tsrange;
-
--- Exclusif des deux côtés : (a, b)
-SELECT '(2025-01-10 14:00, 2025-01-10 16:00)'::tsrange;
-
--- Ouvert à droite : [a, infinity)
-SELECT '[2025-01-01, infinity)'::tsrange;
-```
-
-#### Opérateurs sur les Ranges
-
-| Opérateur | Description | Exemple |
-|-----------|-------------|---------|
-| `&&` | Chevauchement (overlap) | `'[1,5)' && '[3,7)'` → TRUE |
-| `@>` | Contient | `'[1,10)' @> '[2,5)'` → TRUE |
-| `<@` | Est contenu dans | `'[2,5)' <@ '[1,10)'` → TRUE |
-| `-\|-` | Adjacent | `'[1,5)' -\|- '[5,10)'` → TRUE |
-| `<<` | Strictement à gauche | `'[1,5)' << '[10,15)'` → TRUE |
-| `>>` | Strictement à droite | `'[10,15)' >> '[1,5)'` → TRUE |
-
-**Le plus important** : L'opérateur `&&` détecte les chevauchements !
+### Construction et opérateurs utiles
 
 ```sql
--- Exemples de chevauchement
-SELECT '[2025-01-10 14:00, 2025-01-10 16:00)'::tsrange &&
-       '[2025-01-10 15:00, 2025-01-10 17:00)'::tsrange;
--- Retourne TRUE (chevauchement de 14:00-16:00 avec 15:00-17:00)
+-- Construction
+SELECT tsrange('2025-01-10 14:00', '2025-01-10 16:00', '[)');
+-- → ["2025-01-10 14:00:00","2025-01-10 16:00:00")
 
-SELECT '[2025-01-10 14:00, 2025-01-10 16:00)'::tsrange &&
-       '[2025-01-10 16:00, 2025-01-10 18:00)'::tsrange;
--- Retourne FALSE (pas de chevauchement, fin = début)
+-- Opérateurs
+SELECT tsrange('2025-01-10 14:00', '2025-01-10 16:00', '[)')
+    && tsrange('2025-01-10 15:00', '2025-01-10 17:00', '[)');
+-- → TRUE (chevauchement)
+
+SELECT tsrange('2025-01-10 14:00', '2025-01-10 16:00', '[)')
+    && tsrange('2025-01-10 16:00', '2025-01-10 18:00', '[)');
+-- → FALSE (bornes adjacentes : la borne 16:00 est exclue du premier)
 ```
+
+| Opérateur | Sens | Exemple |
+|-----------|------|---------|
+| `&&` | Chevauchement | `r1 && r2` |
+| `@>` | Contient | `'[1,10)' @> '[2,5)'` |
+| `<@` | Est contenu dans | `'[2,5)' <@ '[1,10)'` |
+| `-\|-` | Adjacent | `'[1,5)' -\|- '[5,10)'` |
+| `<<` / `>>` | Strictement à gauche/droite | `'[1,5)' << '[10,15)'` |
+
+**Pour les contraintes temporelles, l'opérateur clé est `&&`** : la nouvelle syntaxe `WITHOUT OVERLAPS` l'utilise sous le capot.
 
 ---
 
-## Syntaxe des Contraintes Temporelles PostgreSQL 18
+## 3. La syntaxe officielle PG 18 : `WITHOUT OVERLAPS`
 
-### Contrainte UNIQUE avec Period
+### Règle de base
 
-PostgreSQL 18 introduit la syntaxe `WITHOUT OVERLAPS` pour définir une contrainte d'unicité temporelle.
-
-#### Syntaxe de base
-
-```sql
-CREATE TABLE nom_table (
-    colonne_identifiant TYPE,
-    colonne_debut TIMESTAMP,
-    colonne_fin TIMESTAMP,
-    UNIQUE (colonne_identifiant, PERIOD(colonne_debut, colonne_fin)) WITHOUT OVERLAPS
-);
+```
+UNIQUE | PRIMARY KEY ( col_1, col_2, …, col_range WITHOUT OVERLAPS )
 ```
 
-**Explication** :
-- `UNIQUE` : Garantit l'unicité  
-- `colonne_identifiant` : La clé sur laquelle on vérifie l'unicité (ex : salle_id)  
-- `PERIOD(debut, fin)` : Définit la période temporelle  
-- `WITHOUT OVERLAPS` : Empêche les chevauchements temporels pour une même valeur de `colonne_identifiant`
+**Points clés** :
+- La colonne avec `WITHOUT OVERLAPS` doit être **la dernière** de la liste.
+- Elle doit être d'un type **`range`** ou **`multirange`**.
+- Les autres colonnes sont comparées pour **égalité** (comme dans un `UNIQUE` classique).
+- L'index sous-jacent est un **GiST**, pas un B-tree.
 
-### Exemple complet : Réservations de salles
+### Premier exemple — réservations de salles
 
 ```sql
+-- ⚠️ btree_gist est nécessaire quand une colonne non-range (ici INTEGER)
+-- est combinée avec une colonne range dans la contrainte.
+CREATE EXTENSION IF NOT EXISTS btree_gist;
+
 CREATE TABLE reservations_salles (
-    id SERIAL PRIMARY KEY,
+    id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     salle_id INTEGER NOT NULL,
     utilisateur_id INTEGER NOT NULL,
-    date_debut TIMESTAMP NOT NULL,
-    date_fin TIMESTAMP NOT NULL,
+    -- Une seule colonne range pour la période, plutôt que deux timestamps
+    periode tstzrange NOT NULL,
     description TEXT,
-    -- Vérification de base : date_fin > date_debut
-    CHECK (date_fin > date_debut),
-    -- Contrainte temporelle : Pas de chevauchement pour une même salle
-    UNIQUE (salle_id, PERIOD(date_debut, date_fin)) WITHOUT OVERLAPS
+    -- La contrainte temporelle : pas de chevauchement par salle
+    CONSTRAINT pas_de_chevauchement
+        UNIQUE (salle_id, periode WITHOUT OVERLAPS),
+    -- Cohérence interne : pas de range vide
+    CHECK (NOT isempty(periode))
 );
 ```
 
@@ -218,671 +169,442 @@ CREATE TABLE reservations_salles (
 
 ```sql
 -- ✅ Première réservation
-INSERT INTO reservations_salles (salle_id, utilisateur_id, date_debut, date_fin)  
-VALUES (1, 100, '2025-01-10 14:00', '2025-01-10 16:00');  
+INSERT INTO reservations_salles (salle_id, utilisateur_id, periode) VALUES
+    (1, 100, tstzrange('2025-01-10 14:00+01', '2025-01-10 16:00+01', '[)'));
 
--- ✅ Réservation d'une autre salle (même créneau, mais salle différente)
-INSERT INTO reservations_salles (salle_id, utilisateur_id, date_debut, date_fin)  
-VALUES (2, 101, '2025-01-10 14:00', '2025-01-10 16:00');  
+-- ✅ Salle différente, même créneau : OK
+INSERT INTO reservations_salles (salle_id, utilisateur_id, periode) VALUES
+    (2, 101, tstzrange('2025-01-10 14:00+01', '2025-01-10 16:00+01', '[)'));
 
--- ✅ Réservation de la même salle, mais créneau adjacent (pas de chevauchement)
-INSERT INTO reservations_salles (salle_id, utilisateur_id, date_debut, date_fin)  
-VALUES (1, 102, '2025-01-10 16:00', '2025-01-10 18:00');  
+-- ✅ Même salle, créneau adjacent (la borne droite est exclue) : OK
+INSERT INTO reservations_salles (salle_id, utilisateur_id, periode) VALUES
+    (1, 102, tstzrange('2025-01-10 16:00+01', '2025-01-10 18:00+01', '[)'));
 
--- ❌ ÉCHEC : Chevauchement détecté !
-INSERT INTO reservations_salles (salle_id, utilisateur_id, date_debut, date_fin)  
-VALUES (1, 103, '2025-01-10 15:00', '2025-01-10 17:00');  
--- ERROR: conflicting key value violates temporal exclusion constraint
--- DETAIL: Key (salle_id, PERIOD(date_debut, date_fin))=(1, [2025-01-10 15:00, 2025-01-10 17:00))
---         conflicts with existing key (salle_id, PERIOD(date_debut, date_fin))=(1, [2025-01-10 14:00, 2025-01-10 16:00))
+-- ❌ Même salle, créneau qui chevauche : REJETÉ
+INSERT INTO reservations_salles (salle_id, utilisateur_id, periode) VALUES
+    (1, 103, tstzrange('2025-01-10 15:00+01', '2025-01-10 17:00+01', '[)'));
+-- ERROR: conflicting key value violates exclusion constraint "pas_de_chevauchement"
 ```
 
-**Résultat** : PostgreSQL empêche automatiquement les réservations qui se chevauchent pour une même salle !
+PostgreSQL détecte automatiquement le chevauchement et rejette l'insertion.
 
----
+> 💡 **Pourquoi `btree_gist` ?** Les contraintes `WITHOUT OVERLAPS` s'appuient sur un index **GiST** (les ranges ne sont pas indexables en B-tree). Or `salle_id` est un `INTEGER` : par défaut, GiST ne connaît pas l'opérateur d'égalité sur les types scalaires. L'extension `btree_gist` ajoute le support des opérateurs B-tree (`=`, `<`, etc.) aux index GiST, ce qui permet de mélanger des colonnes scalaires (`salle_id`) avec des colonnes range (`periode`) dans la même contrainte.
+>
+> Si tous les composants de la contrainte sont déjà des ranges, `btree_gist` n'est pas nécessaire.
 
-## Cas d'Usage Avancés
+### `PRIMARY KEY WITHOUT OVERLAPS`
 
-### 1. Historique de Prix avec Unicité Temporelle
-
-Un produit ne peut avoir qu'**un seul prix valide** à un moment donné.
+La syntaxe `WITHOUT OVERLAPS` s'utilise aussi sur une **clé primaire** :
 
 ```sql
-CREATE TABLE historique_prix (
-    id SERIAL PRIMARY KEY,
+CREATE TABLE tarifs (
     produit_id INTEGER NOT NULL,
     prix NUMERIC(10, 2) NOT NULL,
-    date_debut DATE NOT NULL,
-    date_fin DATE,  -- NULL = prix actuel (toujours valide)
-    -- Garantit qu'il n'y a qu'un seul prix à une date donnée
-    UNIQUE (produit_id, PERIOD(date_debut, COALESCE(date_fin, 'infinity'::date))) WITHOUT OVERLAPS,
-    CHECK (date_fin IS NULL OR date_fin > date_debut)
+    validite daterange NOT NULL,
+    PRIMARY KEY (produit_id, validite WITHOUT OVERLAPS)
 );
 ```
 
-**Astuce** : Utilisation de `COALESCE(date_fin, 'infinity')` pour gérer les périodes ouvertes (prix actuel sans date de fin).
+L'avantage par rapport à `UNIQUE` : pas besoin de définir une colonne `id` artificielle. La paire `(produit_id, validite)` identifie de manière unique chaque tranche de tarif.
+
+---
+
+## 4. Cas d'usage classiques
+
+### a) Historique de prix avec période ouverte
+
+Pour un produit, un seul prix doit être actif à un moment donné. La période courante n'a pas de date de fin (« active jusqu'à nouvel ordre »).
 
 ```sql
--- ✅ Prix initial
-INSERT INTO historique_prix (produit_id, prix, date_debut, date_fin)  
-VALUES (100, 19.99, '2024-01-01', '2024-06-30');  
+CREATE EXTENSION IF NOT EXISTS btree_gist;
 
--- ✅ Nouveau prix à partir du 1er juillet
-INSERT INTO historique_prix (produit_id, prix, date_debut, date_fin)  
-VALUES (100, 24.99, '2024-07-01', '2024-12-31');  
+CREATE TABLE historique_prix (
+    produit_id INTEGER NOT NULL,
+    prix NUMERIC(10, 2) NOT NULL CHECK (prix > 0),
+    -- daterange autorise des bornes infinies via 'infinity'
+    validite daterange NOT NULL,
+    PRIMARY KEY (produit_id, validite WITHOUT OVERLAPS)
+);
 
--- ✅ Prix actuel (ouvert)
-INSERT INTO historique_prix (produit_id, prix, date_debut, date_fin)  
-VALUES (100, 29.99, '2025-01-01', NULL);  
+-- ✅ Trois périodes successives non chevauchantes
+INSERT INTO historique_prix VALUES
+    (100, 19.99, daterange('2024-01-01', '2024-07-01', '[)')),
+    (100, 24.99, daterange('2024-07-01', '2025-01-01', '[)')),
+    (100, 29.99, daterange('2025-01-01', NULL, '[)'));  -- borne droite ouverte = infini
 
--- ❌ ÉCHEC : Chevauchement avec le prix du 1er juillet
-INSERT INTO historique_prix (produit_id, prix, date_debut, date_fin)  
-VALUES (100, 22.00, '2024-06-15', '2024-07-15');  
+-- ❌ Une période qui chevauche est rejetée
+INSERT INTO historique_prix VALUES
+    (100, 22.00, daterange('2024-06-15', '2024-07-15', '[)'));
 ```
 
-### 2. Contrats d'Emploi Sans Chevauchement
+> 📌 **Astuce : `NULL` comme borne signifie « infini »** dans la construction `daterange(a, b, …)`. C'est plus propre que d'écrire `'infinity'::date`.
 
-Un employé ne peut pas avoir plusieurs contrats actifs simultanément.
+### b) Contrats d'emploi sans cumul
 
 ```sql
-CREATE TABLE contrats_emploi (
-    id SERIAL PRIMARY KEY,
+CREATE TABLE contrats (
     employe_id INTEGER NOT NULL,
-    type_contrat VARCHAR(50) NOT NULL,  -- CDI, CDD, Stage, etc.
-    date_debut DATE NOT NULL,
-    date_fin DATE,  -- NULL pour les CDI en cours
+    type_contrat VARCHAR(20) NOT NULL,
     salaire NUMERIC(10, 2) NOT NULL,
-    -- Un employé ne peut avoir qu'un seul contrat actif à la fois
-    UNIQUE (employe_id, PERIOD(date_debut, COALESCE(date_fin, 'infinity'::date))) WITHOUT OVERLAPS,
-    CHECK (date_fin IS NULL OR date_fin > date_debut)
+    periode daterange NOT NULL,
+    PRIMARY KEY (employe_id, periode WITHOUT OVERLAPS)
 );
+
+-- ✅ Un CDD puis un CDI : non chevauchants
+INSERT INTO contrats VALUES
+    (1, 'CDD', 2500.00, daterange('2024-01-01', '2024-07-01', '[)')),
+    (1, 'CDI', 2800.00, daterange('2024-07-01', NULL, '[)'));
+
+-- ❌ Stage qui chevauche le CDI : refusé
+INSERT INTO contrats VALUES
+    (1, 'Stage', 1500.00, daterange('2024-08-01', '2024-12-31', '[)'));
 ```
 
-```sql
--- ✅ Premier contrat CDD
-INSERT INTO contrats_emploi (employe_id, type_contrat, date_debut, date_fin, salaire)  
-VALUES (1, 'CDD', '2024-01-01', '2024-06-30', 2500.00);  
-
--- ✅ CDI à partir du 1er juillet (pas de chevauchement)
-INSERT INTO contrats_emploi (employe_id, type_contrat, date_debut, date_fin, salaire)  
-VALUES (1, 'CDI', '2024-07-01', NULL, 2800.00);  
-
--- ❌ ÉCHEC : Impossible de créer un contrat qui chevauche le CDI
-INSERT INTO contrats_emploi (employe_id, type_contrat, date_debut, date_fin, salaire)  
-VALUES (1, 'Stage', '2024-08-01', '2024-12-31', 1500.00);  
-```
-
-### 3. Locations de Véhicules
-
-Une voiture ne peut être louée par plusieurs clients en même temps.
+### c) Locations de véhicules
 
 ```sql
-CREATE TABLE locations_vehicules (
-    id SERIAL PRIMARY KEY,
+CREATE TABLE locations (
     vehicule_id INTEGER NOT NULL,
     client_id INTEGER NOT NULL,
-    date_heure_debut TIMESTAMP NOT NULL,
-    date_heure_fin TIMESTAMP NOT NULL,
+    periode tstzrange NOT NULL,
     prix_total NUMERIC(10, 2) NOT NULL,
-    -- Un véhicule ne peut être loué par deux clients en même temps
-    UNIQUE (vehicule_id, PERIOD(date_heure_debut, date_heure_fin)) WITHOUT OVERLAPS,
-    CHECK (date_heure_fin > date_heure_debut)
+    PRIMARY KEY (vehicule_id, periode WITHOUT OVERLAPS)
 );
-```
 
-```sql
--- ✅ Location du véhicule 42 du 10 au 15 janvier
-INSERT INTO locations_vehicules (vehicule_id, client_id, date_heure_debut, date_heure_fin, prix_total)  
-VALUES (42, 100, '2025-01-10 09:00', '2025-01-15 18:00', 350.00);  
+INSERT INTO locations VALUES
+    (42, 100, tstzrange('2025-01-10 09:00+01', '2025-01-15 18:00+01', '[)'), 350.00),
+    (42, 101, tstzrange('2025-01-15 18:00+01', '2025-01-20 18:00+01', '[)'), 400.00);
 
--- ✅ Location du même véhicule après la première location
-INSERT INTO locations_vehicules (vehicule_id, client_id, date_heure_debut, date_heure_fin, prix_total)  
-VALUES (42, 101, '2025-01-15 18:00', '2025-01-20 18:00', 400.00);  
-
--- ❌ ÉCHEC : Chevauchement avec la première location
-INSERT INTO locations_vehicules (vehicule_id, client_id, date_heure_debut, date_heure_fin, prix_total)  
-VALUES (42, 102, '2025-01-12 09:00', '2025-01-17 18:00', 450.00);  
-```
-
-### 4. Promotions Sans Chevauchement
-
-Une promotion pour un produit ne peut pas avoir plusieurs périodes actives qui se chevauchent.
-
-```sql
-CREATE TABLE promotions (
-    id SERIAL PRIMARY KEY,
-    produit_id INTEGER NOT NULL,
-    code_promo VARCHAR(50) NOT NULL,
-    pourcentage_reduction INTEGER NOT NULL,
-    date_debut DATE NOT NULL,
-    date_fin DATE NOT NULL,
-    -- Une seule promotion active à la fois pour un produit
-    UNIQUE (produit_id, PERIOD(date_debut, date_fin)) WITHOUT OVERLAPS,
-    CHECK (date_fin >= date_debut),
-    CHECK (pourcentage_reduction > 0 AND pourcentage_reduction <= 100)
-);
-```
-
-```sql
--- ✅ Promotion de janvier
-INSERT INTO promotions (produit_id, code_promo, pourcentage_reduction, date_debut, date_fin)  
-VALUES (200, 'WINTER2025', 20, '2025-01-01', '2025-01-31');  
-
--- ✅ Promotion de février (pas de chevauchement)
-INSERT INTO promotions (produit_id, code_promo, pourcentage_reduction, date_debut, date_fin)  
-VALUES (200, 'SPRING2025', 15, '2025-02-01', '2025-02-28');  
-
--- ❌ ÉCHEC : Chevauchement avec la promotion de janvier
-INSERT INTO promotions (produit_id, code_promo, pourcentage_reduction, date_debut, date_fin)  
-VALUES (200, 'MEGA2025', 30, '2025-01-15', '2025-02-15');  
+-- ❌ Tentative de location en plein milieu de la première
+INSERT INTO locations VALUES
+    (42, 102, tstzrange('2025-01-12 09:00+01', '2025-01-17 18:00+01', '[)'), 450.00);
 ```
 
 ---
 
-## Contraintes Temporelles Multi-Colonnes
+## 5. `FOREIGN KEY … PERIOD` : clés étrangères temporelles
 
-Vous pouvez combiner **plusieurs colonnes d'identification** avec une période temporelle.
+La clause `PERIOD` permet à une `FOREIGN KEY` de référencer non pas une ligne unique, mais **une couverture temporelle**. Le but : garantir que l'enfant n'existe que sur des intervalles où le parent existe aussi.
 
-### Exemple : Réservations de Salles par Bâtiment
+### Exemple : abonnements d'une salle (capacité)
+
+Imaginons que chaque salle a une **capacité valide sur une période** (par exemple, elle est ouverte de 2024 à 2027), et qu'on veut interdire toute réservation hors de cette période.
 
 ```sql
-CREATE TABLE reservations_salles_batiment (
-    id SERIAL PRIMARY KEY,
-    batiment_id INTEGER NOT NULL,
+CREATE EXTENSION IF NOT EXISTS btree_gist;
+
+-- 1) Table parent : périodes de disponibilité de chaque salle
+CREATE TABLE salle_capacite (
     salle_id INTEGER NOT NULL,
-    utilisateur_id INTEGER NOT NULL,
-    date_debut TIMESTAMP NOT NULL,
-    date_fin TIMESTAMP NOT NULL,
-    -- Unicité sur la combinaison (batiment_id, salle_id) + période
-    UNIQUE (batiment_id, salle_id, PERIOD(date_debut, date_fin)) WITHOUT OVERLAPS,
-    CHECK (date_fin > date_debut)
+    capacite INTEGER NOT NULL,
+    validite daterange NOT NULL,
+    PRIMARY KEY (salle_id, validite WITHOUT OVERLAPS)
 );
-```
 
-**Comportement** : Une salle dans un bâtiment donné ne peut être réservée qu'une seule fois par période, mais la même salle dans un autre bâtiment peut l'être.
+INSERT INTO salle_capacite VALUES
+    (1, 30, daterange('2024-01-01', '2027-01-01', '[)'));
 
-```sql
--- ✅ Réservation salle 10 du bâtiment A
-INSERT INTO reservations_salles_batiment
-    (batiment_id, salle_id, utilisateur_id, date_debut, date_fin)
-VALUES (1, 10, 100, '2025-01-10 14:00', '2025-01-10 16:00');
-
--- ✅ Réservation salle 10 du bâtiment B (même salle, autre bâtiment)
-INSERT INTO reservations_salles_batiment
-    (batiment_id, salle_id, utilisateur_id, date_debut, date_fin)
-VALUES (2, 10, 101, '2025-01-10 14:00', '2025-01-10 16:00');
-
--- ❌ ÉCHEC : Chevauchement pour la salle 10 du bâtiment A
-INSERT INTO reservations_salles_batiment
-    (batiment_id, salle_id, utilisateur_id, date_debut, date_fin)
-VALUES (1, 10, 102, '2025-01-10 15:00', '2025-01-10 17:00');
-```
-
----
-
-## Contraintes Temporelles et Primary Keys
-
-Vous pouvez également définir une **clé primaire temporelle**, garantissant l'unicité absolue sur une période.
-
-### Syntaxe
-
-```sql
-CREATE TABLE reservations_primaire (
+-- 2) Table enfant : réservations, avec FK temporelle
+CREATE TABLE reservations_capacite (
+    id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     salle_id INTEGER NOT NULL,
-    date_debut TIMESTAMP NOT NULL,
-    date_fin TIMESTAMP NOT NULL,
-    utilisateur_id INTEGER NOT NULL,
-    -- Clé primaire temporelle
-    PRIMARY KEY (salle_id, PERIOD(date_debut, date_fin)) WITHOUT OVERLAPS,
-    CHECK (date_fin > date_debut)
+    periode daterange NOT NULL,
+    FOREIGN KEY (salle_id, PERIOD periode)
+        REFERENCES salle_capacite (salle_id, PERIOD validite)
 );
+
+-- ✅ Réservation à l'intérieur de la période de disponibilité
+INSERT INTO reservations_capacite (salle_id, periode) VALUES
+    (1, daterange('2025-03-01', '2025-03-15', '[)'));
+
+-- ❌ Réservation qui dépasse la période parent
+INSERT INTO reservations_capacite (salle_id, periode) VALUES
+    (1, daterange('2026-06-01', '2027-12-31', '[)'));
+-- ERROR: insert or update on table "reservations_capacite" violates foreign key constraint
 ```
 
-**Différence avec UNIQUE** :
-- `PRIMARY KEY` : Identifie uniquement chaque "tranche temporelle"
-- Pas besoin d'un `id SERIAL` séparé si la clé temporelle suffit
+**Différence cruciale avec une FK classique** :
+- Une FK classique vérifie que `(salle_id, validite)` **existe** dans la table parent.
+- Une FK temporelle vérifie que `periode` de l'enfant est **entièrement couverte** par l'union des `validite` du parent ayant le même `salle_id`. Le parent peut donc avoir **plusieurs lignes** dont les périodes (combinées) couvrent celle de l'enfant.
+
+### Limitations importantes des FK temporelles
+
+| Action | Supportée sur FK temporelle ? |
+|--------|-------------------------------|
+| `ON DELETE NO ACTION` (défaut) | ✅ Oui |
+| `ON DELETE RESTRICT` | ❌ Non |
+| `ON DELETE CASCADE` | ❌ Non |
+| `ON DELETE SET NULL` | ❌ Non |
+| `ON DELETE SET DEFAULT` | ❌ Non |
+
+Si vous avez besoin de cascades ou de comportements actifs sur les FK temporelles, il faut implémenter la logique vous-même (typiquement via un trigger ou côté application).
+
+---
+
+## 6. Détecter les chevauchements *a posteriori*
+
+La contrainte `WITHOUT OVERLAPS` empêche d'écrire de mauvaises données ; mais sur une base héritée, il faut parfois en **identifier** :
 
 ```sql
--- ✅ Insertion valide
-INSERT INTO reservations_primaire  
-VALUES (1, '2025-01-10 14:00', '2025-01-10 16:00', 100);  
+-- Trouver les paires de réservations qui se chevauchent pour une même salle
+SELECT a.id, b.id, a.salle_id, a.periode, b.periode  
+FROM reservations_salles a  
+JOIN reservations_salles b  
+  ON a.salle_id = b.salle_id
+ AND a.id < b.id            -- éviter (A,B) et (B,A)
+ AND a.periode && b.periode -- l'opérateur de chevauchement
+ORDER BY a.salle_id, a.periode;
+```
 
--- ✅ Autre période pour la même salle
-INSERT INTO reservations_primaire  
-VALUES (1, '2025-01-10 16:00', '2025-01-10 18:00', 101);  
+Cette requête est utile pour faire le **nettoyage** d'une table avant d'y ajouter une contrainte `WITHOUT OVERLAPS`.
 
--- ❌ ÉCHEC : Duplication de la clé primaire temporelle
-INSERT INTO reservations_primaire  
-VALUES (1, '2025-01-10 14:00', '2025-01-10 16:00', 102);  
+---
+
+## 6 bis. Requêtes temporelles courantes
+
+Une fois la table peuplée avec des colonnes de type range, plusieurs requêtes deviennent élégantes grâce aux opérateurs natifs.
+
+### a) « Qui occupe la salle à l'instant T ? »
+
+```sql
+SELECT salle_id, utilisateur_id, periode  
+FROM reservations_salles  
+WHERE periode @> '2025-01-10 15:30:00+01'::timestamptz;  
+```
+
+L'opérateur `@>` (« contient ») lit littéralement : « la période contient cet instant ». Plus naturel et plus indexable que `'2025-01-10 15:30' BETWEEN debut AND fin`.
+
+### b) « Qui occupe la salle pendant le créneau [14h, 16h) ? »
+
+```sql
+SELECT salle_id, utilisateur_id, periode  
+FROM reservations_salles  
+WHERE periode && tstzrange('2025-01-10 14:00+01', '2025-01-10 16:00+01', '[)');  
+```
+
+Avec **un seul opérateur `&&`**, on couvre tous les cas de chevauchement (la réservation commence avant et finit pendant, elle est entièrement incluse, elle englobe le créneau, etc.).
+
+### c) « Trouver les trous dans le planning »
+
+L'opérateur `-` sur les ranges donne la différence (et l'agrégation `range_agg` les unit). Pour trouver les périodes libres d'une salle entre 9h et 18h :
+
+```sql
+WITH journee AS (
+    SELECT tstzrange('2025-01-10 09:00+01', '2025-01-10 18:00+01', '[)') AS plage
+)
+SELECT range_agg(occupe.periode) AS plages_occupees,
+       (SELECT plage FROM journee) - range_agg(occupe.periode) AS plages_libres
+FROM reservations_salles occupe  
+WHERE occupe.salle_id = 1  
+  AND occupe.periode && (SELECT plage FROM journee);
+```
+
+> 📌 `range_agg` (PostgreSQL 14+) consolide plusieurs ranges en un `multirange`. Sa différence avec un range simple donne les **plages libres**, sans avoir à les calculer manuellement avec des `LEAD`/`LAG`.
+
+### d) « Quelle est l'occupation cumulée par jour ? »
+
+```sql
+SELECT
+    date(lower(periode)) AS jour,
+    salle_id,
+    sum(upper(periode) - lower(periode)) AS duree_occupee
+FROM reservations_salles  
+WHERE lower(periode) >= '2025-01-01' AND lower(periode) < '2025-02-01'  
+GROUP BY date(lower(periode)), salle_id  
+ORDER BY jour, salle_id;  
+```
+
+`lower(range)` et `upper(range)` accèdent aux bornes du range pour calculer une durée.
+
+---
+
+## 7. Performance et indexation
+
+### Index GiST automatique
+
+`UNIQUE`/`PRIMARY KEY … WITHOUT OVERLAPS` crée automatiquement un **index GiST** (et non B-tree), adapté aux types range. C'est cet index qui implémente la vérification de chevauchement en temps logarithmique.
+
+### Index complémentaires
+
+Pour les **requêtes de lecture** ciblées par identifiant simple (sans dimension temporelle), un index B-tree classique reste pertinent :
+
+```sql
+-- Le GiST de la contrainte est efficace pour "chevauchements pour salle X",
+-- mais pour "toutes les réservations de l'utilisateur Y", un B-tree classique
+-- est utile.
+CREATE INDEX idx_resa_utilisateur ON reservations_salles(utilisateur_id);
+```
+
+### Index partiel sur l'« actuel »
+
+Si la quasi-totalité des requêtes ne porte que sur les périodes courantes ou futures, un index partiel réduit la taille de l'index :
+
+```sql
+CREATE INDEX idx_resa_futures
+    ON reservations_salles USING gist (salle_id, periode)
+    WHERE upper(periode) > now();
 ```
 
 ---
 
-## Intégration avec les Foreign Keys
+## 8. Migration depuis `EXCLUDE USING gist`
 
-Les contraintes temporelles peuvent être combinées avec des **clés étrangères** pour modéliser des relations complexes.
+Si votre base utilise déjà des `EXCLUDE` avec deux colonnes timestamp, voici le plan de migration :
 
-### Exemple : Réservations avec Validation de Disponibilité
-
-```sql
--- Table des salles
-CREATE TABLE salles (
-    id SERIAL PRIMARY KEY,
-    nom VARCHAR(100) NOT NULL,
-    capacite INTEGER NOT NULL
-);
-
--- Table des périodes de maintenance (la salle est indisponible)
-CREATE TABLE maintenance_salles (
-    id SERIAL PRIMARY KEY,
-    salle_id INTEGER NOT NULL REFERENCES salles(id),
-    date_debut TIMESTAMP NOT NULL,
-    date_fin TIMESTAMP NOT NULL,
-    raison TEXT,
-    -- Pas de chevauchement de maintenances
-    UNIQUE (salle_id, PERIOD(date_debut, date_fin)) WITHOUT OVERLAPS,
-    CHECK (date_fin > date_debut)
-);
-
--- Table des réservations
-CREATE TABLE reservations (
-    id SERIAL PRIMARY KEY,
-    salle_id INTEGER NOT NULL REFERENCES salles(id),
-    utilisateur_id INTEGER NOT NULL,
-    date_debut TIMESTAMP NOT NULL,
-    date_fin TIMESTAMP NOT NULL,
-    -- Pas de chevauchement de réservations
-    UNIQUE (salle_id, PERIOD(date_debut, date_fin)) WITHOUT OVERLAPS,
-    CHECK (date_fin > date_debut)
-);
-```
-
-**Limitation** : PostgreSQL 18 ne peut pas (encore) vérifier automatiquement qu'une réservation ne chevauche pas une période de maintenance. Cela nécessiterait une logique applicative ou des triggers supplémentaires.
-
----
-
-## Performance et Indexation
-
-### Index Automatiques
-
-PostgreSQL 18 crée automatiquement un **index spécialisé** pour les contraintes temporelles, optimisé pour détecter les chevauchements.
+### a) Ancienne structure (PG ≤ 17)
 
 ```sql
--- Après création de la table avec contrainte temporelle
-\d reservations_salles
-
--- Vous verrez un index nommé automatiquement, par exemple :
--- "reservations_salles_salle_id_date_debut_date_fin_excl" EXCLUDE USING gist (...)
-```
-
-### Type d'Index : GIST (Generalized Search Tree)
-
-Les contraintes temporelles utilisent des **index GIST**, particulièrement efficaces pour :
-- Les requêtes de chevauchement (`&&`)
-- Les requêtes spatiales et temporelles
-- Les recherches sur des ranges
-
-### Requêtes Optimisées
-
-```sql
--- Rechercher toutes les réservations d'une salle pour une période donnée
-EXPLAIN ANALYZE  
-SELECT * FROM reservations_salles  
-WHERE salle_id = 1  
-  AND tsrange(date_debut, date_fin) && '[2025-01-10 12:00, 2025-01-10 18:00)';
-
--- L'index GIST sera utilisé automatiquement
-```
-
-### Recommandation : Index Supplémentaires
-
-Pour optimiser les requêtes fréquentes, ajoutez des index B-Tree classiques :
-
-```sql
--- Index sur salle_id pour les recherches par salle
-CREATE INDEX idx_reservations_salle_id ON reservations_salles(salle_id);
-
--- Index sur utilisateur_id pour les recherches par utilisateur
-CREATE INDEX idx_reservations_utilisateur_id ON reservations_salles(utilisateur_id);
-
--- Index sur date_debut pour les recherches par date
-CREATE INDEX idx_reservations_date_debut ON reservations_salles(date_debut);
-```
-
----
-
-## Migration depuis les Anciennes Versions
-
-### Avant PostgreSQL 18 : Contraintes d'Exclusion
-
-Si vous aviez utilisé des contraintes d'exclusion avec `btree_gist` :
-
-```sql
--- Ancienne méthode (PostgreSQL < 18)
 CREATE EXTENSION btree_gist;
 
 CREATE TABLE reservations_old (
-    id SERIAL PRIMARY KEY,
+    id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     salle_id INTEGER NOT NULL,
-    date_debut TIMESTAMP NOT NULL,
-    date_fin TIMESTAMP NOT NULL,
+    debut TIMESTAMPTZ NOT NULL,
+    fin   TIMESTAMPTZ NOT NULL,
     EXCLUDE USING gist (
         salle_id WITH =,
-        tsrange(date_debut, date_fin) WITH &&
+        tstzrange(debut, fin, '[)') WITH &&
     )
 );
 ```
 
-### Nouvelle Syntaxe PostgreSQL 18
+### b) Nouvelle structure (PG 18+)
 
 ```sql
--- Nouvelle méthode (PostgreSQL 18+)
 CREATE TABLE reservations_new (
-    id SERIAL PRIMARY KEY,
+    id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     salle_id INTEGER NOT NULL,
-    date_debut TIMESTAMP NOT NULL,
-    date_fin TIMESTAMP NOT NULL,
-    UNIQUE (salle_id, PERIOD(date_debut, date_fin)) WITHOUT OVERLAPS
+    periode TSTZRANGE NOT NULL,
+    UNIQUE (salle_id, periode WITHOUT OVERLAPS)
 );
 ```
 
-**Avantages** :
-- ✅ Plus lisible et intuitive  
-- ✅ Standard SQL:2011 (Temporal Features)  
-- ✅ Pas besoin d'extension externe  
-- ✅ Meilleures performances  
-- ✅ Meilleur support par les ORM et outils
-
-### Processus de Migration
-
-```sql
--- 1. Créer la nouvelle table avec la syntaxe PG18
-CREATE TABLE reservations_new (
-    id SERIAL PRIMARY KEY,
-    salle_id INTEGER NOT NULL,
-    date_debut TIMESTAMP NOT NULL,
-    date_fin TIMESTAMP NOT NULL,
-    utilisateur_id INTEGER NOT NULL,
-    UNIQUE (salle_id, PERIOD(date_debut, date_fin)) WITHOUT OVERLAPS
-);
-
--- 2. Copier les données
-INSERT INTO reservations_new  
-SELECT * FROM reservations_old;  
-
--- 3. Renommer les tables
-BEGIN;  
-ALTER TABLE reservations_old RENAME TO reservations_old_backup;  
-ALTER TABLE reservations_new RENAME TO reservations;  
-COMMIT;  
-
--- 4. Vérifier et supprimer l'ancienne table
-DROP TABLE reservations_old_backup;
-```
-
----
-
-## Limitations et Considérations
-
-### 1. Types de Données Supportés
-
-Les contraintes temporelles PostgreSQL 18 fonctionnent avec :
-- ✅ `TIMESTAMP` / `TIMESTAMPTZ`  
-- ✅ `DATE`  
-- ✅ Types Range (`tsrange`, `tstzrange`, `daterange`)
-
-### 2. NULL dans les Périodes
-
-Si `date_debut` ou `date_fin` est `NULL`, la contrainte **ne s'applique pas** pour cette ligne.
-
-```sql
--- ✅ Ces deux insertions sont acceptées (NULL ignore la contrainte)
-INSERT INTO reservations (salle_id, date_debut, date_fin)  
-VALUES (1, NULL, NULL);  
-
-INSERT INTO reservations (salle_id, date_debut, date_fin)  
-VALUES (1, NULL, NULL);  
-```
-
-**Solution** : Utilisez `NOT NULL` sur les colonnes de période si vous voulez toujours valider :
-
-```sql
-CREATE TABLE reservations (
-    salle_id INTEGER NOT NULL,
-    date_debut TIMESTAMP NOT NULL,  -- Obligatoire
-    date_fin TIMESTAMP NOT NULL,    -- Obligatoire
-    UNIQUE (salle_id, PERIOD(date_debut, date_fin)) WITHOUT OVERLAPS
-);
-```
-
-### 3. Périodes Ouvertes (Sans Fin)
-
-Pour gérer des périodes ouvertes (ex : contrat en cours), utilisez `COALESCE` :
-
-```sql
-UNIQUE (employe_id, PERIOD(date_debut, COALESCE(date_fin, 'infinity'::date))) WITHOUT OVERLAPS
-```
-
-### 4. Modification de Périodes
-
-Mettre à jour une période peut déclencher une violation si cela crée un chevauchement :
-
-```sql
--- Réservation initiale
-INSERT INTO reservations (salle_id, date_debut, date_fin)  
-VALUES (1, '2025-01-10 14:00', '2025-01-10 16:00');  
-
--- Autre réservation
-INSERT INTO reservations (salle_id, date_debut, date_fin)  
-VALUES (1, '2025-01-10 16:00', '2025-01-10 18:00');  
-
--- ❌ ÉCHEC : Étendre la première réservation crée un chevauchement
-UPDATE reservations  
-SET date_fin = '2025-01-10 17:00'  
-WHERE salle_id = 1 AND date_debut = '2025-01-10 14:00';  
-```
-
-**Solution** : Vérifiez les chevauchements avant de modifier, ou utilisez des transactions.
-
-### 5. Performance sur Grandes Tables
-
-Sur des tables avec **millions de lignes**, les contraintes temporelles peuvent ralentir les insertions/modifications. Optimisations :
-
-1. **Partitionnement** : Partitionnez par période (par mois, par année)  
-2. **Archivage** : Déplacez les anciennes réservations vers une table d'archive  
-3. **Index sélectifs** : Utilisez des index partiels si pertinent
-
-```sql
--- Index partiel : Seulement les réservations futures
-CREATE INDEX idx_reservations_futures  
-ON reservations(salle_id, date_debut)  
-WHERE date_fin >= CURRENT_TIMESTAMP;  
-```
-
----
-
-## Bonnes Pratiques
-
-### 1. Nommez vos Contraintes
-
-```sql
-CREATE TABLE reservations (
-    salle_id INTEGER NOT NULL,
-    date_debut TIMESTAMP NOT NULL,
-    date_fin TIMESTAMP NOT NULL,
-    CONSTRAINT uq_reservations_salle_periode
-        UNIQUE (salle_id, PERIOD(date_debut, date_fin)) WITHOUT OVERLAPS
-);
-```
-
-**Avantage** : Messages d'erreur explicites.
-
-### 2. Combinez avec des CHECK pour la Cohérence
-
-```sql
-CREATE TABLE reservations (
-    date_debut TIMESTAMP NOT NULL,
-    date_fin TIMESTAMP NOT NULL,
-    -- Vérification de base : date_fin après date_debut
-    CHECK (date_fin > date_debut),
-    -- Contrainte temporelle
-    UNIQUE (salle_id, PERIOD(date_debut, date_fin)) WITHOUT OVERLAPS
-);
-```
-
-### 3. Documentez vos Contraintes
-
-```sql
-COMMENT ON CONSTRAINT uq_reservations_salle_periode ON reservations  
-IS 'Empêche les réservations qui se chevauchent pour une même salle';  
-```
-
-### 4. Utilisez des Transactions pour les Opérations Complexes
+### c) Procédure de migration
 
 ```sql
 BEGIN;
 
--- Annuler une réservation existante
-DELETE FROM reservations WHERE id = 42;
+-- Créer la nouvelle table
+CREATE TABLE reservations_new (
+    id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    salle_id INTEGER NOT NULL,
+    periode TSTZRANGE NOT NULL,
+    UNIQUE (salle_id, periode WITHOUT OVERLAPS)
+);
 
--- Créer deux nouvelles réservations dans le même créneau
-INSERT INTO reservations (salle_id, date_debut, date_fin)  
-VALUES (1, '2025-01-10 14:00', '2025-01-10 15:30');  
+-- Copier les données en convertissant deux timestamps en un range
+INSERT INTO reservations_new (salle_id, periode)  
+SELECT salle_id, tstzrange(debut, fin, '[)') FROM reservations_old;  
 
-INSERT INTO reservations (salle_id, date_debut, date_fin)  
-VALUES (1, '2025-01-10 15:30', '2025-01-10 17:00');  
+-- Bascule
+ALTER TABLE reservations_old RENAME TO reservations_old_bak;  
+ALTER TABLE reservations_new RENAME TO reservations_old;  -- on garde le nom métier  
 
 COMMIT;
+
+-- Plus tard, après validation :
+-- DROP TABLE reservations_old_bak;
 ```
 
-### 5. Testez Systématiquement
+**Avantages de la nouvelle approche** :
+- ✅ Syntaxe **déclarative** et lisible
+- ✅ Conforme au **standard SQL:2011**
+- ✅ Le range est **une donnée**, pas une construction à recalculer dans chaque requête de lecture
+- ✅ Les **FK temporelles** deviennent possibles
+- ✅ Mieux supporté par les ORM et outils de migration récents
 
-Écrivez des tests pour vérifier que vos contraintes fonctionnent :
+**Inconvénients** :
+- Une seule colonne `periode` au lieu de deux : si vos requêtes existantes interrogent `debut` ou `fin` directement, il faut les adapter (`lower(periode)`, `upper(periode)`).
+
+---
+
+## 9. Limitations et points d'attention
+
+### a) Types acceptés
+
+`WITHOUT OVERLAPS` exige une colonne **range** ou **multirange**. Vous ne pouvez **pas** écrire `… periode WITHOUT OVERLAPS` sur une colonne `TIMESTAMP` ou `INTEGER` : il faut une colonne de type `tstzrange`, `daterange`, `int8range`, etc.
+
+### b) `NULL` dans la colonne range
+
+Si la colonne range est `NULL`, la ligne **n'est jamais en conflit** avec une autre (puisqu'il n'y a pas de période à comparer). Pour interdire ce cas :
 
 ```sql
--- Test 1 : Insertion normale
-INSERT INTO reservations (salle_id, date_debut, date_fin)  
-VALUES (1, '2025-01-10 14:00', '2025-01-10 16:00');  
-
--- Test 2 : Chevauchement (doit échouer)
-DO $$  
-BEGIN  
-    INSERT INTO reservations (salle_id, date_debut, date_fin)
-    VALUES (1, '2025-01-10 15:00', '2025-01-10 17:00');
-    RAISE EXCEPTION 'Test échoué : Chevauchement non détecté';
-EXCEPTION WHEN unique_violation THEN
-    RAISE NOTICE 'Test réussi : Chevauchement correctement bloqué';
-END $$;
+periode TSTZRANGE NOT NULL  -- ← déclarer NOT NULL
 ```
 
----
+C'est la valeur par défaut recommandée pour une table de réservation.
 
-## Comparaison : Avant vs Après PostgreSQL 18
+### c) Ranges vides
 
-| Aspect | PostgreSQL < 18 | PostgreSQL 18 |
-|--------|----------------|---------------|
-| **Syntaxe** | Complexe (EXCLUDE USING GIST) | Simple (UNIQUE ... WITHOUT OVERLAPS) |
-| **Extension requise** | Oui (btree_gist) | Non (natif) |
-| **Lisibilité** | Faible | Excellente |
-| **Standard SQL** | Non | Oui (SQL:2011) |
-| **Performance** | Bonne | Meilleure (optimisé) |
-| **Support ORM** | Limité | En cours d'adoption |
-| **Maintenance** | Complexe (triggers) | Simple (déclaratif) |
-
----
-
-## Exemples d'Utilisation Avancée
-
-### 1. Gestion de Versions de Documents
-
-Gérer les versions d'un document avec des périodes de validité.
+Un range vide (`'empty'::tstzrange`) ne chevauche **rien** par définition. Pour interdire les ranges vides :
 
 ```sql
-CREATE TABLE versions_documents (
-    document_id INTEGER NOT NULL,
-    version INTEGER NOT NULL,
-    contenu TEXT NOT NULL,
-    auteur_id INTEGER NOT NULL,
-    date_debut TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    date_fin TIMESTAMP,
-    -- Une seule version active à la fois pour un document
-    UNIQUE (document_id, PERIOD(date_debut, COALESCE(date_fin, 'infinity'::timestamp))) WITHOUT OVERLAPS
-);
+CHECK (NOT isempty(periode))
 ```
 
-### 2. Créneaux de Disponibilité de Personnel
+### d) `RESTRICT`/`CASCADE` non supportés sur FK temporelles
 
-Gérer les disponibilités d'employés sans chevauchement.
+Comme vu plus haut, seul `ON DELETE NO ACTION` (le défaut) est autorisé sur les `FOREIGN KEY … PERIOD`. Si vous avez besoin de cascades temporelles, utilisez un trigger applicatif.
 
-```sql
-CREATE TABLE disponibilites_employes (
-    employe_id INTEGER NOT NULL,
-    date_debut TIMESTAMP NOT NULL,
-    date_fin TIMESTAMP NOT NULL,
-    type_disponibilite VARCHAR(20) NOT NULL,  -- 'disponible', 'conges', 'maladie'
-    -- Pas de chevauchement de périodes pour un employé
-    UNIQUE (employe_id, PERIOD(date_debut, date_fin)) WITHOUT OVERLAPS,
-    CHECK (date_fin > date_debut)
-);
-```
+### e) Index lourd sur très grandes tables
 
-### 3. Tarification Dynamique avec Historique
-
-```sql
-CREATE TABLE tarifs_zones (
-    zone_id INTEGER NOT NULL,
-    type_vehicule VARCHAR(50) NOT NULL,
-    tarif_horaire NUMERIC(10, 2) NOT NULL,
-    date_debut DATE NOT NULL,
-    date_fin DATE,
-    -- Un seul tarif valide par zone et type de véhicule à un moment donné
-    UNIQUE (zone_id, type_vehicule, PERIOD(date_debut, COALESCE(date_fin, 'infinity'::date))) WITHOUT OVERLAPS,
-    CHECK (tarif_horaire > 0)
-);
-```
+Le GiST est plus coûteux à maintenir qu'un B-tree. Sur une table d'historique avec des millions de lignes, le partitionnement par période (mensuel, annuel) reste indispensable.
 
 ---
 
-## Résumé
+## 10. Comparatif : avant et après PG 18
 
-### Points Clés
-
-1. **Nouveauté majeure** : Les contraintes temporelles sont natives dans PostgreSQL 18  
-2. **Syntaxe simple** : `UNIQUE (col, PERIOD(debut, fin)) WITHOUT OVERLAPS`  
-3. **Gestion automatique** : Détection et blocage des chevauchements  
-4. **Performance optimisée** : Index GIST automatiques  
-5. **Standard SQL** : Conforme à SQL:2011 (Temporal Features)
-
-### Avantages
-
-- ✅ **Simplicité** : Plus besoin d'extensions ou de triggers complexes  
-- ✅ **Fiabilité** : Garantie au niveau de la base de données  
-- ✅ **Performance** : Optimisé nativement  
-- ✅ **Maintenabilité** : Code déclaratif et lisible  
-- ✅ **Portabilité** : Standard SQL (compatible avec d'autres SGBD modernes)
-
-### Cas d'Usage Idéaux
-
-- 📅 Réservations (salles, véhicules, équipements)  
-- 💰 Historiques de prix et tarifs  
-- 📝 Contrats et périodes de validité  
-- 🎟️ Promotions temporelles  
-- 👤 Disponibilités de personnel  
-- 📚 Versions de documents  
-- 🏢 Locations et baux
+| Aspect | `EXCLUDE USING gist` (avant) | `WITHOUT OVERLAPS` (PG 18) |
+|--------|------------------------------|----------------------------|
+| Syntaxe | `EXCLUDE USING gist (col WITH =, range WITH &&)` | `UNIQUE (col, range WITHOUT OVERLAPS)` |
+| Extension `btree_gist` | Requise dès qu'on mélange scalaire et range | Idem (inchangé) |
+| Standard SQL | Extension PostgreSQL | **SQL:2011** |
+| Lisibilité | Faible | Excellente |
+| `PRIMARY KEY` temporelle | Possible via index unique séparé | Directement avec `PRIMARY KEY … WITHOUT OVERLAPS` |
+| `FOREIGN KEY` temporelle | Impossible nativement (triggers ad hoc) | `FOREIGN KEY … PERIOD` |
+| Schéma stocké | Deux colonnes `debut`/`fin` souvent | Une colonne `range` |
 
 ---
 
-## Conclusion
+## 11. Bonnes pratiques
 
-Les **contraintes temporelles** de PostgreSQL 18 représentent une avancée majeure pour la gestion des données temporelles. Ce qui nécessitait auparavant des extensions complexes, des triggers personnalisés, ou une logique applicative lourde est désormais géré de manière **native, simple et performante**.
-
-Cette fonctionnalité transforme PostgreSQL en un outil encore plus puissant pour les applications modernes qui manipulent des périodes, des historiques et des réservations.
-
-**Recommandation** : Si votre application gère des périodes temporelles avec des risques de chevauchement, **migrez vers PostgreSQL 18** et adoptez cette syntaxe moderne. Vous gagnerez en simplicité, en fiabilité et en performance.
+1. **Stocker les périodes comme des ranges**, pas comme deux colonnes séparées. C'est plus naturel, et l'opérateur `&&` devient utilisable partout.
+2. **Toujours rendre la colonne range `NOT NULL`** sur les tables où la période est intrinsèque (réservation, contrat, location).
+3. **Toujours ajouter `CHECK (NOT isempty(periode))`** pour exclure les ranges vides.
+4. **Préférer la convention `[)`** (inclusif à gauche, exclusif à droite) : elle rend les périodes contiguës (`[8h,10h)` puis `[10h,12h)`) sans chevauchement ni trou.
+5. **Documenter la contrainte** :
+   ```sql
+   COMMENT ON CONSTRAINT pas_de_chevauchement ON reservations_salles
+   IS 'Interdit deux réservations qui se chevauchent pour la même salle.';
+   ```
+6. **Combiner avec une `FOREIGN KEY` classique** vers la table des entités référencées (salle, employé) — la contrainte temporelle vérifie le chevauchement, mais pas l'existence de l'entité parente sans FK explicite.
 
 ---
 
-**Prochain sujet** : Dans la section suivante (7.3), nous explorerons la **théorie des ensembles et les jointures**, fondement essentiel de SQL pour relier les tables entre elles.
+## 12. Résumé
 
-⏭️ [Théorie des ensembles et jointures : Produit cartésien et sélection](/07-relations-et-jointures/03-theorie-des-ensembles.md)
+### Points clés
+
+1. **PostgreSQL 18 standardise** la gestion des contraintes temporelles avec `WITHOUT OVERLAPS` et `PERIOD`.
+2. **La syntaxe utilise une colonne de type range** (pas deux colonnes scalaires séparées).
+3. `WITHOUT OVERLAPS` détecte les **chevauchements** ; `PERIOD` (sur FK) vérifie la **couverture**.
+4. L'extension **`btree_gist`** reste requise dès qu'on mélange une colonne scalaire avec une colonne range dans la contrainte.
+5. Les **actions référentielles** sur FK temporelles sont limitées à `NO ACTION`.
+
+### Cas d'usage idéaux
+
+- 📅 Réservations, plannings, créneaux
+- 💰 Historiques de prix et tarifs
+- 📝 Contrats et périodes de validité
+- 🎟️ Promotions temporelles
+- 👤 Disponibilités et absences
+- 📚 Versions de documents avec dates de validité
+- 🏢 Baux, locations, abonnements
+
+### À retenir en une ligne
+
+> `UNIQUE (entite_id, periode_range WITHOUT OVERLAPS)` remplace, en plus simple et plus standard, les contraintes d'exclusion historiques.
+
+---
+
+⏭️ [Théorie des ensembles et jointures : produit cartésien et sélection](/07-relations-et-jointures/03-theorie-des-ensembles.md)

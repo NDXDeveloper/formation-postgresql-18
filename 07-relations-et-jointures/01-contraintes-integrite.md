@@ -83,6 +83,28 @@ ALTER TABLE utilisateurs
 ALTER COLUMN telephone SET NOT NULL;  
 ```
 
+### 🆕 PostgreSQL 18 : `NOT NULL` devient une contrainte de première classe
+
+Jusqu'en PostgreSQL 17, le `NOT NULL` était stocké comme un simple **drapeau** sur la colonne (`pg_attribute.attnotnull`), **sans nom** et sans entrée dans `pg_constraint`. PostgreSQL 18 finalise un long refactoring : chaque `NOT NULL` est désormais **une vraie contrainte nommée**, avec une ligne dans `pg_constraint` (`contype = 'n'`).
+
+Conséquences pratiques :
+
+1. **Les `NOT NULL` apparaissent dans `\d+`** côté psql, avec un nom (généré ou choisi).
+2. **`NOT NULL NOT VALID`** est désormais possible : on déclare la contrainte sans vérifier immédiatement les lignes existantes, ce qui permet un *ALTER TABLE* quasi-instantané même sur une grosse table — et on valide ensuite à froid avec `VALIDATE CONSTRAINT`.
+
+```sql
+-- Ajouter NOT NULL sans bloquer la table sur la vérification (PG 18)
+ALTER TABLE grande_table  
+    ADD CONSTRAINT grande_table_email_not_null  
+    NOT NULL email NOT VALID;  
+
+-- Plus tard, valider à un moment plus calme (verrou plus faible)
+ALTER TABLE grande_table  
+    VALIDATE CONSTRAINT grande_table_email_not_null;  
+```
+
+Avant PG 18, ajouter un `NOT NULL` sur une table de plusieurs centaines de millions de lignes pouvait bloquer la table de longues minutes pour scanner toutes les valeurs. Avec `NOT VALID`, l'opération devient une simple modification de catalogue : indispensable pour les migrations **zero-downtime**.
+
 ---
 
 ## 2. UNIQUE - Garantir l'Unicité
@@ -133,18 +155,18 @@ INSERT INTO utilisateurs (email, nom)
 VALUES ('bob@example.com', 'Bob');  
 ```
 
-### Particularité : UNIQUE et NULL
+### Particularité : `UNIQUE` et `NULL`
 
-**Point important** : En PostgreSQL, `NULL` est considéré comme **distinct de NULL**. Donc plusieurs lignes peuvent avoir `NULL` dans une colonne `UNIQUE`.
+**Point important** : par défaut, `NULL` est considéré comme **distinct de tout autre `NULL`** dans une contrainte `UNIQUE`. Donc **plusieurs lignes peuvent avoir `NULL`** dans une colonne `UNIQUE`. C'est conforme au standard SQL, mais surprenant pour qui vient de MS SQL Server (qui traite les `NULL` comme égaux dans les contraintes d'unicité, en s'écartant du standard).
 
 ```sql
 CREATE TABLE produits (
-    id SERIAL PRIMARY KEY,
+    id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     nom VARCHAR(100) NOT NULL,
     code_barre VARCHAR(50) UNIQUE  -- Peut être NULL
 );
 
--- ✅ Ces deux insertions sont valides (NULL ≠ NULL)
+-- ✅ Ces deux insertions sont valides (NULL distinct de NULL pour la contrainte)
 INSERT INTO produits (nom, code_barre) VALUES ('Produit A', NULL);  
 INSERT INTO produits (nom, code_barre) VALUES ('Produit B', NULL);  
 
@@ -152,6 +174,28 @@ INSERT INTO produits (nom, code_barre) VALUES ('Produit B', NULL);
 INSERT INTO produits (nom, code_barre) VALUES ('Produit C', '123456');  
 INSERT INTO produits (nom, code_barre) VALUES ('Produit D', '123456');  
 ```
+
+#### `NULLS NOT DISTINCT` (PostgreSQL 15+)
+
+Depuis PostgreSQL 15, on peut **inverser** ce comportement avec le modificateur `NULLS NOT DISTINCT` : tous les `NULL` sont alors considérés comme **égaux entre eux**, et un seul `NULL` est autorisé par contrainte.
+
+```sql
+CREATE TABLE produits_v2 (
+    id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    nom VARCHAR(100) NOT NULL,
+    code_barre VARCHAR(50),
+    UNIQUE NULLS NOT DISTINCT (code_barre)  -- ← un seul NULL autorisé
+);
+
+-- ✅ Premier NULL accepté
+INSERT INTO produits_v2 (nom, code_barre) VALUES ('Produit A', NULL);
+
+-- ❌ Deuxième NULL refusé : il viole maintenant la contrainte
+INSERT INTO produits_v2 (nom, code_barre) VALUES ('Produit B', NULL);
+-- ERROR: duplicate key value violates unique constraint
+```
+
+C'est utile quand le `NULL` signifie « valeur absente, mais l'absence est elle-même un état unique » (ex. : un seul utilisateur peut avoir « pas de poste de manager » dans un certain contexte).
 
 ### UNIQUE vs UNIQUE avec NOT NULL
 
@@ -315,7 +359,7 @@ C'est le mécanisme fondamental pour modéliser les **relations entre entités**
 
 ### Objectif
 
-- **Intégrité référentielle** : Empêcher les "orphelins" (références vers des enregistrements inexistants)  
+- **Intégrité référentielle** : empêcher les « orphelins » (références vers des enregistrements inexistants)  
 - **Cohérence des données** : Garantir que les relations sont valides  
 - **Documentation** : Rendre explicites les liens entre tables
 
@@ -510,6 +554,85 @@ INSERT INTO employes (nom, manager_id) VALUES ('Bob', 1);  -- id=2
 
 4. **Évitez de modifier les PK référencées** : Utilisez `ON UPDATE CASCADE` uniquement si nécessaire.
 
+### Sous le capot : les FK sont implémentées par des triggers cachés
+
+Une `FOREIGN KEY` n'est pas une simple « règle » : sous le capot, PostgreSQL crée **deux triggers système cachés** par contrainte :
+- Sur la table **enfant** : un trigger `AFTER INSERT OR UPDATE` qui vérifie que la valeur de FK existe bien dans la table parent.
+- Sur la table **parent** : un trigger `AFTER UPDATE OR DELETE` qui applique l'action (`RESTRICT`, `CASCADE`, etc.).
+
+Ces triggers sont visibles en consultant `pg_trigger` (mais sont cachés des affichages standards comme `\d`) :
+
+```sql
+SELECT tgname, tgrelid::regclass AS table_concernee  
+FROM pg_trigger  
+WHERE tgname LIKE 'RI_%'  
+ORDER BY table_concernee;  
+```
+
+> 💡 **Conséquence pratique** : `ALTER TABLE … DISABLE TRIGGER ALL` désactive **aussi** ces triggers cachés, ce qui désactive de fait les FK. C'est précisément ce qui rend cette commande dangereuse pour l'intégrité (voir plus haut).
+
+### Verrous pris par les FK lors des modifications
+
+Quand on insère dans la table enfant, PostgreSQL doit vérifier que la ligne parent existe. Pour empêcher qu'elle disparaisse entre la vérification et le `COMMIT`, il pose un **verrou `FOR KEY SHARE`** sur la ligne parent. Ce verrou :
+- Empêche `DELETE` ou `UPDATE` modifiant la clé sur la ligne parent dans une autre transaction ;
+- Autorise les autres `INSERT` qui référencent la même ligne parent (verrou partagé) ;
+- Autorise les `SELECT` et les `UPDATE` qui ne touchent pas la clé.
+
+```sql
+-- Session A
+BEGIN;  
+INSERT INTO commandes (client_id, date_commande)  
+VALUES (42, CURRENT_DATE);  
+-- → pose FOR KEY SHARE sur clients.id=42
+
+-- Session B (en parallèle)
+DELETE FROM clients WHERE id = 42;
+-- ⏳ ATTEND la fin de la transaction A
+```
+
+> ⚠️ **Effet sur la concurrence** : sur des tables très chargées (e-commerce avec un client_id qui revient sur des millions de commandes), les verrous `FOR KEY SHARE` peuvent s'accumuler. Un `UPDATE` du nom de client peut alors devoir attendre la fin de toutes les transactions ayant inséré une commande pour ce client. C'est l'un des compromis du modèle FK.
+
+### `MATCH FULL` vs `MATCH SIMPLE` pour les FK composites
+
+Pour une FK qui porte sur **plusieurs colonnes**, le standard SQL définit deux modes de gestion des `NULL` :
+
+| Mode | Sémantique |
+|------|-----------|
+| `MATCH SIMPLE` (défaut) | Si **au moins une** colonne de la FK est `NULL`, la contrainte **n'est pas vérifiée** (la ligne est considérée comme « partiellement non référencée ») |
+| `MATCH FULL` | **Toutes** les colonnes de la FK doivent être soit toutes `NULL`, soit toutes non-`NULL`. Cas mixte = erreur. |
+
+```sql
+CREATE TABLE inscriptions (
+    etudiant_id INTEGER,
+    cours_id INTEGER,
+    PRIMARY KEY (etudiant_id, cours_id)
+);
+
+-- MATCH SIMPLE (défaut) : un seul NULL suffit à "désactiver" la vérification
+CREATE TABLE notes_simple (
+    id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    etudiant_id INTEGER,
+    cours_id INTEGER,
+    FOREIGN KEY (etudiant_id, cours_id) REFERENCES inscriptions
+        -- MATCH SIMPLE implicite
+);
+
+INSERT INTO notes_simple (etudiant_id, cours_id) VALUES (1, NULL);  -- ✅ accepté
+
+-- MATCH FULL : interdiction du panachage NULL/non-NULL
+CREATE TABLE notes_full (
+    id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    etudiant_id INTEGER,
+    cours_id INTEGER,
+    FOREIGN KEY (etudiant_id, cours_id) REFERENCES inscriptions MATCH FULL
+);
+
+INSERT INTO notes_full (etudiant_id, cours_id) VALUES (1, NULL);  -- ❌ rejeté  
+INSERT INTO notes_full (etudiant_id, cours_id) VALUES (NULL, NULL); -- ✅ accepté (les deux NULL)  
+```
+
+> 📌 `MATCH PARTIAL` est mentionné par le standard mais **non implémenté** par PostgreSQL.
+
 ---
 
 ## 5. CHECK - Contraintes de Validation Personnalisées
@@ -625,22 +748,27 @@ CREATE TABLE utilisateurs (
 
 ### Limitations importantes
 
-1. **Pas de sous-requêtes** : Une contrainte CHECK ne peut pas interroger d'autres tables
+1. **Pas de sous-requêtes** : une contrainte `CHECK` ne peut pas interroger d'autres tables (la contrainte serait alors impossible à garantir : la table interrogée peut changer indépendamment).
    ```sql
    -- ❌ Interdit
    CHECK (client_id IN (SELECT id FROM clients))
    ```
+   Pour ce besoin, utilisez une **`FOREIGN KEY`** (intégrité référentielle native).
 
-2. **Pas d'appels à des fonctions volatiles** : Les fonctions comme `CURRENT_DATE`, `NOW()` sont interdites
+2. **Pas de fonctions non-`IMMUTABLE`** : les fonctions dont le résultat peut changer (comme `CURRENT_DATE`, `now()`, `random()` — qui sont `STABLE` ou `VOLATILE`) sont **techniquement acceptées par `CREATE TABLE`**, mais la contrainte n'a alors **plus de sens fiable** : une ligne valide à l'insertion peut devenir invalide demain, sans qu'aucun mécanisme ne le détecte (PostgreSQL ne re-valide pas les CHECK rétroactivement).
    ```sql
-   -- ❌ Interdit
+   -- ⚠️ Mauvaise idée : la contrainte est acceptée, mais piégeuse
    CHECK (date_naissance < CURRENT_DATE)
+   -- Mieux : valider applicativement, ou utiliser un trigger BEFORE INSERT
    ```
 
-3. **NULL est toujours valide** : Si l'expression retourne `NULL`, la contrainte est considérée comme satisfaite
+3. **`NULL` est toujours considéré comme valide** : si l'expression `CHECK` retourne `NULL` (ce que produit naturellement toute opération impliquant `NULL`), la contrainte est **considérée comme satisfaite** — contrairement à `WHERE` où `NULL` est rejeté. Pour interdire `NULL`, combinez avec `NOT NULL`.
    ```sql
    CREATE TABLE test (val INTEGER CHECK (val > 0));
-   INSERT INTO test VALUES (NULL);  -- ✅ Accepté
+   INSERT INTO test VALUES (NULL);  -- ✅ Accepté ! (NULL > 0 vaut NULL, donc « non faux »)
+   
+   -- Pour vraiment exiger val > 0, ajouter NOT NULL :
+   CREATE TABLE test_strict (val INTEGER NOT NULL CHECK (val > 0));
    ```
 
 ### Bonnes pratiques
@@ -671,11 +799,12 @@ CREATE TABLE utilisateurs (
 
 | Contrainte | Objectif | Portée | Exemple d'usage |
 |-----------|----------|--------|-----------------|
-| **NOT NULL** | Interdire les valeurs nulles | Colonne | Champs obligatoires (nom, email, date) |
-| **UNIQUE** | Garantir l'unicité | Colonne(s) | Email, numéro de client, SIRET |
-| **PRIMARY KEY** | Identifiant unique de la ligne | Colonne(s) | Clé d'identification (id) |
-| **FOREIGN KEY** | Relation entre tables | Colonne(s) | Lien client → commandes |
-| **CHECK** | Validation personnalisée | Ligne | Prix > 0, date_fin >= date_debut |
+| `NOT NULL` | Interdire les valeurs nulles | Colonne | Champs obligatoires (nom, email, date) |
+| `UNIQUE` | Garantir l'unicité | Colonne(s) | Email, numéro de client, SIRET |
+| `PRIMARY KEY` | Identifiant unique de la ligne | Colonne(s) | Clé d'identification (`id`) |
+| `FOREIGN KEY` | Relation entre tables | Colonne(s) | Lien client → commandes |
+| `CHECK` | Validation personnalisée | Ligne | `prix > 0`, `date_fin >= date_debut` |
+| `EXCLUDE` | Pas de chevauchement entre lignes | Plusieurs lignes | Réservations sans collision temporelle (voir 7.2) |
 
 ---
 
@@ -713,17 +842,59 @@ ALTER TABLE produits DROP CONSTRAINT chk_prix_positif;
 ALTER TABLE utilisateurs ALTER COLUMN telephone DROP NOT NULL;
 ```
 
-### Désactiver temporairement une contrainte
+### Différer et valider les contraintes
+
+PostgreSQL ne propose **pas** de syntaxe « DISABLE CONSTRAINT » pour `CHECK` et `FK`. Mais plusieurs mécanismes permettent de moduler leur vérification.
+
+#### a) `DEFERRABLE` : différer la vérification jusqu'au `COMMIT`
 
 ```sql
--- Désactiver (attention : dangereux, à utiliser avec précaution)
-ALTER TABLE commandes DISABLE TRIGGER ALL;
+-- Déclarer une FK comme déférable, vérifiée en fin de transaction
+CREATE TABLE commandes (
+    id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    client_id INTEGER NOT NULL,
+    CONSTRAINT fk_commandes_client
+        FOREIGN KEY (client_id) REFERENCES clients(id)
+        DEFERRABLE INITIALLY DEFERRED
+);
 
--- Réactiver
+-- Permet d'insérer dans le mauvais ordre temporairement :
+BEGIN;  
+INSERT INTO commandes (id, client_id) VALUES (1, 999);  -- client inexistant : OK pour l'instant  
+INSERT INTO clients (id, nom) VALUES (999, 'Alice');     -- on le crée juste après  
+COMMIT;  -- ← la vérification a lieu ici, et passe.  
+```
+
+#### b) `ADD CONSTRAINT … NOT VALID` : ajouter sans vérifier l'existant
+
+Très utile pour ajouter une contrainte à une grosse table sans bloquer :
+
+```sql
+-- Ajoute la FK sur les futures lignes, sans bloquer pour vérifier l'existant
+ALTER TABLE commandes
+    ADD CONSTRAINT fk_commandes_client_v2
+    FOREIGN KEY (client_id) REFERENCES clients(id)
+    NOT VALID;
+
+-- Plus tard, valider à un moment plus calme (verrou plus faible)
+ALTER TABLE commandes VALIDATE CONSTRAINT fk_commandes_client_v2;
+```
+
+Disponible pour `CHECK` et `FK` depuis longtemps. **Étendu à `NOT NULL` en PostgreSQL 18** (voir plus haut).
+
+#### c) Désactiver les triggers
+
+`ALTER TABLE … DISABLE TRIGGER ALL` désactive uniquement les **triggers utilisateur** et les **triggers internes des FK** (qui sont des triggers déguisés). Cela laisse les contraintes `CHECK`, `NOT NULL`, `PRIMARY KEY` et `UNIQUE` actives :
+
+```sql
+-- ⚠️ Désactive le contrôle des FK ! À utiliser avec extrême précaution
+-- (typiquement pour un chargement de données déjà nettoyées hors transaction)
+ALTER TABLE commandes DISABLE TRIGGER ALL;
+-- chargement massif ici…
 ALTER TABLE commandes ENABLE TRIGGER ALL;
 ```
 
-**⚠️ Important** : PostgreSQL ne permet pas de désactiver les contraintes CHECK et FK directement. Il faut les supprimer puis les recréer. Utilisez les triggers pour les désactivations temporaires.
+> 🔐 **Important** : `DISABLE TRIGGER ALL` permet d'insérer des lignes en **violation des FK**. Le SGBD ne les rejette plus. Si vous laissez ces lignes après réactivation, l'intégrité référentielle est **rompue de manière silencieuse** — `VALIDATE CONSTRAINT` ne suffit pas à les détecter rétroactivement pour les triggers FK (il faut les requêter manuellement). Toujours s'accompagner d'un audit post-import.
 
 ---
 
@@ -749,14 +920,15 @@ FROM pg_constraint
 WHERE conrelid = 'nom_table'::regclass;  
 ```
 
-### Types de contraintes (contype)
+### Types de contraintes (`contype`)
 
-- `p` : PRIMARY KEY  
-- `f` : FOREIGN KEY  
-- `u` : UNIQUE  
-- `c` : CHECK  
-- `t` : TRIGGER constraint  
-- `x` : EXCLUSION constraint
+- `p` : `PRIMARY KEY`  
+- `f` : `FOREIGN KEY`  
+- `u` : `UNIQUE`  
+- `c` : `CHECK`  
+- `n` : `NOT NULL` (**nouveau dans PostgreSQL 18** — auparavant les `NOT NULL` étaient un simple drapeau sur la colonne, sans entrée dans `pg_constraint`)
+- `t` : *trigger constraint* (contrainte différée gérée par trigger)
+- `x` : `EXCLUDE` (contrainte d'exclusion ; permet d'exprimer « pas de chevauchement temporel » — voir section 7.2)
 
 ---
 

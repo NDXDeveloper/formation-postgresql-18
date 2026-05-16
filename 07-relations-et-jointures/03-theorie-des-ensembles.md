@@ -14,7 +14,7 @@ Dans ce chapitre, nous allons explorer les bases mathématiques qui sous-tendent
 
 ### Pourquoi la théorie ?
 
-Vous pourriez vous demander : "Pourquoi apprendre la théorie alors que je veux juste écrire du SQL ?"
+Vous pourriez vous demander : « Pourquoi apprendre la théorie alors que je veux juste écrire du SQL ? »
 
 **Réponse** : Parce que SQL est une implémentation de l'algèbre relationnelle ! En comprenant les concepts sous-jacents, vous ne mémoriserez pas des syntaxes, vous **comprendrez** ce qui se passe réellement. C'est la différence entre conduire une voiture et comprendre comment fonctionne un moteur.
 
@@ -93,7 +93,7 @@ SELECT id FROM table_b;
 ### Lien avec les Tables Relationnelles
 
 Dans une base de données relationnelle :
-- Une **table** est un ensemble de **tuples** (lignes)
+- Une **table** est conceptuellement une *relation* — un ensemble de **tuples** (lignes)
 - Un **tuple** est un ensemble de **paires (attribut, valeur)**
 
 ```
@@ -105,7 +105,7 @@ Table Clients :
 }
 ```
 
-Chaque ligne est unique (grâce à la clé primaire), donc une table respecte bien la définition d'un ensemble.
+Si la table a une **clé primaire**, chaque ligne y est unique : la table respecte alors la définition d'un ensemble. Sans clé primaire ni contrainte `UNIQUE`, elle peut contenir des doublons et c'est plutôt un **multi-ensemble** (*multiset* ou *bag*) — voir la section 8 plus bas.
 
 ---
 
@@ -609,7 +609,7 @@ Si SQL exécutait réellement un produit cartésien complet avant de filtrer, ce
 ```
 Table A : 1 000 000 lignes  
 Table B : 1 000 000 lignes  
-Produit cartésien : 1 000 000 000 000 lignes (1 trillion !)  
+Produit cartésien : 10¹² lignes (mille milliards) 💥  
 ```
 
 ### Le Rôle de l'Optimiseur de Requêtes
@@ -632,9 +632,9 @@ Pour chaque client :
 Créer une table de hachage en mémoire pour une table, puis parcourir l'autre.
 
 ```
-1. Créer un hash des clients en mémoire (id → client)
+1. Créer une **table de hachage** des clients en mémoire (id → client)
 2. Parcourir les commandes
-3. Pour chaque commande, chercher le client dans le hash
+3. Pour chaque commande, chercher le client dans la table de hachage
 ```
 
 **Efficace** : Pour les grandes tables sans index adapté.
@@ -821,30 +821,37 @@ WHERE alice.jour = bob.jour
 
 ### Exemple 3 : Distances entre Villes
 
-Calculer les distances entre toutes les paires de villes.
+Calculer une *pseudo-distance* entre toutes les paires de villes.
 
 ```sql
 CREATE TABLE villes (
-    id SERIAL PRIMARY KEY,
+    id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     nom VARCHAR(100),
     latitude DECIMAL(10, 8),
     longitude DECIMAL(11, 8)
 );
 
--- Produit cartésien pour calculer toutes les distances
+-- Produit cartésien + filtre pour ne calculer chaque paire qu'une fois
 SELECT
     v1.nom AS ville_depart,
     v2.nom AS ville_arrivee,
-    -- Formule de distance (simplifiée)
+    -- ⚠️ Distance euclidienne sur (lat, lon) : NON pertinente géographiquement
+    -- (la Terre est une sphère ; un degré de longitude ne fait pas la même
+    -- distance à l'équateur qu'au pôle). Suffisant pour illustrer le pattern,
+    -- mais pour de vraies distances voir plus bas.
     SQRT(
-        POW(v1.latitude - v2.latitude, 2) +
-        POW(v1.longitude - v2.longitude, 2)
-    ) AS distance
+        POWER(v1.latitude - v2.latitude, 2) +
+        POWER(v1.longitude - v2.longitude, 2)
+    ) AS distance_naive
 FROM villes v1  
 CROSS JOIN villes v2  
-WHERE v1.id < v2.id  -- Éviter les doublons (Paris->Lyon = Lyon->Paris)  
-ORDER BY distance;  
+WHERE v1.id < v2.id  -- évite (A,B) et (B,A), exclut aussi (A,A)  
+ORDER BY distance_naive;  
 ```
+
+> 📌 **Pour des distances géographiques réalistes** :  
+> - Utilisez la **formule de Haversine** (~ 30 lignes de trigonométrie), qui prend en compte la courbure de la Terre.  
+> - Mieux : installez l'extension **PostGIS** et utilisez `ST_Distance(geography(point1), geography(point2))` qui gère la sphère et l'ellipsoïde correctement.
 
 ---
 
@@ -961,14 +968,16 @@ Après sélection (id = client_id) : 3 lignes
 
 | Opération | Symbole | SQL | Description |
 |-----------|---------|-----|-------------|
-| **Sélection** | σ | WHERE | Filtre les lignes |
-| **Projection** | π | SELECT colonnes | Sélectionne les colonnes |
-| **Union** | ∪ | UNION | Combine deux tables |
-| **Intersection** | ∩ | INTERSECT | Lignes communes |
-| **Différence** | − | EXCEPT | Lignes dans A mais pas B |
-| **Produit cartésien** | × | CROSS JOIN | Toutes les combinaisons |
-| **Jointure naturelle** | ⋈ | INNER JOIN | Produit cartésien + sélection |
-| **Renommage** | ρ | AS | Renomme colonnes/tables |
+| **Sélection** | σ | `WHERE` | Filtre les lignes |
+| **Projection** | π | `SELECT colonnes` | Sélectionne les colonnes |
+| **Union** | ∪ | `UNION` | Combine deux tables |
+| **Intersection** | ∩ | `INTERSECT` | Lignes communes |
+| **Différence** | − | `EXCEPT` | Lignes dans A mais pas B |
+| **Produit cartésien** | × | `CROSS JOIN` | Toutes les combinaisons |
+| **θ-jointure** | ⋈θ | `INNER JOIN … ON cond` | Produit cartésien + sélection (cas général) |
+| **Équi-jointure** | ⋈ | `INNER JOIN … ON a.x = b.y` | θ-jointure où la condition est une égalité |
+| **Jointure naturelle** | ⋈ | `NATURAL JOIN` | Équi-jointure sur **toutes** les colonnes de même nom (à éviter en pratique : fragile) |
+| **Renommage** | ρ | `AS` | Renomme colonnes/tables |
 
 ---
 

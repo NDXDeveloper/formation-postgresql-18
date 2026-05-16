@@ -568,11 +568,18 @@ FROM (
 WHERE rang <= 3;
 ```
 
-**Benchmark** (sur 1 million de lignes) :
-- **Window Functions** : ~200ms  
-- **LATERAL** : ~250ms
+**Performance comparée** : sur les cas Top N par groupe, les deux approches ont des coûts proches en pratique. La différence dépend fortement de la sélectivité, du nombre de groupes, du nombre de lignes par groupe et des index disponibles.
 
-**Conclusion** : Window Functions généralement plus rapides, mais LATERAL plus flexible et lisible.
+| Approche | Force | Faiblesse |
+|----------|-------|-----------|
+| Window function `ROW_NUMBER()` | Une seule passe sur la table | Doit scanner toutes les lignes avant de filtrer `WHERE rang <= N` |
+| `LATERAL` + `LIMIT N` | Peut utiliser un *index scan limité* (s'arrête après N lignes par groupe) | Réexécute la sous-requête pour chaque ligne de gauche |
+
+**Règle empirique** :
+- Beaucoup de **groupes**, peu de **lignes par groupe** → `LATERAL` brille (chaque sous-requête trouve vite ses N lignes via index).
+- Peu de groupes, beaucoup de lignes par groupe → la window function est souvent gagnante.
+
+Mesurez avec `EXPLAIN ANALYZE` sur **vos** données : la différence peut être nulle ou très importante selon le contexte.
 
 ---
 
@@ -699,6 +706,38 @@ CROSS JOIN LATERAL (
 ORDER BY t.utilisateur_id, t.date_transaction;
 ```
 
+### Cas 5 : « JSON enrichi côté API » — agréger en JSONB par client
+
+Très utile pour les APIs REST/GraphQL : on veut renvoyer en **une seule requête** un client avec ses N dernières commandes embarquées comme objet JSON :
+
+```sql
+SELECT
+    c.id,
+    c.nom,
+    COALESCE(jsonb_agg(cmd) FILTER (WHERE cmd.id IS NOT NULL), '[]'::jsonb) AS dernieres_commandes
+FROM clients c  
+LEFT JOIN LATERAL (  
+    SELECT id, montant, date_commande
+    FROM commandes
+    WHERE commandes.client_id = c.id
+    ORDER BY date_commande DESC
+    LIMIT 5
+) AS cmd ON true
+GROUP BY c.id, c.nom;
+```
+
+**Résultat** :
+
+```
+ id | nom    | dernieres_commandes
+----+--------+-----------------------------------------------------------
+  1 | Alice  | [{"id": 4, "montant": 120, …}, {"id": 3, …}, …]
+  2 | Bob    | [{"id": 6, "montant": 90, …}, {"id": 5, …}]
+  3 | Charlie| []
+```
+
+Côté application, on récupère **une ligne par client** avec ses commandes déjà sérialisées — fini les multiples requêtes ou la post-agrégation côté client. Le `FILTER (WHERE cmd.id IS NOT NULL)` est crucial pour éviter `[null]` quand le `LEFT JOIN` ne trouve rien.
+
 ---
 
 ## 9. Performances et Optimisation
@@ -757,21 +796,12 @@ Cherchez :
 - **Index Scan** : Bon signe (l'index est utilisé)  
 - **Seq Scan** : Peut indiquer un manque d'index
 
-#### 4. Filtrer AVANT le LATERAL
+#### 4. WHERE après LATERAL : laisser le planificateur faire son travail
+
+Les deux formes ci-dessous sont **strictement équivalentes** côté plan d'exécution dans PostgreSQL : l'optimiseur pousse automatiquement le filtre `WHERE clients.ville = 'Paris'` au plus près de la table `clients`, **avant** d'exécuter le `LATERAL` pour chaque ligne.
 
 ```sql
--- ✅ Meilleur : Filtrer d'abord les clients
-SELECT *  
-FROM (SELECT * FROM clients WHERE ville = 'Paris') AS clients_paris  
-CROSS JOIN LATERAL (  
-    SELECT * FROM commandes
-    WHERE commandes.client_id = clients_paris.id
-    LIMIT 5
-) AS recent;
-
--- vs
-
--- ⚠️ Moins efficace : LATERAL pour tous les clients
+-- Forme 1 : filtre dans WHERE (lisible)
 SELECT *  
 FROM clients  
 CROSS JOIN LATERAL (  
@@ -780,7 +810,18 @@ CROSS JOIN LATERAL (
     LIMIT 5
 ) AS recent
 WHERE clients.ville = 'Paris';
+
+-- Forme 2 : filtre dans une sous-requête (plus verbeux)
+SELECT *  
+FROM (SELECT * FROM clients WHERE ville = 'Paris') AS clients_paris  
+CROSS JOIN LATERAL (  
+    SELECT * FROM commandes
+    WHERE commandes.client_id = clients_paris.id
+    LIMIT 5
+) AS recent;
 ```
+
+`EXPLAIN ANALYZE` sur les deux donnera le même plan. **Privilégiez la forme 1**, plus lisible et idiomatique.
 
 ### Quand LATERAL Peut Être Lent
 
@@ -789,29 +830,34 @@ WHERE clients.ville = 'Paris';
 3. **Fonctions coûteuses** appelées pour chaque ligne  
 4. **Sous-requêtes complexes** dans LATERAL
 
-### Alternatives Plus Rapides
+### Alternatives possibles
 
-Si les performances sont critiques :
+Si `LATERAL` se révèle lent dans votre cas précis, voici deux alternatives à comparer avec `EXPLAIN ANALYZE` :
 
 ```sql
--- Alternative 1 : Window Functions (plus rapide pour Top N)
+-- Alternative 1 : Window function (souvent rapide quand peu de groupes)
 SELECT * FROM (
-    SELECT *, ROW_NUMBER() OVER (PARTITION BY client_id ORDER BY date_commande DESC) AS rn
+    SELECT *,
+           ROW_NUMBER() OVER (PARTITION BY client_id ORDER BY date_commande DESC) AS rn
     FROM commandes
-) sub WHERE rn <= 5;
+) sub
+WHERE rn <= 5;
 
--- Alternative 2 : Agrégation avec ARRAY_AGG
+-- Alternative 2 : Agrégation en tableau (les N commandes condensées en un array par client)
 SELECT
     clients.nom,
-    ARRAY_AGG(commandes.id ORDER BY date_commande DESC) FILTER (WHERE row_num <= 5) AS top_5_commandes
-FROM clients  
-LEFT JOIN (  
-    SELECT *, ROW_NUMBER() OVER (PARTITION BY client_id ORDER BY date_commande DESC) AS row_num
-    FROM commandes
-) commandes ON clients.id = commandes.client_id
-WHERE commandes.row_num <= 5 OR commandes.row_num IS NULL  
-GROUP BY clients.id, clients.nom;  
+    (SELECT ARRAY_AGG(c.id ORDER BY c.date_commande DESC)
+     FROM (
+         SELECT id, date_commande
+         FROM commandes
+         WHERE commandes.client_id = clients.id
+         ORDER BY date_commande DESC
+         LIMIT 5
+     ) AS c) AS top_5_commandes_ids
+FROM clients;
 ```
+
+L'alternative 2 retourne **une ligne par client** (avec les IDs des commandes dans un tableau), ce qui peut être plus pratique côté application qu'un résultat « éclaté ».
 
 ---
 
@@ -921,21 +967,26 @@ CROSS JOIN LATERAL (
 
 ### Équivalents dans d'autres SGBD
 
-#### SQL Server : CROSS APPLY / OUTER APPLY
+#### SQL Server : `CROSS APPLY` / `OUTER APPLY`
 
 ```sql
--- PostgreSQL
+-- PostgreSQL (LIMIT N)
 SELECT * FROM clients  
 CROSS JOIN LATERAL (  
-    SELECT TOP 5 * FROM commandes WHERE commandes.client_id = clients.id
+    SELECT * FROM commandes
+    WHERE commandes.client_id = clients.id
+    LIMIT 5
 ) AS orders;
 
--- SQL Server équivalent
+-- SQL Server équivalent (TOP N)
 SELECT * FROM clients  
 CROSS APPLY (  
-    SELECT TOP 5 * FROM commandes WHERE commandes.client_id = clients.id
+    SELECT TOP 5 * FROM commandes
+    WHERE commandes.client_id = clients.id
 ) AS orders;
 ```
+
+`OUTER APPLY` (SQL Server) correspond à `LEFT JOIN LATERAL … ON true` (PostgreSQL).
 
 ---
 
@@ -1069,7 +1120,7 @@ ORDER BY m1.mois;
 
 ### Points Clés à Retenir
 
-1. **LATERAL** transforme une sous-requête en "consciente" des tables précédentes  
+1. **LATERAL** transforme une sous-requête en « consciente » des tables précédentes  
 2. C'est une **jointure corrélée** dans la clause FROM  
 3. Indispensable pour **Top N par groupe avec LIMIT**  
 4. Très utile avec les **fonctions retournant des ensembles**  

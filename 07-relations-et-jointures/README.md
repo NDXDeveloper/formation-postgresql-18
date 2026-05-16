@@ -20,9 +20,11 @@ Maîtriser ces concepts vous permettra de concevoir des bases de données effica
 
 ### Le Concept de Relation
 
-Le terme **"relationnel"** dans "base de données relationnelle" ne signifie pas simplement "relier des tables entre elles" (bien que ce soit une partie importante). Il fait référence à un concept mathématique plus profond : chaque table est une **relation** au sens mathématique, c'est-à-dire un ensemble de tuples (lignes) partageant le même schéma (colonnes).
+Le terme **« relationnel »** dans « base de données relationnelle » ne signifie pas simplement « relier des tables entre elles » (bien que ce soit une partie importante). Il fait référence à un concept mathématique plus profond, formulé par **Edgar F. Codd** en 1970 : chaque table est une **relation** au sens mathématique, c'est-à-dire un ensemble de tuples (lignes) partageant le même schéma (colonnes).
 
-Cependant, dans la pratique quotidienne, quand on parle de "relations" en SQL, on fait généralement référence aux **liens entre les tables**.
+> 📌 **Précision technique** : en théorie pure, une relation est un *ensemble* (donc sans doublons et sans ordre). En SQL, les tables sont en réalité des *multi-ensembles* (elles peuvent contenir des doublons, sauf contrainte explicite) et l'ordre des lignes est non déterminé. Le modèle relationnel pratique s'écarte donc légèrement de la théorie de Codd.
+
+Dans la pratique quotidienne, quand on parle de « relations » en SQL, on fait généralement référence aux **liens entre les tables**.
 
 ### Exemple : Un Système de Commandes
 
@@ -164,7 +166,7 @@ Client [1] ─────── [N] Commandes
 - Pays → Villes (un pays a plusieurs villes)
 - Album → Chansons (un album contient plusieurs chansons)
 
-**Implémentation** : La table "plusieurs" (N) contient une **clé étrangère** pointant vers la table "un" (1).
+**Implémentation** : la table « plusieurs » (N) contient une **clé étrangère** pointant vers la table « un » (1).
 
 ### 3. Relation Plusieurs-à-Plusieurs (N:M)
 
@@ -224,7 +226,7 @@ Table : etudiants              Table : cours
 
 ### 2. Garantir l'Intégrité des Données
 
-**Problème** : Si un utilisateur entre "Paris" dans une commande et "paris" dans une autre, comment retrouver toutes les commandes de Paris ?
+**Problème** : si un utilisateur entre « Paris » dans une commande et « paris » dans une autre, comment retrouver toutes les commandes de Paris ?
 
 **Solution** : Créer une table `villes` avec un ID unique, et utiliser cet ID dans les autres tables.
 
@@ -237,11 +239,81 @@ Table : etudiants              Table : cours
 ### 4. Permettre des Requêtes Complexes
 
 Avec des tables séparées, on peut facilement répondre à des questions comme :
-- "Quels clients ont commandé plus de 1000€ ?"  
-- "Quels produits n'ont jamais été vendus ?"  
-- "Quel est le top 10 des clients par chiffre d'affaires ?"
+- « Quels clients ont commandé plus de 1000 € ? »  
+- « Quels produits n'ont jamais été vendus ? »  
+- « Quel est le top 10 des clients par chiffre d'affaires ? »
 
 C'est là que les **jointures** entrent en jeu !
+
+---
+
+## Bref aperçu de la normalisation
+
+Le processus de **séparer les données en tables** porte un nom : la **normalisation**. Edgar F. Codd l'a formalisé sous forme de **formes normales** (1NF, 2NF, 3NF…). Voici le minimum pratique à retenir.
+
+### Première forme normale (1NF) — atomicité des valeurs
+
+Chaque cellule contient **une seule valeur atomique**. Pas de liste, pas de structure imbriquée.
+
+```
+❌ Pas en 1NF : "telephones" stocke plusieurs numéros
+┌────┬────────┬──────────────────────────────┐
+│ id │ nom    │ telephones                   │
+├────┼────────┼──────────────────────────────┤
+│ 1  │ Alice  │ 06.11.22.33.44 ; 01.22.33.44 │
+│ 2  │ Bob    │ 06.99.88.77.66               │
+└────┴────────┴──────────────────────────────┘
+
+✅ En 1NF : chaque téléphone est une ligne
+┌────┬────────┐    ┌─────────────┬────────────────┐
+│ id │ nom    │    │ utilisateur │ telephone      │
+├────┼────────┤    ├─────────────┼────────────────┤
+│ 1  │ Alice  │    │ 1           │ 06.11.22.33.44 │
+│ 2  │ Bob    │    │ 1           │ 01.22.33.44.55 │
+└────┴────────┘    │ 2           │ 06.99.88.77.66 │
+                   └─────────────┴────────────────┘
+```
+
+> 📌 **Note PostgreSQL** : les types `ARRAY` et `JSONB` permettent techniquement de stocker des valeurs « non atomiques ». Ce n'est pas en soi une violation de 1NF — c'est un **choix de conception** acceptable quand on n'a jamais besoin de chercher *à l'intérieur* du tableau ou du JSON. Mais dès qu'on doit indexer, joindre ou agréger sur les éléments individuels, séparer en table est plus performant et plus naturel.
+
+### Deuxième forme normale (2NF) — dépendance complète à la clé primaire
+
+En plus de la 1NF, **toutes les colonnes non-clés** doivent dépendre de **toute la clé primaire**, pas d'une partie seulement (pertinent surtout quand la clé est composite).
+
+```
+❌ Pas en 2NF : "nom_client" dépend seulement de "client_id",
+   pas de la combinaison (commande_id, ligne_id)
+┌─────────────┬──────────┬───────────┬───────────────┬─────────┐
+│ commande_id │ ligne_id │ client_id │ nom_client    │ produit │
+├─────────────┼──────────┼───────────┼───────────────┼─────────┤
+│ 1           │ 1        │ 42        │ Alice Martin  │ Souris  │
+│ 1           │ 2        │ 42        │ Alice Martin  │ Clavier │
+│ 2           │ 1        │ 99        │ Bob Dupont    │ Souris  │
+└─────────────┴──────────┴───────────┴───────────────┴─────────┘
+
+✅ En 2NF : "nom_client" est déplacé dans une table "clients"
+```
+
+### Troisième forme normale (3NF) — pas de dépendance transitive
+
+En plus de la 2NF, aucune colonne non-clé ne doit dépendre d'une **autre colonne non-clé**.
+
+```
+❌ Pas en 3NF : "ville" dépend de "code_postal", pas de "id"
+┌────┬───────┬─────────────┬───────┐
+│ id │ nom   │ code_postal │ ville │
+├────┼───────┼─────────────┼───────┤
+│ 1  │ Alice │ 75001       │ Paris │
+│ 2  │ Bob   │ 75001       │ Paris │  -- redondance
+│ 3  │ Eve   │ 75001       │ Paris │  -- redondance
+└────┴───────┴─────────────┴───────┘
+
+✅ En 3NF : table "codes_postaux" séparée
+```
+
+> 💡 **Règle pratique** : visez la **3NF en production**. Au-dessus (BCNF, 4NF, 5NF), les distinctions deviennent académiques et rarement utiles. **En-dessous** de la 3NF, vous accumulez de la dette technique (incohérences, anomalies de mise à jour).
+
+> ⚖️ **Dénormalisation contrôlée** : il est parfois légitime de **dénormaliser** pour des raisons de performance (par exemple stocker un total pré-calculé dans la commande au lieu de le recalculer à chaque lecture). Mais la **règle est** : normaliser d'abord, dénormaliser **avec preuves chiffrées** que la performance le justifie réellement.
 
 ---
 
@@ -288,12 +360,14 @@ INNER JOIN commandes ON clients.id = commandes.client_id;
 
 PostgreSQL offre plusieurs types de jointures :
 
-1. **INNER JOIN** : Retourne seulement les lignes qui ont une correspondance dans les deux tables  
-2. **LEFT JOIN** : Retourne toutes les lignes de la table de gauche, même sans correspondance  
-3. **RIGHT JOIN** : Retourne toutes les lignes de la table de droite, même sans correspondance  
-4. **FULL OUTER JOIN** : Retourne toutes les lignes des deux tables  
-5. **CROSS JOIN** : Produit cartésien (toutes les combinaisons)  
-6. **SELF JOIN** : Une table jointe à elle-même
+1. **`INNER JOIN`** : retourne seulement les lignes qui ont une correspondance dans les deux tables  
+2. **`LEFT JOIN`** (ou `LEFT OUTER JOIN`) : retourne toutes les lignes de la table de gauche, même sans correspondance  
+3. **`RIGHT JOIN`** (ou `RIGHT OUTER JOIN`) : retourne toutes les lignes de la table de droite, même sans correspondance  
+4. **`FULL OUTER JOIN`** : retourne toutes les lignes des deux tables  
+5. **`CROSS JOIN`** : produit cartésien (toutes les combinaisons)  
+6. **`LATERAL JOIN`** : la sous-requête de droite peut référencer les colonnes de gauche (corrélation)
+
+> 📌 **Note** : le « **self-join** » n'est pas un type de jointure à part — c'est simplement l'usage d'un `INNER`/`LEFT`/`RIGHT JOIN` sur la **même table** (avec deux alias différents). Il sera traité dans une section dédiée (7.5) car son usage mérite explication.
 
 Nous explorerons chacun de ces types en détail dans les sections suivantes.
 
@@ -486,7 +560,7 @@ Utiliser `INNER JOIN` quand on voulait `LEFT JOIN` (et vice-versa) est une erreu
 - **INNER JOIN** exclut les lignes sans correspondance  
 - **LEFT JOIN** les inclut (avec NULL)
 
-**Conseil** : Posez-vous toujours la question : "Est-ce que je veux inclure les lignes sans correspondance ?"
+**Conseil** : posez-vous toujours la question : « est-ce que je veux inclure les lignes sans correspondance ? »
 
 ---
 
@@ -517,7 +591,7 @@ Tout au long de ce chapitre, nous utiliserons un exemple cohérent : **un systè
 ```sql
 -- Clients
 CREATE TABLE clients (
-    id SERIAL PRIMARY KEY,
+    id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     nom VARCHAR(100) NOT NULL,
     email VARCHAR(255) UNIQUE NOT NULL,
     ville VARCHAR(100)
@@ -525,7 +599,7 @@ CREATE TABLE clients (
 
 -- Produits
 CREATE TABLE produits (
-    id SERIAL PRIMARY KEY,
+    id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     nom VARCHAR(100) NOT NULL,
     prix NUMERIC(10, 2) NOT NULL,
     stock INTEGER NOT NULL DEFAULT 0
@@ -533,19 +607,21 @@ CREATE TABLE produits (
 
 -- Commandes
 CREATE TABLE commandes (
-    id SERIAL PRIMARY KEY,
+    id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     client_id INTEGER NOT NULL REFERENCES clients(id),
     date_commande DATE NOT NULL DEFAULT CURRENT_DATE,
     statut VARCHAR(20) DEFAULT 'en_attente'
 );
 
--- Lignes de commande (relation N:M entre commandes et produits)
+-- Lignes de commande : table de jonction implémentant la relation N:M
+-- entre commandes et produits, enrichie d'attributs propres (quantité, prix)
 CREATE TABLE lignes_commande (
-    id SERIAL PRIMARY KEY,
+    id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     commande_id INTEGER NOT NULL REFERENCES commandes(id),
     produit_id INTEGER NOT NULL REFERENCES produits(id),
     quantite INTEGER NOT NULL CHECK (quantite > 0),
-    prix_unitaire NUMERIC(10, 2) NOT NULL
+    prix_unitaire NUMERIC(10, 2) NOT NULL,
+    UNIQUE (commande_id, produit_id)  -- un produit donné apparaît au plus une fois par commande
 );
 ```
 

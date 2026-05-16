@@ -5,8 +5,8 @@
 ## Introduction
 
 Les **anti-jointures** et **semi-jointures** sont des techniques SQL essentielles pour répondre à des questions du type :
-- "Quels clients **n'ont jamais** commandé ?" (anti-jointure)  
-- "Quels produits **ont été** commandés ?" (semi-jointure)
+- « Quels clients **n'ont jamais** commandé ? » (anti-jointure)  
+- « Quels produits **ont été** commandés ? » (semi-jointure)
 
 Contrairement aux jointures classiques qui **combinent** des données de plusieurs tables, ces opérations **filtrent** une table en fonction de l'existence (ou non) de correspondances dans une autre table, **sans retourner les colonnes de la seconde table**.
 
@@ -15,12 +15,12 @@ Contrairement aux jointures classiques qui **combinent** des données de plusieu
 #### Semi-Jointure
 Une **semi-jointure** retourne les lignes de la table A qui ont **au moins une correspondance** dans la table B, mais **sans dupliquer** les lignes de A et **sans inclure** les colonnes de B.
 
-**Question type** : "Quels sont les éléments de A qui existent aussi dans B ?"
+**Question type** : « Quels sont les éléments de A qui existent aussi dans B ? »
 
 #### Anti-Jointure
 Une **anti-jointure** retourne les lignes de la table A qui **n'ont aucune correspondance** dans la table B.
 
-**Question type** : "Quels sont les éléments de A qui n'existent pas dans B ?"
+**Question type** : « Quels sont les éléments de A qui n'existent pas dans B ? »
 
 ### Analogie Simple
 
@@ -28,9 +28,9 @@ Imaginez deux listes :
 - **Liste A** : Tous vos contacts  
 - **Liste B** : Les personnes qui vous ont souhaité votre anniversaire
 
-**Semi-jointure** : "Qui parmi mes contacts m'a souhaité mon anniversaire ?" → On filtre A selon B (avec correspondance)
+**Semi-jointure** : « Qui parmi mes contacts m'a souhaité mon anniversaire ? » → on filtre A selon B (avec correspondance)
 
-**Anti-jointure** : "Qui parmi mes contacts ne m'a PAS souhaité mon anniversaire ?" → On filtre A selon B (sans correspondance)
+**Anti-jointure** : « Qui parmi mes contacts ne m'a PAS souhaité mon anniversaire ? » → on filtre A selon B (sans correspondance)
 
 Dans les deux cas, on ne retourne que les **contacts** (table A), pas les détails des souhaits (table B).
 
@@ -299,7 +299,7 @@ WHERE NOT EXISTS (
 
 1. **Performance** : Arrêt dès qu'une ligne est trouvée  
 2. **Gestion de NULL** : Fonctionne correctement avec les valeurs NULL  
-3. **Lisibilité** : Intention claire ("il n'existe pas...")
+3. **Lisibilité** : intention claire (« il n'existe pas… »)
 
 ### Méthode 2 : NOT IN
 
@@ -531,15 +531,22 @@ CREATE INDEX idx_commandes_client_id ON commandes(client_id);
 -- Cela accélère EXISTS, IN, et les jointures
 ```
 
-#### 2. Utiliser EXISTS pour les Arrêts Anticipés
+#### 2. `EXISTS` vs `IN` : équivalents sur PostgreSQL moderne
+
+Une ancienne croyance dit qu'`EXISTS` est plus rapide qu'`IN` parce qu'il « s'arrête à la première ligne ». **Sur PostgreSQL ≥ 10, ce n'est plus vrai** : le planificateur transforme automatiquement les deux formes en **`Semi Join`**, qui implémente déjà l'arrêt anticipé.
 
 ```sql
--- ✅ EXISTS s'arrête dès qu'une ligne est trouvée
-WHERE EXISTS (SELECT 1 FROM commandes WHERE commandes.client_id = clients.id)
+-- Ces deux requêtes ont (presque toujours) le même plan
+EXPLAIN ANALYZE SELECT * FROM clients  
+WHERE EXISTS (SELECT 1 FROM commandes WHERE commandes.client_id = clients.id);  
 
--- ⚠️ IN charge toutes les valeurs (moins efficace sur grandes tables)
-WHERE id IN (SELECT client_id FROM commandes)
+EXPLAIN ANALYZE SELECT * FROM clients  
+WHERE id IN (SELECT client_id FROM commandes);  
 ```
+
+**Préférez `EXISTS`** quand même, pour deux raisons non liées à la performance :
+- **Sécurité face aux `NULL`** : `NOT IN` a un piège célèbre avec les `NULL` (voir plus haut). `NOT EXISTS` ne l'a pas.
+- **Lisibilité** : on lit naturellement « **il existe** au moins une commande pour ce client ».
 
 #### 3. Filtrer dans la Sous-Requête
 
@@ -691,7 +698,7 @@ SELECT produit_id FROM ruptures_stock;
 
 ## 6. Semi-Jointures avec Conditions Supplémentaires
 
-### Exemple : Clients Ayant Commandé Plus de 100€
+### Exemple : Clients Ayant Commandé Plus de 100 €
 
 ```sql
 SELECT
@@ -713,7 +720,7 @@ WHERE EXISTS (
 | 1  | Alice Martin  |
 | 4  | Diana Bernard |
 
-Bob (99.50€) est exclu car toutes ses commandes sont ≤ 100€.
+Bob (99,50 €) est exclu car toutes ses commandes sont ≤ 100 €.
 
 ### Exemple : Clients Ayant Commandé en 2025
 
@@ -732,7 +739,7 @@ WHERE EXISTS (
 
 ## 7. Anti-Jointures avec Conditions Complexes
 
-### Exemple : Clients N'Ayant Jamais Commandé Plus de 100€
+### Exemple : Clients N'Ayant Jamais Commandé Plus de 100 €
 
 ```sql
 SELECT
@@ -755,9 +762,9 @@ WHERE NOT EXISTS (
 | 3  | Charlie Durand  |
 | 5  | Eve Laurent     |
 
-- Bob : a commandé mais jamais > 100€ ✅
+- Bob : a commandé mais jamais > 100 € ✅
 - Charlie et Eve : n'ont jamais commandé ✅
-- Alice et Diana : ont commandé > 100€ ❌
+- Alice et Diana : ont commandé > 100 € ❌
 
 ### Exemple : Produits Jamais Commandés en Grande Quantité
 
@@ -781,7 +788,7 @@ Vous pouvez combiner plusieurs conditions.
 
 ### Exemple : Clients Ayant Commandé A mais Pas B
 
-**Objectif** : Clients ayant commandé des "Ordinateurs" mais jamais de "Souris".
+**Objectif** : clients ayant commandé des « Ordinateurs » mais jamais de « Souris ».
 
 ```sql
 SELECT clients.nom  
@@ -974,6 +981,75 @@ WHERE commandes.id IS NULL;
 
 ---
 
+## 10 bis. La division relationnelle : « pour TOUS »
+
+Une question récurrente en analyse de données : « **Quels X ont fait TOUS les Y ?** » (par opposition à « au moins un Y »). C'est l'opération de **division relationnelle**, qui n'a pas d'opérateur SQL dédié mais s'exprime élégamment avec deux anti-jointures.
+
+### Exemple : étudiants ayant suivi *tous* les cours obligatoires
+
+```sql
+CREATE TABLE cours_obligatoires (id INTEGER PRIMARY KEY);  
+CREATE TABLE inscriptions (  
+    etudiant_id INTEGER,
+    cours_id INTEGER,
+    PRIMARY KEY (etudiant_id, cours_id)
+);
+
+INSERT INTO cours_obligatoires VALUES (10), (20), (30);
+
+INSERT INTO inscriptions VALUES
+    (1, 10), (1, 20), (1, 30),  -- Alice a tous
+    (2, 10), (2, 20),            -- Bob n'a pas le 30
+    (3, 10), (3, 20), (3, 30), (3, 40); -- Charlie a tous + extra
+```
+
+### Formulation : « il n'existe pas de cours obligatoire qu'il n'a pas suivi »
+
+C'est la **double négation** caractéristique de la division relationnelle :
+
+```sql
+SELECT e.etudiant_id  
+FROM (SELECT DISTINCT etudiant_id FROM inscriptions) e  
+WHERE NOT EXISTS (  
+    SELECT 1
+    FROM cours_obligatoires co
+    WHERE NOT EXISTS (
+        SELECT 1
+        FROM inscriptions i
+        WHERE i.etudiant_id = e.etudiant_id
+          AND i.cours_id = co.id
+    )
+);
+```
+
+**Lecture** : « les étudiants pour lesquels il n'existe pas de cours obligatoire qu'ils n'ont pas suivi » ≡ « les étudiants qui ont suivi tous les cours obligatoires ».
+
+**Résultat** : Alice (1) et Charlie (3). Bob (2) est exclu car il manque le cours 30.
+
+### Alternative : comptage
+
+Une autre formulation, parfois plus lisible, s'appuie sur `COUNT` :
+
+```sql
+SELECT etudiant_id  
+FROM inscriptions  
+WHERE cours_id IN (SELECT id FROM cours_obligatoires)  
+GROUP BY etudiant_id  
+HAVING COUNT(DISTINCT cours_id) = (SELECT COUNT(*) FROM cours_obligatoires);  
+```
+
+**Lecture** : « les étudiants qui ont suivi autant de cours obligatoires distincts qu'il y en a au total ».
+
+Les deux requêtes sont équivalentes. La première (double `NOT EXISTS`) est plus universelle et marche aussi quand la table de référence est très grande. La seconde (comptage) est souvent plus rapide si un index couvre `(etudiant_id, cours_id)`.
+
+> 💡 **Quand la division relationnelle est-elle utile ?**  
+> - « Clients ayant acheté tous les produits d'une catégorie »  
+> - « Salariés ayant validé toutes les formations obligatoires »  
+> - « Voitures qui ont passé tous les contrôles techniques »  
+> - « Étudiants ayant participé à toutes les sessions »
+
+---
+
 ## 11. Cas d'Usage Avancés
 
 ### Cas 1 : Audit de Données (Orphelins)
@@ -996,7 +1072,7 @@ WHERE NOT EXISTS (SELECT 1 FROM commandes WHERE commandes.id = lignes_commande.c
 
 ### Cas 2 : Recommandations (Clients Similaires)
 
-**Objectif** : "Les clients qui ont acheté X ont aussi acheté Y".
+**Objectif** : « Les clients qui ont acheté X ont aussi acheté Y. »
 
 ```sql
 -- Trouver les produits achetés par d'autres clients ayant acheté le produit 42
@@ -1057,7 +1133,7 @@ WHERE EXISTS (
 
 | Critère | Semi-Jointure | Anti-Jointure |
 |---------|---------------|---------------|
-| **Question** | "Qui existe ?" | "Qui n'existe pas ?" |
+| **Question** | « Qui existe ? » | « Qui n'existe pas ? » |
 | **Opérateur principal** | EXISTS / IN | NOT EXISTS / NOT IN |
 | **Retour** | Lignes avec correspondance | Lignes sans correspondance |
 | **Duplication** | Non (pas de doublons) | Non |
@@ -1078,30 +1154,25 @@ WHERE NOT EXISTS (SELECT 1 FROM commandes WHERE commandes.client_id = clients.id
 → {Charlie, Eve}
 ```
 
-**Complémentarité** : Les deux requêtes sont **complémentaires** et couvrent 100% des clients.
+**Complémentarité** : les deux requêtes sont **complémentaires** et couvrent 100 % des clients.
 
 ---
 
 ## 13. Performances : Benchmarks
 
-### Test sur Grandes Tables
+### Test sur grandes tables : ordres de grandeur
 
-Configuration :
-- Table `clients` : 100 000 lignes
-- Table `commandes` : 500 000 lignes
-- Index sur `commandes.client_id`
+Sur un test avec ~100 000 lignes côté `clients` et ~500 000 lignes côté `commandes`, avec un index sur `commandes.client_id`, on observe typiquement :
 
-#### Résultats (Temps Moyen)
+| Méthode | Semi-jointure | Anti-jointure |
+|---------|--------------|---------------|
+| `EXISTS` / `NOT EXISTS` | ⚡ très rapide | ⚡ très rapide |
+| `IN` / `NOT IN` | ⚡ très rapide (équivalent à EXISTS après planification) | ⚠️ `NOT IN` à éviter à cause du piège NULL |
+| `INNER JOIN` + `DISTINCT` | 🐌 plus lent (le `DISTINCT` coûte) | N/A |
+| `LEFT JOIN` + `IS NULL` | N/A | ⚡ rapide |
+| `INTERSECT` / `EXCEPT` | ⚡ rapide mais limité (renvoie seulement les colonnes communes) | idem |
 
-| Méthode | Semi-Jointure | Anti-Jointure |
-|---------|---------------|---------------|
-| **EXISTS / NOT EXISTS** | 45ms | 50ms |
-| **IN / NOT IN** | 50ms | 55ms |
-| **INNER JOIN + DISTINCT** | 120ms | N/A |
-| **LEFT JOIN + IS NULL** | N/A | 70ms |
-| **INTERSECT / EXCEPT** | 80ms | 85ms |
-
-**Conclusion** : **EXISTS / NOT EXISTS** sont les plus performants.
+**Conclusion** : `EXISTS` / `NOT EXISTS` sont les choix par défaut. **Mesurez sur vos données** avec `EXPLAIN ANALYZE` — l'écart précis dépend du nombre de groupes, de la sélectivité, et de la présence d'index.
 
 ### Facteurs Impactant les Performances
 

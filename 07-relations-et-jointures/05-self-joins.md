@@ -16,7 +16,7 @@ Les self-joins sont utilisés quand les données d'une table ont des **relations
 
 ### Le Principe Clé
 
-Imaginez que vous ayez deux **copies virtuelles** de la même table. Vous pouvez alors les joindre comme s'il s'agissait de deux tables différentes. La seule différence : **vous devez utiliser des alias différents** pour distinguer les deux "copies".
+Imaginez que vous ayez deux **copies virtuelles** de la même table. Vous pouvez alors les joindre comme s'il s'agissait de deux tables différentes. La seule différence : **vous devez utiliser des alias différents** pour distinguer les deux « copies ».
 
 ---
 
@@ -24,7 +24,7 @@ Imaginez que vous ayez deux **copies virtuelles** de la même table. Vous pouvez
 
 ### Pourquoi les Alias ?
 
-Sans alias, PostgreSQL ne peut pas distinguer de quelle "instance" de la table vous parlez.
+Sans alias, PostgreSQL ne peut pas distinguer de quelle « instance » de la table vous parlez.
 
 ```sql
 -- ❌ ERREUR : Impossible sans alias
@@ -313,12 +313,11 @@ ORDER BY difference;
 
 **Résultat** :
 
-| employe1       | salaire1 | employe2        | salaire2 | difference |
-|----------------|----------|-----------------|----------|------------|
-| Charlie Durand | 95000    | Bob Dupont      | 100000   | 5000       |
-| Diana Bernard  | 75000    | Eve Laurent     | 60000    | 15000 (❌) |
+| employe1       | salaire1 | employe2   | salaire2 | difference |
+|----------------|----------|------------|----------|------------|
+| Charlie Durand | 95000    | Bob Dupont | 100000   | 5000       |
 
-**Note** : Seulement les employés avec ≤5000 € de différence apparaissent.
+**Note** : seules les paires avec ≤ 5000 € d'écart apparaissent ; les autres comparaisons (Diana ↔ Eve, par exemple, avec 15 000 € d'écart) sont éliminées par la condition du `ON`.
 
 ### Exemple 3 : Comparer les Ventes Année par Année
 
@@ -503,6 +502,8 @@ LEFT JOIN mesures_temperature AS t2 ON t1.id = t2.id + 1
 ORDER BY t1.date;  
 ```
 
+> ⚠️ **Cette jointure est fragile** : elle suppose que les `id` sont **strictement contigus** (1, 2, 3, …) **et** dans l'ordre chronologique. Si une mesure est supprimée (créant un trou dans la séquence) ou si les `id` ne suivent pas la date, le résultat sera silencieusement faux. Pour un cas réel, utilisez plutôt la **window function** ci-dessous, qui s'appuie explicitement sur l'ordre `date`.
+
 **Résultat** :
 
 | date       | temperature_actuelle | date_precedente | temperature_precedente | variation |
@@ -638,6 +639,53 @@ ORDER BY niveau;
 | Bob Dupont    | 2      |
 | Alice Martin  | 3      |
 
+### Anatomie d'une CTE récursive
+
+Une CTE récursive a toujours deux parties séparées par `UNION ALL` :
+
+1. **L'ancre** (*non-recursive term*) : le point de départ, qui n'utilise pas la CTE elle-même.
+2. **Le terme récursif** : qui référence la CTE en cours de construction et ajoute des lignes à chaque tour.
+
+PostgreSQL exécute la récursion par **itérations successives** :
+- Itération 0 : l'ancre produit ses lignes.
+- Itération N : le terme récursif est exécuté avec, comme « pseudo-table » la CTE, **uniquement les lignes ajoutées à l'itération précédente** (pas toutes les lignes accumulées).
+- La récursion s'arrête quand une itération ne produit plus de nouvelle ligne.
+
+### Protection contre les cycles (PostgreSQL 14+)
+
+Si la hiérarchie contient un cycle (« Alice est manager de Bob, qui est manager d'Alice »), la CTE récursive **bouclera indéfiniment**. PostgreSQL 14 a introduit la clause `CYCLE` pour s'en prémunir :
+
+```sql
+WITH RECURSIVE hierarchy AS (
+    SELECT id, nom, manager_id, 1 AS niveau
+    FROM employes
+    WHERE id = 4
+
+    UNION ALL
+
+    SELECT e.id, e.nom, e.manager_id, h.niveau + 1
+    FROM employes e
+    INNER JOIN hierarchy h ON e.id = h.manager_id
+) CYCLE id SET is_cycle USING path
+SELECT nom, niveau, is_cycle, path  
+FROM hierarchy;  
+```
+
+- `CYCLE id` : colonne sur laquelle PostgreSQL détecte les cycles.
+- `SET is_cycle` : ajoute une colonne booléenne à `true` quand un cycle est détecté ; la récursion s'arrête sur cette branche.
+- `USING path` : ajoute une colonne contenant le chemin parcouru (utile pour le debug).
+
+> 💡 **Avant PostgreSQL 14**, on simulait `CYCLE` en construisant manuellement un tableau du chemin parcouru et en filtrant `WHERE NOT (e.id = ANY(path))`. La clause `CYCLE` rend cela natif et bien plus lisible.
+
+### Garde-fou : limiter la profondeur
+
+Même sans cycle, sur des hiérarchies très profondes, un `SET LOCAL` peut éviter qu'une requête mal écrite épuise les ressources :
+
+```sql
+SET LOCAL statement_timeout = '5s';  
+WITH RECURSIVE … ;  -- abandonnée si > 5 secondes  
+```
+
 ---
 
 ## 9. Pièges et Erreurs Courantes
@@ -754,7 +802,7 @@ FROM employes AS e
 LEFT JOIN employes AS m ON e.manager_id = m.id;  
 ```
 
-Vérifiez que les index sont utilisés (cherchez "Index Scan" plutôt que "Seq Scan").
+Vérifiez que les index sont utilisés (cherchez `Index Scan` plutôt que `Seq Scan`).
 
 #### 3. Limiter les Résultats
 
@@ -796,7 +844,7 @@ LEFT JOIN mesures_temperature AS t2 ON t1.id = t2.id + 1;
 Un self-join sur une table de 1 million de lignes peut générer des résultats énormes :
 
 ```
-1 000 000 × 1 000 000 = 1 trillion de comparaisons potentielles !
+1 000 000 × 1 000 000 = 10¹² comparaisons potentielles (mille milliards)
 ```
 
 **Solutions** :
@@ -844,7 +892,7 @@ WHERE e2.manager_id = e1.id;
 
 **Note** : Pour des cycles plus profonds, utilisez des CTEs récursives.
 
-### Exemple 3 : Trouver les "Orphelins" (Références Invalides)
+### Exemple 3 : Trouver les « orphelins » (références invalides)
 
 **Objectif** : Identifier les employés dont le manager_id ne correspond à aucun employé.
 
@@ -863,7 +911,7 @@ WHERE e.manager_id IS NOT NULL
 
 ### Exemple 4 : Distance dans un Graphe (Degrés de Séparation)
 
-**Objectif** : Calculer le nombre de "sauts" entre deux personnes dans un réseau social.
+**Objectif** : calculer le nombre de « sauts » entre deux personnes dans un réseau social.
 
 ```sql
 -- Distance 1 : Amis directs
