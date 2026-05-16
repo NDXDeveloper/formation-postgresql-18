@@ -36,17 +36,62 @@ LIMIT       -- 7. Terminé par LIMIT/OFFSET
 Mais voici l'ordre dans lequel PostgreSQL **exécute réellement** votre requête :
 
 ```
-1. FROM        -- PostgreSQL commence par identifier les tables
-2. WHERE       -- Filtre les lignes AVANT toute agrégation
-3. GROUP BY    -- Regroupe les lignes filtrées
-4. HAVING      -- Filtre les groupes APRÈS agrégation
-5. SELECT      -- Sélectionne et calcule les colonnes
-6. DISTINCT    -- Élimine les doublons (si présent)
-7. ORDER BY    -- Trie les résultats
-8. LIMIT       -- Limite le nombre de lignes retournées
+0. WITH (CTE)        -- (Si présent) Évalue d'abord les sous-requêtes nommées
+1. FROM + JOIN       -- Identifie les tables et exécute les jointures
+2. WHERE             -- Filtre les lignes AVANT toute agrégation
+3. GROUP BY          -- Regroupe les lignes filtrées
+4. HAVING            -- Filtre les groupes APRÈS agrégation
+5. SELECT            -- Calcule les expressions et les agrégations
+   └─ Window funcs   -- (Si présent) Calcule les fonctions de fenêtrage OVER()
+6. DISTINCT          -- Élimine les doublons (si présent)
+7. UNION/INTERSECT/  -- (Si présent) Combine les ensembles de résultats
+   EXCEPT
+8. ORDER BY          -- Trie les résultats
+9. LIMIT / OFFSET    -- Limite le nombre de lignes retournées
+   / FETCH FIRST
 ```
 
-> **💡 Point clé** : Le `SELECT` n'est PAS la première étape ! PostgreSQL doit d'abord savoir quelles tables utiliser (`FROM`) et quelles lignes garder (`WHERE`) avant de pouvoir sélectionner des colonnes.
+> 💡 **Point clé** : le `SELECT` n'est PAS la première étape ! PostgreSQL doit d'abord savoir quelles tables utiliser (`FROM`) et quelles lignes garder (`WHERE`) avant de pouvoir sélectionner des colonnes.
+
+> 📌 **Bon à savoir** :  
+> - Les **CTE** (`WITH … AS (…)`) sont calculées en premier, comme des « tables temporaires de la requête ».  
+> - Les **fonctions de fenêtrage** (`ROW_NUMBER() OVER(…)`, `LAG()`, etc.) sont évaluées **après** le `GROUP BY/HAVING` mais **avant** le `DISTINCT`. Elles peuvent donc voir les colonnes agrégées.  
+> - Les opérations ensemblistes `UNION`, `INTERSECT`, `EXCEPT` viennent **après** le `SELECT` mais **avant** `ORDER BY`.
+
+### Ordre logique vs ordre physique réel
+
+L'ordre présenté ci-dessus est l'**ordre logique** défini par le standard SQL : c'est la sémantique de la requête, ce que vous devez utiliser pour raisonner sur le résultat. L'**ordre physique d'exécution** choisi par l'**optimiseur (planner) PostgreSQL** peut être très différent : il peut pousser un filtre dans une sous-requête, échanger l'ordre des jointures, fusionner plusieurs étapes en une seule opération, etc., tant que le résultat final reste équivalent.
+
+```sql
+-- Voir le plan d'exécution PHYSIQUE choisi par PostgreSQL
+EXPLAIN  
+SELECT departement, COUNT(*)  
+FROM employes  
+WHERE salaire > 50000  
+GROUP BY departement;  
+
+-- Vous verrez quelque chose comme :
+-- HashAggregate
+--   Group Key: departement
+--   ->  Seq Scan on employes
+--         Filter: (salaire > 50000)
+```
+
+> 📚 L'**ordre logique** sert à comprendre **ce qui est calculé**. L'**ordre physique** sert à comprendre **comment c'est calculé** (et à optimiser). Les deux sont utiles mais répondent à des questions différentes. Voir le chapitre 13 sur l'indexation et `EXPLAIN` pour approfondir.
+
+### Mnémotechnique pour mémoriser l'ordre
+
+Pour retenir l'ordre logique, voici un moyen mnémotechnique anglo-saxon courant :
+
+```
+F  W  G  H  S  D  O  L
+↓  ↓  ↓  ↓  ↓  ↓  ↓  ↓
+FROM → WHERE → GROUP BY → HAVING → SELECT → DISTINCT → ORDER BY → LIMIT
+```
+
+Phrase à retenir (en anglais) : **« F**riends **W**ill **G**enerally **H**ate **S**uddenly **D**ramatic **O**verly **L**oud people. »
+
+Ou en français : **« Fais Wifi Gris Hier Soir Dans Or Latin »** (à adapter selon votre imagination !).
 
 ---
 
@@ -59,7 +104,7 @@ PostgreSQL commence par déterminer **d'où viennent les données**.
 **Ce qui se passe :**
 - Lecture de la ou des tables mentionnées après `FROM`
 - Exécution des jointures (`JOIN`) si plusieurs tables sont impliquées
-- Création d'un ensemble de données temporaire (appelé "relation de travail")
+- Création d'un ensemble de données temporaire (appelé « relation de travail »)
 
 **Exemple :**
 ```sql
@@ -75,6 +120,16 @@ JOIN departements ON employes.dept_id = departements.id
 ```
 
 PostgreSQL combine les deux tables selon la condition de jointure, créant un jeu de résultats temporaire contenant les colonnes des deux tables.
+
+> 💡 **Sources possibles dans `FROM`** : au-delà des tables simples, `FROM` peut aussi contenir :  
+> - Une **sous-requête** (`FROM (SELECT …) AS alias`)  
+> - Une **CTE** (`WITH cte AS (…) SELECT … FROM cte`)  
+> - Une **fonction** retournant un ensemble de lignes (`FROM generate_series(1, 10)`)  
+> - Un constructeur `VALUES` (`FROM (VALUES (1, 'a'), (2, 'b')) AS t(id, nom)`)  
+> - Une **jointure latérale** `LATERAL` (la sous-requête de droite peut référencer les colonnes de gauche — extrêmement puissant)  
+> - Une **vue** ou une **vue matérialisée**
+>
+> Tous ces cas sont traités à l'étape `FROM`, avant `WHERE`.
 
 ---
 
@@ -99,7 +154,7 @@ WHERE salaire > 50000;
 2. PostgreSQL examine chaque ligne et ne garde que celles où `salaire > 50000` (WHERE)  
 3. Seulement maintenant, PostgreSQL sélectionne les colonnes `nom` et `salaire` (SELECT)
 
-**Important :** À ce stade, les fonctions d'agrégation comme `COUNT()`, `SUM()`, `AVG()` ne sont **pas encore** disponibles.
+**Important** : à ce stade, les fonctions d'agrégation comme `COUNT()`, `SUM()`, `AVG()` ne sont **pas encore** disponibles.
 
 ---
 
@@ -202,7 +257,7 @@ FROM employes
 GROUP BY departement;  
 ```
 
-**Point important :** Les alias créés dans `SELECT` ne sont **pas disponibles** dans les clauses précédentes (FROM, WHERE, GROUP BY, HAVING), car elles sont exécutées AVANT le SELECT.
+**Point important** : les alias créés dans `SELECT` ne sont **pas disponibles** dans les clauses précédentes (FROM, WHERE, GROUP BY, HAVING), car elles sont exécutées AVANT le SELECT.
 
 **❌ Ceci génère une erreur :**
 ```sql
@@ -285,7 +340,7 @@ ORDER BY salaire_annuel DESC;  -- ✅ Fonctionne : l'alias existe déjà
 ```sql
 ORDER BY departement ASC, salaire DESC
 ```
-Signifie : "Trier d'abord par département (A→Z), puis pour chaque département, trier par salaire (du plus élevé au plus bas)".
+Signifie : « trier d'abord par département (A→Z), puis pour chaque département, trier par salaire (du plus élevé au plus bas) ».
 
 ---
 
@@ -327,7 +382,9 @@ ORDER BY salaire DESC
 LIMIT 10 OFFSET 20;  
 ```
 
-**⚠️ Important :** `LIMIT` et `OFFSET` sont appliqués **après le tri**. L'ordre des lignes est donc prévisible et stable (si vous utilisez `ORDER BY`).
+**⚠️ Important** : `LIMIT` et `OFFSET` sont appliqués **après le tri**. L'ordre des lignes est donc prévisible et stable **uniquement si vous utilisez `ORDER BY`**.
+
+> 🚨 **Piège classique** : `LIMIT 10` sans `ORDER BY` ne renvoie **pas forcément les 10 premières lignes au sens humain**. PostgreSQL renvoie 10 lignes dans l'ordre où il les a lues — qui peut varier d'une exécution à l'autre selon le plan, les index, l'état du cache, ou la parallélisation. Pour de la pagination ou un « top N », **toujours** ajouter un `ORDER BY` sur une colonne stable (idéalement la clé primaire ou un timestamp + clé primaire pour départager les égalités).
 
 ---
 
@@ -457,23 +514,28 @@ FROM employes
 WHERE salaire * 12 > 600000;  
 ```
 
-### 2. Impossible d'utiliser un alias dans GROUP BY
+### 2. Alias dans GROUP BY : extension PostgreSQL acceptée, mais non standard
 
-**❌ Ne fonctionne pas :**
 ```sql
-SELECT EXTRACT(YEAR FROM date_embauche) as annee, COUNT(*)  
+-- ✅ Accepté par PostgreSQL (extension propriétaire au standard SQL)
+SELECT EXTRACT(YEAR FROM date_embauche) AS annee, COUNT(*)  
 FROM employes  
-GROUP BY annee;  -- Erreur dans PostgreSQL < 9.6  
-```
+GROUP BY annee;  
 
-**✅ Solution (compatible toutes versions) :**
-```sql
-SELECT EXTRACT(YEAR FROM date_embauche) as annee, COUNT(*)  
+-- ✅ Forme strictement standard SQL (portable inter-SGBD)
+SELECT EXTRACT(YEAR FROM date_embauche) AS annee, COUNT(*)  
 FROM employes  
 GROUP BY EXTRACT(YEAR FROM date_embauche);  
+
+-- ✅ Forme par position (numéro de colonne dans SELECT, standard SQL)
+SELECT EXTRACT(YEAR FROM date_embauche) AS annee, COUNT(*)  
+FROM employes  
+GROUP BY 1;  -- 1 = première colonne du SELECT  
 ```
 
-> **Note PostgreSQL ≥ 9.6 :** Les versions récentes de PostgreSQL acceptent les alias dans `GROUP BY` par commodité, mais conceptuellement, `GROUP BY` est toujours exécuté avant `SELECT`.
+> 📚 **Précision factuelle** : PostgreSQL accepte les **alias** dans `GROUP BY` depuis très longtemps (extension documentée du standard SQL). Le standard strict n'autorise lui que les **colonnes sources** ou les **numéros de position**. Conceptuellement, `GROUP BY` est toujours évalué avant `SELECT`, mais PostgreSQL fait une résolution préalable des alias pour cette commodité.
+>
+> 💡 **Pour la portabilité**, préférez la forme avec l'expression complète ou le numéro de colonne si votre code doit fonctionner sur d'autres SGBD (Oracle, SQL Server…).
 
 ### 3. ORDER BY peut utiliser des alias
 

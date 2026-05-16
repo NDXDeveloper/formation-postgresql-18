@@ -91,10 +91,10 @@ ORDER BY date_commande ASC;
 ```
 numero_commande | date_commande
 ----------------|---------------
-CMD001          | 2024-01-15  
-CMD002          | 2024-02-10  
-CMD003          | 2024-03-05  
-CMD004          | 2024-04-20  
+CMD001          | 2026-01-15  
+CMD002          | 2026-02-10  
+CMD003          | 2026-03-05  
+CMD004          | 2026-04-20  
 ```
 
 ### Tri descendant (DESC)
@@ -153,10 +153,10 @@ ORDER BY date_commande DESC;
 ```
 numero_commande | date_commande
 ----------------|---------------
-CMD004          | 2024-04-20  
-CMD003          | 2024-03-05  
-CMD002          | 2024-02-10  
-CMD001          | 2024-01-15  
+CMD004          | 2026-04-20  
+CMD003          | 2026-03-05  
+CMD002          | 2026-02-10  
+CMD001          | 2026-01-15  
 ```
 
 ---
@@ -395,10 +395,10 @@ ORDER BY date_livraison ASC NULLS FIRST;
 ```
 numero_commande | date_commande | date_livraison
 ----------------|---------------|----------------
-CMD005          | 2024-11-15    | NULL           -- À traiter en priorité  
-CMD006          | 2024-11-16    | NULL  
-CMD001          | 2024-10-01    | 2024-10-05     -- Déjà livrées  
-CMD002          | 2024-10-10    | 2024-10-15  
+CMD005          | 2026-11-15    | NULL           -- À traiter en priorité  
+CMD006          | 2026-11-16    | NULL  
+CMD001          | 2026-10-01    | 2026-10-05     -- Déjà livrées  
+CMD002          | 2026-10-10    | 2026-10-15  
 ```
 
 #### 2. Données optionnelles à la fin
@@ -559,7 +559,7 @@ Cette syntaxe est **déconseillée** en production car :
 - Fragile (si vous ajoutez/supprimez une colonne, les numéros changent)
 - Difficile à maintenir
 
-**Recommandation :** Utilisez les noms de colonnes explicites.
+**Recommandation** : utilisez les noms de colonnes explicites.
 
 ```sql
 -- ❌ À éviter
@@ -663,7 +663,7 @@ Le tri est une opération **coûteuse** en termes de performances, surtout sur d
 - Les trier en mémoire (ou sur disque si trop volumineux)
 - Puis retourner le résultat
 
-**Complexité algorithmique :** O(n log n) dans le meilleur cas
+**Complexité algorithmique** : O(n log n) dans le meilleur cas
 
 ### Optimiser le tri avec des index
 
@@ -705,6 +705,28 @@ CREATE INDEX idx_employes_dept_salaire ON employes(departement, salaire DESC);
 -- Cette requête peut utiliser l'index efficacement
 SELECT * FROM employes  
 ORDER BY departement ASC, salaire DESC;  
+```
+
+> ⚠️ **Subtilité pour les index multi-colonnes avec mixage ASC/DESC** : un index `(a ASC, b ASC)` ne peut être lu en sens inverse pour `ORDER BY a DESC, b ASC` (mélange d'ordres). PostgreSQL forcerait alors un tri supplémentaire. Si vous mélangez `ASC` et `DESC` dans `ORDER BY`, créez explicitement l'index avec le même ordre.
+
+**Index sur expression (très utile pour les tris calculés) :**
+
+```sql
+-- ❌ Sans index spécifique : tri à chaque exécution
+SELECT * FROM clients  
+ORDER BY LOWER(nom);  -- Tri insensible à la casse  
+
+-- ✅ Avec un index sur l'expression : tri éliminé
+CREATE INDEX idx_clients_nom_lower ON clients (LOWER(nom));  
+SELECT * FROM clients  
+ORDER BY LOWER(nom);  -- Utilise l'index, pas de tri  
+
+-- Autre exemple : index sur date tronquée
+CREATE INDEX idx_commandes_jour ON commandes (DATE_TRUNC('day', date_commande));  
+SELECT DATE_TRUNC('day', date_commande), COUNT(*)  
+FROM commandes  
+GROUP BY DATE_TRUNC('day', date_commande)  
+ORDER BY 1;  
 ```
 
 ### Tri avec LIMIT : Optimisation majeure
@@ -791,7 +813,7 @@ ORDER BY nom ASC
 LIMIT 20 OFFSET 40;  
 ```
 
-**⚠️ Important :** Pour la pagination, il est crucial d'avoir un **tri stable et reproductible**.
+**⚠️ Important** : pour la pagination, il est crucial d'avoir un **tri stable et reproductible**.
 
 ```sql
 -- ❌ Mauvais : l'ordre peut changer entre les pages si plusieurs personnes ont le même nom
@@ -826,18 +848,63 @@ LIMIT 10;
 ### 5. Tri alphabétique avec accents
 
 ```sql
--- Tri alphabétique en ignorant les accents (collation)
+-- Tri alphabétique selon la locale française (libc)
 SELECT nom  
 FROM clients  
 ORDER BY nom COLLATE "fr_FR";  
 
--- Tri insensible à la casse
+-- ⚠️ "fr_FR" dépend de la libc du système. Pour un tri stable et portable entre serveurs,
+-- préférez une collation ICU (PostgreSQL 10+, défaut en PG 16+) :
+SELECT nom  
+FROM clients  
+ORDER BY nom COLLATE "fr-x-icu";  
+
+-- Tri insensible à la casse et aux accents avec une collation ICU non-déterministe (PG 12+)
+CREATE COLLATION fr_ci_ai (
+    provider = icu,
+    locale = 'und-u-ks-level1',
+    deterministic = false
+);
+SELECT nom FROM clients ORDER BY nom COLLATE fr_ci_ai;
+-- → 'Élève' = 'eleve' = 'ELEVE' au tri
+
+-- Tri insensible à la casse (méthode simple, mais ignore les accents en plus)
 SELECT nom  
 FROM clients  
 ORDER BY LOWER(nom) ASC;  
 ```
 
-### 6. Tri par pertinence (recherche)
+### 6. Agrégations ordonnées : `WITHIN GROUP (ORDER BY …)`
+
+Certaines fonctions d'agrégation prennent un `ORDER BY` interne pour produire un résultat qui dépend de l'ordre des valeurs. C'est la syntaxe `WITHIN GROUP (ORDER BY …)` (standard SQL:2003).
+
+```sql
+-- Concaténer les noms par département dans l'ordre alphabétique
+SELECT
+    departement,
+    STRING_AGG(nom, ', ' ORDER BY nom) AS liste_employes
+FROM employes  
+GROUP BY departement;  
+
+-- Médiane et percentiles ordonnés (PERCENTILE_CONT)
+SELECT
+    departement,
+    PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY salaire) AS salaire_median,
+    PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY salaire) AS salaire_p95
+FROM employes  
+GROUP BY departement;  
+
+-- MODE() : valeur la plus fréquente
+SELECT
+    departement,
+    MODE() WITHIN GROUP (ORDER BY ville) AS ville_la_plus_frequente
+FROM employes  
+GROUP BY departement;  
+```
+
+> 💡 **Utile pour** : produire des rapports statistiques, générer des chaînes triées (CSV, listes), calculer des percentiles, identifier des modes.
+
+### 7. Tri par pertinence (recherche)
 
 ```sql
 -- Recherche avec tri par pertinence
@@ -853,7 +920,7 @@ WHERE nom ILIKE '%ordinateur%' OR description ILIKE '%ordinateur%'
 ORDER BY pertinence ASC, nom ASC;  
 ```
 
-### 7. Tri géographique (distance)
+### 8. Tri géographique (distance)
 
 ```sql
 -- Clients triés par distance à un point (nécessite PostGIS ou calcul manuel)
@@ -893,7 +960,7 @@ LIMIT 1;
 ```sql
 -- Utiliser une sous-requête avec TABLESAMPLE
 SELECT nom_produit, prix  
-FROM produits TABLESAMPLE SYSTEM (10);  -- ~10% de lignes aléatoires  
+FROM produits TABLESAMPLE SYSTEM (10);  -- ~10 % de lignes aléatoires  
 
 -- Ou avec un ID aléatoire si vous avez des IDs séquentiels
 SELECT nom_produit, prix  
@@ -994,7 +1061,7 @@ SELECT nom FROM employes;
 SELECT nom FROM employes ORDER BY nom ASC;
 ```
 
-**Important :** Sans `ORDER BY`, l'ordre des lignes est **imprévisible** et peut changer entre deux exécutions de la même requête.
+**Important** : sans `ORDER BY`, l'ordre des lignes est **imprévisible** et peut changer entre deux exécutions de la même requête.
 
 ### 2. Supposer un ordre par défaut
 

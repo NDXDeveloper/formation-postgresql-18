@@ -21,7 +21,7 @@ Dans ce chapitre, nous allons :
 
 ### Définition conceptuelle
 
-`NULL` signifie **"valeur inconnue"** ou **"absence de valeur"**. C'est un marqueur spécial qui indique qu'une information n'est pas disponible.
+`NULL` signifie **« valeur inconnue »** ou **« absence de valeur »**. C'est un marqueur spécial qui indique qu'une information n'est pas disponible.
 
 **Exemples de situations où NULL a du sens :**
 
@@ -92,7 +92,7 @@ FROM clients;
 
 ```sql
 -- NULL n'est pas un booléen
--- NULL signifie "on ne sait pas si c'est vrai ou faux"
+-- NULL signifie « on ne sait pas si c'est vrai ou faux »
 
 SELECT
     TRUE as vrai,
@@ -129,7 +129,7 @@ SELECT
     NULL || 'texte' as test8;  -- NULL (concaténation)
 ```
 
-**Résultat :** Toutes ces expressions retournent `NULL`.
+**Résultat** : toutes ces expressions retournent `NULL`.
 
 **Pourquoi ?**
 
@@ -509,7 +509,7 @@ NULLIF(valeur1, valeur2)
 
 **Pourquoi est-ce utile ?**
 
-Parfois, certaines valeurs "spéciales" doivent être traitées comme NULL (par exemple, 0, -1, '', 'N/A', etc.).
+Parfois, certaines valeurs « spéciales » doivent être traitées comme NULL (par exemple, 0, -1, '', 'N/A', etc.).
 
 **Exemples simples :**
 
@@ -649,25 +649,37 @@ SELECT
 FROM employes;
 ```
 
-### IS DISTINCT FROM
+### IS DISTINCT FROM et IS NOT DISTINCT FROM
 
-Opérateur spécial qui traite NULL comme une valeur comparable :
+Ces opérateurs traitent `NULL` comme une valeur comparable (deux `NULL` sont considérés égaux). Ils n'ont **jamais** de résultat `NULL` : leur retour est toujours `TRUE` ou `FALSE`.
 
 ```sql
--- Comparaison classique
-SELECT NULL = NULL;    -- Résultat : NULL  
-SELECT NULL != NULL;   -- Résultat : NULL  
+-- Comparaison classique : 3 valeurs possibles
+SELECT NULL = NULL;    -- NULL  
+SELECT NULL != NULL;   -- NULL  
+SELECT 5 = NULL;       -- NULL  
 
--- Avec IS DISTINCT FROM
-SELECT NULL IS DISTINCT FROM NULL;  -- Résultat : FALSE (ils sont "égaux")  
-SELECT 5 IS DISTINCT FROM NULL;     -- Résultat : TRUE (ils sont différents)  
-SELECT 5 IS DISTINCT FROM 5;        -- Résultat : FALSE  
+-- Avec IS DISTINCT FROM : seulement TRUE ou FALSE
+SELECT NULL IS DISTINCT FROM NULL;  -- FALSE (« ils sont égaux »)  
+SELECT 5    IS DISTINCT FROM NULL;  -- TRUE  (« ils sont différents »)  
+SELECT 5    IS DISTINCT FROM 5;     -- FALSE  
+SELECT 5    IS DISTINCT FROM 10;    -- TRUE  
 
--- Cas d'usage : détecter des changements (même si NULL)
-SELECT * FROM employes_nouveau  
-WHERE (salaire, departement) IS DISTINCT FROM  
-      (SELECT salaire, departement FROM employes_ancien WHERE id = employes_nouveau.id);
+-- IS NOT DISTINCT FROM : la négation, équivalent à une « égalité tolérante au NULL »
+SELECT NULL IS NOT DISTINCT FROM NULL;  -- TRUE  
+SELECT 5    IS NOT DISTINCT FROM 5;     -- TRUE  
+SELECT 5    IS NOT DISTINCT FROM NULL;  -- FALSE  
+
+-- Cas d'usage : détecter les changements sur une ligne (audit / CDC)
+-- Avec = classique, on raterait les changements impliquant NULL.
+-- IS DISTINCT FROM les capture correctement.
+SELECT id, ancien.salaire AS avant, nouveau.salaire AS apres  
+FROM ancien  
+JOIN nouveau USING (id)  
+WHERE ancien.salaire IS DISTINCT FROM nouveau.salaire;  
 ```
+
+> 💡 **Mnémotechnique** : `IS DISTINCT FROM` = `!=` qui ne « plante » pas sur NULL. C'est l'opérateur de comparaison **NULL-safe** de PostgreSQL.
 
 ---
 
@@ -688,7 +700,7 @@ FROM employes
 WHERE departement NOT IN (SELECT dept FROM dept_autorises);  
 ```
 
-**Résultat attendu :** Les employés des départements non listés (Ventes, Finance, etc.)
+**Résultat attendu** : les employés des départements non listés (Ventes, Finance, etc.)
 
 **Résultat réel :** **AUCUNE LIGNE** ! 😱
 
@@ -724,6 +736,49 @@ WHERE NOT EXISTS (
 )
 ```
 
+### Piège : Contraintes CHECK et NULL
+
+C'est l'un des comportements les plus contre-intuitifs de SQL : **une contrainte `CHECK` qui s'évalue à `NULL` est considérée comme SATISFAITE** (alors qu'un `WHERE` qui s'évalue à `NULL` rejette la ligne). Cette asymétrie est définie par le standard SQL et peut créer des failles de validation.
+
+```sql
+CREATE TABLE produits (
+    id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    nom VARCHAR(100),
+    prix NUMERIC,
+    -- Contrainte : le prix doit être strictement positif
+    CONSTRAINT ck_prix_positif CHECK (prix > 0)
+);
+
+-- ✅ OK : 100 > 0 = TRUE
+INSERT INTO produits (nom, prix) VALUES ('Stylo', 100);
+
+-- ❌ Échoue : -5 > 0 = FALSE
+INSERT INTO produits (nom, prix) VALUES ('Cahier', -5);
+
+-- 🚨 ACCEPTÉ : NULL > 0 = NULL → la contrainte CHECK passe !
+INSERT INTO produits (nom, prix) VALUES ('Mystère', NULL);
+-- Aucune erreur, la ligne est insérée alors que le prix viole logiquement la règle.
+```
+
+> 🚨 **Règle de validation** : si vous voulez interdire les NULL en plus de la contrainte CHECK, **toujours ajouter `NOT NULL`** explicitement à la colonne :
+>
+> ```sql
+> CREATE TABLE produits (
+>     id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+>     nom VARCHAR(100) NOT NULL,
+>     prix NUMERIC NOT NULL CHECK (prix > 0)  -- 🔐 NOT NULL + CHECK
+> );
+>
+> -- Maintenant l'insertion avec NULL est rejetée
+> INSERT INTO produits (nom, prix) VALUES ('Mystère', NULL);
+> -- ERROR: null value in column "prix" violates not-null constraint
+> ```
+
+> 💡 **Mnémotechnique** :  
+> - **`WHERE`** : `NULL` → ligne **rejetée**  
+> - **`CHECK`** : `NULL` → contrainte **acceptée**  
+> - **`JOIN ON`** : `NULL` → ligne non jointe (sauf OUTER JOIN)
+
 ### Piège 2 : Agrégations et NULL dans GROUP BY
 
 ```sql
@@ -757,11 +812,11 @@ Les valeurs NULL sont **traitées comme égales** lors du regroupement.
 
 ### Piège 3 : UNIQUE et NULL
 
-Dans PostgreSQL, **plusieurs NULL sont autorisés** dans une colonne UNIQUE :
+Par défaut dans PostgreSQL, **plusieurs NULL sont autorisés** dans une colonne UNIQUE :
 
 ```sql
 CREATE TABLE utilisateurs (
-    id SERIAL PRIMARY KEY,
+    id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     email VARCHAR(100) UNIQUE
 );
 
@@ -775,18 +830,37 @@ INSERT INTO utilisateurs (email) VALUES ('test@example.com');
 INSERT INTO utilisateurs (email) VALUES ('test@example.com');  -- ❌ ERREUR  
 ```
 
-**Pourquoi ?** Selon le standard SQL, NULL != NULL, donc plusieurs NULL ne violent pas la contrainte UNIQUE.
+**Pourquoi ?** Selon la sémantique historique du standard SQL, `NULL ≠ NULL`, donc plusieurs `NULL` ne violent pas la contrainte UNIQUE.
 
-**Si vous voulez interdire les NULL multiples :**
+#### Trois manières d'interdire les NULL multiples
 
 ```sql
--- Ajoutez une contrainte NOT NULL
-email VARCHAR(100) UNIQUE NOT NULL
+-- Solution 1 : Forcer NOT NULL (NULL totalement interdit)
+CREATE TABLE utilisateurs (
+    id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    email VARCHAR(100) UNIQUE NOT NULL
+);
 
--- Ou utilisez un index unique avec filtrage (PostgreSQL)
+-- Solution 2 : Index unique partiel (PostgreSQL — permet 0 NULL ou 1 valeur unique)
+CREATE TABLE utilisateurs (
+    id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    email VARCHAR(100)
+);
 CREATE UNIQUE INDEX idx_users_email ON utilisateurs(email) WHERE email IS NOT NULL;
--- Permet un seul NULL, mais pas de doublons non-NULL
+-- ⚠️ Cet index permet plusieurs NULL (car ils sont absents de l'index) mais bloque les doublons non-NULL.
+
+-- Solution 3 : 🆕 PostgreSQL 15+ — clause NULLS NOT DISTINCT
+CREATE TABLE utilisateurs (
+    id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    email VARCHAR(100) UNIQUE NULLS NOT DISTINCT
+);
+-- Avec NULLS NOT DISTINCT, deux NULL sont considérés égaux :
+-- → un seul NULL est autorisé dans la colonne.
+INSERT INTO utilisateurs (email) VALUES (NULL);  -- OK  
+INSERT INTO utilisateurs (email) VALUES (NULL);  -- ❌ ERREUR : doublon  
 ```
+
+> 🆕 **Nouveauté PostgreSQL 15** : la clause `NULLS NOT DISTINCT` (sur `UNIQUE` et `PRIMARY KEY`) permet enfin de traiter les NULL comme égaux pour les contraintes d'unicité, ce qui simplifie de nombreux cas (champs optionnels mais uniques s'ils sont fournis ET interdiction qu'ils soient tous NULL en même temps).
 
 ### Piège 4 : ORDER BY et NULL
 
@@ -865,7 +939,7 @@ CREATE TABLE employes (
 );
 ```
 
-**⚠️ Mais attention :** Une chaîne vide n'est pas la même chose que NULL. Réfléchissez à la sémantique :
+**⚠️ Mais attention** : une chaîne vide n'est pas la même chose que NULL. Réfléchissez à la sémantique :
 - `NULL` = "information non fournie"  
 - `''` = "information fournie, mais vide"
 
@@ -948,7 +1022,7 @@ Certains systèmes utilisent des **valeurs sentinelles** au lieu de NULL :
 - Pièges avec NOT IN, comparaisons, etc.
 - Nécessite IS NULL / IS NOT NULL
 
-**Recommandation :** Utilisez NULL pour représenter l'absence de données, mais soyez conscient des pièges.
+**Recommandation** : utilisez NULL pour représenter l'absence de données, mais soyez conscient des pièges.
 
 ---
 
@@ -992,7 +1066,7 @@ ORDER BY total_ventes DESC NULLS LAST;
 ## Points clés à retenir
 
 1. **NULL ≠ 0, NULL ≠ '', NULL ≠ FALSE**
-   - NULL signifie "valeur inconnue" ou "absence de valeur"
+   - NULL signifie « valeur inconnue » ou « absence de valeur »
 
 2. **Logique ternaire : TRUE, FALSE, NULL**
    - Toute opération avec NULL retourne généralement NULL
@@ -1029,7 +1103,7 @@ ORDER BY total_ventes DESC NULLS LAST;
 NULL est un concept fondamental mais déroutant en SQL. Sa logique ternaire (TRUE/FALSE/NULL) crée des comportements contre-intuitifs qui peuvent générer des bugs subtils.
 
 Les clés pour maîtriser NULL :
-- **Comprendre** que NULL signifie "inconnu", pas "zéro" ou "vide"  
+- **Comprendre** que NULL signifie « inconnu », pas « zéro » ou « vide »  
 - **Utiliser** `IS NULL` et `IS NOT NULL` pour les tests  
 - **Anticiper** le comportement de NULL dans les opérations et les agrégations  
 - **Gérer** NULL explicitement avec `COALESCE`, `NULLIF` et `CASE`  

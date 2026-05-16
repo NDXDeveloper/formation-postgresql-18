@@ -110,7 +110,7 @@ PostgreSQL :
 3. **Élimine les doublons** en comparant toutes les colonnes sélectionnées  
 4. Retourne les lignes uniques
 
-**Important :** DISTINCT compare **toutes les colonnes** du SELECT pour déterminer l'unicité.
+**Important** : DISTINCT compare **toutes les colonnes** du SELECT pour déterminer l'unicité.
 
 ---
 
@@ -178,11 +178,11 @@ CREATE TABLE commandes (
 );
 
 INSERT INTO commandes (client_id, produit, date_commande) VALUES
-    (1, 'Laptop', '2024-01-15'),
-    (1, 'Laptop', '2024-01-15'),  -- Doublon exact
-    (1, 'Mouse', '2024-01-15'),   -- Produit différent
-    (2, 'Laptop', '2024-01-15'),  -- Client différent
-    (1, 'Laptop', '2024-02-10');  -- Date différente
+    (1, 'Laptop', '2026-01-15'),
+    (1, 'Laptop', '2026-01-15'),  -- Doublon exact
+    (1, 'Mouse', '2026-01-15'),   -- Produit différent
+    (2, 'Laptop', '2026-01-15'),  -- Client différent
+    (1, 'Laptop', '2026-02-10');  -- Date différente
 
 -- Combinaisons uniques de client_id et produit
 SELECT DISTINCT client_id, produit  
@@ -249,7 +249,7 @@ NULL       -- Une seule ligne NULL
 2
 ```
 
-**Remarque :** Même si Alice et Bob ont tous les deux `NULL` comme manager_id, DISTINCT ne garde qu'**un seul NULL**.
+**Remarque** : même si Alice et Bob ont tous les deux `NULL` comme manager_id, DISTINCT ne garde qu'**un seul NULL**.
 
 **Comportement :** `NULL = NULL` est normalement `NULL` (inconnu), mais pour DISTINCT, PostgreSQL traite les NULL comme identiques.
 
@@ -291,7 +291,7 @@ FROM (
 -- Les deux donnent le même résultat
 ```
 
-**Recommandation :** Préférez `COUNT(DISTINCT colonne)` pour la simplicité et la performance.
+**Recommandation** : préférez `COUNT(DISTINCT colonne)` pour la simplicité et la performance.
 
 ### COUNT(DISTINCT) avec NULL
 
@@ -304,11 +304,36 @@ SELECT COUNT(DISTINCT telephone) FROM clients;
 -- Résultat : 50 (les NULL ne sont pas comptés)
 ```
 
+### DISTINCT dans d'autres fonctions d'agrégation
+
+Le mot-clé `DISTINCT` peut s'employer **dans la plupart des fonctions d'agrégation** pour ne considérer que les valeurs uniques :
+
+```sql
+-- Somme des montants distincts (utile pour éviter de compter deux fois un même tarif)
+SELECT SUM(DISTINCT montant) FROM ventes;
+
+-- Moyenne des prix distincts (sans pondérer par fréquence)
+SELECT AVG(DISTINCT prix) FROM produits;
+
+-- Concaténer les villes distinctes en une liste séparée par virgules
+SELECT STRING_AGG(DISTINCT ville, ', ' ORDER BY ville) AS villes  
+FROM clients  
+WHERE pays = 'France';  
+-- Résultat : 'Lyon, Marseille, Paris'
+
+-- Agréger les tags distincts en tableau
+SELECT departement, ARRAY_AGG(DISTINCT poste ORDER BY poste) AS postes  
+FROM employes  
+GROUP BY departement;  
+```
+
+> ⚠️ **Performance** : `DISTINCT` dans une agrégation force un tri ou un hashage interne supplémentaire. Sur des grandes tables, à utiliser avec parcimonie ou en s'assurant que les colonnes concernées sont indexées.
+
 ---
 
 ## DISTINCT ON : Extension PostgreSQL
 
-`DISTINCT ON` est une **extension puissante** spécifique à PostgreSQL qui permet de sélectionner la **première ligne** de chaque groupe défini par les colonnes spécifiées.
+`DISTINCT ON` est une **extension puissante** spécifique à PostgreSQL qui permet de sélectionner la **première ligne** de chaque groupe défini par les colonnes spécifiées (« première » au sens de l'`ORDER BY`).
 
 ### Syntaxe
 
@@ -318,18 +343,18 @@ FROM table
 ORDER BY colonnes_groupement, colonnes_tri;  
 ```
 
-**Important :** `ORDER BY` est **fortement recommandé** avec DISTINCT ON pour contrôler quelle ligne est conservée dans chaque groupe.
+**Important** : `ORDER BY` est **fortement recommandé** avec DISTINCT ON pour contrôler quelle ligne est conservée dans chaque groupe.
 
 ### Différence entre DISTINCT et DISTINCT ON
 
-**DISTINCT :** Élimine les doublons sur **toutes les colonnes** du SELECT
+**DISTINCT** : élimine les doublons sur **toutes les colonnes** du SELECT
 
 ```sql
 SELECT DISTINCT ville, nom FROM clients;
 -- Garde les lignes où la combinaison (ville, nom) est unique
 ```
 
-**DISTINCT ON :** Élimine les doublons sur **les colonnes spécifiées** dans ON, mais retourne **toutes les colonnes** du SELECT
+**DISTINCT ON** : élimine les doublons sur **les colonnes spécifiées** dans ON, mais retourne **toutes les colonnes** du SELECT
 
 ```sql
 SELECT DISTINCT ON (ville) ville, nom FROM clients ORDER BY ville;
@@ -350,12 +375,12 @@ CREATE TABLE ventes (
 );
 
 INSERT INTO ventes (produit, vendeur, montant, date_vente) VALUES
-    ('Laptop', 'Alice', 1200, '2024-01-10'),
-    ('Laptop', 'Bob', 1150, '2024-01-15'),
-    ('Laptop', 'Charlie', 1300, '2024-01-20'),
-    ('Mouse', 'Alice', 25, '2024-01-12'),
-    ('Mouse', 'Bob', 30, '2024-01-18'),
-    ('Keyboard', 'Alice', 80, '2024-01-14');
+    ('Laptop', 'Alice', 1200, '2026-01-10'),
+    ('Laptop', 'Bob', 1150, '2026-01-15'),
+    ('Laptop', 'Charlie', 1300, '2026-01-20'),
+    ('Mouse', 'Alice', 25, '2026-01-12'),
+    ('Mouse', 'Bob', 30, '2026-01-18'),
+    ('Keyboard', 'Alice', 80, '2026-01-14');
 
 -- Pour chaque produit, obtenir la vente la plus récente
 SELECT DISTINCT ON (produit)
@@ -371,9 +396,9 @@ ORDER BY produit, date_vente DESC;
 ```
 produit  | vendeur | montant | date_vente
 ---------|---------|---------|------------
-Keyboard | Alice   | 80      | 2024-01-14  
-Laptop   | Charlie | 1300    | 2024-01-20  -- Vente la plus récente pour Laptop  
-Mouse    | Bob     | 30      | 2024-01-18  -- Vente la plus récente pour Mouse  
+Keyboard | Alice   | 80      | 2026-01-14  
+Laptop   | Charlie | 1300    | 2026-01-20  -- Vente la plus récente pour Laptop  
+Mouse    | Bob     | 30      | 2026-01-18  -- Vente la plus récente pour Mouse  
 ```
 
 **Explication :**
@@ -383,7 +408,7 @@ Mouse    | Bob     | 30      | 2024-01-18  -- Vente la plus récente pour Mouse
 
 ### Ordre du ORDER BY avec DISTINCT ON
 
-**Règle importante :** Les colonnes dans `DISTINCT ON` doivent apparaître **en premier** dans `ORDER BY`.
+**Règle importante** : les colonnes dans `DISTINCT ON` doivent apparaître **en premier** dans `ORDER BY`.
 
 ```sql
 -- ✅ Correct : produit est en premier dans ORDER BY
@@ -847,7 +872,7 @@ SELECT DISTINCT ON (categorie) categorie, nom_produit, prix
 FROM produits  
 ORDER BY categorie, prix DESC;  
 
--- Avec window function (plus flexible)
+-- Avec window function (plus flexible, permet le top N)
 SELECT *  
 FROM (  
     SELECT
@@ -858,9 +883,49 @@ FROM (
     FROM produits
 ) sub
 WHERE rang = 1;
+
+-- Avantage des window functions : on peut récupérer le top 3 par catégorie
+SELECT *  
+FROM (  
+    SELECT
+        categorie,
+        nom_produit,
+        prix,
+        ROW_NUMBER() OVER (PARTITION BY categorie ORDER BY prix DESC) as rang
+    FROM produits
+) sub
+WHERE rang <= 3;  -- Top 3 par catégorie (impossible avec DISTINCT ON)
 ```
 
-### 3. EXISTS pour vérification d'existence
+### 3. LATERAL JOIN pour le top N par groupe
+
+`LATERAL` permet à une sous-requête de droite de référencer les colonnes de gauche — c'est l'outil moderne pour le top N par groupe, souvent plus performant que les window functions sur les grands volumes :
+
+```sql
+-- Top 3 produits les plus chers par catégorie
+SELECT c.nom_categorie, p.nom_produit, p.prix  
+FROM categories c  
+CROSS JOIN LATERAL (  
+    SELECT nom_produit, prix
+    FROM produits
+    WHERE categorie_id = c.id
+    ORDER BY prix DESC
+    LIMIT 3
+) p;
+
+-- Avec index sur (categorie_id, prix DESC), c'est généralement le PLUS rapide
+-- pour ce type de requête sur de grandes tables.
+```
+
+> 💡 **Quand utiliser quoi pour « top N par groupe » ?**
+>
+> | Méthode | Top 1 | Top N | Performance grande table | Complexité |  
+> |---------|-------|-------|--------------------------|------------|  
+> | `DISTINCT ON` | ✅ | ❌ | Moyenne | Simple |  
+> | Window function `ROW_NUMBER()` | ✅ | ✅ | Bonne | Moyenne |  
+> | `LATERAL JOIN` | ✅ | ✅ | **Excellente** (avec bon index) | Avancée |
+
+### 4. EXISTS pour vérification d'existence
 
 ```sql
 -- Au lieu de compter les DISTINCT
@@ -906,7 +971,7 @@ SELECT EXISTS (
 5. **DISTINCT ON est spécifique à PostgreSQL**
    - Garde une seule ligne par groupe
    - Nécessite ORDER BY pour être prévisible
-   - Très puissant pour "top 1 par groupe"
+   - Très puissant pour « top 1 par groupe »
 
 6. **ORDER BY doit commencer par les colonnes de DISTINCT ON**
    - Les expressions DISTINCT ON doivent correspondre au début de ORDER BY
@@ -934,12 +999,12 @@ SELECT EXISTS (
 
 `DISTINCT` est un outil simple mais puissant pour éliminer les doublons dans vos résultats. Sa syntaxe est intuitive et son comportement prévisible : il compare toutes les colonnes sélectionnées et garde une seule occurrence de chaque combinaison unique.
 
-`DISTINCT ON`, extension PostgreSQL, va plus loin en permettant de contrôler précisément quelle ligne conserver dans chaque groupe. C'est particulièrement utile pour obtenir "la dernière valeur", "le meilleur prix", ou "la première occurrence" par catégorie.
+`DISTINCT ON`, extension PostgreSQL, va plus loin en permettant de contrôler précisément quelle ligne conserver dans chaque groupe. C'est particulièrement utile pour obtenir « la dernière valeur », « le meilleur prix », ou « la première occurrence » par catégorie.
 
 Quelques conseils finaux :
 - Utilisez DISTINCT quand vous avez besoin de valeurs uniques simples
 - Utilisez GROUP BY quand vous avez besoin d'agrégations
-- Utilisez DISTINCT ON pour le "top 1" par groupe
+- Utilisez DISTINCT ON pour le « top 1 » par groupe
 - Optimisez avec des index sur les colonnes concernées
 - Évitez DISTINCT quand il est inutile (colonnes déjà uniques)
 

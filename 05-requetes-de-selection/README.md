@@ -6,7 +6,7 @@
 
 Bienvenue dans le chapitre le plus fondamental de votre apprentissage de PostgreSQL : les **requêtes de sélection**. C'est ici que commence véritablement votre voyage dans le monde des bases de données relationnelles.
 
-Si vous deviez maîtriser un seul aspect de SQL, ce serait celui-ci. Pourquoi ? Parce que **90% de votre travail quotidien avec PostgreSQL consistera à interroger des données** : les lire, les filtrer, les trier, les analyser, les transformer.
+Si vous deviez maîtriser un seul aspect de SQL, ce serait celui-ci. Pourquoi ? Parce que **90 % de votre travail quotidien avec PostgreSQL consistera à interroger des données** : les lire, les filtrer, les trier, les analyser, les transformer.
 
 Dans ce chapitre, nous allons explorer en profondeur le **DQL (Data Query Language)**, c'est-à-dire le langage d'interrogation de données, dont la pierre angulaire est la clause `SELECT`.
 
@@ -31,8 +31,8 @@ Le **DQL** se concentre exclusivement sur la **lecture** des données. Il ne mod
 ### Pourquoi le DQL est-il si important ?
 
 Dans la vie d'une application :
-- **Lecture (DQL)** : 80-95% des requêtes  
-- **Écriture (DML)** : 5-20% des requêtes
+- **Lecture (DQL)** : 80 à 95 % des requêtes  
+- **Écriture (DML)** : 5 à 20 % des requêtes
 
 Les applications **lisent** beaucoup plus qu'elles n'écrivent. Voici pourquoi maîtriser le DQL est crucial :
 
@@ -99,9 +99,9 @@ SELECT * FROM clients;
 ```
 
 **Décortiquons cette requête :**
-- `SELECT` : Je veux lire des données  
-- `*` : Toutes les colonnes (l'astérisque signifie "tout")  
-- `FROM clients` : De la table nommée "clients"
+- `SELECT` : je veux lire des données  
+- `*` : toutes les colonnes (l'astérisque signifie « tout »)  
+- `FROM clients` : de la table nommée « clients »
 
 **Résultat hypothétique :**
 ```
@@ -114,7 +114,7 @@ id | nom      | prenom  | email                | ville      | age
 5  | Petit    | Luc     | luc.petit@mail.com   | Toulouse   | 52
 ```
 
-**Important :** Le `*` est pratique pour explorer rapidement une table, mais en production, il est recommandé de **spécifier explicitement** les colonnes dont vous avez besoin.
+**Important** : le `*` est pratique pour explorer rapidement une table, mais en production, il est recommandé de **spécifier explicitement** les colonnes dont vous avez besoin (réduit le trafic réseau, évite d'être surpris par l'ajout de colonnes, et permet à PostgreSQL d'utiliser des optimisations comme l'**Index-Only Scan**).
 
 ### Sélectionner des colonnes spécifiques
 
@@ -226,6 +226,19 @@ Pierre Bernard | p.bernard@mail.com
 
 **L'opérateur `||`** est utilisé pour concaténer (coller ensemble) des chaînes de caractères.
 
+> ⚠️ **Piège du NULL** : si une seule des chaînes concaténées est `NULL`, le résultat entier est `NULL`. Par exemple, si `prenom` est `NULL`, alors `prenom || ' ' || nom` renvoie `NULL` (pas seulement « ` ` + nom »). Pour éviter ce piège, utilisez la fonction `CONCAT()` qui ignore les `NULL`, ou `COALESCE()` pour fournir une valeur de remplacement. Ce comportement sera détaillé en section [5.3 sur le piège du NULL](/05-requetes-de-selection/03-piege-du-null.md).
+>
+> ```sql
+> -- Avec ||, si prenom est NULL → résultat NULL
+> SELECT NULL || ' ' || 'Dupont';  -- NULL
+>
+> -- Avec CONCAT, les NULL sont traités comme une chaîne vide
+> SELECT CONCAT(NULL, ' ', 'Dupont');  -- ' Dupont'
+>
+> -- Avec COALESCE, on fournit une valeur de repli
+> SELECT COALESCE(NULL, '(prénom inconnu)') || ' ' || 'Dupont';  -- '(prénom inconnu) Dupont'
+> ```
+
 ### Fonctions dans SELECT
 
 PostgreSQL offre des centaines de fonctions intégrées :
@@ -281,25 +294,25 @@ SELECT
     nom,
     prenom,
     'Client actif' AS statut,
-    2024 AS annee
+    EXTRACT(YEAR FROM CURRENT_DATE)::INTEGER AS annee_courante
 FROM clients;
 ```
 
-**Résultat :**
+**Résultat (en 2026) :**
 ```
-nom      | prenom  | statut        | annee
----------|---------|---------------|------
-Dupont   | Jean    | Client actif  | 2024  
-Martin   | Sophie  | Client actif  | 2024  
-Bernard  | Pierre  | Client actif  | 2024  
+nom      | prenom  | statut        | annee_courante
+---------|---------|---------------|----------------
+Dupont   | Jean    | Client actif  | 2026  
+Martin   | Sophie  | Client actif  | 2026  
+Bernard  | Pierre  | Client actif  | 2026  
 ```
 
 **Types de valeurs littérales :**
-- **Texte** : Entre apostrophes `'Bonjour'`  
-- **Nombres** : Sans délimiteurs `42`, `3.14`  
+- **Texte** : entre apostrophes simples — `'Bonjour'`, `'L''apostrophe doublée pour l''échapper'`  
+- **Nombres** : sans délimiteurs — `42`, `3.14`, `-15`  
 - **Booléens** : `TRUE`, `FALSE`  
-- **Dates** : `'2024-11-19'`, `'2024-11-19 14:30:00'`  
-- **NULL** : Valeur inconnue/absente
+- **Dates** : `'2026-11-19'`, `'2026-11-19 14:30:00+01'` (avec fuseau)  
+- **NULL** : valeur inconnue/absente
 
 ---
 
@@ -332,7 +345,12 @@ Legrand  | 17  | Mineur
 Moreau   | 68  | Senior  
 ```
 
-**Syntaxe de CASE :**
+### Deux formes de CASE
+
+PostgreSQL propose **deux syntaxes** de `CASE` :
+
+**1. CASE « cherché » (searched CASE)** — chaque branche est une condition booléenne complète :
+
 ```sql
 CASE
     WHEN condition1 THEN resultat1
@@ -342,7 +360,56 @@ CASE
 END
 ```
 
+**2. CASE « simple » (simple CASE)** — on compare une seule expression à plusieurs valeurs :
+
+```sql
+CASE expression
+    WHEN valeur1 THEN resultat1
+    WHEN valeur2 THEN resultat2
+    WHEN valeur3 THEN resultat3
+    ELSE resultat_par_defaut
+END
+```
+
+**Exemple comparatif :**
+
+```sql
+-- CASE simple : plus concis pour des comparaisons d'égalité
+SELECT nom,
+    CASE jour_semaine
+        WHEN 1 THEN 'Lundi'
+        WHEN 2 THEN 'Mardi'
+        WHEN 3 THEN 'Mercredi'
+        WHEN 4 THEN 'Jeudi'
+        WHEN 5 THEN 'Vendredi'
+        ELSE 'Week-end'
+    END AS jour_nom
+FROM agenda;
+
+-- CASE cherché : plus flexible (conditions arbitraires)
+SELECT nom,
+    CASE
+        WHEN jour_semaine BETWEEN 1 AND 5 THEN 'Jour ouvré'
+        WHEN jour_semaine IN (6, 7) THEN 'Week-end'
+        ELSE 'Jour inconnu'
+    END AS type_jour
+FROM agenda;
+```
+
 L'expression `CASE` évalue les conditions dans l'ordre et retourne le résultat de la **première condition vraie**. Si aucune condition n'est vraie, elle retourne la valeur du `ELSE` (ou `NULL` si pas de `ELSE`).
+
+> ⚠️ **Piège avec CASE simple et NULL** : la forme `CASE expression WHEN valeur THEN …` utilise l'opérateur `=`, qui retourne `NULL` quand l'expression vaut `NULL` (logique ternaire). Pour tester explicitement `NULL`, utilisez la forme cherchée avec `IS NULL` :
+>
+> ```sql
+> -- ❌ Ne fonctionne pas comme attendu
+> CASE statut WHEN NULL THEN 'Aucun' ELSE statut END  -- WHEN NULL ne matchera jamais !
+>
+> -- ✅ Forme correcte avec CASE cherché
+> CASE WHEN statut IS NULL THEN 'Aucun' ELSE statut END
+>
+> -- ✅ Ou utiliser COALESCE (plus concis)
+> COALESCE(statut, 'Aucun')
+> ```
 
 ---
 
@@ -361,12 +428,22 @@ SELECT * FROM employes;
 Vous pouvez lire depuis plusieurs tables simultanément (nous verrons les jointures en détail plus tard) :
 
 ```sql
+-- Syntaxe moderne et recommandée : JOIN explicite
+SELECT
+    employes.nom,
+    departements.nom_departement
+FROM employes  
+JOIN departements ON employes.departement_id = departements.id;  
+
+-- Syntaxe ancienne (jointure dite « cartésienne filtrée » avec virgule) — déconseillée
 SELECT
     employes.nom,
     departements.nom_departement
 FROM employes, departements  
 WHERE employes.departement_id = departements.id;  
 ```
+
+> ⚠️ **Préférez la syntaxe `JOIN … ON`** : elle est plus lisible, plus explicite, et sépare clairement la **jointure** (relation entre tables) du **filtrage** (clause `WHERE`). La syntaxe avec virgule date du SQL des années 1980 et reste source d'erreurs (oubli du `WHERE` → produit cartésien sur des millions de lignes).
 
 ### Sous-requêtes dans FROM
 
@@ -398,7 +475,7 @@ SELECT 2 + 2;
 -- Date et heure actuelles
 SELECT CURRENT_DATE, CURRENT_TIME, NOW();
 
--- Résultat : 2024-11-19 | 14:30:45.123 | 2024-11-19 14:30:45.123
+-- Résultat exemple : 2026-05-15 | 14:30:45.123 | 2026-05-15 14:30:45.123+02
 
 -- Tester une fonction
 SELECT UPPER('bonjour');
@@ -442,6 +519,8 @@ Afficher les résultats **page par page** plutôt que tout d'un coup.
 
 ### 5.6. DISTINCT et élimination des doublons
 Obtenir des **valeurs uniques** sans doublons.
+
+> 📚 **Pour aller plus loin** : la suite de la formation (parties 2, 3 et 4) couvre les jointures (`JOIN`), les sous-requêtes corrélées, les CTE (`WITH`), les fonctions de fenêtrage (`OVER`), et l'optimisation par index. Ce chapitre se concentre sur les fondamentaux du `SELECT` sur une table unique.
 
 ---
 
@@ -495,14 +574,14 @@ ORDER BY nom;
 ### 4. Commentez les requêtes complexes
 
 ```sql
--- Rapport mensuel des ventes par région
+-- Rapport des ventes de l'année par région
 -- Inclut uniquement les régions avec plus de 10 ventes
 SELECT
     region,
     COUNT(*) AS nb_ventes,
     SUM(montant) AS total_ventes
 FROM ventes  
-WHERE date_vente >= '2024-01-01'  
+WHERE date_vente >= DATE_TRUNC('year', CURRENT_DATE)  
 GROUP BY region  
 HAVING COUNT(*) > 10  
 ORDER BY total_ventes DESC;  
@@ -720,11 +799,11 @@ SELECT titre, annee_publication FROM livres WHERE annee_publication > 1950;
 -- 5. Livres triés par année
 SELECT titre, annee_publication FROM livres ORDER BY annee_publication DESC;
 
--- 6. Âge des livres
+-- 6. Âge des livres (en utilisant l'année courante, pas une constante figée)
 SELECT
     titre,
     annee_publication,
-    2024 - annee_publication AS age_livre
+    EXTRACT(YEAR FROM CURRENT_DATE)::INTEGER - annee_publication AS age_livre
 FROM livres;
 
 -- 7. Catégorie par âge

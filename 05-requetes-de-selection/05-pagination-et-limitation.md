@@ -67,7 +67,7 @@ AirPods Max          | 599
 
 ### LIMIT sans ORDER BY : Comportement imprévisible
 
-**⚠️ Attention :** Sans `ORDER BY`, l'ordre des lignes est **non déterministe**.
+**⚠️ Attention** : sans `ORDER BY`, l'ordre des lignes est **non déterministe**.
 
 ```sql
 -- ❌ Ordre imprévisible (peut changer à chaque exécution)
@@ -84,7 +84,7 @@ LIMIT 10;
 - Cet ordre peut changer après des UPDATE, DELETE, VACUUM, etc.
 - Résultat : vous pourriez obtenir des lignes différentes à chaque exécution
 
-**Règle d'or :** Utilisez **toujours** `ORDER BY` avec `LIMIT` pour des résultats prévisibles.
+**Règle d'or** : utilisez **toujours** `ORDER BY` avec `LIMIT` pour des résultats prévisibles.
 
 ### Syntaxe standard SQL : FETCH FIRST
 
@@ -104,6 +104,28 @@ OFFSET 20 ROWS FETCH FIRST 10 ROWS ONLY;
 ```
 
 Les deux syntaxes sont équivalentes. `LIMIT` est plus concis et très répandu, `FETCH FIRST` est conforme au standard SQL et portable entre SGBD.
+
+#### `WITH TIES` : inclure les égalités du dernier rang
+
+La forme `FETCH FIRST … ROWS WITH TIES` (PostgreSQL 13+) inclut **toutes les lignes ayant la même valeur** que la dernière ligne du `ORDER BY`. Très utile pour les classements où plusieurs personnes sont ex æquo.
+
+```sql
+-- Top 3 STRICT : exactement 3 lignes, même en cas d'égalité (choix arbitraire)
+SELECT nom, score  
+FROM joueurs  
+ORDER BY score DESC  
+LIMIT 3;  
+-- Si plusieurs joueurs ont 100, seuls 3 sont retournés (lesquels ? imprévisible sans tie-breaker)
+
+-- Top 3 AVEC ÉGALITÉS : tous les joueurs ex æquo au 3e rang sont inclus
+SELECT nom, score  
+FROM joueurs  
+ORDER BY score DESC  
+FETCH FIRST 3 ROWS WITH TIES;  
+-- Si 5 joueurs ont 100 points en tête, retourne les 5 (pas seulement 3)
+
+-- ⚠️ WITH TIES n'existe qu'avec FETCH FIRST, pas avec LIMIT
+```
 
 ### Cas d'usage de LIMIT
 
@@ -237,7 +259,7 @@ OFFSET 20 LIMIT 10
 
 ## Pagination : Afficher les résultats page par page
 
-La **pagination** consiste à diviser un grand ensemble de résultats en plusieurs "pages" plus petites.
+La **pagination** consiste à diviser un grand ensemble de résultats en plusieurs « pages » plus petites.
 
 ### Principe de la pagination
 
@@ -393,8 +415,8 @@ LIMIT 20 OFFSET 1980;  -- (100 - 1) × 20
 ```
 
 Idéal pour des interfaces avec :
-- Sélecteur de page (1, 2, 3, ... 50)
-- Lien "Aller à la page X"
+- Sélecteur de page (1, 2, 3, … 50)
+- Lien « Aller à la page X »
 
 ### 3. Comptage de pages précis
 
@@ -487,9 +509,9 @@ Temps (ms)
 Imaginez ce scénario :
 1. Un utilisateur consulte la page 1 (résultats 1-20)  
 2. Pendant qu'il lit, 5 nouvelles lignes sont insérées au début  
-3. Il clique sur "Page 2" (résultats 21-40)
+3. Il clique sur « Page 2 » (résultats 21-40)
 
-**Résultat :** Il voit certains éléments **deux fois** (ceux qui ont "glissé" de la page 1 à la page 2).
+**Résultat** : il voit certains éléments **deux fois** (ceux qui ont « glissé » de la page 1 à la page 2).
 
 **Exemple concret :**
 
@@ -527,7 +549,7 @@ SELECT * FROM produits ORDER BY prix LIMIT 10 OFFSET 10; -- Page 2
 -- Résultat : doublons ou éléments manqués
 ```
 
-**✅ Solution :** Toujours trier avec une colonne **unique** en second critère :
+**✅ Solution** : toujours trier avec une colonne **unique** en second critère :
 
 ```sql
 -- ✅ Tri stable
@@ -538,7 +560,7 @@ LIMIT 10 OFFSET 10;
 
 ### 4. Problème de mémoire : COUNT(*) coûteux
 
-Pour afficher "Page X sur Y", vous devez compter le total :
+Pour afficher « Page X sur Y », vous devez compter le total :
 
 ```sql
 SELECT COUNT(*) FROM produits WHERE categorie = 'electronique';
@@ -547,9 +569,49 @@ SELECT COUNT(*) FROM produits WHERE categorie = 'electronique';
 Sur de très grandes tables, `COUNT(*)` peut être **très lent** (scan complet de la table).
 
 **Alternatives :**
-- Estimer le nombre approximatif (pg_class.reltuples)
+- Estimer le nombre approximatif (`pg_class.reltuples` ou `EXPLAIN`)
 - Ne pas afficher le nombre total de pages
-- Utiliser uniquement "Précédent" / "Suivant"
+- Utiliser uniquement « Précédent » / « Suivant »
+
+#### Estimation rapide via `pg_class` (toute la table)
+
+```sql
+-- Approximation instantanée du nombre de lignes d'une table (sans scan)
+SELECT reltuples::BIGINT AS estimation  
+FROM pg_class  
+WHERE relname = 'produits';  
+-- → Valeur mise à jour par ANALYZE/autovacuum, donc approximative mais très rapide
+```
+
+#### Estimation via `EXPLAIN` (avec un filtre)
+
+Pour estimer le résultat d'une requête filtrée sans l'exécuter :
+
+```sql
+-- Exécuter EXPLAIN et parser sa sortie depuis l'application :
+EXPLAIN (FORMAT JSON)  
+SELECT * FROM produits WHERE categorie = 'electronique';  
+
+-- Le JSON contient une clé "Plan Rows" avec l'estimation.
+-- Une fonction PL/pgSQL peut automatiser cela :
+CREATE OR REPLACE FUNCTION estimate_count(query TEXT) RETURNS BIGINT AS $$  
+DECLARE  
+    plan JSONB;
+BEGIN
+    EXECUTE 'EXPLAIN (FORMAT JSON) ' || query INTO plan;
+    RETURN (plan -> 0 -> 'Plan' ->> 'Plan Rows')::BIGINT;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Utilisation
+SELECT estimate_count('SELECT * FROM produits WHERE categorie = ''electronique''');
+-- Approximation < 1ms vs COUNT(*) qui pourrait prendre plusieurs secondes
+```
+
+> 💡 **Quand utiliser quoi ?**  
+> - **`COUNT(*)` exact** : si le total doit être strictement correct (rapport comptable, audit)  
+> - **Estimation `pg_class`** : pour afficher « environ X produits »  
+> - **Estimation `EXPLAIN`** : pour les filtres dynamiques où une approximation suffit (UI de recherche)
 
 ---
 
@@ -599,7 +661,7 @@ LIMIT 20;
 - ✅ **Pas besoin de OFFSET**
 
 **Inconvénients :**
-- ❌ Impossible de sauter directement à une page arbitraire (pas de "page 50")  
+- ❌ Impossible de sauter directement à une page arbitraire (pas de « page 50 »)  
 - ❌ Uniquement navigation séquentielle (précédent/suivant)  
 - ❌ Plus complexe à implémenter
 
@@ -613,10 +675,10 @@ WHERE (date_creation, id) > ('1900-01-01', 0)  -- Depuis le début
 ORDER BY date_creation DESC, id DESC  
 LIMIT 20;  
 
--- Dernière ligne : date_creation='2024-11-15', id=150
+-- Dernière ligne : date_creation='2026-11-15', id=150
 -- Page 2
 SELECT * FROM articles  
-WHERE (date_creation, id) < ('2024-11-15', 150)  
+WHERE (date_creation, id) < ('2026-11-15', 150)  
 ORDER BY date_creation DESC, id DESC  
 LIMIT 20;  
 ```
@@ -626,7 +688,7 @@ PostgreSQL supporte la comparaison de tuples, très pratique pour keyset paginat
 
 ### 2. Cursors (côté serveur)
 
-Les **cursors** permettent de "garder une position" côté serveur dans un ensemble de résultats.
+Les **cursors** permettent de « garder une position » côté serveur dans un ensemble de résultats.
 
 **Exemple :**
 
@@ -670,11 +732,11 @@ WHERE timestamp < NOW()
 ORDER BY timestamp DESC  
 LIMIT 20;  
 
--- Dernier message : timestamp = '2024-11-19 10:30:00'
+-- Dernier message : timestamp = '2026-11-19 10:30:00'
 
 -- Page 2 : les 20 messages précédents
 SELECT * FROM messages  
-WHERE timestamp < '2024-11-19 10:30:00'  
+WHERE timestamp < '2026-11-19 10:30:00'  
 ORDER BY timestamp DESC  
 LIMIT 20;  
 ```
@@ -684,7 +746,7 @@ LIMIT 20;
 - Historique de messages (chat)
 - Logs système
 
-### 4. Pagination "infinie" (Infinite Scroll)
+### 4. Pagination « infinie » (Infinite Scroll)
 
 Au lieu de pages numérotées, charger automatiquement plus de résultats en scrollant :
 
@@ -777,7 +839,7 @@ FROM pg_class
 WHERE relname = 'produits';  
 
 -- Ou ne montrez pas le total
--- Interface : [Précédent] [Suivant] au lieu de "Page 5 sur 1000"
+-- Interface : [Précédent] [Suivant] au lieu de « Page 5 sur 1000 »
 ```
 
 ### 7. Valider les paramètres d'entrée
@@ -904,7 +966,7 @@ SELECT * FROM get_products_after(40, 20);
 
 ### 1. Site e-commerce (catalogue produits)
 
-**Recommandation :** LIMIT/OFFSET pour < 10 000 produits, keyset au-delà
+**Recommandation** : LIMIT/OFFSET pour < 10 000 produits, keyset au-delà
 
 ```sql
 -- Navigation par page (1, 2, 3, ..., 50)
@@ -919,7 +981,7 @@ CREATE INDEX idx_produits_cat_prix ON produits(categorie, prix, id);
 
 ### 2. Réseau social (fil d'actualité)
 
-**Recommandation :** Keyset pagination (infinite scroll)
+**Recommandation** : keyset pagination (infinite scroll)
 
 ```sql
 -- Charger les nouveaux posts
@@ -931,7 +993,7 @@ LIMIT 50;
 
 ### 3. Tableau de bord analytique
 
-**Recommandation :** LIMIT sans pagination (afficher top/bottom N)
+**Recommandation** : LIMIT sans pagination (afficher top/bottom N)
 
 ```sql
 -- Top 20 des vendeurs
@@ -946,20 +1008,20 @@ LIMIT 20;
 
 ### 4. Export de données
 
-**Recommandation :** Streaming ou batch processing (pas de pagination)
+**Recommandation** : streaming ou batch processing (pas de pagination)
 
 ```sql
 -- Utiliser COPY pour exporter massivement
 COPY (
     SELECT * FROM commandes
-    WHERE date > '2024-01-01'
+    WHERE date > '2026-01-01'
     ORDER BY id
 ) TO '/tmp/export.csv' WITH CSV HEADER;
 ```
 
 ### 5. API REST
 
-**Recommandation :** Keyset pagination + links hypermedia
+**Recommandation** : keyset pagination + links hypermedia
 
 ```json
 {

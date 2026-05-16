@@ -115,10 +115,15 @@ SELECT nom, date_embauche
 FROM employes  
 WHERE date_embauche > '2020-01-01';  
 
--- Commandes passées en 2024
+-- Commandes passées en 2026
 SELECT * FROM commandes  
-WHERE date_commande >= '2024-01-01'  
-  AND date_commande < '2025-01-01';
+WHERE date_commande >= '2026-01-01'  
+  AND date_commande <  '2027-01-01';
+
+-- Variante portable : commandes de l'année courante
+SELECT * FROM commandes  
+WHERE date_commande >= DATE_TRUNC('year', CURRENT_DATE)  
+  AND date_commande <  DATE_TRUNC('year', CURRENT_DATE) + INTERVAL '1 year';
 ```
 
 ---
@@ -171,7 +176,7 @@ WHERE salaire > 40000
   AND anciennete >= 5;
 ```
 
-**Principe :** Plus vous ajoutez de conditions avec `AND`, plus le filtrage est **restrictif** (moins de lignes retournées).
+**Principe** : plus vous ajoutez de conditions avec `AND`, plus le filtrage est **restrictif** (moins de lignes retournées).
 
 ### L'opérateur OR (OU logique)
 
@@ -210,7 +215,7 @@ FROM commandes
 WHERE priorite = 'haute' OR priorite = 'très haute';  
 ```
 
-**Principe :** Plus vous ajoutez de conditions avec `OR`, plus le filtrage est **permissif** (plus de lignes retournées).
+**Principe** : plus vous ajoutez de conditions avec `OR`, plus le filtrage est **permissif** (plus de lignes retournées).
 
 ### L'opérateur NOT (NON logique)
 
@@ -411,6 +416,102 @@ WHERE departement NOT IN ('IT', 'RH', NULL)
 -- Nous verrons cela en détail dans la section 5.3
 ```
 
+### IN avec une sous-requête
+
+`IN` peut aussi prendre une **sous-requête** au lieu d'une liste fixe — très puissant pour les filtres dynamiques :
+
+```sql
+-- Employés qui travaillent dans des départements ayant un budget > 1M€
+SELECT nom, departement  
+FROM employes  
+WHERE departement IN (  
+    SELECT nom_departement
+    FROM departements
+    WHERE budget > 1000000
+);
+
+-- Produits qui ont été commandés au moins une fois cette année
+SELECT nom_produit  
+FROM produits  
+WHERE id IN (  
+    SELECT DISTINCT produit_id
+    FROM commandes
+    WHERE date_commande >= DATE_TRUNC('year', CURRENT_DATE)
+);
+```
+
+> ⚠️ **Piège `NOT IN` avec sous-requête** : si la sous-requête peut retourner `NULL`, `NOT IN` ne retournera **aucune** ligne. Solution : utiliser `NOT EXISTS` (voir section suivante) ou filtrer les NULL dans la sous-requête.
+
+### EXISTS et NOT EXISTS
+
+`EXISTS (sous-requête)` retourne `TRUE` si la sous-requête renvoie **au moins une ligne**, `FALSE` sinon. C'est l'équivalent **NULL-safe** de `IN` et souvent **plus performant** sur de grandes tables (PostgreSQL peut s'arrêter dès qu'il trouve une correspondance — short-circuit).
+
+```sql
+-- Clients ayant passé au moins une commande
+SELECT nom  
+FROM clients c  
+WHERE EXISTS (  
+    SELECT 1 FROM commandes co
+    WHERE co.client_id = c.id
+);
+
+-- Équivalent avec IN (peut être moins performant)
+SELECT nom  
+FROM clients  
+WHERE id IN (SELECT client_id FROM commandes);  
+```
+
+```sql
+-- Clients SANS commande (NOT EXISTS, NULL-safe)
+SELECT nom  
+FROM clients c  
+WHERE NOT EXISTS (  
+    SELECT 1 FROM commandes co
+    WHERE co.client_id = c.id
+);
+
+-- À comparer avec NOT IN (problématique si client_id peut être NULL)
+SELECT nom  
+FROM clients  
+WHERE id NOT IN (SELECT client_id FROM commandes);  -- ⚠️ Risque NULL  
+```
+
+> 💡 **Règle pratique** :  
+> - **`IN` / `NOT IN`** : OK pour des listes fixes ou des sous-requêtes garanties sans NULL  
+> - **`EXISTS` / `NOT EXISTS`** : préférable pour les sous-requêtes corrélées, surtout si la colonne peut contenir des NULL
+
+### ANY et ALL : comparaisons avec des ensembles
+
+`ANY` et `ALL` permettent de comparer une valeur à un ensemble (liste, tableau, sous-requête) avec un opérateur quelconque (`>`, `<`, `=`, `<>`…). Souvent moins connus mais très puissants.
+
+```sql
+-- Employés gagnant plus que AU MOINS UN employé de l'IT
+SELECT nom, salaire  
+FROM employes  
+WHERE salaire > ANY (  
+    SELECT salaire FROM employes WHERE departement = 'IT'
+);
+-- Équivalent : > MIN(salaire IT)
+
+-- Employés gagnant plus que TOUS les employés de l'IT
+SELECT nom, salaire  
+FROM employes  
+WHERE salaire > ALL (  
+    SELECT salaire FROM employes WHERE departement = 'IT'
+);
+-- Équivalent : > MAX(salaire IT)
+
+-- ANY avec un tableau littéral (PostgreSQL)
+SELECT nom FROM employes  
+WHERE departement = ANY (ARRAY['IT', 'RH', 'Finance']);  
+-- Équivalent à : departement IN ('IT', 'RH', 'Finance')
+
+-- = ANY(array) est l'équivalent moderne et performant de IN sur un tableau
+-- C'est utile en particulier avec les paramètres applicatifs (Postgres prepared statements)
+```
+
+> 📚 **`SOME`** est un synonyme de `ANY` (standard SQL, rarement utilisé en pratique).
+
 ### BETWEEN : Intervalle de valeurs
 
 `BETWEEN` vérifie si une valeur est **comprise entre** deux bornes (incluses).
@@ -420,7 +521,7 @@ WHERE departement NOT IN ('IT', 'RH', NULL)
 WHERE colonne BETWEEN valeur_min AND valeur_max
 ```
 
-**Important :** Les bornes sont **incluses** (c'est un intervalle fermé).
+**Important** : les bornes sont **incluses** (c'est un intervalle fermé).
 
 **Exemples :**
 
@@ -440,9 +541,15 @@ SELECT nom_produit, prix
 FROM produits  
 WHERE prix BETWEEN 10 AND 50;  
 
--- Commandes passées en 2024
+-- Commandes passées en 2026
 SELECT * FROM commandes  
-WHERE date_commande BETWEEN '2024-01-01' AND '2024-12-31';  
+WHERE date_commande BETWEEN '2026-01-01' AND '2026-12-31';  
+
+-- ⚠️ Attention : BETWEEN sur une colonne TIMESTAMP exclut les heures du 31/12 après 00:00:00.
+-- Préférez la forme demi-ouverte pour ne rien manquer :
+SELECT * FROM commandes  
+WHERE date_commande >= '2026-01-01'  
+  AND date_commande <  '2027-01-01';
 
 -- Étudiants ayant entre 18 et 25 ans
 SELECT nom, age FROM etudiants  
@@ -515,16 +622,29 @@ WHERE nom_produit LIKE '%ordinateur%';
 
 **Exemples avec _ :**
 
-```sql
--- Codes produit format : 3 lettres + 2 chiffres (ex: ABC12)
-SELECT code FROM produits  
-WHERE code LIKE '___##';  -- 3 underscores + 2 caractères  
+> ⚠️ **Rappel important** : dans `LIKE`, **seuls** `%` et `_` sont des caractères spéciaux. Tous les autres (`#`, `*`, `?`, `[`, etc.) sont des caractères littéraux. Pour distinguer chiffres et lettres, utilisez `SIMILAR TO` ou les **expressions régulières POSIX** avec `~`.
 
--- Numéros de téléphone format : 06-##-##-##-##
+```sql
+-- Codes produit de 5 caractères (5 caractères quelconques)
+SELECT code FROM produits  
+WHERE code LIKE '_____';  -- 5 underscores = 5 caractères quelconques  
+
+-- Pour distinguer « 3 lettres + 2 chiffres » (ex : ABC12), il faut une regex :
+SELECT code FROM produits  
+WHERE code SIMILAR TO '[A-Za-z]{3}[0-9]{2}';  
+-- Ou avec une regex POSIX (plus rapide et plus expressive) :
+SELECT code FROM produits  
+WHERE code ~ '^[A-Za-z]{3}[0-9]{2}$';  
+
+-- Numéros de téléphone au format 06-XX-XX-XX-XX (les X étant n'importe quel caractère)
 SELECT telephone FROM clients  
 WHERE telephone LIKE '06-__-__-__-__';  
 
--- Codes postaux parisiens (750## ou 751##)
+-- Pour exiger spécifiquement des chiffres, utilisez une regex :
+SELECT telephone FROM clients  
+WHERE telephone ~ '^0[67]-[0-9]{2}-[0-9]{2}-[0-9]{2}-[0-9]{2}$';  
+
+-- Codes postaux parisiens (75xxx)
 SELECT ville, code_postal FROM adresses  
 WHERE code_postal LIKE '75%';  
 ```
@@ -537,9 +657,11 @@ SELECT prenom FROM employes
 WHERE prenom LIKE 'M____';  -- M + 4 underscores  
 -- Trouve : Marie, Marco, Manon, etc.
 
--- Emails du format : prénom.nom@entreprise.com
+-- ⚠️ Attention : 'M____' compte exactement 5 caractères. Pour « au moins 5 », utilisez 'M____%'.
+
+-- Emails d'au moins un caractère de prénom suivi d'un point puis du nom (ex: j.dupont@…)
 SELECT email FROM employes  
-WHERE email LIKE '%._@%.com';  
+WHERE email LIKE '_._%@%';  -- 1 caractère + . + au moins 1 caractère + @ + reste  
 ```
 
 **ILIKE : Insensible à la casse (spécifique PostgreSQL)**
@@ -849,15 +971,22 @@ Utilisez `IN` pour la **lisibilité** quand vous avez plusieurs valeurs.
 ### 5. LIKE avec % au début est coûteux
 
 ```sql
--- ❌ Lent : ne peut pas utiliser d'index standard
+-- ❌ Lent : ne peut pas utiliser d'index B-tree standard (scan complet de table)
 WHERE nom LIKE '%dupont%';
 
--- ✅ Rapide : peut utiliser un index
+-- ✅ Rapide : peut utiliser un index B-tree avec text_pattern_ops
 WHERE nom LIKE 'dupont%';
 
--- Pour rechercher dans tout le texte efficacement, utilisez :
--- - Un index GIN avec pg_trgm (trigrammes)
--- - Full-Text Search (tsvector/tsquery)
+-- Pour accélérer un LIKE '%motif%' sur une grande table :
+-- → Index GIN avec l'extension pg_trgm (trigrammes), recherche par similarité
+CREATE EXTENSION IF NOT EXISTS pg_trgm;  
+CREATE INDEX idx_clients_nom_trgm ON clients USING GIN (nom gin_trgm_ops);  
+
+-- Avec cet index, les requêtes ILIKE et LIKE '%...%' deviennent rapides :
+SELECT * FROM clients WHERE nom ILIKE '%dupont%';
+
+-- Pour de la recherche full-text (sur des textes longs, avec scoring), préférez :
+-- → tsvector / tsquery + index GIN (voir chapitre 14 sur l'indexation)
 ```
 
 ### 6. Combinez les conditions intelligemment
