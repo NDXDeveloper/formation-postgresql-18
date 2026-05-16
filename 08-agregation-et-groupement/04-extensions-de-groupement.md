@@ -567,18 +567,20 @@ GROUP BY ROLLUP(region, categorie);
 
 **Résultat :**
 
-| region | categorie    | total | est_subtotal_region | est_subtotal_categorie |
-|--------|--------------|-------|---------------------|------------------------|
-| Est    | Électronique | 950   | 0                   | 0                      |
-| Est    | Vêtements    | 280   | 0                   | 0                      |
-| Est    | NULL         | 1230  | 0                   | 1                      | ← Sous-total catégorie
-| Nord   | Électronique | 1200  | 0                   | 0                      |
-| Nord   | Vêtements    | 350   | 0                   | 0                      |
-| Nord   | NULL         | 1550  | 0                   | 1                      | ← Sous-total catégorie
-| Sud    | Électronique | 800   | 0                   | 0                      |
-| Sud    | Vêtements    | 420   | 0                   | 0                      |
-| Sud    | NULL         | 1220  | 0                   | 1                      | ← Sous-total catégorie
-| NULL   | NULL         | 4000  | 1                   | 1                      | ← Grand total
+| region | categorie    | total | GROUPING(region) | GROUPING(categorie) | Interprétation |
+|--------|--------------|-------|------------------|---------------------|----------------|
+| Est    | Électronique | 950   | 0                | 0                   | Détail |
+| Est    | Vêtements    | 280   | 0                | 0                   | Détail |
+| Est    | NULL         | 1230  | 0                | **1**               | Sous-total **région Est** (toutes catégories) |
+| Nord   | Électronique | 1200  | 0                | 0                   | Détail |
+| Nord   | Vêtements    | 350   | 0                | 0                   | Détail |
+| Nord   | NULL         | 1550  | 0                | **1**               | Sous-total **région Nord** |
+| Sud    | Électronique | 800   | 0                | 0                   | Détail |
+| Sud    | Vêtements    | 420   | 0                | 0                   | Détail |
+| Sud    | NULL         | 1220  | 0                | **1**               | Sous-total **région Sud** |
+| NULL   | NULL         | 4000  | **1**            | **1**               | Grand total |
+
+> 📌 **Lecture des bits `GROUPING()`** : `GROUPING(c) = 1` veut dire « la colonne `c` est `NULL` **parce qu'elle a été agrégée** (sommée sur toutes ses valeurs), pas parce que la donnée d'origine valait `NULL` ». Le « sous-total par région Est » apparaît donc avec `GROUPING(region) = 0` (la région est conservée) et `GROUPING(categorie) = 1` (la catégorie a été « écrasée »).
 
 ### Utilisation Pratique : Étiqueter les Lignes
 
@@ -902,7 +904,27 @@ MixedAggregate  (cost=25.50..30.75 rows=10 width=20)
         ->  Seq Scan on ventes  (cost=0.00..10.00 rows=600 width=12)
 ```
 
-**MixedAggregate** : PostgreSQL calcule tous les niveaux en une seule passe !
+**MixedAggregate** est l'algorithme spécifique à `ROLLUP`/`CUBE`/`GROUPING SETS`. Il calcule **tous les niveaux d'agrégation en une seule passe** sur les données. Le plan énumère explicitement chaque `Group Key` traitée :
+
+- `Group Key: region, categorie` → niveau détail
+- `Group Key: region` → sous-totaux par région
+- `Group Key: ()` → grand total
+
+> 💡 **Pourquoi un `Sort` apparaît-il ?** `MixedAggregate` opère en mode *streaming* sur des données triées : il accumule l'état d'un groupe au fur et à mesure que la clé change. Un tri préalable (ou un index ordonné) est donc nécessaire — c'est pourquoi le plan inclut un nœud `Sort` quand aucun index ne fournit l'ordre. Pour les gros volumes, créer un index sur `(region, categorie)` permet d'éviter ce tri et accélère significativement la requête.
+
+### Complexité combinatoire : le piège de CUBE
+
+Pour `CUBE(c₁, c₂, …, c_n)`, PostgreSQL doit produire **2ⁿ** groupements distincts. Le nombre de lignes en sortie est borné par la **somme des cardinalités** de toutes les combinaisons possibles :
+
+| n (colonnes) | Nombre de groupements | Exemple de risque |
+|--------------|----------------------|-------------------|
+| 2 | 4 | OK |
+| 3 | 8 | OK |
+| 4 | 16 | Peut commencer à peser |
+| 5 | 32 | Souvent trop |
+| 6 | 64 | Quasi toujours trop |
+
+**Règle d'or** : au-delà de **4 dimensions**, utilisez plutôt `GROUPING SETS` en listant les seuls niveaux dont vous avez réellement besoin. Cela peut transformer une requête qui rend la main en 30 secondes en une requête en 200 ms.
 
 ### Optimisations
 

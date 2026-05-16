@@ -314,7 +314,7 @@ GROUP BY client_id;
 ```
 
 **Processus :**
-1. Exclure les achats de 25€ (souris)  
+1. Exclure les achats de 25 € (souris)  
 2. Grouper par client sur les lignes restantes  
 3. Calculer les sommes
 
@@ -333,7 +333,7 @@ HAVING SUM(montant) > 500;  -- Filtre les GROUPES
 **Processus :**
 1. Grouper toutes les lignes par client  
 2. Calculer les sommes  
-3. Exclure les groupes dont la somme ≤ 500€
+3. Exclure les groupes dont la somme ≤ 500 €
 
 ---
 
@@ -419,22 +419,23 @@ HAVING COUNT(*) >= 3                -- Minimum statistique
 
 ### ⚠️ Attention : Portée des Alias
 
-En SQL standard, les alias définis dans SELECT **ne sont pas accessibles** dans HAVING (car SELECT s'exécute après HAVING).
+Les alias définis dans `SELECT` **ne sont pas accessibles dans `WHERE` ni dans `HAVING`** en PostgreSQL — ils ne le sont que dans `GROUP BY` et `ORDER BY`. La raison : `SELECT` (qui calcule les alias) est logiquement évalué **après** `WHERE`/`HAVING`/`GROUP BY`.
 
 ```sql
--- ❌ Peut ne pas fonctionner (dépend du SGBD)
+-- ❌ ERREUR : PostgreSQL refuse l'alias dans HAVING
 SELECT
     client_id,
     SUM(montant) AS total
 FROM ventes  
 GROUP BY client_id  
-HAVING total > 500;  -- ❌ "total" peut ne pas être reconnu  
+HAVING total > 500;  
+-- ERROR: column "total" does not exist
 ```
 
-**Solution standard : Répéter l'expression**
+**Solution : répéter l'expression d'agrégation**
 
 ```sql
--- ✅ CORRECT et portable
+-- ✅ CORRECT
 SELECT
     client_id,
     SUM(montant) AS total
@@ -443,7 +444,20 @@ GROUP BY client_id
 HAVING SUM(montant) > 500;  
 ```
 
-**Note PostgreSQL** : PostgreSQL **permet** d'utiliser les alias dans HAVING (extension non-standard), mais ce n'est pas portable vers d'autres SGBD.
+**Astuce CTE pour éviter la répétition** : si l'expression d'agrégation est complexe, encapsulez la requête dans une CTE — l'alias y devient utilisable dans un `WHERE` du second niveau :
+
+```sql
+WITH stats AS (
+    SELECT client_id, SUM(montant) AS total
+    FROM ventes
+    GROUP BY client_id
+)
+SELECT *  
+FROM stats  
+WHERE total > 500;  -- ✅ ici, "total" est une colonne ordinaire  
+```
+
+> 📌 **Comportement standard SQL** : les alias dans `HAVING` ne sont pas non plus permis par le standard. PostgreSQL est conforme sur ce point. En revanche, MySQL accepte cette syntaxe (extension non-standard) — c'est l'inverse de ce que l'on croit souvent.
 
 ---
 
@@ -879,11 +893,10 @@ HashAggregate  (cost=15.50..17.50 rows=100 width=20)
 ```
 
 **Interprétation :**
-- **HashAggregate** : PostgreSQL utilise une table de hachage pour grouper (rapide)
-- Alternative : **GroupAggregate** (nécessite tri préalable, utilisé si index disponible)
-- **Seq Scan** : Scan séquentiel de la table
+- **HashAggregate** : PostgreSQL construit une table de hachage en mémoire (clé = `client_id`, valeur = compteurs). Très rapide tant que la table tient dans `work_mem`.
+- **Seq Scan** : scan séquentiel de la table source.
 
-**Si un index existe :**
+**Si un index existe sur la clé de groupement :**
 
 ```
 GroupAggregate  (cost=0.15..25.30 rows=100 width=20)
@@ -891,7 +904,49 @@ GroupAggregate  (cost=0.15..25.30 rows=100 width=20)
   ->  Index Scan using idx_client_id on ventes  (cost=0.15..20.30 rows=1000 width=12)
 ```
 
-L'index permet d'éviter un tri explicite (les données sont déjà ordonnées).
+**GroupAggregate** : PostgreSQL parcourt les données **déjà triées par l'index**, et change de groupe quand la clé change. Très peu de mémoire requise — c'est essentiellement du *streaming*.
+
+### HashAggregate vs GroupAggregate : comment choisir ?
+
+| Aspect | HashAggregate | GroupAggregate |
+|--------|---------------|----------------|
+| **Données triées requises ?** | Non | Oui (ou tri préalable) |
+| **Mémoire** | O(nombre de groupes × taille état) — tient en `work_mem` | O(1) — streaming |
+| **Performance** | Très rapide si `work_mem` suffit | Constante, indépendante du nombre de groupes |
+| **Spill disque** | Possible si `work_mem` débordé (PG 13+ : *Hash Disk Spilling*) | Jamais |
+| **Cas favori** | Beaucoup de groupes, pas de tri disponible | Index couvrant la clé de groupement, ou tri déjà nécessaire pour `ORDER BY` |
+
+### Diagnostic d'un `HashAggregate` qui *spille* sur disque
+
+Quand le nombre de groupes × la taille de chaque état d'agrégation dépasse `work_mem`, PostgreSQL :
+- **Avant PG 13** : choisissait un `GroupAggregate` (avec tri préalable) pour éviter le spill — parfois bien plus lent.
+- **À partir de PG 13** : déverse partiellement la table de hachage sur disque (*Hash Disk Spilling*), puis traite les partitions une à une.
+
+Sur un plan avec `EXPLAIN (ANALYZE, BUFFERS)`, vous verrez :
+
+```
+HashAggregate  (actual time=…) 
+  Batches: 9  Memory Usage: 4097kB  Disk Usage: 3072kB   ← spill !
+```
+
+**Que faire ?**
+
+1. **Augmenter `work_mem`** pour la session :
+   ```sql
+   SET work_mem = '256MB';
+   SELECT … GROUP BY …;
+   ```
+2. **Ajouter `hash_mem_multiplier`** (PG 13+, défaut 2) pour donner plus de mémoire spécifiquement aux nœuds hash :
+   ```sql
+   SET hash_mem_multiplier = 4;
+   ```
+3. **Réduire le volume traité** avec un `WHERE` plus sélectif en amont.
+4. **Créer un index couvrant** pour forcer un `GroupAggregate` en streaming :
+   ```sql
+   CREATE INDEX idx_ventes_client_id ON ventes(client_id);
+   ```
+
+> ⚠️ **Attention à `work_mem`** : c'est une mémoire **par nœud de plan et par requête**, pas globale. Une requête avec 5 jointures et 2 agrégations peut consommer `7 × work_mem`. Multipliez par le nombre de connexions concurrentes pour estimer la pression mémoire.
 
 ---
 

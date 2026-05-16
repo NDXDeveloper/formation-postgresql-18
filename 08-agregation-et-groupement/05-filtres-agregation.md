@@ -77,7 +77,7 @@ FROM ventes;
 fonction_agregation(colonne) FILTER (WHERE condition)
 ```
 
-**Traduction littérale** : "Applique cette agrégation uniquement sur les lignes qui satisfont cette condition"
+**Traduction littérale** : « applique cette agrégation uniquement sur les lignes qui satisfont cette condition. »
 
 ### Exemple : Réécriture avec FILTER
 
@@ -284,7 +284,7 @@ ORDER BY ca_valide DESC;
 **Interprétation :**
 - Une ligne par région
 - Chaque ligne contient plusieurs agrégations avec des conditions différentes
-- Le Sud a un problème : 0% de ventes validées !
+- Le Sud a un problème : 0 % de ventes validées !
 
 ### Exemple : Analyse Temporelle par Produit
 
@@ -585,7 +585,7 @@ FROM ventes
 WHERE statut = 'Validée';  -- Filtre global  
 ```
 
-**Résultat :** Statistiques uniquement sur les ventes validées.
+**Résultat** : statistiques uniquement sur les ventes validées.
 
 ### FILTER : Filtre Par Agrégation
 
@@ -601,7 +601,7 @@ SELECT
 FROM ventes;  -- Pas de WHERE : toutes les lignes
 ```
 
-**Résultat :** Plusieurs statistiques avec des conditions différentes dans une seule ligne.
+**Résultat** : plusieurs statistiques avec des conditions différentes dans une seule ligne.
 
 ### Tableau Comparatif
 
@@ -705,16 +705,20 @@ FROM notes;
 
 ## Performance et Optimisation
 
-### FILTER est Généralement Plus Performant
+### FILTER vs CASE WHEN : très similaires en performance
 
-PostgreSQL peut optimiser FILTER plus efficacement que CASE WHEN car :
-1. L'intention est explicite  
-2. Le planificateur peut réorganiser les calculs  
-3. Moins d'évaluations conditionnelles en interne
-
-### Exemple de Plan d'Exécution
+Dans **PostgreSQL moderne**, `FILTER` et `CASE WHEN` produisent quasiment **le même plan d'exécution** : les deux nécessitent un seul parcours de la table, et l'évaluation de la condition par ligne coûte autant. Le gain principal de `FILTER` est **la lisibilité, pas la performance**.
 
 ```sql
+-- Ces deux requêtes ont un plan d'exécution quasi identique
+EXPLAIN ANALYZE  
+SELECT  
+    region,
+    COUNT(*) FILTER (WHERE statut = 'Validée') AS nb_validees,
+    SUM(montant) FILTER (WHERE statut = 'Validée') AS ca_valide
+FROM ventes  
+GROUP BY region;  
+
 EXPLAIN ANALYZE  
 SELECT  
     region,
@@ -724,7 +728,11 @@ FROM ventes
 GROUP BY region;  
 ```
 
-PostgreSQL génère un plan efficace qui évalue la condition une seule fois par ligne.
+> 📌 **Cas particuliers où `FILTER` peut être marginalement meilleur** :  
+> - Avec `COUNT(DISTINCT …) FILTER (…)`, le moteur peut éviter de matérialiser une seconde fois la même structure de hachage.  
+> - Avec les fonctions ordonnées (`PERCENTILE_*`), `FILTER` permet d'éviter une seconde lecture des données triées.
+>
+> Dans tous les autres cas, **choisissez `FILTER` pour la lisibilité**, pas pour les microsecondes gagnées.
 
 ### Bonnes Pratiques de Performance
 

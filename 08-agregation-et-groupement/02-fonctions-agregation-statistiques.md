@@ -71,7 +71,7 @@ VAR_POP(colonne)
 
 **Quelle version utiliser ?**
 
-- **VAR_SAMP / VARIANCE** : Utiliser **dans 99% des cas** (données = échantillon d'une population plus large)  
+- **`VAR_SAMP` / `VARIANCE`** : à utiliser **dans 99 % des cas** (données = échantillon d'une population plus large)  
 - **VAR_POP** : Seulement si vos données représentent la **totalité** d'une population (rare en pratique)
 
 ### Exemple Théorique
@@ -127,7 +127,7 @@ Reprenons l'exemple des salaires :
 - Variance : 2 500 000 **€²** (unité difficile à interpréter)
 - Écart-type : √2 500 000 ≈ 1 581 **€** (unité claire : euros)
 
-**Interprétation** : "En moyenne, les salaires s'écartent de 1 581 € par rapport à la moyenne de 36 000 €"
+**Interprétation** : « En moyenne, les salaires s'écartent de 1 581 € par rapport à la moyenne de 36 000 €. »
 
 ### Syntaxe PostgreSQL
 
@@ -160,14 +160,14 @@ FROM salaires_employes;
 
 Pour une distribution normale (en cloche) :
 
-- **68%** des valeurs se situent à ±1 écart-type de la moyenne  
-- **95%** des valeurs se situent à ±2 écarts-types de la moyenne  
-- **99.7%** des valeurs se situent à ±3 écarts-types de la moyenne
+- **68 %** des valeurs se situent à ±1 écart-type de la moyenne  
+- **95 %** des valeurs se situent à ±2 écarts-types de la moyenne  
+- **99,7 %** des valeurs se situent à ±3 écarts-types de la moyenne
 
 **Exemple avec nos salaires** (moyenne = 36 000, écart-type = 1 581) :
 
-- **68%** des salaires devraient être entre 34 419 € et 37 581 €  
-- **95%** des salaires devraient être entre 32 838 € et 39 162 €
+- **68 %** des salaires devraient être entre 34 419 € et 37 581 €  
+- **95 %** des salaires devraient être entre 32 838 € et 39 162 €
 
 ### Comparaison de Dispersion
 
@@ -205,7 +205,7 @@ WHERE e.salaire > s.moyenne + (3 * s.ecart_type)
    OR e.salaire < s.moyenne - (3 * s.ecart_type);
 ```
 
-Cette requête identifie les salaires qui s'écartent de plus de 3 σ (sigma) de la moyenne, ce qui est statistiquement très rare (<0.3% si distribution normale).
+Cette requête identifie les salaires qui s'écartent de plus de 3 σ (sigma) de la moyenne, ce qui est statistiquement très rare (< 0,3 % si distribution normale).
 
 ---
 
@@ -303,15 +303,16 @@ SELECT
 FROM ventes_marketing;
 ```
 
-**Résultat hypothétique :**
+**Résultat (calculé sur les 5 valeurs ci-dessus)** :
 
 | correlation_ventes_pub | covariance |
 |------------------------|------------|
-| 0.95                   | 2500000    |
+| 0.999                  | 1 050 000  |
 
 **Interprétation** :
-- Corrélation de 0.95 → **relation très forte** entre budget pub et ventes
-- Quand le budget augmente, les ventes augmentent de façon quasi-linéaire
+- Corrélation ≈ 1 → **relation linéaire quasi parfaite** entre budget pub et ventes
+- Quand le budget augmente d'un euro, les ventes augmentent proportionnellement
+- ⚠️ Avec seulement 5 points, ce coefficient peut être trompeur : un véritable jeu de données réel produirait rarement une corrélation aussi propre
 
 #### Cas d'Usage Réels
 
@@ -356,10 +357,10 @@ Toujours analyser le contexte métier avant de conclure !
 
 Un **percentile** est une valeur qui sépare les données en pourcentages :
 
-- **Médiane** = 50ᵉ percentile (50% des valeurs en dessous, 50% au-dessus)  
+- **Médiane** = 50ᵉ percentile (50 % des valeurs en dessous, 50 % au-dessus)  
 - **Premier quartile (Q1)** = 25ᵉ percentile  
 - **Troisième quartile (Q3)** = 75ᵉ percentile  
-- **95ᵉ percentile** = 95% des valeurs sont inférieures
+- **95ᵉ percentile** = 95 % des valeurs sont inférieures
 
 ### Pourquoi les Percentiles ?
 
@@ -422,15 +423,15 @@ Si on ajoute une 6ᵉ note de 20 :
 
 | mediane_cont | mediane_disc |
 |--------------|--------------|
-| 15.0         | 14 ou 16     |
+| 15.0         | 14           |
 
-- **CONT** : Interpole entre 14 et 16 → 15 (valeur qui n'existe pas dans le dataset)  
-- **DISC** : Choisit une valeur réelle (généralement la plus basse des deux)
+- **CONT** : interpole linéairement entre 14 et 16 → **15** (valeur qui n'existe pas dans le dataset)  
+- **DISC** : choisit la **plus petite valeur dont la fonction de répartition empirique atteint ou dépasse le percentile demandé**. Pour 6 valeurs et `p = 0.5`, c'est la 3ᵉ valeur triée (`ceil(0.5 × 6) = 3`), donc **14**. Le résultat est déterministe.
 
 **Quand utiliser quoi ?**
 
-- **PERCENTILE_CONT** : Pour des données continues (salaires, températures, temps)  
-- **PERCENTILE_DISC** : Pour des données discrètes ou quand vous voulez une valeur réelle
+- **`PERCENTILE_CONT`** : pour des données continues (salaires, températures, temps) ; valeur la plus représentative.
+- **`PERCENTILE_DISC`** : quand vous voulez une **valeur réellement présente** dans les données (utile par exemple pour retrouver l'identifiant d'une observation médiane).
 
 ### Exemple : Analyse Salariale Complète
 
@@ -455,8 +456,8 @@ FROM salaires_employes;
 
 **Interprétation :**
 - La **médiane** (42k) est bien inférieure à la **moyenne** (48k) → distribution asymétrique avec quelques très hauts salaires
-- 25% des employés gagnent moins de 35k
-- 95% des employés gagnent moins de 85k
+- 25 % des employés gagnent moins de 35 k
+- 95 % des employés gagnent moins de 85 k
 - L'écart-type de 18k montre une forte dispersion
 
 ### Percentiles Multiples : Analyse de Performance Web
@@ -477,16 +478,16 @@ FROM logs_requetes_api;
 | 120         | 350  | 520  | 1850 |
 
 **Interprétation (SLA Web typique) :**
-- **50% des requêtes** répondent en moins de 120ms (expérience majoritaire)  
-- **90% des requêtes** répondent en moins de 350ms (bon)  
-- **5% des requêtes** prennent plus de 520ms (acceptable)  
-- **1% des requêtes** prennent plus de 1.8s (cas extrêmes à investiguer)
+- **50 % des requêtes** répondent en moins de 120 ms (expérience majoritaire)  
+- **90 % des requêtes** répondent en moins de 350 ms (bon)  
+- **5 % des requêtes** prennent plus de 520 ms (acceptable)  
+- **1 % des requêtes** prennent plus de 1,8 s (cas extrêmes à investiguer)
 
 **Pourquoi P95/P99 plutôt que la moyenne ?**
 
-Une moyenne de 200ms peut cacher :
-- Cas A : Toutes les requêtes entre 150-250ms (excellent)
-- Cas B : 90% à 100ms, 10% à 1000ms+ (problématique pour les utilisateurs)
+Une moyenne de 200 ms peut cacher :
+- Cas A : toutes les requêtes entre 150 et 250 ms (excellent)
+- Cas B : 90 % à 100 ms, 10 % à 1000 ms+ (problématique pour les utilisateurs)
 
 Les percentiles révèlent cette disparité !
 
@@ -528,9 +529,9 @@ FROM ventes_marketing;
 
 **Interprétation :**
 - **Équation de régression** : `Ventes = 8.5 × Budget_pub + 6500`
-- Pour chaque euro investi en pub, on génère 8.5€ de ventes supplémentaires
-- R² de 0.90 signifie que 90% de la variance des ventes est expliquée par le budget pub
-- **Prédiction** : Si budget = 2000€ → Ventes prédites = 8.5×2000 + 6500 = 23 500€
+- Pour chaque euro investi en pub, on génère 8,5 € de ventes supplémentaires
+- R² de 0,90 signifie que 90 % de la variance des ventes est expliquée par le budget pub
+- **Prédiction** : si budget = 2000 € → ventes prédites = 8,5 × 2000 + 6500 = 23 500 €
 
 ### 5.2. Fonctions d'Agrégation Statistiques par Groupe
 
@@ -569,7 +570,7 @@ ORDER BY salaire_moyen DESC;
 | Fonction | Objectif | Résultat Typique | Interprétation |
 |----------|----------|------------------|----------------|
 | **VARIANCE(col)** | Dispersion des valeurs | Nombre positif (unité²) | Plus élevé = plus dispersé |
-| **STDDEV(col)** | Écart-type (√variance) | Nombre positif (même unité que col) | "Distance moyenne" à la moyenne |
+| **STDDEV(col)** | Écart-type (√variance) | Nombre positif (même unité que col) | « Distance moyenne » à la moyenne |
 | **COVAR_SAMP(Y,X)** | Covariation entre X et Y | Nombre (peut être négatif) | Relation (mais dépend de l'échelle) |
 | **CORR(Y,X)** | Corrélation de Pearson | -1 à +1 | Force et sens de la relation linéaire |
 | **PERCENTILE_CONT(p)** | Percentile continu | Valeur (peut être interpolée) | Seuil : p% en dessous |
@@ -676,7 +677,7 @@ WHERE a_achete = TRUE
    - Sauf si vous avez vraiment la population totale (très rare)
 
 3. **Préférer les percentiles aux moyennes pour les SLA**
-   - P95, P99 révèlent l'expérience des utilisateurs "malchanceux"
+   - P95, P99 révèlent l'expérience des utilisateurs « malchanceux »
 
 4. **Vérifier la taille de l'échantillon avant d'interpréter les statistiques**
    ```sql
@@ -727,12 +728,37 @@ WHERE a_achete = TRUE
 
 ### Coût de Calcul
 
-Les fonctions statistiques nécessitent de **parcourir toutes les lignes** (full table scan) :
+Les fonctions statistiques nécessitent généralement de **parcourir toutes les lignes du périmètre filtré** :
 
-- **COUNT, SUM, AVG** : Scan simple (rapide)  
-- **STDDEV, VARIANCE** : Deux passes (moyenne d'abord, puis variance)  
-- **PERCENTILE** : Tri complet des données (le plus coûteux)  
-- **CORR, COVAR** : Calculs croisés sur deux colonnes
+- **`COUNT`, `SUM`, `AVG`** : Scan simple, une seule passe (rapide)  
+- **`STDDEV`, `VARIANCE`** : **Une seule passe** en PostgreSQL grâce à l'algorithme de Welford (cf. encadré ci-dessous), pas deux comme on le pense souvent  
+- **`PERCENTILE_CONT`, `PERCENTILE_DISC`** : nécessitent le **tri complet** des valeurs — la plus coûteuse des opérations statistiques  
+- **`CORR`, `COVAR`** : calculs croisés sur deux colonnes, une seule passe également
+
+> 🧪 **L'algorithme de Welford pour `STDDEV` et `VARIANCE`**
+>
+> Une implémentation naïve calculerait d'abord la moyenne (1ʳᵉ passe), puis la somme des écarts au carré (2ᵉ passe). PostgreSQL utilise l'**algorithme de Welford** (1962), qui maintient les statistiques (moyenne, variance) en mise à jour incrémentale au fur et à mesure du scan. Avantages :
+>
+> - **Une seule passe** sur les données  
+> - **Stabilité numérique** très supérieure à la formule naïve `(Σx² - (Σx)²/n) / (n-1)` qui souffre de pertes de précision catastrophiques sur des valeurs grandes et proches.
+>
+> C'est pourquoi `STDDEV(prix)` reste fiable sur une colonne de prix en milliards d'euros, alors qu'un calcul Python naïf en `float64` pourrait afficher `0` ou même `NaN`.
+
+### Précision et types flottants : un piège pour les calculs financiers
+
+Les fonctions statistiques retournent des types **flottants** quand l'entrée est `real` ou `double precision`. Les erreurs d'arrondi sont alors inévitables :
+
+```sql
+-- Avec DOUBLE PRECISION : approximation possible
+SELECT AVG(prix::DOUBLE PRECISION) FROM produits;
+-- → 19.989999999999998
+
+-- Avec NUMERIC : précision exacte garantie
+SELECT AVG(prix::NUMERIC) FROM produits;
+-- → 19.99
+```
+
+**Règle d'or** : pour les **montants financiers**, stockez vos données en `NUMERIC` et acceptez le coût d'agrégation légèrement supérieur (≈ 30 % plus lent que `double precision`). La précision exacte vaut amplement ce surcoût.
 
 ### Optimisations
 
@@ -768,8 +794,9 @@ Les fonctions statistiques nécessitent de **parcourir toutes les lignes** (full
    ```
 
 4. **Approximations pour les très grandes tables**
-   - PostgreSQL 18+ : Certaines extensions proposent des statistiques approximatives (HyperLogLog)
-   - Pour des milliards de lignes, considérer l'échantillonnage
+   - Pour les **comptages de valeurs distinctes** : l'extension tierce [`postgresql-hll`](https://github.com/citusdata/postgresql-hll) implémente l'algorithme **HyperLogLog**, qui estime `COUNT(DISTINCT …)` avec une précision typique de 0,8 % sur des milliards de lignes en utilisant quelques Ko de mémoire.
+   - Pour les **percentiles approximatifs** : l'extension [`tdigest`](https://github.com/tvondra/tdigest) (de Tomas Vondra, contributeur PostgreSQL) calcule des percentiles très rapidement sur des séries massives.
+   - Pour les **estimations rapides** : `EXPLAIN`, `pg_stats` et la **table-sample clause** (`TABLESAMPLE`) permettent des analyses sur un échantillon aléatoire.
 
 ---
 

@@ -4,7 +4,7 @@
 
 ## Introduction aux Fonctions d'Agrégation
 
-Les fonctions d'agrégation sont des outils puissants de SQL qui permettent de **calculer une valeur unique à partir d'un ensemble de lignes**. Contrairement aux requêtes classiques qui retournent plusieurs lignes, les agrégations "condensent" les données pour produire des résultats synthétiques.
+Les fonctions d'agrégation sont des outils puissants de SQL qui permettent de **calculer une valeur unique à partir d'un ensemble de lignes**. Contrairement aux requêtes classiques qui retournent plusieurs lignes, les agrégations « condensent » les données pour produire des résultats synthétiques.
 
 ### Pourquoi les Agrégations ?
 
@@ -82,9 +82,48 @@ FROM commandes;
 
 #### Cas d'Usage Typiques
 
-- **Comptage de lignes** : "Combien d'utilisateurs sont inscrits ?"  
-- **Validation de données** : "Combien de lignes ont une valeur NULL dans cette colonne ?"  
-- **Analyse de cardinalité** : "Combien de valeurs uniques existe-t-il ?"
+- **Comptage de lignes** : « combien d'utilisateurs sont inscrits ? »  
+- **Validation de données** : « combien de lignes ont une valeur NULL dans cette colonne ? »  
+- **Analyse de cardinalité** : « combien de valeurs uniques existe-t-il ? »
+
+#### `COUNT(*)` vs `COUNT(1)` vs `COUNT(colonne)`
+
+Trois variantes existent et créent souvent la confusion :
+
+| Forme | Sémantique | Performance |
+|-------|-----------|-------------|
+| `COUNT(*)` | Compte **toutes les lignes** visibles, peu importe leur contenu | Le plus rapide ; peut utiliser un *index-only scan* si la *visibility map* est à jour |
+| `COUNT(1)` | Compte toutes les lignes (la constante `1` n'est jamais `NULL`) | **Strictement équivalent à `COUNT(*)` en PostgreSQL** — pas de gain ni de perte |
+| `COUNT(colonne)` | Compte les lignes où **`colonne IS NOT NULL`** | Doit lire la colonne (mais peut utiliser un index partiel sur `WHERE colonne IS NOT NULL`) |
+
+> 🧙 **Mythe à enterrer** : « `COUNT(1)` est plus rapide que `COUNT(*)` ». C'est une **légende urbaine** datant d'anciens SGBD. En PostgreSQL moderne, les deux produisent **le même plan d'exécution**. Préférez `COUNT(*)` qui est plus lisible et reflète l'intention.
+
+```sql
+-- Démonstration : ces trois requêtes produisent le même résultat
+SELECT COUNT(*) FROM commandes;        -- 5 (total)  
+SELECT COUNT(1) FROM commandes;        -- 5 (identique)  
+SELECT COUNT('peu importe') FROM commandes;  -- 5 aussi : la constante est jamais NULL  
+
+-- En revanche, celle-ci diffère :
+SELECT COUNT(date_livraison) FROM commandes;  -- 3 (seulement les non-NULL)
+```
+
+#### `COUNT(*)` et l'optimisation *index-only scan*
+
+Sur les **grandes tables**, `COUNT(*)` peut être très rapide grâce à un *index-only scan* :
+
+```sql
+-- Avec un index sur (date_creation) :
+EXPLAIN SELECT COUNT(*) FROM commandes WHERE date_creation >= '2025-01-01';
+
+-- Plan typique :
+--   Aggregate
+--     ->  Index Only Scan using idx_commandes_date_creation on commandes
+--           Index Cond: (date_creation >= '2025-01-01')
+--           Heap Fetches: 0       ← idéal : zéro accès à la table principale
+```
+
+`Heap Fetches: 0` indique que PostgreSQL a pu répondre **uniquement** avec l'index, sans toucher à la table. Pour cela, la **visibility map** de la table doit être à jour — `VACUUM` (manuel ou via autovacuum) la maintient. Si vous voyez beaucoup de `Heap Fetches`, lancez `VACUUM ANALYZE` sur la table.
 
 ---
 
@@ -150,10 +189,16 @@ AVG(nom_colonne_numerique)
 
 #### Comportement
 
-- Calcule : `SUM(colonne) / COUNT(colonne)`
-- Les valeurs NULL sont **ignorées** du calcul
-- Retourne un type NUMERIC par défaut (avec décimales)
-- Retourne NULL si toutes les valeurs sont NULL
+- Calcule conceptuellement : `SUM(colonne) / COUNT(colonne)`
+- Les valeurs NULL sont **ignorées** du calcul (elles n'entrent pas dans la somme **ni dans le diviseur**)
+- Type de retour :
+  - `NUMERIC` pour les entrées `smallint`, `integer`, `bigint` (pour préserver la précision)
+  - `NUMERIC` pour `numeric`
+  - `DOUBLE PRECISION` pour `real` / `double precision`
+  - `INTERVAL` pour `interval`
+- Retourne `NULL` si toutes les valeurs sont `NULL`
+
+> ⚠️ **Piège du type implicite** : `AVG(colonne_integer)` renvoie un `NUMERIC` (avec décimales), pas un `INTEGER` tronqué. Si vous voulez un entier arrondi, faites explicitement `AVG(col)::INTEGER` ou `ROUND(AVG(col))`.
 
 #### Exemples Théoriques
 
@@ -183,7 +228,7 @@ FROM commandes;
 
 La moyenne (AVG) est sensible aux valeurs extrêmes. Pour des distributions déséquilibrées, la médiane peut être plus représentative (nous verrons les fonctions statistiques dans une section ultérieure).
 
-Exemple : Si 4 employés gagnent 30 000 € et 1 PDG gagne 500 000 €, la moyenne sera de 130 000 €, ce qui ne reflète pas la réalité de la majorité.
+Exemple : si 4 employés gagnent 30 000 € et 1 PDG gagne 500 000 €, la moyenne sera de **124 000 €** ((4 × 30 000 + 500 000) / 5), ce qui ne reflète pas la réalité de la majorité (dont la **médiane** est 30 000 €).
 
 ---
 
@@ -549,9 +594,18 @@ FROM commandes;
 
 ### Agrégations vs Scan Complet
 
-- **COUNT(*)** nécessite un scan complet (parcourir toutes les lignes)  
-- **SUM, AVG** nécessitent aussi un scan complet  
-- **MIN/MAX** peuvent utiliser un index pour une récupération directe
+- **`COUNT(*)`** nécessite un scan de toutes les lignes visibles (parfois optimisé en *index-only scan* si la *visibility map* de la table est à jour — voir `VACUUM`).
+- **`SUM`, `AVG`** nécessitent aussi un scan complet (toutes les valeurs doivent être additionnées).
+- **`MIN`/`MAX`** peuvent être ultra-rapides : si un index B-tree existe sur la colonne, PostgreSQL récupère **directement** la première ou dernière valeur de l'index (`Index Scan` avec `Limit 1`).
+
+```sql
+EXPLAIN SELECT MIN(montant) FROM commandes;
+-- Si index présent sur montant :
+--   Result
+--     ->  Limit
+--           ->  Index Only Scan using idx_commandes_montant on commandes
+--                 Index Cond: (montant IS NOT NULL)
+```
 
 ---
 

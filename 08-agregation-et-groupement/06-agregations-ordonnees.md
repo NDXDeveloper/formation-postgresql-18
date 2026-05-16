@@ -11,7 +11,7 @@ Jusqu'à présent, nous avons utilisé des fonctions d'agrégation où **l'ordre
 
 Mais certaines opérations **nécessitent un ordre** pour avoir du sens :
 - **Calculer la médiane** : Il faut d'abord trier les valeurs !  
-- **Concaténer des noms** : "Alice, Bob, Charlie" ≠ "Charlie, Alice, Bob"  
+- **Concaténer des noms** : « Alice, Bob, Charlie » ≠ « Charlie, Alice, Bob »  
 - **Trouver le mode** (valeur la plus fréquente) : Nécessite un tri par fréquence  
 - **Créer des listes ordonnées** : Top 3, classement, etc.
 
@@ -43,26 +43,34 @@ Nous allons explorer les deux approches en détail.
 
 ---
 
-## 1. WITHIN GROUP : Agrégations Hypothétiques
+## 1. WITHIN GROUP : deux familles distinctes
 
-### Qu'est-ce qu'une Agrégation Hypothétique ?
+PostgreSQL utilise `WITHIN GROUP (ORDER BY …)` pour deux familles de fonctions qui ont besoin d'un **ordre** sur leurs données :
 
-Les **agrégations hypothétiques** (hypothetical-set aggregate functions) calculent une statistique en supposant qu'une valeur hypothétique est ajoutée à l'ensemble de données.
+### a) Fonctions d'**ensemble ordonné** (*ordered-set aggregates*)
 
-PostgreSQL utilise WITHIN GROUP pour les fonctions qui **requièrent un ordre** pour fonctionner.
-
-### Les Fonctions WITHIN GROUP
+Elles calculent une statistique sur l'ensemble trié, sans valeur hypothétique en entrée :
 
 | Fonction | Description | Usage |
 |----------|-------------|-------|
-| **PERCENTILE_CONT** | Percentile continu (interpolé) | Médiane, quartiles |
-| **PERCENTILE_DISC** | Percentile discret (valeur réelle) | Médiane, quartiles |
-| **MODE** | Valeur la plus fréquente | Trouver la valeur modale |
-| **RANK** | Rang d'une valeur hypothétique | Position dans un classement |
-| **DENSE_RANK** | Rang dense d'une valeur | Position sans "trous" |
-| **PERCENT_RANK** | Rang en pourcentage | Position relative (0-1) |
+| `PERCENTILE_CONT(p)` | Percentile continu (interpolé) | Médiane, quartiles |
+| `PERCENTILE_DISC(p)` | Percentile discret (valeur réelle) | Médiane, quartiles |
+| `MODE()` | Valeur la plus fréquente | Trouver la valeur modale |
 
-Nous avons déjà vu PERCENTILE_CONT et PERCENTILE_DISC dans la section 8.2. Voyons les autres.
+`PERCENTILE_CONT` et `PERCENTILE_DISC` ont déjà été vues à la section 8.2.
+
+### b) Fonctions d'**ensemble hypothétique** (*hypothetical-set aggregates*)
+
+Elles répondent à la question « **si on insérait cette valeur, quel serait son rang ?** » :
+
+| Fonction | Description | Usage |
+|----------|-------------|-------|
+| `RANK(val)` | Rang d'une valeur hypothétique | À quelle position serait `val` ? |
+| `DENSE_RANK(val)` | Rang dense (sans saut) | Idem, mais sans trous entre rangs |
+| `PERCENT_RANK(val)` | Rang en pourcentage | Position relative dans [0, 1] |
+| `CUME_DIST(val)` | Distribution cumulée | Proportion de valeurs ≤ `val` |
+
+Voyons d'abord `MODE`, puis nous verrons les hypothétiques plus loin.
 
 ---
 
@@ -115,7 +123,7 @@ FROM commandes;
 - Laptop apparaît 3 fois
 - Souris apparaît 2 fois
 - Clavier apparaît 1 fois
-- Le mode est "Laptop"
+- Le mode est « Laptop »
 
 ### Utilisation avec GROUP BY
 
@@ -158,13 +166,17 @@ GROUP BY produit;
 
 ```sql
 -- Jour de la semaine le plus fréquent pour les visites
+-- (on prend MODE directement sur date_visite, puis on formate)
 SELECT
-    TO_CHAR(
-        MODE() WITHIN GROUP (ORDER BY EXTRACT(DOW FROM date_visite)),
-        'Day'
-    ) AS jour_plus_frequent
+    TO_CHAR(MODE() WITHIN GROUP (ORDER BY date_visite), 'Day') AS jour_plus_frequent
 FROM visites_site;
+
+-- Variante : si on veut juste l'indice du jour (0=dimanche … 6=samedi)
+SELECT MODE() WITHIN GROUP (ORDER BY EXTRACT(DOW FROM date_visite)::INTEGER) AS dow_dominant  
+FROM visites_site;  
 ```
+
+> ⚠️ **Attention** : `TO_CHAR(integer, 'Day')` ne fonctionne pas — `TO_CHAR` au format `'Day'` attend un type **date** ou **timestamp**, pas un entier. Pour formater à partir d'un `EXTRACT(DOW …)`, il faut soit revenir à une date (par exemple `MAKE_DATE(2000,1,2)::DATE + dow`), soit utiliser un `CASE`.
 
 ---
 
@@ -625,7 +637,7 @@ GROUP BY user_id;
 
 | user_id | wishlist                                      | wishlist_ids | nb_produits |
 |---------|-----------------------------------------------|--------------|-------------|
-| 101     | Laptop (899€), Écran (250€), Souris (25€)    | {12,45,78}   | 3           |
+| 101     | Laptop (899 €), Écran (250 €), Souris (25 €) | {12,45,78}   | 3           |
 
 ### 🏥 Santé : Historique Médical
 
@@ -900,6 +912,46 @@ FROM articles;
 
 ---
 
+## Limites pratiques des agrégations en collection
+
+### `STRING_AGG`, `ARRAY_AGG`, `JSON_AGG` : tout tient en mémoire
+
+Ces trois fonctions ont une caractéristique commune importante : elles **matérialisent en mémoire** l'intégralité de la collection avant de retourner le résultat. Conséquences :
+
+| Limite | `STRING_AGG` | `ARRAY_AGG` | `JSON_AGG` / `JSONB_AGG` |
+|--------|--------------|-------------|--------------------------|
+| Taille max d'une valeur | 1 Go (limite de `TEXT`) | 1 Go par dimension | 1 Go par valeur `jsonb` |
+| Mémoire de travail | `work_mem` (puis disque) | Idem | Idem |
+| Indexation a posteriori | ❌ Impossible | ✅ GIN sur ARRAY | ✅ GIN sur JSONB |
+| Coût de traitement applicatif | Parse manuel | Type natif | Type natif (drivers) |
+
+### Quand ces limites peuvent-elles vous gêner ?
+
+- **Agrégation sur des millions de lignes** dans un seul groupe : le `STRING_AGG` peut produire une chaîne de plusieurs centaines de Mo, ralentir massivement la requête, voire échouer si on dépasse 1 Go.
+- **Récupération applicative** : lire un `JSONB` de 50 Mo via un driver Python ou Node.js peut faire exploser la mémoire client.
+
+### Alternatives pour les gros volumes
+
+| Besoin | Alternative recommandée |
+|--------|------------------------|
+| Lister beaucoup d'éléments sans tout charger | **Pagination** : faire un `SELECT` normal sans `AGG`, avec `LIMIT` côté client |
+| Construire un JSON volumineux en streaming | **Streaming JSON** côté application + plusieurs requêtes plus petites |
+| Compter / vérifier l'existence | `COUNT(DISTINCT …)` + `EXISTS` plutôt que `ARRAY_AGG(…) @> ARRAY[…]` |
+| Agrégat « top N » uniquement | Sous-requête `ORDER BY … LIMIT N` puis `ARRAY_AGG` sur le résultat réduit |
+
+### `JSON_AGG` vs `JSONB_AGG` : choisir le bon
+
+| Aspect | `JSON_AGG` (type `JSON`) | `JSONB_AGG` (type `JSONB`) |
+|--------|--------------------------|----------------------------|
+| Représentation | **Texte brut**, préserve l'ordre des clés et les espaces | **Binaire normalisé**, ordre des clés indéterminé, espaces supprimés |
+| Construction | Plus rapide | Légèrement plus coûteuse (parsing + normalisation) |
+| Recherche dans le résultat | ❌ Pas d'opérateurs `@>`/`?` | ✅ Indexable, requêtable |
+| Cas d'usage | Sortie pour API (jamais relue côté SQL) | Stockage pour réutilisation SQL ultérieure |
+
+**Règle simple** : pour une **réponse API directe**, `JSON_AGG` suffit (et il est plus rapide). Pour stocker dans une colonne et requêter dessus, utilisez `JSONB_AGG`.
+
+---
+
 ## Bonnes Pratiques
 
 ### ✅ À Faire
@@ -1025,7 +1077,7 @@ FROM employes
 GROUP BY departement;  
 ```
 
-**Résultat :** Une ligne par département
+**Résultat** : une ligne par département
 
 | departement | employes_par_salaire         |
 |-------------|------------------------------|
@@ -1043,7 +1095,7 @@ SELECT
 FROM employes;
 ```
 
-**Résultat :** Une ligne par employé
+**Résultat** : une ligne par employé
 
 | departement | nom     | salaire | rang |
 |-------------|---------|---------|------|

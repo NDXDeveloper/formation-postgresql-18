@@ -28,19 +28,19 @@ C'est exactement le rôle de l'**agrégation** : **transformer de nombreuses lig
 
 Imaginez que vous avez une pile de factures papier sur votre bureau :
 
-**Sans agrégation** : Vous regardez chaque facture une par une
-- Facture 1 : 150€
-- Facture 2 : 200€
-- Facture 3 : 75€
-- Facture 4 : 300€
-- ...
+**Sans agrégation** : vous regardez chaque facture une par une
+- Facture 1 : 150 €
+- Facture 2 : 200 €
+- Facture 3 : 75 €
+- Facture 4 : 300 €
+- …
 
-**Avec agrégation** : Vous utilisez une calculatrice pour obtenir :
-- **Total** : 725€  
+**Avec agrégation** : vous utilisez une calculatrice pour obtenir :
+- **Total** : 725 €  
 - **Nombre de factures** : 4  
-- **Montant moyen** : 181.25€  
-- **Facture la plus élevée** : 300€  
-- **Facture la plus basse** : 75€
+- **Montant moyen** : 181,25 €  
+- **Facture la plus élevée** : 300 €  
+- **Facture la plus basse** : 75 €
 
 L'agrégation SQL fait exactement cela, mais automatiquement et sur des millions de lignes !
 
@@ -53,9 +53,9 @@ L'agrégation SQL fait exactement cela, mais automatiquement et sur des millions
 Les décisions métier ne se prennent pas sur des lignes individuelles, mais sur des **tendances et des statistiques**.
 
 **Exemples :**
-- "Nos ventes ont augmenté de 15% ce trimestre" (agrégation temporelle)  
-- "Le panier moyen est de 87€" (moyenne)  
-- "Le produit le plus vendu est X" (comptage)
+- « Nos ventes ont augmenté de 15 % ce trimestre » (agrégation temporelle)  
+- « Le panier moyen est de 87 € » (moyenne)  
+- « Le produit le plus vendu est X » (comptage)
 
 ### 2. Rapports et Tableaux de Bord
 
@@ -124,7 +124,7 @@ GROUP BY produit;
 
 ### 1. Fonctions d'Agrégation
 
-Ce sont les "opérations" que vous pouvez effectuer sur un ensemble de valeurs.
+Ce sont les « opérations » que vous pouvez effectuer sur un ensemble de valeurs.
 
 **Les 5 fonctions essentielles :**
 
@@ -192,7 +192,7 @@ HAVING SUM(montant) > 1000;
 
 Pour créer des **sous-totaux automatiques** à plusieurs niveaux.
 
-**Exemple :** Ventes par région ET par produit + sous-totaux par région + total général
+**Exemple** : ventes par région ET par produit + sous-totaux par région + total général
 
 Ces extensions génèrent plusieurs niveaux d'agrégation en une seule requête !
 
@@ -323,7 +323,7 @@ ORDER BY ca_total DESC;
 
 ### 1. Questions de Volume
 
-**"Combien ?"**
+**« Combien ? »**
 
 - Combien de clients avons-nous ? → `COUNT(DISTINCT client_id)`
 - Combien de commandes ce mois ? → `COUNT(*) WHERE date >= ...`
@@ -331,7 +331,7 @@ ORDER BY ca_total DESC;
 
 ### 2. Questions Financières
 
-**"Quel montant ?"**
+**« Quel montant ? »**
 
 - Quel est notre chiffre d'affaires ? → `SUM(montant)`
 - Quel est le panier moyen ? → `AVG(montant_commande)`
@@ -339,7 +339,7 @@ ORDER BY ca_total DESC;
 
 ### 3. Questions de Performance
 
-**"Quelle est la meilleure/pire performance ?"**
+**« Quelle est la meilleure/pire performance ? »**
 
 - Quel produit se vend le plus ? → `GROUP BY produit ORDER BY COUNT(*) DESC`
 - Quelle région génère le plus de CA ? → `GROUP BY region ORDER BY SUM(montant) DESC`
@@ -347,7 +347,7 @@ ORDER BY ca_total DESC;
 
 ### 4. Questions de Tendance
 
-**"Comment évolue... ?"**
+**« Comment évolue… ? »**
 
 - Les ventes augmentent-elles ? → `GROUP BY EXTRACT(MONTH FROM date)`
 - Le panier moyen baisse-t-il ? → `AVG(montant) GROUP BY semaine`
@@ -355,7 +355,7 @@ ORDER BY ca_total DESC;
 
 ### 5. Questions de Distribution
 
-**"Comment se répartissent... ?"**
+**« Comment se répartissent… ? »**
 
 - Distribution des âges : `COUNT(*) GROUP BY tranche_age`
 - Répartition géographique : `COUNT(*) GROUP BY region`
@@ -363,7 +363,7 @@ ORDER BY ca_total DESC;
 
 ### 6. Questions de Qualité
 
-**"Quelle est la variabilité ?"**
+**« Quelle est la variabilité ? »**
 
 - Les délais de livraison sont-ils constants ? → `STDDEV(delai)`
 - Les prix sont-ils homogènes ? → `VARIANCE(prix)`
@@ -478,10 +478,20 @@ PostgreSQL peut utiliser des index pour accélérer les agrégations :
 
 **3. Calculs Optimisés**
 
-Les bases de données sont **optimisées** pour les agrégations :
-- Algorithmes de hachage rapides
-- Tri efficace
-- Parallélisation automatique
+Les bases de données sont **optimisées** pour les agrégations. Côté PostgreSQL, le planificateur choisit dynamiquement entre **trois algorithmes** selon la situation :
+
+| Algorithme | Mécanique | Quand le planificateur le choisit |
+|------------|-----------|------------------------------------|
+| **PlainAggregate** | Une seule passe linéaire | `GROUP BY` absent (agrégation globale, une ligne en sortie) |
+| **HashAggregate** | Table de hachage en mémoire (clé = groupe) | Beaucoup de groupes, **`work_mem`** suffisant pour la table de hachage |
+| **GroupAggregate** | Tri préalable des données, puis parcours | Données déjà triées par un index, ou tri rentable |
+
+À cela s'ajoute :
+- **Parallélisation** (`max_parallel_workers_per_gather`) : PostgreSQL répartit l'agrégation sur plusieurs cœurs avec un nœud `Partial Aggregate` (par worker) + `Finalize Aggregate` (combine les résultats).
+- **`MixedAggregate`** (PG 10+) : utilisé pour `ROLLUP`/`CUBE`/`GROUPING SETS` — calcule plusieurs niveaux d'agrégation en une seule passe.
+- **`Index Only Scan`** sur `MIN`/`MAX` : un index B-tree peut donner la réponse en O(log n) sans scan complet.
+
+> 💡 **Astuce concrète** : si un `HashAggregate` *spille* sur disque (visible dans `EXPLAIN (ANALYZE, BUFFERS)` avec `Disk: …kB`), augmentez `work_mem` pour la session. À partir de PostgreSQL 13, `hash_mem_multiplier` (défaut : 2) permet d'allouer plus de mémoire aux nœuds hash sans toucher à `work_mem` global.
 
 **4. Moins de Code Applicatif**
 
@@ -709,7 +719,7 @@ GROUP BY produit;
 
 Maintenant que vous comprenez les concepts fondamentaux de l'agrégation et du groupement, passons à la pratique avec la **Section 8.1 : Fonctions d'Agrégation Standards (COUNT, SUM, AVG, MIN, MAX)**.
 
-Vous y apprendrez à utiliser les 5 fonctions essentielles qui constituent 90% des agrégations quotidiennes en SQL.
+Vous y apprendrez à utiliser les 5 fonctions essentielles qui constituent 90 % des agrégations quotidiennes en SQL.
 
 **Bonne découverte de l'agrégation PostgreSQL !** 🚀
 
