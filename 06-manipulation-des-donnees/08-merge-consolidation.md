@@ -8,7 +8,7 @@
 
 Cette commande permet de **synchroniser** des données entre deux tables en effectuant différentes actions (INSERT, UPDATE, DELETE) selon qu'une ligne correspond ou non. C'est l'outil idéal pour les opérations ETL (Extract, Transform, Load), les synchronisations de données, et les imports complexes.
 
-> **Analogie** : MERGE est comme une opération "synchronisation" entre deux dossiers : il copie les nouveaux fichiers, met à jour les fichiers modifiés, et peut supprimer les fichiers obsolètes.
+> **Analogie** : MERGE est comme une opération « synchronisation » entre deux dossiers : il copie les nouveaux fichiers, met à jour les fichiers modifiés, et peut supprimer les fichiers obsolètes.
 
 ---
 
@@ -66,7 +66,7 @@ Avant de plonger dans MERGE, comparons-le avec ON CONFLICT (UPSERT) que nous avo
 ### Quand utiliser quoi ?
 
 **Utilisez ON CONFLICT quand** :
-- ✅ Vous faites un simple upsert (INSERT or UPDATE)  
+- ✅ Vous faites un simple *upsert* (`INSERT` ou `UPDATE`)  
 - ✅ Vous voulez une syntaxe courte et claire  
 - ✅ Vous n'avez pas besoin de DELETE  
 - ✅ La source est directement dans la requête (VALUES)
@@ -84,7 +84,7 @@ Avant de plonger dans MERGE, comparons-le avec ON CONFLICT (UPSERT) que nous avo
 
 ### Exemple simple de synchronisation
 
-Imaginons deux tables : une table de production et une table de staging pour les imports.
+Imaginons deux tables : une table de production et une table de *staging* pour les imports.
 
 ```sql
 -- Table de production (cible)
@@ -710,51 +710,69 @@ ON target.sku = source.sku
 
 ### Comparaison de performance
 
-Pour synchroniser 100 000 lignes entre deux tables :
+Pour synchroniser deux tables, l'approche fait une différence importante. Voici des **ordres de grandeur** comparatifs (les valeurs absolues dépendent du matériel, du volume, du nombre d'index, du nombre de lignes effectivement modifiées) :
 
-| Méthode | Durée | Complexité |
-|---------|-------|-----------|
-| DELETE + INSERT | ~15 secondes | Perd toutes les données temporairement |
-| SELECT puis UPDATE/INSERT individuels | ~45 secondes | Nombreuses requêtes |
-| MERGE | ~3 secondes | Une seule requête optimisée |
+| Méthode | Coût relatif | Pourquoi |
+|---------|--------------|----------|
+| Boucle applicative `SELECT` + `INSERT`/`UPDATE` ligne par ligne | ⛔ Très lent | N allers-retours client/serveur + N planifications de requête |
+| `DELETE FROM target` puis `INSERT … SELECT FROM source` | ⚠️ Lent | Écrit tout le WAL deux fois (effacement + recréation) ; verrous longs |
+| `INSERT … ON CONFLICT DO UPDATE` | ✅ Rapide | Une seule passe, mais limité à INSERT/UPDATE — pas de DELETE |
+| `MERGE` | ✅ Rapide | Une seule passe, plus flexible (peut aussi `DELETE`) — coût similaire à `ON CONFLICT` pour le cas commun INSERT/UPDATE |
+
+L'écart vraiment important est entre la **boucle applicative** (qui paie N fois la latence réseau) et les approches SQL ensemblistes. Entre `ON CONFLICT` et `MERGE`, le différentiel de performance pur est généralement faible sur un cas équivalent.
 
 ### Batch processing pour très gros volumes
 
-Pour des millions de lignes, traiter par lots :
+Pour des **dizaines de millions de lignes**, traiter en une seule commande `MERGE` peut consommer beaucoup de mémoire, gonfler le WAL et tenir des verrous longuement. On préfère alors traiter par **lots** dans une procédure (qui peut `COMMIT` entre chaque lot — un bloc `DO` ne le permet pas) :
 
 ```sql
--- Traiter par lots de 100 000 lignes
-DO $$  
+-- Étape 1 : marquer la source pour suivre l'avancement
+ALTER TABLE produits_import ADD COLUMN IF NOT EXISTS traite BOOLEAN DEFAULT false;  
+CREATE INDEX IF NOT EXISTS idx_import_a_traiter ON produits_import(sku) WHERE NOT traite;  
+
+-- Étape 2 : procédure de traitement par lots avec COMMIT entre chaque lot
+CREATE OR REPLACE PROCEDURE synchroniser_produits(taille_lot INTEGER DEFAULT 100000)  
+LANGUAGE plpgsql  
+AS $$  
 DECLARE  
-    batch_size INTEGER := 100000;
-    offset_val INTEGER := 0;
-    affected_rows INTEGER;
+    nb_traite INTEGER;
 BEGIN
     LOOP
-        MERGE INTO produits AS target
-        USING (
-            SELECT *
+        WITH lot AS (
+            SELECT sku, nom, prix, stock
             FROM produits_import
+            WHERE NOT traite
             ORDER BY sku
-            LIMIT batch_size OFFSET offset_val
-        ) AS source
-        ON target.sku = source.sku
-        WHEN MATCHED THEN
-            UPDATE SET
-                prix = source.prix,
-                stock = source.stock
-        WHEN NOT MATCHED THEN
-            INSERT (sku, nom, prix, stock)
-            VALUES (source.sku, source.nom, source.prix, source.stock);
+            LIMIT taille_lot
+            FOR UPDATE SKIP LOCKED
+        ),
+        merged AS (
+            MERGE INTO produits AS target
+            USING lot AS source
+            ON target.sku = source.sku
+            WHEN MATCHED THEN
+                UPDATE SET nom = source.nom, prix = source.prix, stock = source.stock
+            WHEN NOT MATCHED THEN
+                INSERT (sku, nom, prix, stock)
+                VALUES (source.sku, source.nom, source.prix, source.stock)
+            RETURNING source.sku AS sku_traite
+        )
+        UPDATE produits_import SET traite = true
+        WHERE sku IN (SELECT sku_traite FROM merged);
 
-        GET DIAGNOSTICS affected_rows = ROW_COUNT;
-        EXIT WHEN affected_rows = 0;
+        GET DIAGNOSTICS nb_traite = ROW_COUNT;
+        EXIT WHEN nb_traite = 0;
 
-        offset_val := offset_val + batch_size;
-        RAISE NOTICE 'Traité % lignes', offset_val;
+        RAISE NOTICE 'Lot terminé : % lignes', nb_traite;
+        COMMIT;  -- libère les verrous et borne la taille du WAL
     END LOOP;
-END $$;
+END;
+$$;
+
+CALL synchroniser_produits(100000);
 ```
+
+> 📌 **Pourquoi pas `OFFSET` pour la pagination ?** Sur de gros volumes, `LIMIT n OFFSET k` coûte de plus en plus cher quand `k` augmente (PostgreSQL doit scanner et jeter les `k` premières lignes à chaque itération). Marquer les lignes traitées (ou utiliser une *keyset pagination* sur la clé primaire) garde un coût constant par lot.
 
 ---
 
@@ -1007,6 +1025,109 @@ WHERE operation = 'UPDATE';  -- Historiser seulement les modifications
 
 ---
 
+## 6.8.14. Pattern industriel : *Slowly Changing Dimensions* (SCD)
+
+`MERGE` est l'outil de référence pour implémenter les **dimensions à évolution lente** d'un entrepôt de données. Voici les deux types les plus courants.
+
+### SCD type 1 — écrasement (pas d'historique)
+
+Le plus simple : on garde toujours la valeur courante, l'ancienne est perdue. Convient pour des attributs sans intérêt historique (orthographe d'un nom, code postal corrigé, etc.).
+
+```sql
+-- Dimension "client" en SCD1 : une seule ligne par client
+CREATE TABLE dim_client (
+    client_id   INTEGER PRIMARY KEY,
+    nom         TEXT NOT NULL,
+    ville       TEXT,
+    segment     TEXT,
+    derniere_maj TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+MERGE INTO dim_client AS dim  
+USING staging_client AS src  
+ON dim.client_id = src.client_id  
+WHEN MATCHED AND (  
+    dim.nom IS DISTINCT FROM src.nom
+ OR dim.ville IS DISTINCT FROM src.ville
+ OR dim.segment IS DISTINCT FROM src.segment
+) THEN
+    UPDATE SET nom = src.nom,
+               ville = src.ville,
+               segment = src.segment,
+               derniere_maj = now()
+WHEN NOT MATCHED THEN
+    INSERT (client_id, nom, ville, segment)
+    VALUES (src.client_id, src.nom, src.ville, src.segment);
+```
+
+Le `IS DISTINCT FROM` (et non `<>`) gère correctement les `NULL`. La condition `WHEN MATCHED AND …` évite d'écrire pour rien quand les valeurs sont identiques (gain de WAL et de bloat).
+
+### SCD type 2 — versionnage complet avec historique
+
+À chaque changement, on **clôt** la version courante (en lui fixant une date de fin) et on insère une nouvelle ligne « active ». On peut ainsi répondre à « quel était le segment de ce client le 15 mai 2024 ? ».
+
+```sql
+CREATE TABLE dim_client_h (
+    sk            BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    client_id     INTEGER NOT NULL,
+    nom           TEXT NOT NULL,
+    ville         TEXT,
+    segment       TEXT,
+    valide_du     TIMESTAMPTZ NOT NULL,
+    valide_au     TIMESTAMPTZ,  -- NULL = version active
+    actif         BOOLEAN NOT NULL DEFAULT true
+);
+
+-- Index partiel : la seule ligne "active" par client_id
+CREATE UNIQUE INDEX dim_client_h_actif
+    ON dim_client_h (client_id) WHERE actif;
+
+-- L'algorithme SCD2 en un seul MERGE :
+WITH
+-- 1) Pour chaque ligne source, retrouver la version active
+src_avec_actif AS (
+    SELECT s.*, h.sk AS sk_actif, h.segment AS segment_actuel,
+           h.ville AS ville_actuelle, h.nom AS nom_actuel
+    FROM staging_client s
+    LEFT JOIN dim_client_h h
+      ON h.client_id = s.client_id AND h.actif
+),
+-- 2) Ne garder que celles qui ont vraiment changé
+modifications AS (
+    SELECT *
+    FROM src_avec_actif
+    WHERE sk_actif IS NULL                                  -- nouveau client
+       OR nom IS DISTINCT FROM nom_actuel                   -- ou changement
+       OR ville IS DISTINCT FROM ville_actuelle
+       OR segment IS DISTINCT FROM segment_actuel
+),
+-- 3) Clore les versions actuelles concernées
+fermees AS (
+    UPDATE dim_client_h
+    SET actif = false, valide_au = now()
+    WHERE sk IN (SELECT sk_actif FROM modifications WHERE sk_actif IS NOT NULL)
+    RETURNING sk
+)
+-- 4) Insérer les nouvelles versions actives
+INSERT INTO dim_client_h (client_id, nom, ville, segment, valide_du)  
+SELECT client_id, nom, ville, segment, now()  
+FROM modifications;  
+```
+
+L'index partiel `WHERE actif` garantit qu'il y a **au plus une ligne active** par `client_id` à tout instant, et accélère la lookup de la version courante. La table contient l'**historique complet** des transitions, qu'on peut interroger temporellement :
+
+```sql
+-- Quel était le segment du client 42 le 15 mai 2024 ?
+SELECT segment FROM dim_client_h  
+WHERE client_id = 42  
+  AND valide_du <= '2024-05-15'::timestamptz
+  AND (valide_au IS NULL OR valide_au > '2024-05-15'::timestamptz);
+```
+
+> 💡 **MERGE pur ou CTE chaînées ?** Le SCD2 ci-dessus utilise plusieurs CTE chaînées plutôt qu'un seul `MERGE`. Pourquoi ? Parce que SCD2 nécessite **deux écritures par changement** (clôture + nouvelle version), et `MERGE` n'autorise qu'**une seule action par ligne source**. Un `MERGE` plus un `INSERT` séparé est nécessaire — ce que nous faisons ici, élégamment, dans un seul `WITH`.
+
+---
+
 ## Récapitulatif
 
 ### Syntaxe de référence complète
@@ -1047,7 +1168,7 @@ RETURNING
 
 | Besoin | Utilisez MERGE ? |
 |--------|-----------------|
-| Simple INSERT or UPDATE | ⚠️ ON CONFLICT plus simple |
+| Simple `INSERT` ou `UPDATE` | ⚠️ `ON CONFLICT` plus simple |
 | Synchronisation complète de tables | ✅ Parfait |
 | INSERT + UPDATE + DELETE | ✅ Idéal |
 | Conditions complexes multiples | ✅ Très flexible |

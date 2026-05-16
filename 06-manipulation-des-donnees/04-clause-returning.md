@@ -62,7 +62,7 @@ LIMIT 1;
 **Problèmes de cette approche** :
 1. **Deux requêtes** au lieu d'une (moins performant)  
 2. **Race condition** : Entre l'INSERT et le SELECT, une autre insertion pourrait survenir  
-3. **Ambiguïté** : Si plusieurs "Marie Dupont" existent, laquelle est la bonne ?  
+3. **Ambiguïté** : si plusieurs « Marie Dupont » existent, laquelle est la bonne ?  
 4. **Complexité** : Code plus verbeux et plus fragile
 
 ### La solution avec RETURNING
@@ -210,9 +210,9 @@ RETURNING id, nom, prenom, salaire;
 
 Vous voyez immédiatement la nouvelle valeur du salaire (45000 * 1.10 = 49500).
 
-### Retourner l'ancienne ET la nouvelle valeur (avec expression)
+### Retourner une « ancienne » valeur reconstruite (avant PG 18)
 
-Vous pouvez utiliser des expressions dans `RETURNING` :
+Vous pouvez utiliser des **expressions** dans `RETURNING`. Quand la transformation appliquée par `SET` est **réversible mathématiquement**, on peut « retrouver » l'ancienne valeur depuis la nouvelle :
 
 ```sql
 UPDATE employes  
@@ -222,17 +222,31 @@ RETURNING
     id,
     nom,
     salaire AS nouveau_salaire,
-    salaire / 1.10 AS ancien_salaire;
+    salaire / 1.10 AS ancien_salaire_reconstruit;  
 ```
 
 **Résultat** :
 ```
- id |  nom   | nouveau_salaire | ancien_salaire
-----+--------+-----------------+----------------
- 42 | Dupont |        49500.00 |       45000.00
+ id |  nom   | nouveau_salaire | ancien_salaire_reconstruit
+----+--------+-----------------+----------------------------
+ 42 | Dupont |        49500.00 |                   45000.00
 ```
 
-> **Note** : `salaire / 1.10` recalcule l'ancienne valeur à partir de la nouvelle.
+> ⚠️ **Cette astuce a des limites importantes** :  
+> - Elle ne fonctionne **que** pour des transformations **inversibles** (`+`, `-`, `*`, `/` par une constante). Une mise à jour comme `salaire = COALESCE(autre_colonne, salaire)` ou `statut = 'archivé'` ne peut **pas** se « dé-calculer ».  
+> - Sur des valeurs en virgule flottante ou en `NUMERIC` arrondi, la division peut introduire de très petites erreurs d'arrondi.
+>
+> 🆕 **PostgreSQL 18** introduit **`OLD.`** et **`NEW.`** dans `RETURNING`, ce qui permet de récupérer **directement et exactement** l'ancienne et la nouvelle valeur, sans dépendre d'une formule inverse :
+>
+> ```sql
+> -- Disponible en PostgreSQL 18+
+> UPDATE employes
+> SET salaire = salaire * 1.10
+> WHERE id = 42
+> RETURNING id, nom, OLD.salaire AS ancien, NEW.salaire AS nouveau;
+> ```
+>
+> Voir la section [6.5](/06-manipulation-des-donnees/05-old-new-dans-returning.md) pour le détail.
 
 ### UPDATE multiple avec RETURNING
 
@@ -364,7 +378,7 @@ SELECT * FROM deleted;
 
 ### Vérifier ce qui va être supprimé
 
-Vous pouvez utiliser RETURNING dans une transaction pour "simuler" une suppression :
+Vous pouvez utiliser RETURNING dans une transaction pour « simuler » une suppression :
 
 ```sql
 BEGIN;
@@ -515,7 +529,7 @@ WHERE id = (
 RETURNING id, job_type, payload;
 ```
 
-Ce pattern garantit qu'un seul worker récupère chaque job, sans risque de doublon.
+Ce pattern garantit qu'un seul *worker* récupère chaque *job*, sans risque de doublon.
 
 ### Pattern 2 : Incrémentation atomique de compteur
 
@@ -682,7 +696,25 @@ if (rs.next()) {
 
 ## 6.4.7. Combinaison avec CTE (Common Table Expressions)
 
-Les CTE permettent d'enchaîner plusieurs opérations en utilisant `RETURNING`.
+PostgreSQL permet de placer des commandes DML (`INSERT`, `UPDATE`, `DELETE`, `MERGE`) **dans des CTE** — on les appelle alors *data-modifying CTEs*. Couplées à `RETURNING`, elles autorisent des **pipelines de transformation en une seule requête atomique**, là où l'on faisait auparavant trois ou quatre requêtes séparées.
+
+### Subtilités importantes des *data-modifying CTEs*
+
+Avant de voir les exemples, deux règles à graver dans le marbre :
+
+1. **Toutes les sous-instructions s'exécutent sur le même *snapshot*** : à l'intérieur d'un même `WITH … SELECT/INSERT …`, les `INSERT`/`UPDATE`/`DELETE` ne voient **pas les effets les uns des autres**. Tous voient l'état des tables tel qu'il était au début de la commande.
+   
+   ```sql
+   WITH supprimes AS (
+       DELETE FROM employes WHERE id = 42 RETURNING *
+   )
+   SELECT count(*) FROM employes WHERE id = 42;
+   -- → 1 (et non 0) — le SELECT principal ne voit pas encore le DELETE
+   ```
+   
+   Pour propager les modifications, **passez par `RETURNING`** et lisez la CTE, pas la table source.
+
+2. **L'ordre d'exécution des CTE modifiantes n'est pas garanti** par le standard. PostgreSQL exécute toutes les CTE modifiantes du même niveau « comme si » elles étaient atomiques et simultanées. Cela peut surprendre quand on enchaîne plusieurs `INSERT` qui visent la même table.
 
 ### Exemple : Pipeline de traitement
 
@@ -730,6 +762,48 @@ SELECT
     STRING_AGG(nom || ' ' || prenom, ', ') AS employes_archives
 FROM archives;
 ```
+
+### Pattern : déplacer des lignes entre deux tables atomiquement
+
+C'est l'un des cas d'usage les plus puissants : on veut « bouger » des lignes d'une table à une autre, sans fenêtre temporelle pendant laquelle les données n'existent ni dans l'une ni dans l'autre.
+
+```sql
+-- Déplacer une commande "panier" en "commande validée" en une seule requête
+WITH valides AS (
+    DELETE FROM paniers
+    WHERE client_id = 42 AND date_creation < NOW() - INTERVAL '1 heure'
+    RETURNING client_id, produit_id, quantite, prix_unitaire
+)
+INSERT INTO commandes_validees (client_id, produit_id, quantite, prix_unitaire, date_validation)  
+SELECT client_id, produit_id, quantite, prix_unitaire, NOW()  
+FROM valides;  
+```
+
+Un crash en plein milieu de cette commande **annule tout** : aucune ligne n'est jamais perdue, aucune n'est jamais dupliquée.
+
+### Pattern : *splitting* d'une table de staging
+
+Trier une table de *staging* en lignes valides / invalides en un seul `WITH` :
+
+```sql
+WITH lignes_valides AS (
+    DELETE FROM staging
+    WHERE email ~ '^[^@]+@[^@]+\.[^@]+$'
+    RETURNING *
+),
+inserees AS (
+    INSERT INTO clients (email, nom)
+    SELECT email, nom FROM lignes_valides
+    RETURNING id
+)
+-- Les lignes restantes (invalides) sont déplacées en quarantaine
+INSERT INTO clients_rejetes (email, nom, raison)  
+SELECT email, nom, 'email malformé' FROM staging;  
+```
+
+Notez que la dernière instruction (qui n'est pas dans une CTE) référence `staging` **après** que le `DELETE` de `lignes_valides` ait extrait les bonnes lignes. C'est pourquoi le `staging` final ne contient plus que les invalides — à condition que le `DELETE` ait été exécuté **avant** le `SELECT` final. Ici, comme `inserees` dépend de `lignes_valides`, l'ordre est respecté.
+
+> 💡 **Règle pratique** : pour rendre l'ordre **explicite et déterministe**, créez une chaîne de dépendances entre vos CTE modifiantes via leurs `RETURNING` (par exemple : `archives` lit `anciens`, `inserees` lit `valides`).
 
 ---
 
@@ -799,13 +873,15 @@ RETURNING id, salaire;
 
 ### Support de RETURNING
 
-| SGBD | Support RETURNING | Notes |
-|------|------------------|-------|
-| **PostgreSQL** | ✅ Complet | INSERT, UPDATE, DELETE |
-| **Oracle** | ✅ Partiel | Clause RETURNING INTO (PL/SQL) |
-| **SQL Server** | ✅ Via OUTPUT | Clause OUTPUT (syntaxe différente) |
-| **MySQL** | ❌ Non | Pas de support natif |
-| **SQLite** | ✅ Depuis v3.35 | RETURNING ajouté récemment |
+| SGBD | Support `RETURNING` | Notes |
+|------|---------------------|-------|
+| **PostgreSQL** | ✅ Complet | `INSERT` / `UPDATE` / `DELETE` (et `MERGE` depuis PG 17) ; `OLD.` / `NEW.` depuis PG 18 |
+| **Oracle** | ✅ Partiel | Clause `RETURNING … INTO` uniquement en PL/SQL |
+| **SQL Server** | ✅ Via `OUTPUT` | Clause `OUTPUT` avec pseudo-tables `INSERTED` / `DELETED` (équivalent fonctionnel) |
+| **MySQL** | ❌ Non | Pas de support natif ; utiliser `LAST_INSERT_ID()` |
+| **MariaDB** | ✅ Partiel | `INSERT` / `DELETE` / `REPLACE … RETURNING` depuis 10.5 ; pas de `UPDATE … RETURNING` |
+| **SQLite** | ✅ Depuis 3.35 (2021) | Syntaxe quasi identique à PostgreSQL |
+| **Standard SQL** | ✅ Depuis SQL:2023 | Clause `RETURN` standardisée — PostgreSQL utilise `RETURNING` (variante historique) |
 
 ### Équivalents dans d'autres SGBD
 
@@ -848,15 +924,21 @@ SELECT LAST_INSERT_ID() AS id;
 ### 1. Utiliser RETURNING systématiquement pour les ID générés
 
 ```sql
--- ✅ Bonne pratique
+-- ✅ Bonne pratique : tout en une seule requête atomique
 INSERT INTO employes (nom, prenom)  
 VALUES ('Dupont', 'Marie')  
 RETURNING id;  
 
--- ❌ À éviter
+-- ⚠️ Alternative historique : currval() fonctionne, mais est plus fragile
 INSERT INTO employes (nom, prenom)  
 VALUES ('Dupont', 'Marie');  
-SELECT currval('employes_id_seq');  -- Fragile et non standard  
+SELECT currval('employes_id_seq');  
+-- Inconvénients :
+--  - Deux requêtes au lieu d'une (latence réseau doublée)
+--  - Nom de séquence à connaître ('employes_id_seq' n'existe que pour SERIAL ;
+--    pour GENERATED AS IDENTITY, le nom est généré automatiquement et opaque)
+--  - Pour récupérer plusieurs ID après un INSERT multi-lignes, currval() ne donne
+--    que la DERNIÈRE valeur — RETURNING les donne toutes.
 ```
 
 ### 2. Retourner uniquement les colonnes nécessaires

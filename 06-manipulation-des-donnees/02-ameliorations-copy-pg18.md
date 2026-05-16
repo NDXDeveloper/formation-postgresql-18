@@ -1,786 +1,500 @@
 🔝 Retour au [Sommaire](/SOMMAIRE.md)
 
-# 6.2. Nouveauté PG 18 : Améliorations COPY et gestion du marqueur de fin \. en CSV
+# 6.2. Nouveauté PG 18 : Améliorations COPY et gestion du marqueur de fin `\.` en CSV
 
 ## Introduction
 
-PostgreSQL 18, sorti en septembre 2025, apporte des améliorations significatives à la commande `COPY`, notamment dans la gestion des fichiers CSV. Cette section explore en détail ces nouveautés, en particulier la résolution d'un problème historique lié au marqueur de fin de données `\.` (backslash point).
+PostgreSQL 18, sorti en septembre 2025, apporte plusieurs améliorations à la commande `COPY`. Cette section explore en détail :
 
-Ces améliorations rendent l'importation de données plus robuste, plus fiable et plus intuitive, particulièrement pour les développeurs travaillant avec des fichiers CSV issus de sources externes variées.
+1. La **fin du double sens du marqueur `\.`** lors de la lecture depuis un fichier
+2. Les nouvelles options **`REJECT_LIMIT`** et **`LOG_VERBOSITY = 'silent'`** qui complètent `ON_ERROR`
+3. La possibilité de **`COPY TO` depuis une vue matérialisée**
+4. L'**interdiction de `FREEZE` sur les *foreign tables***
+
+Ces changements rendent l'importation de données plus prévisible, plus robuste et plus tolérante aux erreurs, tout en restant rétrocompatibles pour l'écrasante majorité des scripts existants.
 
 ---
 
 ## Comprendre le contexte historique
 
-### Le marqueur de fin `\.` : Un héritage du format texte
+### Le marqueur de fin `\.` : un héritage du format texte
 
-Pour comprendre l'amélioration apportée par PostgreSQL 18, il faut d'abord comprendre l'origine du problème.
+Pour comprendre l'amélioration apportée par PostgreSQL 18, il faut d'abord comprendre l'origine du marqueur.
 
 #### Le format texte de PostgreSQL
 
-Historiquement, PostgreSQL utilise un format propriétaire appelé "format texte" pour ses opérations d'import/export via `COPY`. Dans ce format :
+Historiquement, PostgreSQL utilise un format propriétaire appelé « format texte » pour ses opérations d'import/export via `COPY`. Dans ce format :
 
 - Les colonnes sont séparées par des **tabulations** (`\t`)
 - Les lignes sont séparées par des **retours à la ligne** (`\n`)
-- Les valeurs NULL sont représentées par `\N`
-- La **fin des données** est marquée par une ligne contenant uniquement `\.`
+- Les valeurs `NULL` sont représentées par `\N`
+- La **fin des données** était traditionnellement marquée par **une ligne contenant uniquement `\.`** (un antislash suivi d'un point)
 
 #### Exemple de format texte
 
-Fichier `employes.txt` au format texte PostgreSQL :
+Flux de données au format texte PostgreSQL :
 
-```
+```text
 1	Dupont	Marie	marie.dupont@example.com	45000.00
 2	Martin	Pierre	pierre.martin@example.com	52000.00
 3	Durand	Sophie	sophie.durand@example.com	48000.00
 \.
 ```
 
-La dernière ligne `\.` indique à PostgreSQL : "C'est la fin des données, arrête de lire".
+La dernière ligne `\.` indique à PostgreSQL : « c'est la fin des données, arrête de lire ».
 
 #### Pourquoi ce marqueur existe-t-il ?
 
-Le marqueur `\.` a été introduit pour deux raisons principales :
+Le marqueur `\.` a été conçu principalement pour les flux dans lesquels la fin de fichier (EOF) **n'arrive pas** naturellement, typiquement :
 
-1. **Différencier données et commandes** : Dans l'interface interactive `psql`, il fallait un moyen clair de marquer la fin des données saisies manuellement  
-2. **Compatibilité avec STDIN** : Lors de la lecture depuis l'entrée standard, PostgreSQL devait savoir quand s'arrêter
+1. **`COPY FROM STDIN` dans psql** : le script SQL continue après le `COPY`, donc psql a besoin d'un délimiteur explicite pour savoir où s'arrête la donnée et où reprend le SQL.
+2. **Saisie interactive** : un utilisateur tapant des lignes au clavier doit pouvoir signaler la fin.
 
 #### Exemple d'utilisation avec STDIN
 
 ```bash
-psql -d mabase << EOF  
-COPY employes FROM STDIN;  
+psql -d mabase << 'EOF'  
+COPY employes (id, nom, prenom, email) FROM STDIN;  
 1	Dupont	Marie	marie@example.com
 2	Martin	Pierre	pierre@example.com
 \.
-EOF
+SELECT count(*) FROM employes;  
+EOF  
 ```
 
-Le `\.` indique ici la fin du flux de données.
+Le `\.` indique ici la fin du flux de données ; le `SELECT` qui suit est interprété comme une nouvelle commande SQL.
 
 ---
 
-## Le problème avec les fichiers CSV
+## Le problème historique
 
-### L'extension du marqueur au format CSV
+### Règle PG 17 et antérieures
 
-Lorsque PostgreSQL a ajouté le support du format CSV (plus universel et standard), le comportement du marqueur `\.` a été conservé par compatibilité. Cela créait une situation problématique.
+Dans **toutes** les versions antérieures à PostgreSQL 18, `COPY FROM` reconnaissait `\.` comme marqueur de fin **dès lors qu'il apparaissait seul sur une ligne**, et ce **quel que soit le contexte** :
 
-### Le problème concret
+| Source de données | Format | `\.` seul sur une ligne | Résultat PG 17 |
+|-------------------|--------|------------------------|----------------|
+| STDIN (psql) | text | Présent | Fin reconnue (attendu) |
+| STDIN (psql) | csv | Présent | Fin reconnue (attendu) |
+| **Fichier** | text | Présent | Fin reconnue (souvent attendu) |
+| **Fichier** | **csv** | **Présent** | **Fin reconnue — ⚠️ piège** |
 
-Imaginons un fichier CSV légitime contenant des données avec la chaîne `\.` :
+Le **piège** se cache dans la dernière ligne du tableau : un fichier CSV légitime contenant `\.` seul sur une ligne provoquait l'arrêt prématuré de l'import — alors qu'en CSV, le marqueur n'a aucune raison d'être (le fichier a une fin de fichier naturelle).
 
-#### Fichier `chemins_windows.csv`
+### Cas concrets affectés en PG 17
 
-```csv
-id,nom,chemin
-1,Config système,C:\.config\system.ini
-2,Dossier racine,D:\.
-3,Fichier caché,.\.secret\data.txt
-```
+**À retenir** : pour déclencher le bug, il fallait qu'une **ligne entière** du flux soit exactement `\.`. Un `\.` à l'intérieur d'une cellule (par exemple `C:\.config\system.ini`) n'a **jamais** été interprété comme marqueur, car il n'est pas seul sur sa ligne.
 
-#### Comportement dans PostgreSQL 17 et antérieurs
+Les scénarios réellement piégés étaient :
 
-Lors de l'importation avec `COPY` :
-
-```sql
-COPY chemins (id, nom, chemin)  
-FROM '/tmp/chemins_windows.csv'  
-WITH (FORMAT csv, HEADER true);  
-```
-
-**Problème** : PostgreSQL interprétait la ligne contenant `D:\.` comme un marqueur de fin de fichier, stoppant l'importation prématurément !
-
-```
-Résultat dans PostgreSQL 17 :
-- Ligne 1 importée : C:\.config\system.ini
-- Ligne 2 NON importée (considérée comme fin de fichier)
-- Ligne 3 NON importée (données ignorées après le marqueur)
-```
-
-### Cas d'usage problématiques
-
-Ce problème affectait plusieurs scénarios réels :
-
-#### 1. Chemins de fichiers Windows et Unix
+#### 1. Cellule contenant un saut de ligne, puis `\.` sur la ligne suivante
 
 ```csv
-chemin  
-C:\Users\.config  
-/home/user/.\file
-.\relative\path
+id,description
+1,"Texte sur
+\.
+plusieurs lignes"
+2,"Autre donnée"
 ```
 
-#### 2. Expressions régulières et patterns
+Ici, à l'intérieur de la cellule quotée de la ligne 1, on a un retour à la ligne suivi de `\.` seul, puis un autre retour à la ligne. Selon les versions et le parseur, ce `\.` interne pouvait être interprété comme une fin prématurée.
+
+#### 2. CSV mal formé ou concaténé
+
+Un fichier produit par concaténation de plusieurs exports `COPY ... TO` au format texte, où chaque bloc se terminait par `\.`, et que l'on tentait de relire en CSV :
 
 ```csv
-pattern,description
-^\.,Fichiers cachés Unix
-\.\w+$,Extensions de fichiers
+nom,valeur  
+a,1  
+b,2  
+\.
+c,3  
+d,4  
 ```
 
-#### 3. Code source et échappements
+→ PG 17 s'arrêtait à `\.` et n'importait que `a,1` et `b,2`.
 
-```csv
-code,langage  
-console.log('\.'),JavaScript  
-echo "\.",Bash  
-```
+#### 3. Données générées par un outil ajoutant systématiquement `\.`
 
-#### 4. Données mathématiques ou scientifiques
-
-```csv
-notation,valeur
-\.5,0.5
-1\.,Point décimal
-```
+Certaines moulinettes d'export, par mimétisme avec le format texte historique, ajoutaient `\.` en fin de fichier CSV — provoquant en PG 17 un comportement « ça marche aujourd'hui, mais comment ? ».
 
 ### Contournements dans les versions antérieures
 
-Avant PostgreSQL 18, plusieurs solutions de contournement existaient, toutes insatisfaisantes :
+Avant PostgreSQL 18, les solutions étaient toutes imparfaites :
 
-#### Solution 1 : Échappement manuel des données
-
-```csv
-chemin  
-C:\\.config\system.ini  
-D:\\..  
-```
-
-**Inconvénients** :
-- Modification des données sources
-- Complexité accrue
-- Erreurs faciles
-
-#### Solution 2 : Utilisation d'un caractère de fin personnalisé
-
-Cette option n'existait pas vraiment pour CSV, uniquement pour le format texte.
-
-#### Solution 3 : Prétraitement des fichiers
-
-```bash
-# Remplacer \. par autre chose avant import
-sed 's/\\\./BACKSLASHPOINT/g' input.csv > temp.csv
-```
-
-**Inconvénients** :
-- Étape supplémentaire
-- Scripts de traitement complexes
-- Risque de corruption des données
-
-#### Solution 4 : Utiliser STDIN avec prudence
-
-```bash
-cat fichier.csv | psql -c "COPY table FROM STDIN WITH (FORMAT csv)"
-```
-
-**Inconvénients** :
-- Moins performant
-- Plus complexe à scripter
-- Problèmes avec les gros fichiers
+1. **Nettoyer les fichiers** en amont (script `sed`/`awk` pour échapper ou supprimer les `\.` isolés) — fragile et ajoute une étape.
+2. **Utiliser le format text avec un délimiteur exotique** — perte du standard CSV.
+3. **Passer par une table de *staging* en `TEXT`** puis valider et convertir — robuste mais coûteux en code.
 
 ---
 
-## Les améliorations de PostgreSQL 18
+## L'amélioration de PostgreSQL 18
 
-### Changement fondamental : Contexte-aware parsing
+### Changement de règle (release notes officielles)
 
-PostgreSQL 18 introduit un **parsing intelligent et sensible au contexte** pour la commande `COPY` avec le format CSV.
+> *« Disallow `COPY FROM` from treating `\.` as an end-of-data marker in CSV mode »* (Daniel Vérité, Tom Lane)
 
-### Nouvelle règle de gestion du marqueur `\.`
+**Règle nouvelle, depuis PostgreSQL 18 :**
 
-Dans PostgreSQL 18, le marqueur `\.` est désormais traité différemment selon le contexte :
+| Source | Format | `\.` seul sur une ligne | Comportement PG 18 |
+|--------|--------|------------------------|---------------------|
+| **Fichier** | **csv** | Présent | **Traité comme donnée** (changement) |
+| Fichier | text | Présent | Toujours marqueur de fin (inchangé) |
+| STDIN (psql) | text | Présent | Toujours marqueur de fin (compatibilité psql) |
+| STDIN (psql) | csv | Présent | Toujours marqueur de fin (compatibilité psql) |
 
-| Contexte | Comportement PG 17 | Comportement PG 18 |
-|----------|-------------------|-------------------|
-| **COPY FROM fichier** (CSV) | `\.` interprété comme fin | `\.` traité comme donnée |
-| **COPY FROM STDIN** (CSV) | `\.` interprété comme fin | `\.` interprété comme fin (backcompat) |
-| **Format texte** | `\.` interprété comme fin | `\.` interprété comme fin (inchangé) |
+Autrement dit :
+- **Lecture depuis un fichier** : le format CSV est désormais autonome — la fin de fichier (EOF) suffit. Le format `text` conserve le marqueur pour la rétrocompatibilité.
+- **Lecture depuis STDIN via psql** : `\.` reste indispensable comme délimiteur logique entre les données et la suite du script SQL, en CSV comme en text.
 
-### Principe de la modification
+Note de la documentation officielle :
 
-**Règle simple** : Lors de l'importation depuis un **fichier CSV**, PostgreSQL 18 ne cherche plus le marqueur `\.` et lit le fichier jusqu'à sa fin naturelle (EOF - End Of File).
+> *Pour la compatibilité avec les anciennes versions, `COPY TO` continue de **quoter** `\.` quand il se trouve seul sur une ligne, même si ce n'est plus strictement nécessaire en PG 18.*
 
-Le marqueur `\.` est **uniquement** recherché lors de l'utilisation de `STDIN` (entrée standard), pour des raisons de compatibilité avec les scripts existants.
+### Exemple : import d'un CSV contenant `\.` seul sur une ligne
 
----
-
-## Exemples pratiques des améliorations
-
-### Exemple 1 : Chemins Windows
-
-#### Fichier `chemins_windows.csv`
+Fichier `notations.csv` :
 
 ```csv
-id,application,chemin_config
-1,PostgreSQL,C:\Program Files\PostgreSQL\.config
-2,Apache,D:\.htaccess
-3,Node.js,.\node_modules\.cache
+id,notation
+1,"Méthode habituelle"
+2,"\."
+3,"\."
+4,"Donnée finale"
 ```
 
-#### PostgreSQL 17 (ÉCHEC)
+(Les cellules `\.` ici sont volontairement entre guillemets et donc pas seules sur leur ligne — illustration : `\.` ne déclenche pas le marqueur dans ce cas, ni en PG 17 ni en PG 18.)
 
-```sql
-COPY configurations (id, application, chemin_config)  
-FROM '/tmp/chemins_windows.csv'  
-WITH (FORMAT csv, HEADER true);  
-
--- Résultat : Seulement la ligne 1 importée
--- La ligne 2 est vue comme un marqueur de fin
-```
-
-#### PostgreSQL 18 (SUCCÈS)
-
-```sql
-COPY configurations (id, application, chemin_config)  
-FROM '/tmp/chemins_windows.csv'  
-WITH (FORMAT csv, HEADER true);  
-
--- Résultat : Toutes les lignes importées correctement
--- Le \. dans "D:\." est traité comme une donnée normale
-```
-
-**Vérification** :
-
-```sql
-SELECT * FROM configurations;
-
- id | application |                chemin_config
-----+-------------+-------------------------------------------
-  1 | PostgreSQL  | C:\Program Files\PostgreSQL\.config
-  2 | Apache      | D:\.htaccess
-  3 | Node.js     | .\node_modules\.cache
-```
-
-### Exemple 2 : Expressions régulières
-
-#### Fichier `regex_patterns.csv`
+Fichier `notations_piege.csv` (cas qui était problématique) :
 
 ```csv
-id,pattern,description,exemple
-1,"^\.",Fichiers cachés Unix,.bashrc
-2,"\.txt$",Fichiers texte,document.txt
-3,"\.\w+",Extension avec caractères,file.config
-4,"\.{2,}",Points multiples,parent\..
+id,notation
+1,Méthode habituelle
+\.
+2,Donnée après marqueur
 ```
 
-#### PostgreSQL 18 : Import sans modification
+#### En PostgreSQL 17
 
 ```sql
-COPY regex_library (id, pattern, description, exemple)  
-FROM '/tmp/regex_patterns.csv'  
-WITH (FORMAT csv, HEADER true);  
-
--- Toutes les lignes sont importées correctement
+COPY notations FROM '/tmp/notations_piege.csv' WITH (FORMAT csv, HEADER true);
+-- Résultat : 1 seule ligne importée (id = 1)
+-- La ligne 2 est ignorée, sans erreur visible : import silencieusement tronqué.
 ```
 
-**Vérification** :
+#### En PostgreSQL 18
 
 ```sql
-SELECT pattern, description FROM regex_library;
-
-  pattern   |       description
-------------+--------------------------
- ^\.        | Fichiers cachés Unix
- \.txt$     | Fichiers texte
- \.\w+      | Extension avec caractères
- \.{2,}     | Points multiples
+COPY notations FROM '/tmp/notations_piege.csv' WITH (FORMAT csv, HEADER true);
+-- Résultat : selon le contenu de la ligne `\.`, soit elle est importée comme
+-- une ligne de données (si elle a le bon nombre de colonnes après parsing CSV),
+-- soit elle déclenche une erreur de format CSV.
+-- L'import ne s'arrête plus silencieusement.
 ```
 
-### Exemple 3 : Code source embarqué
+Cette différence est **précieuse** : un import tronqué sans erreur est l'un des bugs les plus difficiles à détecter en production.
 
-#### Fichier `code_samples.csv`
+### Comportement STDIN inchangé
 
-```csv
-langage,code,description  
-JavaScript,"const x = '\.';",Chaîne avec backslash-point  
-Python,"print('\.')",Affichage de \.  
-Bash,"echo '\.'",Echo en shell  
-Regex,"\.",Point littéral  
-```
-
-#### PostgreSQL 18 : Aucun problème
-
-```sql
-COPY code_snippets (langage, code, description)  
-FROM '/tmp/code_samples.csv'  
-WITH (FORMAT csv, HEADER true);  
-
-SELECT * FROM code_snippets;
-
-  langage   |       code        |      description
-------------+-------------------+------------------------
-JavaScript | const x = '\.';   | Chaîne avec backslash-point  
-Python     | print('\.')       | Affichage de \.  
-Bash       | echo '\.'         | Echo en shell  
-Regex      | \.                | Point littéral  
-```
-
----
-
-## Compatibilité et comportement avec STDIN
-
-### Le cas particulier de STDIN
-
-Pour maintenir la **compatibilité ascendante** avec les scripts existants, PostgreSQL 18 conserve le comportement historique lors de l'utilisation de `STDIN` :
-
-#### Avec STDIN : `\.` reste un marqueur de fin
+Pour maintenir la compatibilité avec **les milliers de scripts** utilisant `COPY FROM STDIN` (le pattern le plus courant dans les dumps `pg_dump` au format SQL, par exemple), le marqueur `\.` reste reconnu en STDIN :
 
 ```bash
-psql -d mabase << EOF  
+psql -d mabase << 'EOF'  
 COPY employes (nom, prenom) FROM STDIN WITH (FORMAT csv);  
 Dupont,Marie  
 Martin,Pierre  
 \.
-EOF
+SELECT count(*) FROM employes;  
+EOF  
 ```
 
-Le `\.` est **toujours nécessaire** pour marquer la fin des données avec STDIN.
+Sans le `\.`, psql ne pourrait pas distinguer la fin du flux CSV du début du `SELECT` qui suit.
 
-#### Pourquoi cette exception ?
+> ⚠️ **Effet de bord sur les anciens clients psql** : les notes officielles signalent qu'un **client psql antérieur à 18** se connectant à un **serveur PostgreSQL 18** peut rencontrer des comportements inattendus avec `\copy` (la méta-commande côté client) sur les fichiers CSV. Mettez à jour `psql` côté client pour éviter ces écarts.
 
-1. **Scripts existants** : Des milliers de scripts utilisent ce comportement  
-2. **Interface interactive** : Dans `psql`, l'utilisateur doit pouvoir signaler la fin de la saisie  
-3. **Backward compatibility** : Garantir que les anciens scripts continuent de fonctionner
+#### Pourquoi `pg_dump` n'est pas affecté
 
-### Différenciation automatique
-
-PostgreSQL 18 détecte automatiquement le contexte :
+Un dump SQL produit par `pg_dump` (sans option `-Fc`/`-Fd`) contient typiquement, pour chaque table :
 
 ```sql
--- Contexte 1 : Fichier (nouveau comportement)
-COPY table FROM '/path/file.csv' WITH (FORMAT csv);
--- → \. traité comme donnée
-
--- Contexte 2 : STDIN (ancien comportement préservé)
-COPY table FROM STDIN WITH (FORMAT csv);
--- → \. traité comme marqueur de fin
-```
-
----
-
-## Autres améliorations de COPY dans PostgreSQL 18
-
-### 1. Performances accrues
-
-PostgreSQL 18 optimise le traitement interne de `COPY`, notamment :
-
-#### Optimisations I/O
-
-- **Lecture en buffer plus efficace** : Meilleure utilisation de la mémoire tampon  
-- **Parallélisation améliorée** : Traitement plus rapide des gros fichiers  
-- **Réduction des allocations mémoire** : Moins de fragmentation
-
-#### Gains mesurables
-
-Tests de benchmark (fichier CSV de 10 millions de lignes) :
-
-| Version PostgreSQL | Temps d'import | Amélioration |
-|-------------------|---------------|--------------|
-| PostgreSQL 16     | 45 secondes   | Baseline     |
-| PostgreSQL 17     | 42 secondes   | +7%          |
-| PostgreSQL 18     | 35 secondes   | +29%         |
-
-### 2. Meilleure gestion des types complexes
-
-PostgreSQL 18 améliore l'import de types de données complexes via `COPY` :
-
-#### Types JSONB
-
-```csv
-id,data
-1,"{""name"": ""Alice"", ""tags"": [""admin"", ""user""]}"
-2,"{""name"": ""Bob"", ""score"": 95.5}"
-```
-
-```sql
-COPY users (id, data)  
-FROM '/tmp/users.csv'  
-WITH (FORMAT csv, HEADER true);  
-
--- PostgreSQL 18 : Parsing JSONB plus rapide de ~15%
-```
-
-#### Types ARRAY
-
-```csv
-id,tags,scores
-1,"{tag1,tag2,tag3}","{95,87,92}"
-2,"{admin,superuser}","{100,100}"
-```
-
-```sql
-COPY products (id, tags, scores)  
-FROM '/tmp/products.csv'  
-WITH (FORMAT csv, HEADER true);  
-
--- Gestion améliorée des délimiteurs et échappements dans les tableaux
-```
-
-### 3. Messages d'erreur plus explicites
-
-PostgreSQL 18 améliore les messages d'erreur lors des échecs d'import :
-
-#### Avant (PostgreSQL 17)
-
-```
-ERROR: invalid input syntax for type integer: "abc"  
-CONTEXT: COPY employes, line 2347  
-```
-
-#### Après (PostgreSQL 18)
-
-```
-ERROR: invalid input syntax for type integer: "abc"  
-DETAIL: Column "age" expects an integer value  
-CONTEXT: COPY employes, line 2347, column age  
-HINT: Check the data type of column "age" in your CSV file  
-```
-
-Les messages incluent maintenant :
-- Le **nom de la colonne** concernée
-- Le **type attendu**
-- Un **conseil** (HINT) pour résoudre le problème
-
-### 4. Support amélioré de l'encodage
-
-PostgreSQL 18 gère mieux les conversions d'encodage lors de l'import :
-
-```sql
--- Détection automatique améliorée
-COPY employes FROM '/tmp/data_utf16.csv'  
-WITH (FORMAT csv, ENCODING 'UTF16');  
-
--- Gestion plus robuste des caractères invalides
-COPY logs FROM '/tmp/logs_mixed.csv'  
-WITH (FORMAT csv, ENCODING 'UTF8');  
-```
-
----
-
-## Guide de migration vers PostgreSQL 18
-
-### Vérifier la compatibilité de vos scripts
-
-Si vous migrez vers PostgreSQL 18, voici les points à vérifier :
-
-#### Scripts utilisant COPY FROM fichier
-
-✅ **Aucune modification nécessaire** - Le nouveau comportement est plus permissif et ne cassera pas les scripts existants.
-
-```sql
--- Ce script fonctionnait en PG 17 et fonctionne toujours en PG 18
-COPY employes FROM '/tmp/employes.csv' WITH (FORMAT csv);
-```
-
-#### Scripts utilisant COPY FROM STDIN
-
-✅ **Aucune modification nécessaire** - Le comportement est préservé pour la compatibilité.
-
-```bash
-# Ce script continue de fonctionner en PG 18
-psql -d mabase << EOF  
-COPY employes FROM STDIN WITH (FORMAT csv);  
-Dupont,Marie  
+COPY public.employes (id, nom, prenom) FROM stdin;
+1   Dupont  Marie
+2   Martin  Pierre
 \.
-EOF
 ```
 
-#### Scripts avec données contenant `\.`
-
-✅ **Amélioration automatique** - Les fichiers qui échouaient en PG 17 fonctionnent maintenant en PG 18.
-
-### Nettoyer les contournements obsolètes
-
-Si vous aviez mis en place des contournements pour le problème du `\.`, vous pouvez maintenant les supprimer :
-
-#### Avant (PostgreSQL 17)
-
-```bash
-#!/bin/bash
-# Script de prétraitement nécessaire en PG 17
-
-# Échapper les \. dans le fichier CSV
-sed 's/\\\./BACKSLASHPOINT/g' input.csv > temp.csv
-
-# Importer
-psql -d mabase -c "COPY table FROM '/tmp/temp.csv' WITH (FORMAT csv)"
-
-# Corriger les données après import
-psql -d mabase -c "UPDATE table SET column = REPLACE(column, 'BACKSLASHPOINT', '\.')"
-
-# Nettoyer
-rm temp.csv
-```
-
-#### Après (PostgreSQL 18)
-
-```bash
-#!/bin/bash
-# Script simplifié en PG 18
-
-# Import direct sans prétraitement
-psql -d mabase -c "COPY table FROM '/tmp/input.csv' WITH (FORMAT csv)"
-```
-
-**Bénéfices** :
-- Code plus simple et plus maintenable
-- Moins de risques d'erreur
-- Meilleures performances (pas de prétraitement)
-- Pas de fichiers temporaires
+Quand on rejoue ce dump avec `psql -f dump.sql`, psql lit ces lignes depuis **STDIN** (par rapport au `COPY`) : le marqueur `\.` reste donc indispensable et est correctement interprété, en PG 17 comme en PG 18. **C'est exactement pour ne pas casser ces millions de dumps existants** que le comportement STDIN a été préservé.
 
 ---
 
-## Cas d'usage réels bénéficiant des améliorations
+## Nouvelles options de gestion d'erreurs
 
-### 1. Import de logs système
+Pour les imports d'origine externe (CSV venant d'un partenaire, d'un export tiers, etc.), il est fréquent d'avoir quelques lignes mal formées dans un fichier par ailleurs valide. PostgreSQL 17 avait introduit `ON_ERROR = 'ignore'` ; PostgreSQL 18 ajoute deux options pour mieux le contrôler.
 
-Les logs contiennent souvent des chemins de fichiers :
+### Rappel : `ON_ERROR` (PostgreSQL 17)
 
-```csv
-timestamp,level,message,file
-2025-11-19 10:30:00,ERROR,Config not found,C:\Windows\.config
-2025-11-19 10:31:15,WARN,Permission denied,/etc/.\hidden
-2025-11-19 10:32:45,INFO,File loaded,.\relative\path
+```sql
+COPY employes FROM '/tmp/employes.csv'  
+WITH (FORMAT csv, HEADER true, ON_ERROR = 'ignore');  
 ```
 
-**PostgreSQL 18** : Import direct sans problème.
+- Les lignes pour lesquelles la **conversion de type** échoue (par exemple `"abc"` dans une colonne `INTEGER`) sont **ignorées** au lieu d'avorter la commande.
+- Les autres violations (`NOT NULL`, `UNIQUE`, clés étrangères, `CHECK`) ne sont **pas** captées et provoquent toujours l'erreur de COPY classique.
+- Valeurs possibles : `'stop'` (défaut, comportement historique) ou `'ignore'`.
 
-### 2. Import de configurations applicatives
+### `REJECT_LIMIT` (PostgreSQL 18)
 
-```csv
-app,config_key,config_value  
-nginx,root_path,/var/www/.\public  
-apache,htaccess_path,/.\.htaccess  
-tomcat,webapp_path,.\webapps  
+Plafonne le nombre de lignes que `ON_ERROR = 'ignore'` est autorisé à ignorer :
+
+```sql
+COPY employes FROM '/tmp/employes.csv'  
+WITH (FORMAT csv, HEADER true,  
+      ON_ERROR = 'ignore',  
+      REJECT_LIMIT = 100);  
 ```
 
-**PostgreSQL 18** : Toutes les valeurs importées correctement.
+- Si **plus de 100** lignes sont invalides, `COPY` échoue (avec rollback total).
+- Si **100 ou moins**, l'import réussit, et un `NOTICE` indique combien ont été ignorées.
 
-### 3. Import de patterns de sécurité
+C'est un garde-fou précieux : on tolère « un peu de bruit » dans les données, mais on refuse un fichier massivement corrompu (qui pourrait masquer un vrai problème en amont).
 
-```csv
-rule_id,pattern,risk_level
-1,"\.",HIGH
-2,"\.exe$",CRITICAL
-3,"^\.",MEDIUM
+`REJECT_LIMIT` n'est valide qu'en combinaison avec `ON_ERROR = 'ignore'`.
+
+### `LOG_VERBOSITY` (PostgreSQL 18)
+
+Contrôle le détail des messages produits par `ON_ERROR = 'ignore'` :
+
+```sql
+-- Mode silencieux : ne pas spammer le journal pour chaque ligne ignorée
+COPY employes FROM '/tmp/employes.csv'  
+WITH (FORMAT csv, HEADER true,  
+      ON_ERROR = 'ignore',  
+      LOG_VERBOSITY = 'silent');  
 ```
 
-**PostgreSQL 18** : Les expressions régulières sont préservées intégralement.
+Valeurs :
+- `'default'` (par défaut) : log un `NOTICE` pour chaque ligne ignorée.
+- `'verbose'` : log détaillé incluant la cause de l'erreur.
+- `'silent'` (**nouveau PG 18**) : ne log qu'un résumé final, pas chaque ligne.
 
-### 4. Bases de données de recherche de code
+Utile lors d'imports volumineux : sans `silent`, le journal du serveur peut être noyé sous des milliers de `NOTICE` pour les lignes ignorées.
 
-```csv
-repo,file,line_number,code_snippet  
-myapp,utils.js,45,"const re = /\./g;"  
-myapp,config.py,12,"if path.startswith('\.'):  
-otherapp,main.c,89,"printf(""\\."");"  
+### Exemple combiné
+
+```sql
+-- Charger un export quotidien d'un partenaire :
+-- - on tolère jusqu'à 50 lignes en erreur de type
+-- - au-delà, on rejette tout l'import
+-- - on garde le journal lisible
+COPY ventes (date_vente, client_id, produit_id, montant)  
+FROM '/imports/ventes_J-1.csv'  
+WITH (  
+    FORMAT csv,  
+    HEADER true,  
+    ON_ERROR = 'ignore',  
+    REJECT_LIMIT = 50,  
+    LOG_VERBOSITY = 'silent'  
+);  
 ```
-
-**PostgreSQL 18** : Code source importé sans altération.
 
 ---
 
-## Bonnes pratiques avec PostgreSQL 18
+## `COPY TO` depuis une vue matérialisée
 
-### 1. Privilégier COPY FROM fichier
+PostgreSQL 18 lève une restriction historique : `COPY TO` accepte désormais une **vue matérialisée peuplée** comme source.
 
-Avec PostgreSQL 18, préférez toujours `COPY FROM` avec un fichier plutôt que `STDIN` :
+### Avant (PG 17 et antérieures)
 
 ```sql
--- ✅ Recommandé (utilise les améliorations de PG 18)
-COPY employes FROM '/tmp/data.csv' WITH (FORMAT csv);
-
--- ⚠️ Fonctionne mais conserve l'ancien comportement
-COPY employes FROM STDIN WITH (FORMAT csv);
+COPY ventes_par_mois TO '/tmp/ventes.csv' WITH (FORMAT csv, HEADER true);
+-- ERROR: cannot copy from materialized view "ventes_par_mois"
 ```
 
-### 2. Toujours spécifier FORMAT csv
-
-Soyez explicite sur le format pour éviter toute confusion :
+Il fallait passer par une sous-requête :
 
 ```sql
--- ✅ Clair et explicite
-COPY employes FROM '/tmp/data.csv' WITH (FORMAT csv, HEADER true);
-
--- ❌ Ambiguë (format texte par défaut)
-COPY employes FROM '/tmp/data.txt';
+COPY (SELECT * FROM ventes_par_mois) TO '/tmp/ventes.csv' WITH (FORMAT csv, HEADER true);
 ```
 
-### 3. Profiter des messages d'erreur améliorés
-
-En cas d'erreur, lisez attentivement le message complet :
+### Depuis PG 18
 
 ```sql
-ERROR: invalid input syntax for type date: "2025-13-45"  
-DETAIL: Column "date_embauche" expects a valid date  
-CONTEXT: COPY employes, line 3421, column date_embauche  
-HINT: Check the date format in your CSV file (expected: YYYY-MM-DD)  
+-- Fonctionne désormais directement
+COPY ventes_par_mois TO '/tmp/ventes.csv' WITH (FORMAT csv, HEADER true);
 ```
 
-Le message vous donne :
-- La ligne exacte (`line 3421`)
-- La colonne concernée (`date_embauche`)
-- Le type attendu (`date`)
-- Un conseil pour corriger
+La vue matérialisée doit être **peuplée** (avoir reçu au moins un `REFRESH MATERIALIZED VIEW`) ; une vue matérialisée vide produit toujours une erreur.
 
-### 4. Documenter les sources de données
+> 📌 La forme `COPY (SELECT … FROM mv) TO …` reste utilisable et permet de filtrer/transformer à la volée.
 
-Si vos fichiers CSV peuvent contenir des caractères spéciaux, documentez-le :
+---
 
-```sql
--- Import de données Windows pouvant contenir des chemins avec \.
--- PostgreSQL 18+ requis pour une gestion correcte
-COPY configurations  
-FROM '/data/windows_configs.csv'  
-WITH (FORMAT csv, HEADER true, ENCODING 'UTF8');  
+## Restriction `FREEZE` sur les *foreign tables*
+
+`COPY FREEZE` est une option qui marque les lignes comme « gelées » dès l'insertion : utile pour pré-remplir une table sans déclencher de `VACUUM FREEZE` ultérieur. Cette option n'a jamais eu de sens sur une *foreign table* (table distante), puisque le moteur PostgreSQL local ne contrôle pas le stockage physique de l'autre côté.
+
+| Version | Comportement |
+|---------|--------------|
+| PG 17 et antérieures | `COPY foreign_table FROM … FREEZE` accepté, **mais `FREEZE` ignoré silencieusement** |
+| **PG 18** | **Erreur explicite** : `FREEZE option not supported for COPY to foreign tables` |
+
+C'est un changement « cosmétique » mais utile : il évite de croire qu'on a un gain de performance qui en réalité n'existe pas.
+
+---
+
+## Compatibilité et migration
+
+### Migration vers PostgreSQL 18 : check-list
+
+| Pratique | Action |
+|----------|--------|
+| `COPY FROM '...' WITH (FORMAT csv)` sur un fichier sans `\.` isolé | ✅ Rien à faire |
+| `COPY FROM '...' WITH (FORMAT csv)` sur un fichier **contenant** `\.` isolé | ✅ L'import qui était tronqué silencieusement va maintenant aller au bout |
+| `COPY FROM STDIN` dans un script psql (dump, init data…) | ✅ Rien à faire, `\.` reste reconnu |
+| Script avec contournement maison du `\.` | 🧹 Vous pouvez le retirer |
+| `\copy` depuis un client **psql ≤ 17** vers un serveur PG 18 | ⚠️ Mettre à jour psql côté client |
+| `COPY foreign_table FROM … FREEZE` | ❌ Retirer `FREEZE` ou cibler une table locale |
+| Pipeline ignorant manuellement des lignes erronées | 💡 Envisager `ON_ERROR = 'ignore'` + `REJECT_LIMIT` |
+
+### Avant / après : un script qui contournait le bug
+
+#### Avant (PG ≤ 17)
+
+```bash
+#!/bin/bash
+# Le fichier CSV reçu d'un partenaire contient parfois "\." en cellule
+# Échappement préventif pour éviter une troncature silencieuse en COPY
+sed 's/^\\\.$/__BACKSLASH_DOT__/g' input.csv > clean.csv
+
+psql -d mabase -c "COPY t FROM '/tmp/clean.csv' WITH (FORMAT csv, HEADER true)"
+
+psql -d mabase -c "UPDATE t SET col = '\.' WHERE col = '__BACKSLASH_DOT__'"  
+rm clean.csv  
+```
+
+#### Après (PG 18)
+
+```bash
+#!/bin/bash
+psql -d mabase -c "COPY t FROM '/tmp/input.csv' WITH (FORMAT csv, HEADER true)"
 ```
 
 ---
 
 ## Tests de validation après migration
 
-### Script de test complet
-
-Voici un script pour valider que les améliorations fonctionnent correctement après migration vers PostgreSQL 18 :
-
-```sql
--- 1. Créer une table de test
-CREATE TABLE test_copy_pg18 (
-    id SERIAL PRIMARY KEY,
-    data TEXT
-);
-
--- 2. Créer un fichier de test avec des cas limites
--- (À exécuter depuis le shell)
-```
+Voici un script reproductible pour vérifier le nouveau comportement.
 
 ```bash
-cat > /tmp/test_copy.csv << 'EOF'  
-id,data  
-1,"Simple data"
-2,"Data with \. in middle"
-3,"D:\."
-4,"Multiple \. \. \."
-5,"Start \."
-6,"\. End"
-7,"^\."
-8,"Regex: \.\w+"
+# Préparer un CSV qui aurait tronqué l'import en PG 17
+cat > /tmp/test_pg18_copy.csv <<'EOF'  
+id,libelle  
+1,Avant le piège
+\.
+2,Après le piège
 EOF
 ```
 
 ```sql
--- 3. Importer les données
-COPY test_copy_pg18 (id, data)  
-FROM '/tmp/test_copy.csv'  
-WITH (FORMAT csv, HEADER true);  
+-- 1. Table de test
+CREATE TABLE test_pg18_copy (id INTEGER, libelle TEXT);
 
--- 4. Vérifier que toutes les lignes sont importées
-SELECT COUNT(*) FROM test_copy_pg18;
--- Attendu : 8 lignes
+-- 2. Import
+COPY test_pg18_copy FROM '/tmp/test_pg18_copy.csv'  
+WITH (FORMAT csv, HEADER true, ON_ERROR = 'ignore');  
 
--- 5. Vérifier que les \. sont préservés
-SELECT id, data  
-FROM test_copy_pg18  
-WHERE data LIKE '%\.%';  
--- Attendu : 7 lignes (toutes sauf la première)
+-- 3. Comptage
+SELECT count(*) FROM test_pg18_copy;
+--   PG 17 : 1   (import tronqué silencieusement à la ligne "\.")
+--   PG 18 : 1 ou 2 selon que la ligne "\." est rejetée par ON_ERROR ou non,
+--           mais dans tous les cas la ligne "Après le piège" est TENTÉE.
 
--- 6. Vérifier des cas spécifiques
-SELECT data FROM test_copy_pg18 WHERE id = 3;
--- Attendu : "D:\."
+-- 4. Détail
+SELECT * FROM test_pg18_copy ORDER BY id;
 
-SELECT data FROM test_copy_pg18 WHERE id = 8;
--- Attendu : "Regex: \.\w+"
-
--- 7. Nettoyer
-DROP TABLE test_copy_pg18;
+-- 5. Nettoyage
+DROP TABLE test_pg18_copy;
 ```
 
-**Résultats attendus dans PostgreSQL 18** :
-- ✅ 8 lignes importées (100%)  
-- ✅ Tous les `\.` préservés dans les données  
-- ✅ Aucune erreur
-
-**Résultats dans PostgreSQL 17** :
-- ❌ Import interrompu à la ligne 3  
-- ❌ Seulement 2 lignes importées  
-- ❌ Données après `D:\.` ignorées
+L'élément clé du test : **en PG 18, la ligne `2,Après le piège` n'est plus ignorée**.
 
 ---
 
 ## Questions fréquentes (FAQ)
 
-### Q1 : Les anciens scripts vont-ils casser après upgrade vers PG 18 ?
+### Q1 — Les anciens scripts vont-ils casser après upgrade vers PG 18 ?
 
-**R :** Non. Les changements sont **rétrocompatibles**. PostgreSQL 18 est plus permissif, pas plus restrictif. Les scripts qui fonctionnaient en PG 17 continueront de fonctionner en PG 18.
+**Non**, le changement est rétrocompatible pour les usages réels :
+- `COPY FROM STDIN` (les dumps `pg_dump`, les scripts d'init) : comportement strictement inchangé.
+- `COPY FROM '…' (FORMAT text)` : comportement strictement inchangé.
+- `COPY FROM '…' (FORMAT csv)` : seuls les imports qui étaient **tronqués silencieusement** changent — et le nouveau comportement est désirable.
 
-### Q2 : Dois-je modifier mes fichiers CSV pour PG 18 ?
+Le seul piège est un **client `psql` plus ancien que 18** parlant à un **serveur PG 18**, pour la méta-commande `\copy` sur CSV : alignez les versions.
 
-**R :** Non. Si vos fichiers CSV fonctionnaient en PG 17, ils fonctionneront en PG 18. Et si certains fichiers échouaient à cause du `\.`, ils fonctionneront maintenant.
+### Q2 — Dois-je nettoyer mes fichiers CSV pour PG 18 ?
 
-### Q3 : Comment forcer l'ancien comportement si nécessaire ?
+Non. Au contraire, des fichiers qui étaient « toxiques » en PG 17 (`\.` isolé) sont maintenant lisibles.
 
-**R :** Utilisez `COPY FROM STDIN` au lieu de `COPY FROM fichier`. Le comportement historique est préservé avec STDIN.
+### Q3 — Le format `text` est-il affecté ?
 
-### Q4 : Le format texte est-il affecté ?
+**Non.** En format `text`, `\.` reste un marqueur de fin de données (qu'on lise depuis un fichier ou depuis STDIN). Le changement de PG 18 ne concerne que le **format CSV** et la **source fichier**.
 
-**R :** Non. Le format texte (`FORMAT text`) conserve son comportement historique inchangé. Le marqueur `\.` est toujours requis et reconnu.
+### Q4 — Comment garder l'ancien comportement « \\. = EOF » si je le voulais en CSV ?
 
-### Q5 : Puis-je utiliser `\.` comme marqueur explicite dans un fichier CSV ?
+Vous ne pouvez plus en lecture depuis fichier. Si votre format de données utilise réellement `\.` comme marqueur, il faut soit l'importer en `FORMAT text`, soit le pipe-er via STDIN avec psql, soit retirer la ligne `\.` du fichier avant import.
 
-**R :** En PG 18, lors de l'import depuis un fichier, `\.` sera traité comme des données normales. Pour marquer explicitement la fin, utilisez plutôt EOF (fin de fichier naturelle).
+### Q5 — Quelle est l'amélioration de performance de `COPY` en PG 18 ?
 
-### Q6 : Y a-t-il un impact sur les performances ?
+Les release notes ne documentent **pas** d'optimisation directe de `COPY` lui-même. En revanche, deux évolutions du moteur peuvent indirectement accélérer les imports massifs :
+- Le **nouveau sous-système d'E/S asynchrones (AIO)**, configurable via `io_method`, qui peut améliorer les opérations d'E/S intensives.
+- Les **améliorations des jointures de hachage et `GROUP BY`** qui bénéficient aux traitements post-import (analytique, agrégation).
 
-**R :** Oui, positivement ! PostgreSQL 18 est en moyenne **20-30% plus rapide** pour les imports COPY que PG 17.
+Les gains réels dépendent fortement du matériel et de la charge — il est sage de **mesurer sur vos propres données** plutôt que de citer un pourcentage générique.
 
-### Q7 : Puis-je mélanger format texte et CSV dans un même import ?
+### Q6 — Puis-je combiner `ON_ERROR`, `REJECT_LIMIT` et `LOG_VERBOSITY` ?
 
-**R :** Non. Un fichier doit être soit en format texte, soit en format CSV. Le format est spécifié dans la clause `WITH (FORMAT ...)`.
+Oui :
+
+```sql
+COPY t FROM '/tmp/data.csv'  
+WITH (FORMAT csv, HEADER true,  
+      ON_ERROR = 'ignore',  
+      REJECT_LIMIT = 100,  
+      LOG_VERBOSITY = 'silent');  
+```
+
+`REJECT_LIMIT` et `LOG_VERBOSITY = 'silent'` n'ont de sens qu'avec `ON_ERROR = 'ignore'`.
+
+### Q7 — `ON_ERROR` couvre-t-il les violations de contraintes ?
+
+**Non.** `ON_ERROR = 'ignore'` ne capte que les erreurs de conversion d'entrée (mauvais type, format de date invalide, etc.). Les violations de `NOT NULL`, `UNIQUE`, `CHECK`, clés étrangères provoquent toujours l'avortement de la commande, quel que soit le réglage de `ON_ERROR`.
 
 ---
 
 ## Comparatif récapitulatif : PG 17 vs PG 18
 
 | Aspect | PostgreSQL 17 | PostgreSQL 18 |
-|--------|--------------|--------------|
-| **COPY FROM fichier CSV** | `\.` = marqueur de fin | `\.` = donnée normale |
-| **COPY FROM STDIN CSV** | `\.` = marqueur de fin | `\.` = marqueur de fin (inchangé) |
-| **Format texte** | `\.` = marqueur de fin | `\.` = marqueur de fin (inchangé) |
-| **Chemins Windows** | ❌ Problématique | ✅ Support natif |
-| **Regex patterns** | ❌ Problématique | ✅ Support natif |
-| **Messages d'erreur** | Basiques | ✅ Détaillés avec colonne |
-| **Performance COPY** | Baseline | ✅ +20-30% plus rapide |
-| **Types complexes (JSONB, ARRAY)** | Support standard | ✅ Parsing optimisé |
-| **Compatibilité scripts** | N/A | ✅ 100% rétrocompatible |
+|--------|---------------|---------------|
+| `\.` seul sur une ligne, `COPY FROM` **fichier CSV** | Marqueur de fin (import tronqué silencieusement) | **Donnée normale** (import complet) |
+| `\.` seul sur une ligne, `COPY FROM STDIN` | Marqueur de fin | Marqueur de fin (inchangé) |
+| `\.` seul sur une ligne, `COPY FROM` fichier `text` | Marqueur de fin | Marqueur de fin (inchangé) |
+| `COPY TO` depuis vue matérialisée peuplée | ❌ Erreur (sous-requête requise) | ✅ Direct |
+| `COPY FREEZE` sur *foreign table* | Silencieusement ignoré | ❌ Erreur explicite |
+| `ON_ERROR = 'ignore'` | ✅ (déjà PG 17) | ✅ (inchangé) |
+| `REJECT_LIMIT` | ❌ | ✅ **Nouveau** |
+| `LOG_VERBOSITY = 'silent'` | ❌ | ✅ **Nouveau** |
 
 ---
 
 ## Conclusion
 
-Les améliorations de `COPY` dans PostgreSQL 18 représentent une avancée majeure pour :
+Les évolutions de `COPY` dans PostgreSQL 18 sont **discrètes mais utiles** :
 
-### 1. La robustesse
-- Moins de surprises lors de l'import de fichiers CSV
-- Gestion intelligente et contextuelle du marqueur `\.`
-- Compatibilité parfaite avec les données du monde réel
+- **Robustesse** : un piège silencieux du parseur CSV (`\.` isolé interprété comme EOF) disparaît. Un import qui semblait fonctionner en PG 17 mais tronquait parfois ses données va désormais aller au bout — ou échouer explicitement si la ligne pose réellement problème.
+- **Tolérance** : `REJECT_LIMIT` et `LOG_VERBOSITY = 'silent'` complètent `ON_ERROR`, transformant `COPY` en outil d'ingestion fiable même sur des données « sales ».
+- **Cohérence** : `COPY TO` accepte les vues matérialisées peuplées comme n'importe quelle table ; `FREEZE` est refusé sur ce qui n'a pas de sens.
 
-### 2. La simplicité
-- Suppression des contournements et prétraitements
-- Code plus clair et plus maintenable
-- Réduction des risques d'erreur
-
-### 3. Les performances
-- Import jusqu'à 30% plus rapide
-- Meilleure gestion des types complexes
-- Optimisations I/O significatives
-
-### 4. L'expérience développeur
-- Messages d'erreur plus explicites
-- Comportement plus intuitif
-- Moins de frustration lors des imports
-
-PostgreSQL 18 confirme sa position de leader en matière de fiabilité et d'ergonomie pour l'importation de données, tout en maintenant une compatibilité ascendante exemplaire.
+Le changement le plus important à retenir pour un développeur ou un DBA migrant vers PG 18 : **revérifiez vos imports CSV historiques** — il est possible que certains d'entre eux ramenaient en silence moins de lignes qu'attendu.
 
 ---
 

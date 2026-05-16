@@ -7,12 +7,14 @@
 Après avoir appris à **créer** des structures de données (tables, colonnes, contraintes) avec le DDL (Data Definition Language), il est temps d'apprendre à **manipuler** les données elles-mêmes. C'est le rôle du **DML** : Data Manipulation Language.
 
 Le DML regroupe l'ensemble des commandes SQL qui permettent de :
-- **Insérer** de nouvelles données dans les tables  
-- **Modifier** des données existantes  
-- **Supprimer** des données  
-- **Interroger** les données (bien que SELECT soit parfois classé dans le DQL - Data Query Language)
+- **Insérer** de nouvelles données dans les tables (`INSERT`, `COPY`)  
+- **Modifier** des données existantes (`UPDATE`)  
+- **Supprimer** des données (`DELETE`, `TRUNCATE`)  
+- **Combiner** insertion et mise à jour conditionnelles (`INSERT … ON CONFLICT`, `MERGE`)
 
 Ces opérations constituent le cœur de l'utilisation quotidienne d'une base de données. Comprendre le DML est essentiel pour tout développeur ou administrateur de bases de données.
+
+> 📌 **Note sur SELECT** : la commande `SELECT` est traitée à part dans le **chapitre 5 (DQL — Data Query Language)** car elle **n'écrit pas** de données. Certains auteurs l'incluent dans le DML « au sens large » (puisqu'elle manipule les données en lecture) ; le standard SQL et la plupart des SGBD la classent dans le DQL. Dans cette formation, nous suivons cette séparation : **DQL pour lire**, **DML pour modifier**.
 
 ---
 
@@ -22,28 +24,29 @@ Ces opérations constituent le cœur de l'utilisation quotidienne d'une base de 
 
 Le **DML (Data Manipulation Language)** est un sous-ensemble du langage SQL dédié à la manipulation des données contenues dans les tables d'une base de données. Contrairement au DDL qui modifie la **structure** des objets (CREATE, ALTER, DROP), le DML modifie le **contenu** des tables.
 
-### Les quatre commandes fondamentales
+### Les commandes du CRUD
 
-Le DML comprend quatre commandes principales, souvent appelées **CRUD** dans le monde du développement :
+Dans le monde du développement, on parle souvent du **CRUD** (Create, Read, Update, Delete). Ce chapitre couvre les opérations qui **écrivent** dans la base ; la lecture (`SELECT`) a été vue au chapitre 5 :
 
-| Commande | Opération CRUD | Description | Exemple d'usage |
-|----------|---------------|-------------|-----------------|
-| **INSERT** | **C**reate | Ajoute de nouvelles lignes | Enregistrer un nouvel utilisateur |
-| **SELECT** | **R**ead | Lit et récupère des données | Afficher la liste des produits |
-| **UPDATE** | **U**pdate | Modifie des lignes existantes | Changer le prix d'un produit |
-| **DELETE** | **D**elete | Supprime des lignes | Supprimer un compte utilisateur |
-
-> **Note** : Certains considèrent SELECT comme faisant partie du DQL (Data Query Language) plutôt que du DML, car il ne modifie pas les données. Dans ce cours, nous l'incluons car il fait partie intégrante de la manipulation des données au sens large.
+| Commande SQL | Opération CRUD | Description | Exemple d'usage | Chapitre |
+|--------------|---------------|-------------|-----------------|----------|
+| `INSERT` / `COPY` | **C**reate | Ajoute de nouvelles lignes | Enregistrer un nouvel utilisateur | **6.1 / 6.2** |
+| `SELECT` | **R**ead | Lit et récupère des données | Afficher la liste des produits | 5 (DQL) |
+| `UPDATE` | **U**pdate | Modifie des lignes existantes | Changer le prix d'un produit | **6.3** |
+| `DELETE` / `TRUNCATE` | **D**elete | Supprime des lignes | Supprimer un compte utilisateur | **6.3 / 6.6** |
+| `INSERT … ON CONFLICT` | **C**reate ou **U**pdate | UPSERT atomique | Compteur de vues d'une page | **6.7** |
+| `MERGE` | **C**+ **U** + **D** | Synchronisation conditionnelle | Réconcilier deux tables | **6.8** |
 
 ### Analogie avec un classeur
 
 Imaginez une base de données comme un classeur de fiches :
 
-- **DDL (CREATE TABLE)** : Créer un nouveau classeur avec des intercalaires et des colonnes prédéfinies  
-- **DML INSERT** : Ajouter de nouvelles fiches dans le classeur  
-- **DML SELECT** : Consulter les fiches pour lire les informations  
-- **DML UPDATE** : Corriger ou mettre à jour une fiche existante  
-- **DML DELETE** : Retirer une fiche du classeur
+- **DDL (`CREATE TABLE`)** : créer un nouveau classeur avec des intercalaires et des colonnes prédéfinies  
+- **DML `INSERT`** : ajouter de nouvelles fiches dans le classeur  
+- **DQL `SELECT`** : consulter les fiches pour lire les informations (voir chapitre 5)  
+- **DML `UPDATE`** : corriger ou mettre à jour une fiche existante  
+- **DML `DELETE`** : retirer une fiche du classeur  
+- **DML `TRUNCATE`** : vider intégralement le classeur d'un coup
 
 ---
 
@@ -55,64 +58,65 @@ Une application moderne suit généralement ce cycle :
 
 ```
 ┌─────────────┐
-│   CREATE    │  DDL : Créer la structure
+│   CREATE    │  DDL : créer la structure (chapitre 4)
 └──────┬──────┘
        │
        ▼
 ┌─────────────┐
-│   INSERT    │  DML : Ajouter des données
+│   INSERT    │  DML : ajouter des données (6.1, 6.2)
 └──────┬──────┘
        │
        ▼
 ┌─────────────┐
-│   SELECT    │  DML : Lire les données
+│   SELECT    │  DQL : lire les données (chapitre 5)
 └──────┬──────┘
        │
        ▼
 ┌─────────────┐
-│   UPDATE    │  DML : Modifier les données
+│   UPDATE    │  DML : modifier les données (6.3)
 └──────┬──────┘
        │
        ▼
 ┌─────────────┐
-│   DELETE    │  DML : Supprimer les données
+│   DELETE    │  DML : supprimer des données (6.3, 6.6)
 └─────────────┘
 ```
 
-Le DML est utilisé dans **90% des opérations** d'une application en production.
+Combinées, **lecture (DQL)** et **écriture (DML)** représentent la quasi-totalité des opérations effectuées par une application en production.
 
 ### 2. L'interaction quotidienne avec les données
 
-Voici la fréquence typique des opérations dans une application web :
+Dans une application web typique, les opérations d'**écriture (DML)** sont minoritaires en volume mais critiques en impact. Voici un ordre de grandeur courant :
 
-| Opération | Fréquence | Exemple |
-|-----------|-----------|---------|
-| **SELECT** | 80-90% | Afficher une page produit, charger un profil utilisateur |
-| **INSERT** | 5-10% | Créer un compte, passer une commande |
-| **UPDATE** | 3-7% | Mettre à jour un panier, modifier un profil |
-| **DELETE** | 1-3% | Supprimer un commentaire, vider le panier |
+| Opération | Part typique | Exemple |
+|-----------|--------------|---------|
+| `SELECT` (lecture / DQL) | 80–90 % | afficher une page produit, charger un profil utilisateur |
+| `INSERT` | 5–10 % | créer un compte, passer une commande |
+| `UPDATE` | 3–7 % | mettre à jour un panier, modifier un profil |
+| `DELETE` | 1–3 % | supprimer un commentaire, vider le panier |
+
+> 📌 Ces chiffres sont indicatifs : une application analytique peut atteindre 99 % de lectures, tandis qu'un système d'**ingestion** (logs, IoT, ETL) peut au contraire être dominé par les `INSERT` et les `COPY`.
 
 ### 3. La base de toute application
 
-Quel que soit le type d'application, le DML est omniprésent :
+Quel que soit le type d'application, le DML est omniprésent. Voici les opérations d'**écriture** typiques dans trois contextes courants :
 
 **E-commerce** :
-- INSERT : Enregistrer une nouvelle commande
-- SELECT : Afficher le catalogue de produits
-- UPDATE : Mettre à jour le stock après un achat
-- DELETE : Supprimer un article du panier
+- `INSERT` : enregistrer une nouvelle commande
+- `UPDATE` : mettre à jour le stock après un achat
+- `DELETE` : supprimer un article du panier
+- `INSERT … ON CONFLICT` : décrémenter un stock partagé sans risquer le doublon
 
 **Réseau social** :
-- INSERT : Publier un nouveau post
-- SELECT : Afficher le fil d'actualité
-- UPDATE : Modifier un commentaire
-- DELETE : Supprimer une photo
+- `INSERT` : publier un nouveau post
+- `UPDATE` : modifier un commentaire
+- `DELETE` : supprimer une photo
 
 **Gestion d'entreprise** :
-- INSERT : Enregistrer une nouvelle facture
-- SELECT : Générer un rapport mensuel
-- UPDATE : Corriger une erreur de saisie
-- DELETE : Archiver des données obsolètes
+- `INSERT` / `COPY` : enregistrer une nouvelle facture, importer en masse depuis l'ERP
+- `UPDATE` : corriger une erreur de saisie
+- `DELETE` / `TRUNCATE` : archiver des données obsolètes, purger une table de *staging*
+- `MERGE` : synchroniser une table miroir avec une source externe
 
 ---
 
@@ -136,10 +140,49 @@ COMMIT;  -- Valider toutes les opérations
 ```
 
 **Propriétés ACID** :
-- **A**tomicité : Tout ou rien  
-- **C**ohérence : Respect des contraintes  
-- **I**solation : Les transactions ne s'interfèrent pas  
-- **D**urabilité : Les données committées sont permanentes
+- **A**tomicité : tout ou rien  
+- **C**ohérence : respect des contraintes  
+- **I**solation : les transactions ne s'interfèrent pas  
+- **D**urabilité : les données *committées* sont permanentes (garantie via le WAL)
+
+#### Autocommit : la transaction implicite
+
+Hors d'un `BEGIN`, **chaque commande SQL est sa propre transaction implicite** : elle est *committée* automatiquement si elle réussit, ou *rollback* si elle échoue. C'est le mode *autocommit*. Beaucoup de bugs en production viennent de cette confusion :
+
+```sql
+-- Hors BEGIN : autocommit. Le DELETE est INSTANTANÉMENT committé.
+DELETE FROM comptes WHERE actif = false;
+-- Pas de "annulation" possible. Il faut restaurer depuis sauvegarde.
+
+-- Dans BEGIN : transaction explicite. Tant que vous n'avez pas COMMIT,
+-- vous pouvez ROLLBACK.
+BEGIN;  
+DELETE FROM comptes WHERE actif = false;  
+-- Vérifier ce qui a été supprimé...
+SELECT count(*) FROM comptes WHERE actif = false;  -- 0 (mais visible par vous seul)  
+ROLLBACK;  -- Tout est restauré  
+```
+
+> 💡 **Réflexe à acquérir** : pour toute opération DML potentiellement destructrice, ouvrez un `BEGIN` avant et un `ROLLBACK` après pour vérifier le périmètre avant de relancer la commande définitivement avec `COMMIT`.
+
+#### Points de sauvegarde (`SAVEPOINT`)
+
+À l'intérieur d'une transaction, on peut poser des **points de sauvegarde** pour annuler partiellement sans tout perdre :
+
+```sql
+BEGIN;  
+INSERT INTO commandes (client_id, montant) VALUES (42, 100);  
+
+SAVEPOINT avant_lignes;  
+INSERT INTO lignes_commande (commande_id, produit_id) VALUES (currval('commandes_id_seq'), 999);  
+-- Oups, produit_id 999 n'existe pas !
+ROLLBACK TO SAVEPOINT avant_lignes;
+-- L'INSERT de la commande est conservé, seul l'INSERT des lignes est annulé.
+
+-- On peut continuer
+INSERT INTO lignes_commande (commande_id, produit_id) VALUES (currval('commandes_id_seq'), 1);  
+COMMIT;  
+```
 
 ### 2. Les contraintes d'intégrité
 
@@ -193,21 +236,72 @@ DELETE FROM utilisateurs;
 DELETE FROM utilisateurs WHERE statut = 'inactif';
 ```
 
-### 4. Les performances
+### 4. MVCC et conséquences sur le DML
 
-Certaines opérations DML peuvent être coûteuses :
+PostgreSQL implémente l'isolation via **MVCC** (*Multi-Version Concurrency Control*). Comprendre ce mécanisme est essentiel pour ne pas être surpris par le comportement du DML.
 
-| Opération | Volume | Impact |
-|-----------|--------|--------|
-| INSERT d'une ligne | Léger | ~1ms |
-| INSERT de 1000 lignes une par une | Moyen | ~1 seconde |
-| INSERT de 1000 lignes en batch | Léger | ~10ms |
-| UPDATE d'une ligne (avec index) | Léger | ~1ms |
-| UPDATE de 1 million de lignes | Lourd | Minutes |
-| DELETE avec WHERE (indexé) | Léger | ~1ms |
-| DELETE sans WHERE (table complète) | Très lourd | Minutes/Heures |
+#### Principe
 
-Nous verrons comment optimiser ces opérations.
+Chaque ligne stockée porte deux *timestamps logiques* invisibles, basés sur les **identifiants de transaction** (`xid`) :
+- `xmin` : la transaction qui a **créé** cette version
+- `xmax` : la transaction qui a **supprimé** cette version (`0` si encore vivante)
+
+Quand vous faites un `UPDATE` ou un `DELETE`, PostgreSQL ne modifie **pas** la ligne en place : il marque l'ancienne version comme « morte pour les futures transactions » (en posant son `xmax`), et — pour un `UPDATE` — écrit une **nouvelle version**. Les anciennes versions restent physiquement présentes tant qu'une transaction ouverte au moment de leur création peut encore les voir.
+
+```sql
+-- Voir les pseudo-colonnes système :
+SELECT ctid, xmin, xmax, * FROM comptes WHERE id = 1;
+--  ctid  | xmin |  xmax  | id | nom   | solde
+-- -------+------+--------+----+-------+-------
+--  (0,1) |  742 |      0 |  1 | Alice |  1000
+```
+
+#### Conséquences pratiques
+
+- **Les lecteurs ne bloquent pas les écrivains** (et inversement) : un `SELECT` ne pose aucun verrou sur les données qu'il lit. Une transaction qui modifie ces données peut progresser en parallèle.
+- **Un `UPDATE` est en réalité un `DELETE` + `INSERT` logique** : il génère du *bloat* (espace occupé par d'anciennes versions) jusqu'à ce que `VACUUM` (manuel ou via `autovacuum`) le récupère.
+- **Une transaction longue empêche le nettoyage** : tant qu'une transaction ouverte pourrait voir une ancienne version, celle-ci ne peut pas être supprimée. Une transaction oubliée pendant une heure peut faire enfler une table très volatile.
+
+> 💡 **À retenir** : surveillez les transactions longues (`SELECT pid, state, xact_start, query FROM pg_stat_activity WHERE state <> 'idle'`) et configurez `autovacuum` pour qu'il suive le rythme d'écriture de vos tables.
+
+### 5. Niveaux d'isolation des transactions
+
+PostgreSQL propose **trois niveaux d'isolation** standard SQL (les autres sont automatiquement *promus*) :
+
+| Niveau (`SET TRANSACTION ISOLATION LEVEL …`) | Anomalies évitées | Coût |
+|----------------------------------------------|-------------------|------|
+| `READ COMMITTED` (défaut) | Lectures sales | Très faible |
+| `REPEATABLE READ` | + Lectures non-répétables, + lectures fantômes (en pratique grâce au snapshot stable) | Faible à modéré |
+| `SERIALIZABLE` | + Anomalies de sérialisation | Modéré ; peut produire des `serialization_failure` à *rejouer* côté applicatif |
+
+En pratique, **`READ COMMITTED` est le bon défaut** pour la plupart des applications transactionnelles. On bascule en `REPEATABLE READ` ou `SERIALIZABLE` quand on veut une cohérence stricte multi-instructions (rapports financiers, *snapshot* d'un agrégat à un instant T).
+
+```sql
+BEGIN ISOLATION LEVEL REPEATABLE READ;
+-- À l'intérieur, tous les SELECT verront le même snapshot, même si
+-- d'autres transactions COMMITent entre-temps.
+SELECT sum(solde) FROM comptes;
+-- ... autres requêtes ...
+COMMIT;
+```
+
+### 6. Les performances en un coup d'œil
+
+Les coûts ci-dessous sont des **ordres de grandeur** pour fixer les idées — vos chiffres réels dépendront du matériel (SSD/NVMe, RAM, CPU), du nombre d'index, des triggers, et du *fillfactor* de vos tables. Mesurez sur votre propre infrastructure.
+
+| Opération | Coût relatif | Notes |
+|-----------|--------------|-------|
+| `INSERT` d'**1 ligne** | très faible | Aller-retour réseau souvent dominant |
+| 1000 `INSERT` séparés | élevé | N planifications + N allers-retours |
+| `INSERT` multi-valeurs (1000 lignes en une requête) | faible | À privilégier |
+| `COPY` (CSV ou binaire) | très faible | À privilégier au-delà de quelques milliers de lignes |
+| `UPDATE` ciblé par index | très faible | Encore plus rapide si **HOT update** (cf. 6.3) |
+| `UPDATE` massif (millions de lignes) | élevé | Génère beaucoup de WAL + dead tuples ; faire **par lots** |
+| `DELETE` ciblé par index | très faible | |
+| `DELETE` de toute la table | très élevé | Préférer `TRUNCATE` |
+| `TRUNCATE` | constant (indépendant du volume) | Verrou exclusif, libère le fichier |
+
+Nous verrons comment optimiser ces opérations dans chaque section.
 
 ---
 
@@ -438,7 +532,7 @@ COMMIT;
 
 Avant toute opération DML en production, vérifiez :
 
-- [ ] **Ai-je testé sur un environnement de développement/staging ?**  
+- [ ] **Ai-je testé sur un environnement de développement / *staging* ?**  
 - [ ] **Ai-je vérifié avec SELECT ce qui sera affecté ?**  
 - [ ] **Ma clause WHERE est-elle correcte ?**  
 - [ ] **Suis-je dans une transaction (BEGIN) si nécessaire ?**  
@@ -457,17 +551,19 @@ Avant de continuer, assurez-vous de comprendre ces termes :
 
 | Terme | Définition |
 |-------|------------|
-| **Ligne (Row/Tuple)** | Un enregistrement dans une table |
+| **Ligne (Row)** | Un enregistrement dans une table |
+| **Tuple** | Dans PostgreSQL, une **version physique** d'une ligne sur disque. Avec MVCC, une même ligne logique peut exister en plusieurs tuples (versions) tant que d'anciennes transactions y voient encore l'état précédent. |
 | **Colonne (Column)** | Un attribut/champ d'une table |
 | **Clé primaire (Primary Key)** | Identifiant unique d'une ligne |
 | **Clé étrangère (Foreign Key)** | Référence vers une autre table |
 | **Contrainte (Constraint)** | Règle de validation des données |
 | **Transaction** | Groupe d'opérations atomiques |
-| **COMMIT** | Validation d'une transaction |
-| **ROLLBACK** | Annulation d'une transaction |
+| **`COMMIT`** | Validation d'une transaction |
+| **`ROLLBACK`** | Annulation d'une transaction |
 | **Verrou (Lock)** | Blocage temporaire d'une ressource |
-| **MVCC** | Multi-Version Concurrency Control |
-| **WAL** | Write-Ahead Log (journal de transactions) |
+| **MVCC** | *Multi-Version Concurrency Control* — chaque écriture crée une nouvelle version de ligne ; les lecteurs ne bloquent pas les écrivains et inversement |
+| **WAL** | *Write-Ahead Log* — journal de transactions garantissant la durabilité (D d'ACID) et la reprise après crash |
+| **HOT update** | *Heap-Only Tuple update* — UPDATE optimisé qui réutilise la même page disque quand aucun index n'est touché (voir chapitre 6.3) |
 
 ---
 
@@ -475,33 +571,33 @@ Avant de continuer, assurez-vous de comprendre ces termes :
 
 Si vous venez d'un autre système de gestion de bases de données, voici les principales différences :
 
-### PostgreSQL vs MySQL
+### PostgreSQL vs MySQL / MariaDB
 
-| Aspect | PostgreSQL | MySQL |
-|--------|-----------|-------|
-| **RETURNING** | ✅ Supporté | ❌ Non (utiliser LAST_INSERT_ID()) |
-| **UPSERT** | `ON CONFLICT` | `ON DUPLICATE KEY UPDATE` |
-| **Transactions** | Toujours activées | InnoDB : Oui, MyISAM : Non |
-| **DELETE sans WHERE** | Autorisé mais dangereux | Idem |
-| **TRUNCATE** | Très rapide | Très rapide |
+| Aspect | PostgreSQL | MySQL / MariaDB |
+|--------|-----------|-----------------|
+| **`RETURNING`** | ✅ Supporté (INSERT/UPDATE/DELETE/MERGE) | ❌ MySQL : non — utiliser `LAST_INSERT_ID()`<br>✅ MariaDB 10.5+ : `INSERT`/`DELETE`/`REPLACE … RETURNING` |
+| **UPSERT** | `INSERT … ON CONFLICT` (standard) | `INSERT … ON DUPLICATE KEY UPDATE` (non standard) |
+| **Transactions** | Toujours actives, partout | InnoDB : oui ; MyISAM (déprécié) : non |
+| **`DELETE` sans `WHERE`** | Autorisé mais dangereux | Idem |
+| **`TRUNCATE`** | Très rapide, **transactionnel** (`ROLLBACK` possible) | Très rapide, **non transactionnel** sur InnoDB : commit implicite |
 
 ### PostgreSQL vs SQL Server
 
 | Aspect | PostgreSQL | SQL Server |
 |--------|-----------|-----------|
-| **RETURNING** | `RETURNING` | `OUTPUT` |
-| **MERGE** | Depuis PG 15 | Depuis SQL Server 2008 |
-| **Séquences** | `SERIAL` / `IDENTITY` | `IDENTITY` |
-| **Transactions** | Explicites ou implicites | Implicites par défaut |
+| **RETURNING** | `RETURNING` (clause standard SQL:2023) | `OUTPUT` (avec pseudo-tables `INSERTED` / `DELETED`) |
+| **`MERGE`** | Depuis PG 15 | Depuis SQL Server 2008 |
+| **Séquences / auto-incr.** | `GENERATED … AS IDENTITY` (standard, recommandé) ou `SERIAL` (legacy) | `IDENTITY` (non standard) ou `SEQUENCE` (depuis 2012) |
+| **Transactions** | Explicites (mode *autocommit* par défaut) | *Autocommit* par défaut, sauf `SET IMPLICIT_TRANSACTIONS ON` |
 
 ### PostgreSQL vs Oracle
 
 | Aspect | PostgreSQL | Oracle |
 |--------|-----------|--------|
-| **RETURNING** | `RETURNING` | `RETURNING INTO` (PL/SQL) |
-| **MERGE** | Depuis PG 15 | Depuis Oracle 9i |
-| **Séquences** | `SERIAL` / Sequences | Sequences |
-| **Transactions** | Explicites | Explicites |
+| **RETURNING** | `RETURNING` directement dans SQL | `RETURNING … INTO` (uniquement en PL/SQL) |
+| **`MERGE`** | Depuis PG 15 | Depuis Oracle 9i |
+| **Séquences / auto-incr.** | `GENERATED … AS IDENTITY` ou `SEQUENCE` | `SEQUENCE` (historique) ou `GENERATED AS IDENTITY` (12c+) |
+| **Transactions** | Mode *autocommit* par défaut (chaque instruction commit) ; `BEGIN` ouvre explicitement une transaction | Pas d'*autocommit* : toute instruction démarre une transaction implicite jusqu'au `COMMIT`/`ROLLBACK` |
 
 ---
 

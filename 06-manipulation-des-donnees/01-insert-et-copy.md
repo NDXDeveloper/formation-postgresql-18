@@ -36,7 +36,7 @@ Imaginons une table `employes` avec la structure suivante :
 
 ```sql
 CREATE TABLE employes (
-    id SERIAL PRIMARY KEY,
+    id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     nom VARCHAR(100) NOT NULL,
     prenom VARCHAR(100) NOT NULL,
     email VARCHAR(255) UNIQUE,
@@ -44,6 +44,23 @@ CREATE TABLE employes (
     date_embauche DATE DEFAULT CURRENT_DATE
 );
 ```
+
+> 📌 **`GENERATED AS IDENTITY` vs `SERIAL`** : `SERIAL` (et `BIGSERIAL`) reste supporté mais c'est un *raccourci historique* qui crée en sous-main une séquence et un `DEFAULT nextval(...)`. La syntaxe `GENERATED { ALWAYS | BY DEFAULT } AS IDENTITY`, **conforme au standard SQL** et disponible depuis PostgreSQL 10, est désormais recommandée : meilleurs droits par défaut, séquence détruite avec la colonne, et `ALWAYS` interdit toute insertion explicite (sécurité). Vous croiserez encore `SERIAL` dans beaucoup de bases existantes — c'est normal, et il fonctionne toujours parfaitement.
+
+> ⚠️ **Piège classique : les séquences ne sont pas transactionnelles**
+>
+> Quand un `INSERT` consomme une valeur de séquence (`IDENTITY` ou `SERIAL`), cette consommation est **immédiate** et **non annulée** par un `ROLLBACK`. Conséquence : vos `id` peuvent comporter des **trous**.
+>
+> ```sql
+> BEGIN;
+> INSERT INTO employes (nom, prenom) VALUES ('Test', 'A');   -- id = 1
+> INSERT INTO employes (nom, prenom) VALUES ('Test', 'B');   -- id = 2
+> ROLLBACK;
+>
+> INSERT INTO employes (nom, prenom) VALUES ('Réel', 'C');   -- id = 3, pas 1 !
+> ```
+>
+> C'est **voulu** : si les séquences étaient transactionnelles, deux transactions concurrentes devraient se sérialiser autour de la séquence, anéantissant le débit d'insertion. Ne tentez pas de combler manuellement ces trous avec `ALTER SEQUENCE … RESTART` en production : vous risquez des collisions avec des `id` déjà attribués mais non encore *committés* par d'autres sessions.
 
 Pour insérer un nouvel employé :
 
@@ -62,9 +79,9 @@ VALUES ('Martin', 'Pierre', 'pierre.martin@example.com');
 ```
 
 Dans cet exemple :
-- La colonne `id` sera générée automatiquement (SERIAL)
-- La colonne `salaire` recevra NULL (si autorisé)
-- La colonne `date_embauche` prendra la valeur par défaut (CURRENT_DATE)
+- La colonne `id` sera générée automatiquement (la séquence associée à l'`IDENTITY` est avancée)
+- La colonne `salaire` recevra `NULL` (puisqu'elle est *nullable*)
+- La colonne `date_embauche` prendra la valeur par défaut (`CURRENT_DATE`)
 
 ### Insertion sans spécifier les colonnes
 
@@ -75,7 +92,9 @@ INSERT INTO employes
 VALUES (DEFAULT, 'Durand', 'Sophie', 'sophie.durand@example.com', 48000.00, '2025-02-01');  
 ```
 
-> **Note** : Cette syntaxe est déconseillée car elle rend le code fragile. Si la structure de la table change (ajout/suppression de colonne), votre requête pourrait échouer.
+Le mot-clé `DEFAULT` pour `id` force l'utilisation de la valeur par défaut de la colonne — ici la prochaine valeur de la séquence d'`IDENTITY`. Si la colonne était déclarée `GENERATED ALWAYS AS IDENTITY`, il faut **soit** utiliser `DEFAULT`, **soit** ajouter `OVERRIDING SYSTEM VALUE` pour fournir une valeur explicite (ce dernier cas étant réservé à des imports/migrations).
+
+> ⚠️ **Cette syntaxe sans liste de colonnes est déconseillée en production** : elle rend le code fragile. Si la structure de la table change (ajout/suppression/réordonnancement de colonne), votre requête échouera silencieusement ou insérera les valeurs dans les mauvaises colonnes. Préférez toujours nommer les colonnes explicitement.
 
 ### Gestion des valeurs NULL et DEFAULT
 
@@ -258,12 +277,35 @@ WHERE d.nom = 'Ventes';
 
 ### Qu'est-ce que COPY ?
 
-`COPY` est une commande PostgreSQL spécialement conçue pour l'importation et l'exportation de données en masse. Elle est **beaucoup plus rapide** que des INSERT multiples pour les raisons suivantes :
+`COPY` est une commande PostgreSQL spécialement conçue pour l'importation et l'exportation de données en masse. Elle est **beaucoup plus rapide** qu'une succession d'`INSERT` pour les raisons suivantes :
 
-1. **Contournement du parseur SQL** : Les données sont traitées directement  
-2. **Optimisation du WAL** : Écriture groupée dans les journaux de transactions  
-3. **Moins de overhead** : Pas de préparation de requête pour chaque ligne  
-4. **Format binaire optionnel** : Encore plus rapide que le format texte
+1. **Pas de re-parsing ligne par ligne** : `COPY` lit son propre format compact et écrit directement les tuples (le moteur SQL n'est invoqué qu'une fois pour la commande globale).  
+2. **Allocation de pages amortie** : `COPY` peut remplir une page disque entière avant d'écrire, là où un `INSERT` peut générer un appel WAL par ligne.  
+3. **Moins d'allers-retours protocolaires** : un seul `Bind`/`Execute` pour des millions de lignes, contre N pour autant d'`INSERT`.  
+4. **Format binaire optionnel** : le format `binary` évite les conversions texte↔interne (encore plus rapide, mais le fichier devient dépendant de l'architecture/version PostgreSQL).
+
+#### Le chemin d'une ligne dans un `INSERT` vs un `COPY`
+
+Pour comprendre l'écart de performance, voici ce que fait PostgreSQL pour **une seule ligne** :
+
+```
+INSERT classique :
+  1. Parser SQL          (analyser le texte VALUES …)
+  2. Analyseur sémantique (résoudre noms de colonnes, types)
+  3. Planificateur       (choisir l'index ; cas trivial mais facturé)
+  4. Exécuteur           (évaluer expressions DEFAULT, IDENTITY)
+  5. Validation contraintes (NOT NULL, CHECK, FK, UNIQUE)
+  6. Écriture du tuple dans le buffer
+  7. Enregistrement WAL  (avant écriture page → "Write-Ahead")
+  8. Réveil des éventuels triggers BEFORE/AFTER
+
+COPY :
+  Étapes 1 à 4 : faites UNE SEULE FOIS pour toute la commande
+  Étapes 5 à 8 : faites par ligne, mais avec un chemin code dédié
+                 et un buffering plus agressif
+```
+
+L'écart provient surtout des **étapes 1 à 4 amorties** sur tout le flux : sur des millions de lignes, on économise des millions de parsings et planifications.
 
 ### Quand utiliser COPY ?
 
@@ -278,7 +320,7 @@ WHERE d.nom = 'Ventes';
 
 Il existe deux variantes de COPY :
 
-#### 1. COPY côté serveur (depuis un fichier sur le serveur)
+#### 1. `COPY` côté serveur (depuis un fichier sur le serveur)
 
 ```sql
 COPY nom_table (colonne1, colonne2, colonne3)  
@@ -286,17 +328,50 @@ FROM '/chemin/vers/fichier.csv'
 WITH (FORMAT csv, HEADER true, DELIMITER ',');  
 ```
 
-> **Important** : Le fichier doit être accessible par le processus PostgreSQL (droits de lecture). Cette commande nécessite généralement des privilèges superutilisateur.
+> ⚠️ **Important** : le fichier doit être accessible **par le processus PostgreSQL** (utilisateur système `postgres`), pas par le client SQL. Cette commande nécessite par défaut des privilèges de superutilisateur. Depuis PostgreSQL 11, on peut aussi accorder l'accès via les rôles prédéfinis `pg_read_server_files` (pour `COPY FROM`) et `pg_write_server_files` (pour `COPY TO`), sans devoir donner les droits superutilisateur complets :
+>
+> ```sql
+> GRANT pg_read_server_files TO mon_role_import;
+> ```
 
-#### 2. \copy côté client (depuis psql)
+#### 2. `\copy` côté client (depuis psql)
 
-```sql
-\copy nom_table (colonne1, colonne2, colonne3)
-FROM '/chemin/local/fichier.csv'  
-WITH (FORMAT csv, HEADER true, DELIMITER ',');  
+```text
+\copy nom_table (colonne1, colonne2, colonne3) FROM '/chemin/local/fichier.csv' WITH (FORMAT csv, HEADER true, DELIMITER ',')
 ```
 
-> **Note** : `\copy` est une commande **psql** (l'outil en ligne de commande), pas une commande SQL. Elle transfère les données depuis le client vers le serveur.
+> 📌 **Note** : `\copy` est une **commande client psql** (préfixée par `\`), pas une commande SQL. Elle doit tenir **sur une seule ligne logique** (psql ne reconnaît pas le multi-ligne pour les méta-commandes, sauf à terminer chaque ligne par `\`). Elle transfère les données depuis le **poste client** vers le serveur via la connexion psql : aucun privilège spécial côté serveur n'est requis, juste les droits `INSERT` sur la table. C'est l'option à privilégier quand le fichier réside sur votre poste et non sur le serveur.
+
+#### 3. `COPY … FROM PROGRAM` — exécuter une commande shell
+
+PostgreSQL peut alimenter un `COPY` en exécutant **un programme externe côté serveur** dont la sortie standard sert d'entrée :
+
+```sql
+-- Importer la sortie d'un script de génération
+COPY logs (ip, methode, url, code_retour)  
+FROM PROGRAM '/opt/scripts/extraire_logs.sh hier'  
+WITH (FORMAT csv, HEADER true);  
+
+-- Décompresser à la volée sans fichier temporaire
+COPY mesures FROM PROGRAM 'zcat /data/mesures.csv.gz'  
+WITH (FORMAT csv, HEADER true);  
+```
+
+> 🔐 **Risque de sécurité majeur** : `FROM PROGRAM` exécute du shell **avec les droits de l'utilisateur `postgres`** sur le serveur. Réservé aux superutilisateurs ou aux membres du rôle prédéfini `pg_execute_server_program`. À éviter à tout prix dans une application web (injection trivialement catastrophique).
+
+#### 4. Pipe inter-bases via psql
+
+Pour copier d'une base à une autre **sans fichier intermédiaire**, on enchaîne deux psql via un pipe shell :
+
+```bash
+# Du serveur "source" vers le serveur "cible", format binaire pour aller vite
+psql -h source.example.com -d mabase \
+     -c "COPY (SELECT * FROM gros_table WHERE date_creation > '2025-01-01') TO STDOUT WITH (FORMAT binary)" \
+  | psql -h cible.example.com -d mabase \
+     -c "COPY gros_table FROM STDIN WITH (FORMAT binary)"
+```
+
+C'est typiquement le moyen le plus rapide pour transférer une partie d'une grosse table d'une base à une autre.
 
 ### Format CSV (le plus courant)
 
@@ -457,41 +532,28 @@ COPY (
 WITH (FORMAT csv, HEADER true);
 ```
 
-### Nouveautés PostgreSQL 18 : Amélioration de COPY
+### Nouveautés PostgreSQL 18 : Améliorations de `COPY`
 
-PostgreSQL 18 apporte des améliorations importantes à la commande COPY :
+PostgreSQL 18 apporte plusieurs améliorations à `COPY`, détaillées dans la section [6.2](/06-manipulation-des-donnees/02-ameliorations-copy-pg18.md). En résumé :
 
-#### 1. Gestion améliorée du marqueur de fin `\.` en CSV
+1. **Marqueur `\.`** : `COPY FROM` lisant depuis un **fichier** ne reconnaît plus `\.` comme marqueur de fin de données (en CSV comme en text). Le marqueur n'est conservé que pour `STDIN` lu via psql, pour la compatibilité des scripts.
+2. **`ON_ERROR = 'ignore'`** (déjà PG 17) couplé à **`REJECT_LIMIT n`** (nouveau PG 18) : permet de poursuivre l'import en ignorant les lignes invalides jusqu'à `n` rejets maximum.
+3. **`LOG_VERBOSITY = 'silent'`** (nouveau PG 18) : supprime le journal des lignes ignorées par `ON_ERROR = 'ignore'`.
+4. **`COPY (SELECT … FROM mv)`** : `COPY TO` accepte désormais une sous-requête sur une **vue matérialisée** peuplée comme source de données.
+5. **Restriction `FREEZE` sur tables étrangères** : `COPY FREEZE` est explicitement refusé sur les *foreign tables* (auparavant accepté mais silencieusement ignoré).
 
-Dans les versions précédentes, le marqueur de fin `\.` (backslash point) utilisé dans le format texte pouvait causer des problèmes s'il apparaissait dans les données CSV. PostgreSQL 18 améliore la gestion de ce cas :
+### Comparaison de performances : `INSERT` vs `COPY`
 
-```sql
--- Désormais plus robuste face au \. dans les données CSV
-COPY employes FROM '/tmp/data.csv'  
-WITH (FORMAT csv);  
-```
+Les chiffres ci-dessous sont des **ordres de grandeur** indicatifs pour l'insertion d'**1 million de lignes** dans une table simple, sur un poste de développement courant. La performance réelle dépend du matériel (CPU, type de disque SSD/NVMe, RAM disponible), du nombre d'index, du type des colonnes, et de la latence réseau entre client et serveur :
 
-Cette amélioration rend COPY plus fiable lors de l'importation de fichiers CSV contenant des caractères spéciaux.
+| Méthode | Temps typique | Cas d'usage |
+|---------|---------------|-------------|
+| `INSERT` simple (1 M requêtes séparées) | plusieurs heures | À proscrire pour le volume |
+| `INSERT` multi-valeurs (lots de ~1000 lignes) | quelques minutes | Migration, volumes modérés |
+| `COPY` (format CSV) | quelques dizaines de secondes | Import massif (par défaut) |
+| `COPY` (format binaire) | encore quelques secondes plus rapide | Quand source et cible sont toutes deux PostgreSQL |
 
-#### 2. Meilleures performances
-
-PostgreSQL 18 optimise le traitement interne de COPY, rendant les importations encore plus rapides, particulièrement pour :
-- Les fichiers volumineux (plusieurs Go)
-- Les types de données complexes (JSONB, ARRAY)
-- Les tables avec de nombreux index
-
-### Comparaison de performances : INSERT vs COPY
-
-Voici des ordres de grandeur typiques pour l'insertion d'1 million de lignes :
-
-| Méthode | Temps approximatif | Cas d'usage |
-|---------|-------------------|-------------|
-| INSERT simple (1M requêtes) | ~2h-4h | À éviter pour du volume |
-| INSERT multiple (1000 lignes/requête) | ~5-10 min | Migration, petits volumes |
-| COPY (format CSV) | ~10-30 sec | Import massif (recommandé) |
-| COPY (format binaire) | ~5-15 sec | Import massif haute performance |
-
-> **Conclusion** : COPY peut être **100 à 500 fois plus rapide** que des INSERT pour de gros volumes.
+> 🚀 **Conclusion** : pour de gros volumes, `COPY` est typiquement de **un à deux ordres de grandeur** plus rapide qu'un torrent d'`INSERT` un-par-un. L'écart se réduit pour des `INSERT` multi-valeurs bien groupés, mais `COPY` reste presque toujours la solution la plus rapide pour des imports massifs.
 
 ### Bonnes pratiques pour les imports massifs
 
@@ -558,6 +620,41 @@ COMMIT;
 
 Si une erreur survient, toutes les insertions sont annulées.
 
+#### 5. L'option `FREEZE` : pré-marquer les tuples pour éviter un futur VACUUM
+
+Quand vous chargez une **table vide** dans une transaction qui l'a aussi créée (ou tronquée), `COPY … FREEZE` marque immédiatement les tuples comme « gelés » (visibles par toutes les futures transactions) :
+
+```sql
+BEGIN;
+
+-- La table doit être créée OU tronquée dans la MÊME transaction que le COPY FREEZE
+TRUNCATE TABLE gros_import;
+
+COPY gros_import FROM '/data/init.csv'  
+WITH (FORMAT csv, HEADER true, FREEZE);  
+
+COMMIT;
+```
+
+**Pourquoi c'est utile** : sans `FREEZE`, les millions de lignes que vous venez d'insérer seront re-balayées plus tard par `VACUUM` quand leur `xmin` atteindra le seuil de `vacuum_freeze_min_age` (par défaut 50 millions de transactions plus tard). Sur des chargements initiaux de gros volumes, c'est une économie majeure de coût de maintenance ultérieur.
+
+**Restrictions** :
+- La table doit être vide **et** la transaction doit être celle qui a créé ou tronqué la table (PostgreSQL doit garantir qu'aucune autre transaction ne peut voir l'état antérieur).
+- Aucun autre client ne doit voir la table avant le `COMMIT` (PostgreSQL le vérifie : sinon la commande échoue).
+- ❌ Ne fonctionne **pas** sur les *foreign tables* (PG 18 rend cette restriction explicite — cf. section 6.2).
+
+#### 6. Paramètres système à connaître pour les imports massifs
+
+| Paramètre | Effet | Recommandation pendant un import massif |
+|-----------|-------|-----------------------------------------|
+| `maintenance_work_mem` | Mémoire pour `CREATE INDEX`, `VACUUM`, etc. | Monter à plusieurs Go le temps de l'import |
+| `synchronous_commit` | Si `off`, `COMMIT` ne bloque pas l'écriture WAL sur disque | `off` accélère, **au prix** d'une fenêtre de perte sur crash (acceptable pour un *staging* rejouable) |
+| `max_wal_size` | Plafond avant *checkpoint* forcé | Monter (ex : 4 Go) pour éviter des checkpoints fréquents |
+| `wal_compression` | Compression LZ4/zstd des enregistrements WAL | `lz4` ou `zstd` (PG 15+) ; gain net sur le débit disque |
+| `autovacuum` | Maintenance automatique en arrière-plan | Ne **pas** désactiver : laisser tourner, ou si vraiment nécessaire, désactiver pour la table cible précise via `ALTER TABLE … SET (autovacuum_enabled = false)` puis lancer `VACUUM ANALYZE` manuellement à la fin |
+
+> ⚠️ Tout changement de paramètre serveur impacte **toute l'instance**. Préférez les paramètres `SET LOCAL …` à l'intérieur d'une transaction, ou faites les modifications pendant une fenêtre de maintenance.
+
 ---
 
 ## 6.1.5. Gestion des erreurs et validation
@@ -607,16 +704,52 @@ COMMIT;
 -- ROLLBACK;
 ```
 
-### Gestion des erreurs avec COPY
+### Gestion des erreurs avec `COPY`
 
-Contrairement à INSERT, COPY s'arrête à la première erreur par défaut :
+Par défaut, `COPY` est **transactionnel** : si une seule ligne échoue (type invalide, contrainte violée, etc.), toute la commande est annulée et **aucune** ligne n'est insérée :
 
 ```sql
 COPY employes FROM '/tmp/data.csv' WITH (FORMAT csv);
--- Si la ligne 5000 contient une erreur, les 4999 premières lignes ne seront PAS insérées
+-- Si la ligne 5000 contient une erreur, les 4999 premières lignes sont rollback :
+-- la table reste exactement comme avant la commande.
 ```
 
-**Solution** : Valider vos données avant l'import, ou utiliser une table de staging :
+#### Option `ON_ERROR` (PostgreSQL 17+)
+
+Depuis PostgreSQL 17, l'option `ON_ERROR = 'ignore'` permet de passer outre les lignes invalides au lieu d'avorter :
+
+```sql
+COPY employes FROM '/tmp/data.csv'  
+WITH (FORMAT csv, HEADER true, ON_ERROR = 'ignore');  
+-- Les lignes invalides (mauvais type, conversion impossible) sont ignorées
+-- Les lignes valides sont importées
+```
+
+À l'issue de la commande, un message `NOTICE` indique le nombre de lignes ignorées. Cette option ne contourne **pas** les violations de contraintes (`NOT NULL`, `UNIQUE`, clés étrangères) : elle ne capte que les **erreurs de conversion de type** sur les colonnes.
+
+#### `REJECT_LIMIT` et `LOG_VERBOSITY` (PostgreSQL 18)
+
+PostgreSQL 18 ajoute deux options qui complètent `ON_ERROR` :
+
+```sql
+-- Limiter à 100 lignes invalides maximum ; au-delà, COPY échoue
+COPY employes FROM '/tmp/data.csv'  
+WITH (FORMAT csv, HEADER true,  
+      ON_ERROR = 'ignore',  
+      REJECT_LIMIT = 100);  
+
+-- Importer sans journal verbeux pour les lignes ignorées
+COPY employes FROM '/tmp/data.csv'  
+WITH (FORMAT csv, HEADER true,  
+      ON_ERROR = 'ignore',  
+      LOG_VERBOSITY = 'silent');  
+```
+
+Ces options sont détaillées en section [6.2](/06-manipulation-des-donnees/02-ameliorations-copy-pg18.md).
+
+#### Stratégie alternative : table de *staging*
+
+Une approche **portable** (toutes versions) consiste à charger les données brutes dans une table intermédiaire sans contraintes, puis à valider/transformer avant d'insérer dans la table finale :
 
 ```sql
 -- 1. Créer une table temporaire sans contraintes
@@ -671,7 +804,7 @@ WHERE email ~ '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}$'  -- Validation
 - [ ] Les contraintes (PK, FK, UNIQUE) sont-elles compatibles avec les données ?  
 - [ ] L'encodage du fichier est-il correct (UTF-8 recommandé) ?  
 - [ ] Les index peuvent-ils être temporairement supprimés ?  
-- [ ] Une table de staging est-elle nécessaire pour valider les données ?  
+- [ ] Une table de *staging* est-elle nécessaire pour valider les données ?  
 - [ ] Une transaction globale est-elle nécessaire ?  
 - [ ] Les performances du système permettent-elles l'import (I/O, mémoire) ?
 

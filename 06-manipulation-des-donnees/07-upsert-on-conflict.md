@@ -1,10 +1,10 @@
 🔝 Retour au [Sommaire](/SOMMAIRE.md)
 
-# 6.7. "Upsert" : La clause ON CONFLICT (DO NOTHING, DO UPDATE)
+# 6.7. *Upsert* : la clause ON CONFLICT (DO NOTHING, DO UPDATE)
 
 ## Introduction
 
-L'**UPSERT** (contraction de "UPDATE" et "INSERT") est une opération qui tente d'insérer une ligne, et si elle existe déjà (conflit de clé), soit ignore l'insertion, soit met à jour la ligne existante.
+L'**UPSERT** (contraction de `UPDATE` et `INSERT`) est une opération qui tente d'insérer une ligne, et si elle existe déjà (conflit de clé), soit ignore l'insertion, soit met à jour la ligne existante.
 
 PostgreSQL implémente cette fonctionnalité via la clause `ON CONFLICT`, introduite dans PostgreSQL 9.5. C'est l'une des fonctionnalités les plus élégantes et utiles du langage SQL moderne.
 
@@ -307,6 +307,19 @@ DO UPDATE SET
     vues = statistiques.vues + EXCLUDED.vues;
     --     └─ Valeur actuelle   └─ Valeur tentée (10)
 ```
+
+> 💡 **Pourquoi le mot `EXCLUDED` ?** Sémantiquement, c'est « la ligne qui aurait dû être insérée mais qui a été **exclue** » par le conflit. Le mot est statique et ne change pas avec le nom de la table : `EXCLUDED.colonne` fonctionne pour n'importe quel `INSERT`.
+
+> ⚠️ **Différence avec PG 18 `OLD`/`NEW`** : `EXCLUDED` désigne la ligne qu'on **voulait insérer**, **avant** l'éventuelle réécriture par `DO UPDATE SET`. Dans le `RETURNING`, `NEW` désigne la ligne **finale après application du `SET`**. Ce sont deux choses différentes :
+>
+> ```sql
+> INSERT INTO statistiques (page, vues) VALUES ('accueil', 10)
+> ON CONFLICT (page) DO UPDATE SET vues = statistiques.vues + EXCLUDED.vues
+> RETURNING
+>     EXCLUDED.vues AS tentee,        -- 10 (ce qu'on voulait insérer)
+>     OLD.vues AS ancienne,           -- 42 (s'il y avait conflit)
+>     NEW.vues AS finale;             -- 52 (résultat du SET : 42 + 10)
+> ```
 
 ### Exemples avec EXCLUDED
 
@@ -847,6 +860,41 @@ ON CONFLICT (code) DO UPDATE SET ...;
 -- → Vérifie aussi ref_externe, email, telephone (surcoût)
 ```
 
+### Piège 4 : Concurrence et séquences gaspillées
+
+`ON CONFLICT` est atomique vis-à-vis des autres sessions, mais il a un comportement subtil sur les séquences :
+
+```sql
+-- La séquence id est consommée AVANT que le conflit soit détecté
+INSERT INTO produits (nom, prix) VALUES ('Existant', 50)  
+ON CONFLICT (nom) DO UPDATE SET prix = EXCLUDED.prix;  
+```
+
+À chaque tentative, `IDENTITY`/`SERIAL` consomme une valeur — y compris si le conflit déclenche un `DO UPDATE` (auquel cas l'`id` consommé n'est pas utilisé). Sur des UPSERT à très haute fréquence où la majorité sont des UPDATE, on peut « brûler » des millions d'IDs. C'est typiquement **acceptable** (les `bigint` ne s'épuisent pas), mais si vous comptiez sur des `id` denses, vous serez surpris.
+
+**Workaround** si la densité est critique : faire un `SELECT` d'existence d'abord et n'`INSERT` que si nécessaire (en assumant un `ON CONFLICT DO NOTHING` de filet de sécurité).
+
+### Piège 5 : Lockup sur lignes mortes
+
+Quand deux sessions tentent simultanément un `INSERT … ON CONFLICT … DO UPDATE` sur la **même clé**, PostgreSQL garantit la cohérence — mais l'une des deux peut attendre :
+
+```
+-- Session A
+BEGIN;  
+INSERT INTO compteurs (cle, val) VALUES ('x', 1)  
+ON CONFLICT (cle) DO UPDATE SET val = compteurs.val + 1;  
+-- A a verrouillé la ligne 'x'.
+
+-- Session B (en parallèle)
+INSERT INTO compteurs (cle, val) VALUES ('x', 1)  
+ON CONFLICT (cle) DO UPDATE SET val = compteurs.val + 1;  
+-- ⏳ ATTEND la fin de la transaction A.
+```
+
+Pour des compteurs très contentieux, c'est souvent acceptable (les transactions sont courtes). Mais si A reste ouverte longtemps, B reste bloquée.
+
+> 💡 **Si le verrou pose problème**, deux options : (1) raccourcir les transactions ; (2) pré-agréger côté application (par exemple : accumulez les incréments en mémoire pendant 1 seconde puis faites un seul UPSERT par seconde par clé).
+
 ---
 
 ## 6.7.10. Patterns avancés
@@ -959,30 +1007,32 @@ DO UPDATE SET value = counters.value + EXCLUDED.value;
 
 ---
 
-## 6.7.11. Comparaison avec MERGE (PostgreSQL 18)
+## 6.7.11. Comparaison avec `MERGE`
 
-PostgreSQL 18 introduit la commande `MERGE`, qui est une alternative SQL standard à ON CONFLICT.
+`MERGE` est disponible dans PostgreSQL depuis **PG 15** ; **PG 17** lui a ajouté la clause `RETURNING` ; **PG 18** y a ajouté le support de `OLD` / `NEW` dans `RETURNING`. C'est l'alternative *standard SQL* à `INSERT … ON CONFLICT`. Voir le détail au [chapitre 6.8](/06-manipulation-des-donnees/08-merge-consolidation.md).
 
-### MERGE vs ON CONFLICT
+### `MERGE` vs `ON CONFLICT`
 
-| Aspect | ON CONFLICT | MERGE |
-|--------|-------------|-------|
-| **Standard SQL** | ❌ PostgreSQL spécifique | ✅ Standard SQL:2016 |
-| **Simplicité** | ✅ Syntaxe simple | ⚠️ Plus verbeux |
-| **Flexibilité** | ⚠️ Limitée à INSERT | ✅ Peut gérer DELETE aussi |
-| **Performance** | ✅ Très performant | ✅ Comparable |
-| **Cas d'usage** | Upsert simple | Synchronisation complexe |
+| Aspect | `INSERT … ON CONFLICT` | `MERGE` |
+|--------|------------------------|---------|
+| **Standard SQL** | ❌ Extension propre à PostgreSQL (et adoptée par SQLite) | ✅ Standard SQL:2003 (étendu en SQL:2008/2016/2023) |
+| **Verbosité** | ✅ Très concis pour l'upsert | ⚠️ Plus long (clauses `WHEN MATCHED` / `WHEN NOT MATCHED`) |
+| **Opérations possibles** | `INSERT` ou (`INSERT`+`UPDATE`) ; pas de `DELETE` | `INSERT`, `UPDATE` **et `DELETE`** dans la même commande |
+| **Sources multiples** | ❌ Une seule source (le `VALUES`/`SELECT` de l'`INSERT`) | ✅ N'importe quelle relation jointe en `USING` |
+| **Détection du conflit** | Sur **contrainte unique / clé primaire** (par colonnes ou nom de contrainte) | Sur une **condition de jointure** arbitraire (`ON …`) |
+| **Concurrence** | ✅ Garantie d'absence d'erreur de doublon, même sous forte concurrence | ⚠️ Peut lever `serialization_failure` si deux sessions insèrent la même clé simultanément — il faut éventuellement réessayer en isolation `READ COMMITTED` |
+| **Cas d'usage typique** | UPSERT pur (la majorité des cas applicatifs courants) | Synchronisation, *delta load* d'ETL, application de différentiels |
 
 ### Équivalence
 
 ```sql
--- Avec ON CONFLICT
+-- Avec ON CONFLICT (disponible depuis PG 9.5)
 INSERT INTO stats (page, vues)  
 VALUES ('accueil', 1)  
 ON CONFLICT (page)  
 DO UPDATE SET vues = stats.vues + 1;  
 
--- Avec MERGE (PostgreSQL 18)
+-- Avec MERGE (disponible depuis PG 15)
 MERGE INTO stats AS target  
 USING (VALUES ('accueil', 1)) AS source (page, vues)  
 ON target.page = source.page  
@@ -1058,7 +1108,7 @@ ON CONFLICT ON CONSTRAINT nom_contrainte DO ...
 
 ### Points clés à retenir
 
-1. **UPSERT = INSERT or UPDATE** en une seule opération atomique  
+1. **UPSERT = `INSERT` ou `UPDATE`** en une seule opération atomique  
 2. **ON CONFLICT** nécessite un index UNIQUE ou PRIMARY KEY  
 3. **DO NOTHING** ignore silencieusement les doublons  
 4. **DO UPDATE** met à jour la ligne existante  
@@ -1074,11 +1124,11 @@ ON CONFLICT ON CONSTRAINT nom_contrainte DO ...
 La clause `ON CONFLICT` est l'une des fonctionnalités les plus utiles et élégantes de PostgreSQL moderne. Elle transforme des opérations qui nécessitaient auparavant plusieurs requêtes, de la logique applicative complexe et des risques de race conditions en une seule commande SQL simple, atomique et performante.
 
 **Bénéfices principaux** :
-- ✅ **Simplicité** : Une ligne de code au lieu de dizaines  
-- ✅ **Atomicité** : Opération garantie sans race condition  
-- ✅ **Performance** : 3× à 10× plus rapide que les approches traditionnelles  
-- ✅ **Lisibilité** : Intent clair dans le code SQL  
-- ✅ **Sécurité** : Pas besoin de gestion d'exception complexe
+- ✅ **Simplicité** : une ligne SQL au lieu d'un bloc procédural  
+- ✅ **Atomicité** : pas de race condition entre la vérification d'existence et l'écriture  
+- ✅ **Performance** : nettement plus rapide qu'un `SELECT` + `INSERT`/`UPDATE` séquentiel (en particulier sous concurrence, où l'approche traditionnelle force des reprises)  
+- ✅ **Lisibilité** : intention claire dans le SQL lui-même  
+- ✅ **Sécurité** : pas de gestion d'exception nécessaire
 
 Maîtriser `ON CONFLICT` est essentiel pour tout développeur travaillant avec PostgreSQL, que ce soit pour de l'import de données, de la synchronisation, du caching, ou de l'agrégation en temps réel.
 

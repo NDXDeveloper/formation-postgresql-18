@@ -39,7 +39,7 @@ Prenons une table `employes` :
 
 ```sql
 CREATE TABLE employes (
-    id SERIAL PRIMARY KEY,
+    id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     nom VARCHAR(100),
     prenom VARCHAR(100),
     email VARCHAR(255),
@@ -96,7 +96,7 @@ WHERE id = 2;
 
 Les valeurs peuvent être calculées dynamiquement :
 
-#### Augmentation de 10%
+#### Augmentation de 10 %
 
 ```sql
 UPDATE employes  
@@ -104,7 +104,7 @@ SET salaire = salaire * 1.10
 WHERE poste = 'Développeur';  
 ```
 
-Cette requête augmente le salaire de tous les développeurs de 10%.
+Cette requête augmente le salaire de tous les développeurs de 10 %.
 
 #### Calculs plus complexes
 
@@ -149,10 +149,10 @@ END;
 ```
 
 **Explication** :
-- 5+ ans d'ancienneté : +15%
-- 2-4 ans : +10%
-- 1-2 ans : +5%
-- Moins d'1 an : Pas d'augmentation
+- 5+ ans d'ancienneté : +15 %
+- 2-4 ans : +10 %
+- 1-2 ans : +5 %
+- Moins d'1 an : pas d'augmentation
 
 ---
 
@@ -251,19 +251,28 @@ WHERE poste = 'Développeur';
 
 **Si le nombre ne correspond pas à vos attentes, c'est qu'il y a un problème !**
 
-#### 4. Utiliser LIMIT (avec précaution)
+#### 4. Limiter le nombre de lignes modifiées
 
-PostgreSQL permet de limiter le nombre de lignes à modifier :
+> ⚠️ **Attention** : contrairement à MySQL/MariaDB, **PostgreSQL n'accepte PAS `LIMIT` directement dans un `UPDATE` ou un `DELETE`**. La syntaxe `UPDATE … WHERE … LIMIT n` produira une erreur de syntaxe.
+
+Pour limiter le nombre de lignes affectées, on passe par une **sous-requête** sur la clé primaire :
 
 ```sql
--- Modifier au maximum 10 employés
+-- ✅ Forme correcte en PostgreSQL : limiter à 10 lignes via une sous-requête
 UPDATE employes  
 SET salaire = salaire * 1.05  
-WHERE poste = 'Développeur'  
-LIMIT 10;  
+WHERE id IN (  
+    SELECT id  
+    FROM employes  
+    WHERE poste = 'Développeur'  
+    ORDER BY id  
+    LIMIT 10  
+);  
 ```
 
-> **Note** : Cette fonctionnalité est non-standard et doit être utilisée avec prudence.
+L'`ORDER BY` dans la sous-requête est important : sans lui, le « top 10 » serait indéterministe (la 11e ligne pourrait être traitée à la place de la 1re d'une exécution à l'autre).
+
+Cette technique est particulièrement utile pour les **suppressions par lots** (voir plus loin dans cette section, *Limiter le nombre de lignes (pour les suppressions massives)*) afin d'éviter les verrous longue durée sur une table volumineuse.
 
 ### Conditions WHERE complexes
 
@@ -670,27 +679,56 @@ WHERE date_embauche < '2020-01-01';
 
 ### 5. Limiter le nombre de lignes (pour les suppressions massives)
 
-Pour éviter de verrouiller la table trop longtemps :
+Pour éviter de verrouiller la table trop longtemps et d'enfler le journal des transactions (WAL), il vaut mieux supprimer **par lots successifs** dans une boucle plutôt qu'en un seul gros `DELETE`. Comme `DELETE` n'accepte pas `LIMIT` directement, on passe par une sous-requête sur la clé primaire :
 
 ```sql
--- Supprimer par lots
-DO $$  
+-- Supprimer par lots de 10 000 lignes au sein d'une procédure
+-- (la procédure peut COMMITer entre chaque lot, contrairement à un bloc DO
+--  ou à une fonction PL/pgSQL classique)
+CREATE OR REPLACE PROCEDURE purge_anciens_logs()  
+LANGUAGE plpgsql  
+AS $$  
 DECLARE  
     deleted_count INTEGER;
 BEGIN
     LOOP
         DELETE FROM logs
-        WHERE date_creation < '2023-01-01'
-        LIMIT 10000;
+        WHERE id IN (
+            SELECT id FROM logs
+            WHERE date_creation < '2023-01-01'
+            ORDER BY id
+            LIMIT 10000
+        );
 
         GET DIAGNOSTICS deleted_count = ROW_COUNT;
         EXIT WHEN deleted_count = 0;
 
-        -- Pause entre les lots
+        -- Commit après chaque lot : libère les verrous, permet à autovacuum
+        -- de progresser, réduit la taille du WAL non rejoué.
+        COMMIT;
         PERFORM pg_sleep(0.1);
     END LOOP;
-END $$;
+END;
+$$;
+
+-- Lancer la purge (s'exécute hors d'une transaction englobante)
+CALL purge_anciens_logs();
 ```
+
+> 📌 **Pourquoi une procédure et pas un bloc `DO` ?** Depuis PostgreSQL 11, **seules les procédures** (`CREATE PROCEDURE`) appelées par `CALL` peuvent contenir un `COMMIT` au milieu de leur exécution. Un bloc `DO $$ … $$` s'exécute dans une transaction unique : un `COMMIT` à l'intérieur déclenchera l'erreur `cannot commit while a subtransaction is active` ou similaire.
+
+> 💡 **Variante avec `FOR UPDATE SKIP LOCKED`** : dans un système où plusieurs workers purgent en parallèle, ajouter `FOR UPDATE SKIP LOCKED` dans la sous-requête évite que deux workers attendent les mêmes lignes :
+>
+> ```sql
+> DELETE FROM logs
+> WHERE id IN (
+>     SELECT id FROM logs
+>     WHERE date_creation < '2023-01-01'
+>     ORDER BY id
+>     LIMIT 10000
+>     FOR UPDATE SKIP LOCKED
+> );
+> ```
 
 ### 6. Documenter les opérations critiques
 
@@ -725,18 +763,21 @@ COMMIT;
 TRUNCATE TABLE nom_table;
 ```
 
-### Différences entre DELETE et TRUNCATE
+### Différences entre `DELETE` et `TRUNCATE`
 
-| Aspect | DELETE | TRUNCATE |
-|--------|--------|----------|
-| **Syntaxe** | `DELETE FROM table WHERE ...` | `TRUNCATE TABLE table` |
-| **WHERE clause** | ✅ Possible (ciblage) | ❌ Impossible (tout ou rien) |
-| **Vitesse** | Lent (ligne par ligne) | ⚡ Très rapide |
-| **Triggers** | ✅ Déclenche les triggers | ❌ Ne déclenche pas les triggers |
-| **ROLLBACK** | ✅ Possible dans transaction | ✅ Possible dans transaction |
-| **Espace disque** | Libéré progressivement | Libéré immédiatement |
-| **Séquences** | Ne réinitialise pas | Réinitialise (avec RESTART IDENTITY) |
-| **Foreign keys** | Vérifie les contraintes | Peut échouer si références existent |
+| Aspect | `DELETE` | `TRUNCATE` |
+|--------|----------|------------|
+| **Syntaxe** | `DELETE FROM table WHERE …` | `TRUNCATE TABLE table` |
+| **Clause `WHERE`** | ✅ Oui (ciblage fin) | ❌ Non (vide la table entière) |
+| **Vitesse** | O(n) — proportionnelle au nombre de lignes | ⚡ Quasi instantanée, indépendante du volume |
+| **Triggers `ROW` (`BEFORE`/`AFTER DELETE`)** | ✅ Déclenchés pour chaque ligne | ❌ Non déclenchés |
+| **Triggers `STATEMENT` (`BEFORE`/`AFTER TRUNCATE`)** | N/A | ✅ Déclenchés (depuis PG 8.4) |
+| **`ROLLBACK`** | ✅ Transactionnel | ✅ Transactionnel (spécificité PostgreSQL) |
+| **Espace disque** | Récupéré par `VACUUM` ultérieur (les pages restent allouées) | **Restitué immédiatement à l'OS** (la table est tronquée à 0 octet) |
+| **Séquences `IDENTITY` / `SERIAL`** | Inchangées | Réinitialisées si `RESTART IDENTITY`, sinon inchangées |
+| **Clés étrangères entrantes** | Vérifiées ligne par ligne (échec sur dépendance) | Refusée tant que d'autres tables référencent celle-ci, sauf `CASCADE` |
+| **Verrouillage** | `RowExclusiveLock` (autres lecteurs et écrivains progressent) | `AccessExclusiveLock` (bloque tout autre accès le temps de l'opération) |
+| **WAL généré** | Important (un enregistrement par tuple) | Minimal (juste la troncature du fichier) |
 
 ### Exemples d'utilisation
 
@@ -770,7 +811,7 @@ TRUNCATE TABLE departements CASCADE;
 - Vous voulez vider complètement une table
 - La performance est critique
 - Vous n'avez pas besoin de triggers
-- C'est une table de staging ou temporaire
+- C'est une table de *staging* ou temporaire
 
 ❌ **N'utilisez PAS TRUNCATE quand** :
 - Vous voulez supprimer seulement certaines lignes
@@ -810,62 +851,86 @@ ROLLBACK;
 
 ### UPDATE : Considérations de performance
 
-#### 1. Index et UPDATE
+#### 1. Index et UPDATE — l'optimisation HOT
 
-Les UPDATE peuvent être ralentis par les index :
+Les `UPDATE` peuvent être ralentis par les index, puisque chaque colonne indexée modifiée doit aussi voir son index mis à jour :
 
 ```sql
--- Table avec beaucoup d'index
+-- Table avec plusieurs index
 CREATE TABLE produits (
-    id SERIAL PRIMARY KEY,
+    id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     nom VARCHAR(200),
     prix NUMERIC(10, 2),
     stock INTEGER,
     date_maj TIMESTAMP
 );
 
-CREATE INDEX idx_nom ON produits(nom);  
-CREATE INDEX idx_prix ON produits(prix);  
-CREATE INDEX idx_stock ON produits(stock);  
-CREATE INDEX idx_date ON produits(date_maj);  
-
--- Chaque UPDATE doit mettre à jour tous les index concernés
-UPDATE produits SET prix = prix * 1.1;  -- Met à jour idx_prix  
-UPDATE produits SET stock = stock - 1;  -- Met à jour idx_stock  
+CREATE INDEX idx_produits_nom   ON produits(nom);  
+CREATE INDEX idx_produits_prix  ON produits(prix);  
+CREATE INDEX idx_produits_stock ON produits(stock);  
 ```
 
-**Impact** : Plus il y a d'index, plus l'UPDATE est lent.
+PostgreSQL applique cependant une **optimisation très efficace appelée HOT update** (*Heap-Only Tuple update*) : si l'`UPDATE`
+- **ne modifie aucune colonne indexée** *et*
+- **la nouvelle version de la ligne tient sur la même page** que l'ancienne,
 
-#### 2. MVCC et bloat
-
-PostgreSQL utilise MVCC (Multi-Version Concurrency Control). Lors d'un UPDATE :
-- L'ancienne version de la ligne est conservée (dead tuple)
-- Une nouvelle version est créée
-- L'espace n'est pas immédiatement libéré
+alors **aucun index n'est mis à jour**. La nouvelle version est chaînée à l'ancienne sur la même page, et seule l'entrée d'index pointe (indirectement) vers la chaîne. C'est **considérablement plus rapide** et réduit le bloat.
 
 ```sql
--- UPDATE massif
-UPDATE employes SET salaire = salaire * 1.1;
--- Crée une nouvelle version de chaque ligne
+-- 🚀 HOT update possible : aucune colonne indexée touchée
+UPDATE produits SET date_maj = NOW() WHERE id = 42;
 
--- VACUUM nécessaire pour récupérer l'espace
-VACUUM employes;
+-- ❌ HOT update impossible : modifie 'prix' qui est indexé
+UPDATE produits SET prix = prix * 1.1 WHERE id = 42;
 ```
+
+> 💡 **Conséquence pratique** : si une table subit beaucoup d'`UPDATE` fréquents sur une colonne « technique » (compteur, dernier accès, `last_seen_at`), évitez de l'indexer si ce n'est pas nécessaire — vous préserverez la possibilité de HOT updates. Pour favoriser les HOT, on peut aussi baisser le `fillfactor` de la table (par défaut 100, on met souvent 80–90 sur les tables très volatiles) afin de laisser de la place libre sur chaque page pour la nouvelle version :
+>
+> ```sql
+> ALTER TABLE produits SET (fillfactor = 85);
+> ```
+
+#### 2. MVCC et *bloat*
+
+PostgreSQL implémente l'isolation via **MVCC** (*Multi-Version Concurrency Control*). Lors d'un `UPDATE` :
+- L'ancienne version (tuple) est **marquée comme obsolète** mais reste physiquement présente tant que d'anciennes transactions peuvent encore la voir.
+- Une **nouvelle version** est écrite (sur la même page si possible — voir HOT, sinon ailleurs).
+- L'espace des versions obsolètes est récupéré par **`VACUUM`** (manuel ou automatique via `autovacuum`).
+
+```sql
+-- UPDATE massif : crée une nouvelle version pour chaque ligne touchée
+UPDATE employes SET salaire = salaire * 1.1;
+
+-- Récupération de l'espace par autovacuum, ou manuellement :
+VACUUM employes;
+
+-- Pour réorganiser physiquement et récupérer tout l'espace
+-- (⚠️ prend un AccessExclusiveLock — table indisponible le temps de l'opération) :
+VACUUM FULL employes;
+```
+
+L'accumulation de tuples obsolètes non encore *vacuumés* s'appelle le **bloat** : un `UPDATE` qui met à jour 10 fois une table de 1 Go peut, sans `VACUUM`, faire enfler la table à plusieurs Go.
 
 #### 3. UPDATE partiel vs UPDATE complet
 
 ```sql
--- ❌ Inefficace : Modifie toutes les colonnes
+-- ❌ Inutilement coûteux : liste toutes les colonnes même si elles ne changent pas
 UPDATE employes  
 SET nom = nom,  
     prenom = prenom,
     email = email,
     salaire = salaire * 1.1;
 
--- ✅ Efficace : Modifie seulement ce qui change
+-- ✅ Efficace : ne liste que la colonne réellement modifiée
 UPDATE employes  
 SET salaire = salaire * 1.1;  
 ```
+
+Pourquoi cette différence ?
+
+- Une nouvelle version du tuple est **toujours créée** dès lors que l'`UPDATE` matche la ligne, **même si toutes les nouvelles valeurs sont identiques aux anciennes** (PostgreSQL ne fait pas de comparaison « avant/après » sur les colonnes non listées dans `SET`).
+- Mais la première forme **liste explicitement** `nom`, `prenom`, `email` dans `SET`. Si l'une de ces colonnes est indexée, PostgreSQL **ne pourra pas faire de HOT update** (cf. optimisation ci-dessus), même si la valeur n'a pas changé.
+- La seconde forme ne touche que `salaire` ; si seule la colonne `salaire` est indexée, le HOT update reste impossible ; mais si `salaire` n'est pas indexé, on bénéficie pleinement du HOT.
 
 ### DELETE : Considérations de performance
 
@@ -898,6 +963,126 @@ DELETE FROM logs WHERE id % 2 = 0;
 -- Solution : VACUUM FULL (réorganise physiquement)
 VACUUM FULL logs;
 ```
+
+---
+
+## 6.3.7 bis. Verrouillage et concurrence
+
+Comprendre les verrous est essentiel dès qu'on a plus d'une session qui écrit.
+
+### Verrous de ligne (row-level locks)
+
+`UPDATE` et `DELETE` posent un **`ROW EXCLUSIVE` lock** sur la table et, **plus important**, un **verrou de tuple** (*row lock*) sur chaque ligne qu'ils modifient. Ce verrou est conservé jusqu'à la fin de la transaction (`COMMIT` ou `ROLLBACK`).
+
+```sql
+-- Session A
+BEGIN;  
+UPDATE comptes SET solde = solde - 100 WHERE id = 1;  
+-- La ligne id=1 est verrouillée pour modification.
+
+-- Session B (en parallèle)
+UPDATE comptes SET solde = solde + 50 WHERE id = 1;
+-- ⏳ ATTEND la fin de la transaction A.
+
+UPDATE comptes SET solde = solde - 100 WHERE id = 2;
+-- ✅ OK : ligne différente.
+
+SELECT * FROM comptes WHERE id = 1;
+-- ✅ OK : les lecteurs ne sont JAMAIS bloqués par les écrivains (MVCC).
+-- Session B voit ENCORE l'ancienne valeur de id=1.
+```
+
+> 💡 **Règle d'or** : un `UPDATE` qui dure 10 secondes verrouille les lignes affectées pendant 10 secondes. Évitez de combiner du `UPDATE` avec du code applicatif lent à l'intérieur d'une même transaction.
+
+### Verrous explicites : `SELECT … FOR UPDATE`
+
+Pour réserver une ligne avant de la modifier (par exemple pour un pattern « lire-décider-écrire » atomique), on utilise `SELECT … FOR UPDATE` :
+
+```sql
+BEGIN;
+
+-- Réserver la ligne pour modification : pose le même verrou qu'un UPDATE
+SELECT solde FROM comptes WHERE id = 1 FOR UPDATE;
+-- → 1000
+
+-- Vérification métier côté applicatif…
+-- Si tout est OK, modifier
+UPDATE comptes SET solde = solde - 100 WHERE id = 1;
+
+COMMIT;
+```
+
+Variantes utiles :
+
+| Clause | Effet |
+|--------|-------|
+| `FOR UPDATE` | Verrou exclusif sur la ligne — autres `UPDATE`/`DELETE`/`SELECT FOR UPDATE` attendent |
+| `FOR NO KEY UPDATE` | Plus permissif : autorise les `UPDATE` qui ne touchent pas une clé référencée par une FK |
+| `FOR SHARE` | Verrou partagé : empêche modification mais autorise d'autres `FOR SHARE` |
+| `FOR KEY SHARE` | Le plus faible : empêche uniquement suppression et modification des clés |
+| `… NOWAIT` | Échec immédiat (`could not obtain lock`) si la ligne est déjà verrouillée |
+| `… SKIP LOCKED` | Saute les lignes verrouillées (idéal pour des *workers* concurrents qui se partagent une file) |
+
+### Pattern : file d'attente avec `SKIP LOCKED`
+
+Plusieurs *workers* veulent traiter une table `tâches` sans se marcher dessus :
+
+```sql
+-- Chaque worker exécute, en boucle :
+BEGIN;
+
+SELECT id, payload  
+FROM taches  
+WHERE statut = 'à_traiter'  
+ORDER BY priorite DESC, id  
+LIMIT 1  
+FOR UPDATE SKIP LOCKED;  -- ← clé du pattern  
+
+-- (traitement côté application…)
+
+UPDATE taches SET statut = 'fait' WHERE id = …;  
+COMMIT;  
+```
+
+Chaque *worker* récupère **une** tâche, saute toutes celles déjà tenues par d'autres *workers*, et n'attend pas. C'est le pattern utilisé par des systèmes comme [Sidekiq Pro](https://github.com/sidekiq/sidekiq), [Oban](https://github.com/oban-bg/oban) ou [pgworker](https://github.com/citusdata/pg_cron).
+
+### Détecter les conflits de verrous (*lock waits*)
+
+Quand une session bloque, on peut voir qui attend qui :
+
+```sql
+SELECT
+    blocked.pid          AS pid_bloque,
+    blocked.query        AS requete_bloquee,
+    blocking.pid         AS pid_bloquant,
+    blocking.query       AS requete_bloquante,
+    age(now(), blocked.xact_start) AS attente_depuis
+FROM pg_stat_activity blocked  
+JOIN pg_stat_activity blocking  
+  ON blocking.pid = ANY(pg_blocking_pids(blocked.pid))
+WHERE blocked.state = 'active';
+```
+
+En cas d'urgence, on peut tuer une session :
+
+```sql
+SELECT pg_cancel_backend(12345);   -- Annule la requête (doux : envoie SIGINT)  
+SELECT pg_terminate_backend(12345); -- Tue la connexion (brutal)  
+```
+
+### Deadlocks
+
+Deux transactions qui se demandent mutuellement des verrous **en sens inverse** créent un *deadlock*. PostgreSQL le détecte et **avorte l'une des deux** avec `ERROR: deadlock detected` :
+
+```
+-- Session A         |  Session B
+BEGIN;               |  BEGIN;  
+UPDATE c WHERE id=1; |  UPDATE c WHERE id=2;  
+UPDATE c WHERE id=2; |  UPDATE c WHERE id=1;  
+-- attend B          |  -- attend A → deadlock !
+```
+
+**Prévention** : toujours acquérir les verrous **dans le même ordre** (par exemple `ORDER BY id` avant un `FOR UPDATE`, ou trier les `UPDATE` côté application par clé primaire croissante).
 
 ---
 
@@ -1015,7 +1200,7 @@ Avant chaque UPDATE ou DELETE en production :
 - [ ] **Les utilisateurs/applications sont-ils informés (downtime) ?**  
 - [ ] **Ai-je un plan de rollback si problème ?**  
 - [ ] **La commande est-elle documentée (qui, quand, pourquoi) ?**  
-- [ ] **Ai-je testé sur un environnement de développement/staging ?**
+- [ ] **Ai-je testé sur un environnement de développement / *staging* ?**
 
 ---
 

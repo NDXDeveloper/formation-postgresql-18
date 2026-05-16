@@ -16,19 +16,21 @@ Cette section explore en profondeur ces différences pour vous permettre de choi
 
 ### Vue d'ensemble comparative
 
-| Aspect | DELETE | TRUNCATE |
-|--------|--------|----------|
-| **Syntaxe WHERE** | ✅ Possible (ciblage précis) | ❌ Impossible (tout ou rien) |
-| **Vitesse** | 🐌 Lent (ligne par ligne) | ⚡ Très rapide |
-| **Triggers** | ✅ Déclenche les triggers | ❌ Ne déclenche pas les triggers |
-| **ROLLBACK** | ✅ Possible dans transaction | ✅ Possible dans transaction |
-| **WAL (Write-Ahead Log)** | 📝 Écrit chaque suppression | 📝 Écriture minimale |
-| **Espace disque** | 🔄 Récupéré progressivement | ⚡ Libéré immédiatement |
-| **Séquences (SERIAL)** | ⏸️ Ne réinitialise pas | 🔄 Peut réinitialiser |
-| **Foreign Keys** | ✅ Vérifie les contraintes | ⚠️ Échoue si références existent |
-| **Verrous (Locks)** | 🔒 Verrous de ligne | 🔒🔒 Verrou de table exclusif |
+| Aspect | `DELETE` | `TRUNCATE` |
+|--------|----------|------------|
+| **Clause `WHERE`** | ✅ Possible (ciblage précis) | ❌ Impossible (table entière) |
+| **Vitesse** | 🐌 O(n) : croît avec le nombre de lignes | ⚡ O(1) : quasi-instantanée quel que soit le volume |
+| **Triggers `ROW` (`AFTER DELETE` etc.)** | ✅ Déclenchés ligne par ligne | ❌ Non déclenchés |
+| **Triggers `STATEMENT` (`AFTER TRUNCATE`)** | N/A | ✅ Déclenchés (depuis PG 8.4) |
+| **`ROLLBACK`** | ✅ Transactionnel | ✅ Transactionnel (spécificité PostgreSQL — pas le cas sur MySQL) |
+| **WAL généré** | 📝 Une entrée par ligne (volumineux) | 📝 Une entrée pour la troncature du fichier (minimal) |
+| **Espace disque** | 🔄 Pages conservées ; espace récupéré par `VACUUM` ultérieur | ⚡ Fichier de table tronqué à 0 octet immédiatement |
+| **Séquences `IDENTITY` / `SERIAL`** | ⏸️ Inchangées | 🔄 `RESTART IDENTITY` pour réinitialiser, sinon inchangées |
+| **Clés étrangères entrantes** | ✅ Vérifiées (échec sur dépendance présente) | ⚠️ Refusée tant que d'autres tables référencent celle-ci, sauf `CASCADE` |
+| **Verrouillage** | 🔒 `RowExclusiveLock` (autres requêtes peuvent progresser) | 🔒🔒 `AccessExclusiveLock` (bloque toute autre activité sur la table) |
+| **Catégorie SQL** | DML pur | À cheval : modifie le contenu (DML) **mais** est exécutée comme une opération sur le **stockage** de la relation (DDL) — c'est pourquoi elle prend un verrou DDL exclusif |
 
-### DELETE : La suppression sélective
+### `DELETE` : la suppression sélective
 
 `DELETE` est la commande SQL standard pour supprimer des lignes :
 
@@ -39,24 +41,24 @@ WHERE condition;
 
 **Caractéristiques** :
 - Traite chaque ligne individuellement
-- Vérifie toutes les contraintes
-- Déclenche les triggers
-- Écrit dans le WAL pour la réplication
-- Peut être ciblée avec WHERE
+- Vérifie toutes les contraintes (FK, `CHECK`, exclusions)
+- Déclenche les triggers `BEFORE`/`AFTER DELETE` ligne par ligne
+- Génère un enregistrement WAL par ligne supprimée
+- Peut être ciblée avec `WHERE`
 
-### TRUNCATE : La réinitialisation rapide
-
-`TRUNCATE` est une commande DDL (Data Definition Language) spécialisée :
+### `TRUNCATE` : la troncature rapide
 
 ```sql
 TRUNCATE TABLE table_name;
 ```
 
 **Caractéristiques** :
-- Supprime toutes les lignes d'un coup
-- Opération quasi-instantanée
-- Pas de traitement ligne par ligne
-- Libère immédiatement l'espace disque
+- Tronque physiquement le fichier de la table (les anciennes pages sont jetées d'un coup)
+- Opération quasi-instantanée, indépendante du nombre de lignes
+- Pas de traitement ligne par ligne, donc pas de triggers `ROW`
+- Restitue immédiatement l'espace disque à l'OS
+- **Bloque** toute autre activité sur la table (verrou exclusif)
+- Déclenche les éventuels triggers `STATEMENT` de type `TRUNCATE`
 
 ---
 
@@ -173,62 +175,51 @@ TRUNCATE TABLE departements CASCADE;
 
 ---
 
-## 6.6.3. Performances : La différence cruciale
+## 6.6.3. Performances : la différence cruciale
 
-### Benchmark comparatif
+### Mesurer vous-même
 
-Voici des mesures réelles sur différents volumes de données :
-
-#### Test 1 : Table de 10 000 lignes
+Reproduisez les tests sur votre propre matériel — les chiffres absolus dépendent énormément du type de disque, de la mémoire disponible, et du nombre d'index :
 
 ```sql
--- Créer une table de test
+-- Table de test
 CREATE TABLE test_perf (
-    id SERIAL PRIMARY KEY,
+    id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     data TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Insérer 10 000 lignes
-INSERT INTO test_perf (data)  
-SELECT 'test_' || generate_series(1, 10000);  
-```
-
-**Résultats** :
-
-| Opération | Durée | Taille WAL | Espace libéré |
-|-----------|-------|-----------|---------------|
-| DELETE sans WHERE | ~80 ms | ~15 MB | Progressif |
-| TRUNCATE | ~5 ms | ~8 KB | Immédiat |
-
-**Gain : TRUNCATE est ~16× plus rapide**
-
-#### Test 2 : Table de 1 000 000 lignes
-
-```sql
+-- Remplir avec un million de lignes
 INSERT INTO test_perf (data)  
 SELECT 'test_' || generate_series(1, 1000000);  
+
+-- Activer l'affichage du temps dans psql
+\timing on
+
+-- Test 1 : DELETE sans WHERE
+BEGIN;  
+DELETE FROM test_perf;  
+ROLLBACK;  
+
+-- Test 2 : TRUNCATE
+BEGIN;  
+TRUNCATE TABLE test_perf;  
+ROLLBACK;  
 ```
 
-**Résultats** :
+### Ordres de grandeur typiques
 
-| Opération | Durée | Taille WAL | Espace libéré |
-|-----------|-------|-----------|---------------|
-| DELETE sans WHERE | ~8 secondes | ~1.5 GB | Progressif (VACUUM requis) |
-| TRUNCATE | ~10 ms | ~8 KB | Immédiat |
+Pour donner une idée — sur une table simple (peu d'index, lignes courtes) sur un SSD moderne :
 
-**Gain : TRUNCATE est ~800× plus rapide !**
+| Volume | `DELETE` (sans WHERE) | `TRUNCATE` | Rapport |
+|--------|----------------------|------------|---------|
+| 10 000 lignes | quelques dizaines de millisecondes | quelques millisecondes | ×10 à ×30 |
+| 1 000 000 lignes | quelques secondes | quelques millisecondes | **plusieurs centaines** |
+| 10 000 000 lignes | dizaines de secondes voire minutes | quelques millisecondes (et plus si beaucoup de fichiers à supprimer) | **plusieurs milliers** |
 
-#### Test 3 : Table de 10 000 000 lignes
+**À retenir** : le temps de `DELETE` croît linéairement avec le nombre de lignes (et le nombre d'index, et le travail des triggers). Le temps de `TRUNCATE` est **quasi constant** : tronquer un fichier de 10 Mo ou de 10 Go prend à peu près le même temps côté noyau.
 
-**Résultats** :
-
-| Opération | Durée | Taille WAL | Espace libéré |
-|-----------|-------|-----------|---------------|
-| DELETE sans WHERE | ~80 secondes | ~15 GB | Progressif (VACUUM requis) |
-| TRUNCATE | ~15 ms | ~8 KB | Immédiat |
-
-**Gain : TRUNCATE est ~5000× plus rapide !!!**
+L'impact sur le **WAL** est encore plus déséquilibré : un `DELETE` de N lignes génère ~N × (taille du tuple) octets de WAL ; un `TRUNCATE` génère un seul enregistrement de quelques dizaines d'octets. Sur une instance répliquée, cela se traduit en bande passante et en lag de réplication.
 
 ### Pourquoi TRUNCATE est-il si rapide ?
 
@@ -509,7 +500,7 @@ SELECT pg_size_pretty(pg_relation_size('employes')) AS taille_table;
 -- Résultat : 120 MB (inchangé !)
 ```
 
-Les lignes sont marquées comme "mortes" mais l'espace n'est pas libéré.
+Les lignes sont marquées comme « mortes » mais l'espace n'est pas libéré.
 
 #### Pourquoi ?
 
@@ -723,18 +714,18 @@ TRUNCATE TABLE logs;
 
 **Impact WAL** :
 - Une seule entrée dans le WAL (~8 KB)
-- Réplication : Les replicas reçoivent simplement "table vidée"
+- Réplication : les *replicas* reçoivent simplement « table vidée »
 
-### Comparaison visuelle
+### Comparaison visuelle (ordre de grandeur, 1 M de lignes)
 
 ```
-DELETE (1M lignes) :  
-WAL : [████████████████████████████████] 1.5 GB  
-Durée réplication : ~30 secondes  
+DELETE (1 M lignes) :  
+WAL généré        : [████████████████████████████████] centaines de Mo  
+Durée réplication : proportionnelle au volume WAL  
 
 TRUNCATE (même table) :  
-WAL : [█] 8 KB  
-Durée réplication : ~0.1 seconde  
+WAL généré        : [·] quelques dizaines d'octets  
+Durée réplication : quasi instantanée  
 ```
 
 ---
@@ -830,23 +821,71 @@ TRUNCATE TABLE rapports_journaliers;
 
 ## 6.6.11. Exemples pratiques et patterns
 
-### Pattern 1 : Nettoyage de logs
+### Pattern 1 : Nettoyage de logs par **partitionnement**
+
+C'est le pattern le plus puissant pour les tables qui croissent avec le temps (logs, événements, mesures IoT, etc.).
+
+**Idée** : au lieu d'avoir une grosse table à laquelle on applique `DELETE WHERE date < …` à chaque purge, on conçoit la table comme **partitionnée par date**. Chaque mois (ou jour, ou année) est une partition séparée. La purge devient alors un simple `DROP TABLE` de la partition — instantané, sans WAL volumineux, sans verrou long.
 
 ```sql
--- ❌ Inefficace pour gros volumes
-DELETE FROM application_logs  
-WHERE date_creation < CURRENT_DATE - INTERVAL '1 year';  
--- Peut prendre des minutes/heures sur des millions de lignes
+-- 1. Table parent partitionnée par RANGE sur la date
+CREATE TABLE application_logs (
+    id BIGINT GENERATED ALWAYS AS IDENTITY,
+    date_creation TIMESTAMPTZ NOT NULL,
+    niveau VARCHAR(10),
+    message TEXT,
+    PRIMARY KEY (id, date_creation)
+) PARTITION BY RANGE (date_creation);
 
--- ✅ Solution hybride : Partitionnement + TRUNCATE
--- Table partitionnée par mois
-CREATE TABLE logs_2024_01 PARTITION OF logs  
-FOR VALUES FROM ('2024-01-01') TO ('2024-02-01');  
+-- 2. Une partition par mois (à créer à l'avance, idéalement par un job automatisé)
+CREATE TABLE application_logs_2025_11
+    PARTITION OF application_logs
+    FOR VALUES FROM ('2025-11-01') TO ('2025-12-01');
 
--- Détacher et supprimer la partition (équivalent à TRUNCATE ultra-rapide)
-ALTER TABLE logs DETACH PARTITION logs_2024_01;  
-DROP TABLE logs_2024_01;  
+CREATE TABLE application_logs_2025_12
+    PARTITION OF application_logs
+    FOR VALUES FROM ('2025-12-01') TO ('2026-01-01');
+
+-- 3. Les INSERT sur application_logs sont routés vers la bonne partition
+INSERT INTO application_logs (date_creation, niveau, message)  
+VALUES (NOW(), 'INFO', 'Application started');  
+
+-- 4. La purge devient instantanée :
+DROP TABLE application_logs_2024_11;
+-- 0 enregistrement WAL pour les données, juste pour la disparition du catalogue.
 ```
+
+#### Variante : `DETACH PARTITION` + archivage
+
+Si on veut conserver la partition ailleurs avant de la jeter :
+
+```sql
+-- Détacher la partition (l'ancienne table autonome existe encore, mais
+-- elle n'est plus rattachée à la table parent ; les requêtes sur le parent
+-- ne la voient plus)
+ALTER TABLE application_logs DETACH PARTITION application_logs_2024_11;
+
+-- À ce stade, on peut :
+--   - Exporter via COPY pour archive S3 / Glacier
+COPY application_logs_2024_11 TO '/archive/logs_2024_11.csv.gz'  
+WITH (FORMAT csv, HEADER true);  
+--   - Puis détruire
+DROP TABLE application_logs_2024_11;
+```
+
+> 💡 **Bonus PG 14+** : `ALTER TABLE … DETACH PARTITION … CONCURRENTLY` réalise le détachement sans verrou long (`ShareUpdateExclusiveLock` au lieu de `AccessExclusiveLock`), ce qui évite de bloquer les lectures en cours.
+
+#### Comparaison radicale des trois approches
+
+Pour purger les logs de plus d'un an dans une table de 100 millions de lignes :
+
+| Approche | Temps | Verrous | WAL | Espace libéré |
+|----------|-------|---------|-----|---------------|
+| `DELETE FROM application_logs WHERE date < …` | minutes à heures | `RowExclusiveLock` long | énorme | non (besoin `VACUUM`) |
+| `TRUNCATE` (mais perd tout) | quelques ms | `AccessExclusiveLock` | minimal | oui, immédiat |
+| `DROP TABLE` d'une partition | quelques ms | bref `AccessExclusiveLock` sur la partition seule | minimal | oui, immédiat |
+
+Le partitionnement est l'option **production-grade** pour les tables qui grossissent indéfiniment.
 
 ### Pattern 2 : Staging tables (import de données)
 
@@ -1069,8 +1108,8 @@ ORDER BY query_start;
 
 | Situation | Commande | Raison |
 |-----------|----------|--------|
-| Supprimer 10% d'une table | DELETE | Suppression partielle |
-| Vider complètement une table de staging | TRUNCATE | Performance maximale |
+| Supprimer 10 % d'une table | DELETE | Suppression partielle |
+| Vider complètement une table de *staging* | TRUNCATE | Performance maximale |
 | Supprimer avec audit/log | DELETE | Triggers nécessaires |
 | Nettoyer table temporaire en test | TRUNCATE RESTART IDENTITY | Réinitialisation complète |
 | Supprimer en haute concurrence | DELETE | Moins de blocage |
@@ -1117,4 +1156,4 @@ En production, le choix entre DELETE et TRUNCATE peut faire la différence entre
 ---
 
 
-⏭️ ["Upsert" : La clause ON CONFLICT (DO NOTHING, DO UPDATE)](/06-manipulation-des-donnees/07-upsert-on-conflict.md)
+⏭️ [*Upsert* : la clause ON CONFLICT (DO NOTHING, DO UPDATE)](/06-manipulation-des-donnees/07-upsert-on-conflict.md)

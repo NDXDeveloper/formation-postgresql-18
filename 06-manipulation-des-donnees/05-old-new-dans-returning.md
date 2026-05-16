@@ -48,16 +48,35 @@ Avec PostgreSQL 18, ces mêmes concepts sont maintenant disponibles **directemen
 
 ### Disponibilité selon l'opération
 
-| Opération | OLD disponible | NEW disponible |
-|-----------|----------------|----------------|
-| **INSERT** | ❌ Non (pas d'ancienne valeur) | ✅ Oui |
-| **UPDATE** | ✅ Oui | ✅ Oui |
-| **DELETE** | ✅ Oui | ❌ Non (pas de nouvelle valeur) |
+| Opération | `OLD` | `NEW` |
+|-----------|-------|-------|
+| `INSERT` (pur) | ✅ Renvoie `NULL` pour chaque colonne | ✅ Valeurs insérées |
+| `INSERT … ON CONFLICT DO UPDATE` | ✅ Ligne préexistante (s'il y a conflit) ou `NULL` (insertion neuve) | ✅ Ligne finale |
+| `UPDATE` | ✅ Ligne avant modification | ✅ Ligne après modification |
+| `DELETE` | ✅ Ligne supprimée | ✅ Renvoie `NULL` pour chaque colonne |
+| `MERGE` (toutes branches) | ✅ Selon l'action effectuée | ✅ Selon l'action effectuée |
 
-Cette logique est intuitive :
-- Lors d'un **INSERT**, il n'y a pas de valeur précédente → pas de `OLD`
-- Lors d'un **DELETE**, il n'y a plus de valeur après → pas de `NEW`
-- Lors d'un **UPDATE**, les deux existent → `OLD` et `NEW` disponibles
+> 📌 **Clé importante** : `OLD` et `NEW` sont **toujours accessibles** depuis PG 18, mais peuvent valoir `NULL` selon le type d'opération. Cela permet d'écrire des requêtes **polymorphes** qui marchent pour tout type d'opération (par exemple un `MERGE` dont la branche dépend du `MATCHED`/`NOT MATCHED`) et de tester `OLD IS NULL` pour distinguer une insertion d'une mise à jour.
+
+> 💡 **Renommage des qualificateurs** : on peut renommer `OLD` et `NEW` (par exemple si vous avez réellement une table ou colonne nommée « old ») via la syntaxe :
+>
+> ```sql
+> UPDATE produits SET prix = prix * 1.10
+> RETURNING WITH (OLD AS o, NEW AS n)
+>     id, o.prix AS ancien, n.prix AS nouveau;
+> ```
+
+### Comportement par défaut (sans qualificateur)
+
+Sans qualificateur `OLD.` ou `NEW.`, PostgreSQL choisit la valeur la plus naturelle :
+
+| Opération | Sans qualificateur → équivalent à |
+|-----------|-----------------------------------|
+| `INSERT` | `NEW.colonne` (ligne insérée) |
+| `UPDATE` | `NEW.colonne` (ligne après modification) |
+| `DELETE` | `OLD.colonne` (ligne supprimée) |
+
+Autrement dit, le code existant (avant PG 18) qui écrit `RETURNING id, nom, salaire` **continue de produire exactement le même résultat** en PG 18 — le mécanisme `OLD`/`NEW` est purement additif.
 
 ---
 
@@ -582,9 +601,82 @@ RETURNING
 
 ---
 
-## 6.5.7. Utilisation avec MERGE (PostgreSQL 18)
+## 6.5.6 bis. `RETURNING OLD/NEW` ou trigger : quel mécanisme choisir ?
 
-PostgreSQL 18 introduit également la commande `MERGE`, et OLD/NEW sont disponibles dans sa clause RETURNING !
+Les variables `OLD` et `NEW` sont historiquement associées aux **triggers** (depuis longtemps en PostgreSQL). PostgreSQL 18 les rend disponibles dans `RETURNING`. Les deux mécanismes peuvent sembler équivalents pour l'audit ou la comparaison avant/après — mais ils répondent à des besoins différents.
+
+### Tableau comparatif
+
+| Aspect | Trigger `AFTER UPDATE` (PL/pgSQL) | `RETURNING OLD.*, NEW.*` (PG 18+) |
+|--------|------------------------------------|-------------------------------------|
+| **Périmètre d'activation** | Automatique : toute modification de la table, **quelle que soit la requête** | Seulement la requête qui contient `RETURNING` |
+| **Visibilité côté DBA** | Invisible aux applications — garantit l'audit même si le développeur l'oublie | Volontaire : le développeur doit l'écrire explicitement |
+| **Overhead** | Permanent (overhead par ligne, même quand pas nécessaire) | Aucun overhead si on n'utilise pas la clause |
+| **Logique conditionnelle** | Plein PL/pgSQL : branches, appels de fonctions, exceptions | Expressions SQL uniquement |
+| **Destination des données** | N'importe où : autre table, fichier, NOTIFY, appel de fonction externe | Le résultat de la commande (à consommer côté client ou via CTE) |
+| **Mode `DEFERRABLE`** | ✅ Possible (triggers `INITIALLY DEFERRED`) | ❌ Pas applicable |
+| **Tests unitaires** | Difficile : il faut tester côté base | Facile : tout le comportement est dans la requête testée |
+
+### Quand préférer un **trigger**
+
+- L'audit doit être **obligatoire et exhaustif** : aucune modification ne doit y échapper, même si un développeur oublie de l'écrire.
+- La logique d'audit est **complexe** (calculs, appels de fonctions stockées, écriture dans plusieurs tables).
+- Vous voulez **factoriser** : la même règle s'applique à plusieurs tables — un trigger générique sur chacune est plus simple que copier la clause `RETURNING` partout.
+- Vous avez besoin d'un comportement **différé** (à la fin de la transaction, après tout le reste).
+
+### Quand préférer **`RETURNING OLD/NEW`**
+
+- L'audit est **lié à une requête métier précise** (un import, une réorganisation, une migration).
+- Vous voulez **enchaîner** la donnée auditée dans une CTE pour la passer à une autre instruction.
+- Vous ne voulez **pas** ajouter d'overhead permanent à la table (qui ne sera audité que pour cette opération exceptionnelle).
+- Vous cherchez la **lisibilité maximale** : tout est dans la requête, sans aller-retour vers `pg_trigger`.
+
+### Exemple : la même audit avec les deux approches
+
+**Avec trigger** :
+
+```sql
+-- Setup une seule fois (le DBA pose le trigger)
+CREATE OR REPLACE FUNCTION audit_salaire_trg()  
+RETURNS TRIGGER AS $$  
+BEGIN  
+    IF NEW.salaire IS DISTINCT FROM OLD.salaire THEN
+        INSERT INTO audit_salaires (employe_id, ancien, nouveau, ts)
+        VALUES (OLD.id, OLD.salaire, NEW.salaire, now());
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER audit_salaire_aft  
+AFTER UPDATE OF salaire ON employes  
+FOR EACH ROW EXECUTE FUNCTION audit_salaire_trg();  
+
+-- Désormais TOUT UPDATE est audité, peu importe l'auteur :
+UPDATE employes SET salaire = salaire * 1.05 WHERE departement_id = 3;
+```
+
+**Avec `RETURNING OLD/NEW`** :
+
+```sql
+-- À écrire à chaque requête métier qu'on veut auditer
+WITH modifs AS (
+    UPDATE employes SET salaire = salaire * 1.05
+    WHERE departement_id = 3
+    RETURNING id, OLD.salaire AS ancien, NEW.salaire AS nouveau
+)
+INSERT INTO audit_salaires (employe_id, ancien, nouveau, ts)  
+SELECT id, ancien, nouveau, now() FROM modifs  
+WHERE ancien IS DISTINCT FROM nouveau;  
+```
+
+> 💡 **Règle générale** : pour un audit *réglementaire* ou *de sécurité* (« on doit pouvoir prouver que toute modification est tracée »), un **trigger** est plus sûr. Pour une opération ponctuelle ou un pipeline ETL, **`RETURNING OLD/NEW`** est plus simple et plus rapide.
+
+---
+
+## 6.5.7. Utilisation avec MERGE
+
+La commande `MERGE` est disponible depuis **PostgreSQL 15** ; PostgreSQL 17 lui a ajouté la clause `RETURNING`. C'est **PostgreSQL 18** qui complète enfin le tableau en autorisant `OLD` et `NEW` dans le `RETURNING` d'un `MERGE` — extrêmement utile, car `MERGE` peut exécuter une `INSERT`, une `UPDATE` ou une `DELETE` selon la branche `WHEN` choisie pour chaque ligne source.
 
 ### Syntaxe MERGE avec OLD et NEW
 
@@ -715,100 +807,107 @@ PostgreSQL 18 optimise l'accès aux valeurs OLD et NEW :
 - Pour les comparaisons avant/après
 - Pour simplifier le code
 
-⚠️ **Attention avec de gros volumes** :
-- RETURNING stocke toutes les lignes en mémoire
-- Pour des millions de lignes, traitez par lots
+⚠️ **Attention avec de gros volumes** : `RETURNING` matérialise les lignes retournées avant de les renvoyer au client. Sur un `UPDATE` de plusieurs millions de lignes avec `RETURNING OLD.*, NEW.*`, vous pouvez **consommer beaucoup de mémoire et de WAL**. Pour ces volumes, traitez par lots dans une **procédure** (cf. section [6.3](/06-manipulation-des-donnees/03-update-et-delete.md)) :
 
 ```sql
--- ✅ Bon pour quelques milliers de lignes
-UPDATE employes  
-SET salaire = salaire * 1.10  
-RETURNING OLD.salaire, NEW.salaire;  
-
--- ⚠️ Pour des millions de lignes, préférez par lots
-DO $$  
+CREATE OR REPLACE PROCEDURE augmenter_salaires_par_lots(taille_lot INTEGER)  
+LANGUAGE plpgsql  
+AS $$  
 DECLARE  
-    batch_size INTEGER := 10000;
+    ids_traites INTEGER[];
 BEGIN
     LOOP
-        WITH updated AS (
-            UPDATE employes
-            SET salaire = salaire * 1.10
-            WHERE id IN (
-                SELECT id FROM employes
-                WHERE salaire < 50000
-                LIMIT batch_size
-                FOR UPDATE SKIP LOCKED
-            )
-            RETURNING OLD.salaire, NEW.salaire
+        -- Sélectionner un lot de lignes non encore traitées
+        -- et capturer OLD/NEW pour l'historisation
+        WITH lot AS (
+            SELECT id FROM employes
+            WHERE salaire < 50000
+              AND NOT augmente_2025  -- colonne ajoutée pour marquer le traitement
+            ORDER BY id
+            LIMIT taille_lot
+            FOR UPDATE SKIP LOCKED
+        ),
+        modifies AS (
+            UPDATE employes e
+            SET salaire = salaire * 1.10,
+                augmente_2025 = true
+            FROM lot
+            WHERE e.id = lot.id
+            RETURNING e.id, OLD.salaire AS ancien, NEW.salaire AS nouveau
         )
-        INSERT INTO historique_salaires
-        SELECT * FROM updated;
+        INSERT INTO historique_salaires (employe_id, ancien, nouveau)
+        SELECT id, ancien, nouveau FROM modifies
+        RETURNING employe_id INTO ids_traites;  -- pour détecter la fin
 
-        EXIT WHEN NOT FOUND;
+        EXIT WHEN ids_traites IS NULL OR array_length(ids_traites, 1) IS NULL;
+
+        -- Commit après chaque lot : indispensable pour libérer les verrous
+        -- et limiter la taille de la transaction.
+        COMMIT;
     END LOOP;
-END $$;
+END;
+$$;
+
+CALL augmenter_salaires_par_lots(10000);
 ```
+
+> 📌 La présence d'une colonne « marqueur » (`augmente_2025` ici) est essentielle : sans elle, après une première itération, les lignes augmentées pourraient encore satisfaire `salaire < 50000` et seraient ré-augmentées **en boucle infinie**. Alternative : utiliser une colonne `derniere_revalorisation TIMESTAMP` et filtrer dessus.
 
 ---
 
 ## 6.5.10. Limitations et cas particuliers
 
-### Limitations connues
+### Subtilités à connaître
 
-#### 1. Pas de OLD avec INSERT
+#### 1. `OLD` dans un `INSERT` pur : retourne `NULL`, sans erreur
+
+Contrairement à ce qu'on pourrait croire, écrire `OLD.colonne` dans le `RETURNING` d'un `INSERT` pur **ne provoque pas d'erreur** : chaque colonne `OLD` vaut simplement `NULL` (il n'y a pas de ligne précédente).
 
 ```sql
--- ❌ Erreur : OLD n'existe pas pour INSERT
 INSERT INTO employes (nom, prenom)  
 VALUES ('Nouveau', 'Jean')  
-RETURNING OLD.id, NEW.id;  
--- ERROR: column "old" does not exist
+RETURNING OLD.id AS ancien_id, NEW.id AS nouveau_id;  
 ```
 
-**Solution** : Utilisez simplement les noms de colonnes ou NEW :
-```sql
--- ✅ Correct
-INSERT INTO employes (nom, prenom)  
-VALUES ('Nouveau', 'Jean')  
-RETURNING id, nom, prenom;  -- ou NEW.id, NEW.nom, NEW.prenom  
+**Résultat** :
+```
+ ancien_id | nouveau_id
+-----------+------------
+           |         99
 ```
 
-#### 2. Pas de NEW avec DELETE
+C'est précisément ce qui permet le pattern `(OLD IS NULL)::boolean AS is_new` pour distinguer une insertion d'une mise à jour dans un `INSERT … ON CONFLICT` ou un `MERGE`.
+
+#### 2. `NEW` dans un `DELETE` pur : retourne `NULL`, sans erreur
+
+De même, `NEW.colonne` dans un `DELETE` renvoie `NULL` :
 
 ```sql
--- ❌ Erreur : NEW n'existe pas pour DELETE
 DELETE FROM employes  
 WHERE id = 42  
-RETURNING OLD.id, NEW.id;  
--- ERROR: column "new" does not exist
+RETURNING OLD.id AS supprime_id, NEW.id AS nouveau_id;  
 ```
 
-**Solution** : Utilisez OLD :
-```sql
--- ✅ Correct
-DELETE FROM employes  
-WHERE id = 42  
-RETURNING OLD.id, OLD.nom, OLD.prenom;  
+**Résultat** :
+```
+ supprime_id | nouveau_id
+-------------+------------
+          42 |
 ```
 
-#### 3. Ambiguïté possible
+#### 3. Comportement par défaut sans qualificateur
 
-Si vous ne précisez ni OLD ni NEW, PostgreSQL utilise la valeur NEW par défaut (pour UPDATE) :
+Si l'on ne préfixe ni par `OLD` ni par `NEW`, PostgreSQL choisit la valeur « sensée » pour l'opération (voir le tableau plus haut). Les codes existants ne changent donc pas de comportement entre PG ≤ 17 et PG 18.
 
 ```sql
--- Ces deux requêtes sont équivalentes
-UPDATE employes SET salaire = salaire * 1.10  
-RETURNING salaire;  -- Retourne NEW.salaire (nouvelle valeur)  
-
-UPDATE employes SET salaire = salaire * 1.10  
-RETURNING NEW.salaire;  -- Explicite : nouvelle valeur  
+-- Ces deux UPDATE ... RETURNING retournent strictement la même chose :
+UPDATE employes SET salaire = salaire * 1.10 RETURNING salaire;  
+UPDATE employes SET salaire = salaire * 1.10 RETURNING NEW.salaire;  
 ```
 
-**Recommandation** : Soyez explicite pour la clarté du code :
+**Recommandation** : dès qu'on a besoin de l'ancienne valeur ou de comparer avant/après, **soyez explicite** :
 
 ```sql
--- ✅ Clair et sans ambiguïté
 UPDATE employes SET salaire = salaire * 1.10  
 RETURNING  
     OLD.salaire AS ancien_salaire,
@@ -824,40 +923,27 @@ RETURNING
 ```sql
 -- Table d'audit générique
 CREATE TABLE audit_universel (
-    id BIGSERIAL PRIMARY KEY,
+    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     table_name VARCHAR(100),
     operation VARCHAR(10),
     row_id INTEGER,
     changes JSONB,
     user_name VARCHAR(100),
-    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    moment TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Fonction d'audit réutilisable avec OLD et NEW
-CREATE OR REPLACE FUNCTION audit_changes(
-    p_table_name TEXT,
-    p_operation TEXT,
-    p_row_id INTEGER,
-    p_old_data JSONB,
-    p_new_data JSONB
-) RETURNS VOID AS $$
-BEGIN
-    INSERT INTO audit_universel (table_name, operation, row_id, changes, user_name)
-    VALUES (
-        p_table_name,
-        p_operation,
-        p_row_id,
-        jsonb_build_object(
-            'old', p_old_data,
-            'new', p_new_data,
-            'diff', jsonb_diff(p_old_data, p_new_data)
-        ),
-        CURRENT_USER
-    );
-END;
-$$ LANGUAGE plpgsql;
+-- Fonction utilitaire : calcule la "diff" entre deux JSONB
+-- (PostgreSQL n'offre pas de jsonb_diff natif — voici une implémentation simple
+--  qui ne retient que les clés dont la valeur a changé en passant de old à new)
+CREATE OR REPLACE FUNCTION jsonb_diff(old_data JSONB, new_data JSONB)  
+RETURNS JSONB AS $$  
+    SELECT COALESCE(jsonb_object_agg(key, value), '{}'::jsonb)
+    FROM jsonb_each(new_data)
+    WHERE old_data IS NULL
+       OR old_data -> key IS DISTINCT FROM value;
+$$ LANGUAGE sql IMMUTABLE;
 
--- Utilisation avec UPDATE
+-- Utilisation avec UPDATE : un seul appel SQL fait la mise à jour ET l'audit
 WITH updated AS (
     UPDATE employes
     SET
@@ -865,18 +951,25 @@ WITH updated AS (
         poste = 'Senior ' || poste
     WHERE id = 42
     RETURNING
-        NEW.id,
-        to_jsonb(OLD.*) AS old_data,
-        to_jsonb(NEW.*) AS new_data
+        NEW.id AS row_id,
+        to_jsonb(OLD) AS old_data,
+        to_jsonb(NEW) AS new_data
 )
-SELECT audit_changes(
+INSERT INTO audit_universel (table_name, operation, row_id, changes, user_name)  
+SELECT  
     'employes',
     'UPDATE',
-    id,
-    old_data,
-    new_data
-) FROM updated;
+    row_id,
+    jsonb_build_object(
+        'old', old_data,
+        'new', new_data,
+        'diff', jsonb_diff(old_data, new_data)
+    ),
+    CURRENT_USER
+FROM updated;
 ```
+
+> 📌 **Note sur `jsonb_diff`** : PostgreSQL n'offre pas de fonction `jsonb_diff` native. L'implémentation ci-dessus ne couvre que les clés modifiées au premier niveau et marque comme « modifiée » toute clé absente de `old_data`. Pour un diff complet (suppressions de clés, comparaison récursive sur les objets imbriqués), il existe des extensions comme [jsonb_deep_diff](https://github.com/dbgate/dbgate/blob/master/packages/api/src/utility/jsonbDiff.ts) ou des implémentations PL/pgSQL plus élaborées — adaptez selon votre besoin réel.
 
 ### Pattern : Synchronisation bidirectionnelle
 
@@ -916,12 +1009,13 @@ FROM sync;
 
 ### Tableau de référence rapide
 
-| Opération | OLD disponible | NEW disponible | Usage typique |
-|-----------|----------------|----------------|---------------|
-| INSERT | ❌ Non | ✅ Oui | Récupérer valeurs générées |
-| UPDATE | ✅ Oui | ✅ Oui | Comparer avant/après |
-| DELETE | ✅ Oui | ❌ Non | Archiver données supprimées |
-| MERGE | ✅ Oui | ✅ Oui | Distinguer INSERT/UPDATE |
+| Opération | `OLD` (avant) | `NEW` (après) | Usage typique |
+|-----------|---------------|---------------|---------------|
+| `INSERT` | ✅ vaut `NULL` partout | ✅ ligne insérée | Récupérer les valeurs générées |
+| `UPDATE` | ✅ ligne avant | ✅ ligne après | Comparer avant / après |
+| `DELETE` | ✅ ligne supprimée | ✅ vaut `NULL` partout | Archiver les données supprimées |
+| `INSERT … ON CONFLICT DO UPDATE` | ✅ ligne préexistante si conflit, `NULL` sinon | ✅ ligne finale | Distinguer INSERT pur d'UPDATE via `OLD IS NULL` |
+| `MERGE` | ✅ selon la branche | ✅ selon la branche | Auditer une consolidation polymorphe |
 
 ### Syntaxe de référence
 
@@ -978,12 +1072,11 @@ Le support de OLD et NEW dans les clauses RETURNING est l'une des améliorations
 
 **Points clés à retenir** :
 
-- ✅ OLD = valeurs avant modification  
-- ✅ NEW = valeurs après modification  
-- ✅ UPDATE : OLD et NEW disponibles  
-- ✅ DELETE : seulement OLD  
-- ✅ INSERT : seulement NEW (ou nom de colonne simple)  
-- ✅ MERGE : OLD et NEW pour distinguer les opérations
+- ✅ `OLD` = ligne avant modification (`NULL` pour un `INSERT` pur)  
+- ✅ `NEW` = ligne après modification (`NULL` pour un `DELETE` pur)  
+- ✅ `UPDATE` : les deux portent des valeurs réelles, c'est le cas le plus riche  
+- ✅ `INSERT … ON CONFLICT` et `MERGE` : on peut tester `OLD IS NULL` pour reconnaître une insertion vs une mise à jour dans la même requête  
+- ✅ Sans qualificateur `OLD.` / `NEW.`, PostgreSQL choisit la valeur la plus naturelle — donc **tout code antérieur à PG 18 continue de fonctionner à l'identique**
 
 Cette fonctionnalité place PostgreSQL encore plus en avant comme base de données offrant les outils les plus avancés et élégants pour la manipulation de données.
 
