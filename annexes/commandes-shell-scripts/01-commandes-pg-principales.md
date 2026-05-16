@@ -765,38 +765,57 @@ pg_dump -U postgres mabase > backup.sql
 
 #### 2.4.3. Compression
 
+**Syntaxe historique (chiffre seul = niveau gzip)** :
+
 ```bash
-# Format custom : compression automatique
+# Format custom : compression gzip implicite, niveau 0-9
 pg_dump -F c -Z 9 mabase -f backup.dump
-
-# -Z 9 : Niveau de compression maximum (0-9)
-# 0 = pas de compression
-# 9 = compression maximum (plus lent, plus petit)
-# Défaut : 6
+# -Z 0 : pas de compression
+# -Z 9 : compression maximum (plus lent, plus petit)
+# -Z 6 : défaut historique
 ```
 
-**Compression manuelle avec plain text :**
+**Syntaxe étendue (PostgreSQL 16+) : choix de l'algorithme** :
+
+Depuis PostgreSQL 16, `-Z` accepte la forme `algorithme[:niveau]` pour les formats *custom* et *directory* :
 
 ```bash
-# Avec gzip
-pg_dump mabase | gzip > backup.sql.gz
-
-# Avec bzip2 (meilleure compression, plus lent)
-pg_dump mabase | bzip2 > backup.sql.bz2
-
-# Avec xz (excellente compression)
-pg_dump mabase | xz > backup.sql.xz
+# Choix explicite de l'algorithme et du niveau
+pg_dump -F c -Z gzip:9   mabase -f backup.dump      # gzip, niveau 9  
+pg_dump -F c -Z lz4:1    mabase -f backup.dump      # lz4 (très rapide, ratio modéré)  
+pg_dump -F c -Z zstd:9   mabase -f backup.dump      # zstd (meilleur rapport vitesse/ratio)  
+pg_dump -F c -Z none     mabase -f backup.dump      # pas de compression  
 ```
 
-**Comparaison de taille typique (pour une base de 1 GB) :**
+| Algorithme | Vitesse | Ratio | Décompression | Quand l'utiliser |
+|---|---|---|---|---|
+| `none`  | ⚡⚡⚡ instant | 1× | instant | déjà compressé en aval (S3 server-side, etc.) |
+| `lz4`   | ⚡⚡ très rapide | ~2× | très rapide | backups fréquents, fenêtre courte |
+| `gzip`  | ⚡ modéré | ~4× | modéré | défaut historique, compatible partout |
+| `zstd`  | ⚡⚡ rapide | ~4-5× | rapide | **recommandation 2026** : meilleur compromis |
+
+> ⚠️ `lz4` et `zstd` ne sont disponibles que si PostgreSQL a été **compilé avec leurs bibliothèques** respectives (`--with-lz4`, `--with-zstd`). Les paquets `postgresql-18` officiels sur Debian/Ubuntu et RPM les activent par défaut.
+
+**Compression manuelle avec plain text** :
+
+```bash
+pg_dump mabase | gzip  > backup.sql.gz  
+pg_dump mabase | zstd  > backup.sql.zst   # rapide et efficace  
+pg_dump mabase | bzip2 > backup.sql.bz2  
+pg_dump mabase | xz    > backup.sql.xz  
+```
+
+**Comparaison de taille typique (pour une base de 1 Go)** :
 
 ```
-backup.sql           : 1000 MB  (100%)  
-backup.sql.gz        :  250 MB  (25%)  
-backup.dump (-Z 6)   :  220 MB  (22%)  
-backup.dump (-Z 9)   :  200 MB  (20%)  
-backup.sql.bz2       :  180 MB  (18%)  
-backup.sql.xz        :  150 MB  (15%)  
+backup.sql                  : 1000 Mo  (100 %)  
+backup.sql.gz               :  250 Mo  ( 25 %)  
+backup.dump (-Z lz4:1)      :  280 Mo  ( 28 %, le plus rapide)  
+backup.dump (-Z gzip:6)     :  220 Mo  ( 22 %)  
+backup.dump (-Z gzip:9)     :  200 Mo  ( 20 %)  
+backup.dump (-Z zstd:9)     :  190 Mo  ( 19 %, ~3× plus rapide que gzip:9)  
+backup.sql.bz2              :  180 Mo  ( 18 %)  
+backup.sql.xz               :  150 Mo  ( 15 %)  
 ```
 
 #### 2.4.4. Backup Sélectif
@@ -959,9 +978,10 @@ pg_dump -F d -j 4 grande_base -f backup_dir/
 
 ```
 Base de 100 GB :
-- pg_dump standard    : 2 heures
-- pg_dump -j 4        : 30 minutes (4× plus rapide)
-- pg_dump -j 8        : 20 minutes (6× plus rapide)
+- pg_dump (séquentiel)        : 2 heures
+- pg_dump -F d -j 4           : 30 minutes (4× plus rapide)
+- pg_dump -F d -j 8           : 20 minutes (6× plus rapide)
+# Rappel : -j N requiert -F d (format directory). Avec -F c ou -F p, -j est ignoré.
 ```
 
 ### 2.7. Exemples de Scripts de Backup
@@ -1516,36 +1536,58 @@ echo "✅ Restauration terminée"
 
 ### 3.7. Gestion des Erreurs
 
-#### 3.7.1. Continuer en Cas d'Erreur (--single-transaction OFF)
+> ⚠️ **Important** : le comportement par **défaut** de `pg_restore` est de **continuer** quand une commande échoue (et de compter les erreurs à la fin). C'est l'inverse de `psql` qui s'arrête à la première erreur. Beaucoup de tutoriels affirment l'inverse — vérifiez la version concernée.
 
-Par défaut, pg_restore s'arrête à la première erreur. Pour continuer :
-
-```bash
-# Ne pas s'arrêter aux erreurs
-pg_restore -d mabase --no-owner --no-acl backup.dump
-```
-
-**Options utiles :**
-- `--no-owner` : Ignore les propriétaires d'objets (évite les erreurs si l'utilisateur n'existe pas)  
-- `--no-acl` : Ignore les permissions (GRANT/REVOKE)  
-- `--if-exists` : Ajoute IF EXISTS aux DROP (évite erreurs si objet n'existe pas)
-
-#### 3.7.2. Mode Transaction Unique
+#### 3.7.1. Stopper à la première erreur (`--exit-on-error`)
 
 ```bash
-# Restaurer en une seule transaction (tout ou rien)
-pg_restore -d mabase --single-transaction backup.dump
+# Faire échouer la restauration dès la première erreur rencontrée
+pg_restore --exit-on-error -d mabase backup.dump
 ```
 
-**Comportement :**
-- Toute la restauration = 1 transaction
-- Si une erreur survient → **ROLLBACK complet**
-- Base laissée dans état initial
+**Caractéristiques** :
+- Arrête immédiatement (avec un code de retour ≠ 0).
+- Ce qui a déjà été appliqué reste en place (**pas** de rollback global).
+- Utile en CI/CD pour détecter rapidement un problème.
 
-**⚠️ Attention :**
-- Impossible avec `-j` (parallèle)
-- Consomme beaucoup de mémoire pour gros backups
-- Utile pour s'assurer de la cohérence
+#### 3.7.2. Ignorer proprement certaines erreurs
+
+Quand on restaure dans un environnement différent (rôles absents, droits différents…), on évite les faux positifs avec ces options :
+
+```bash
+pg_restore --no-owner --no-acl --if-exists -d mabase backup.dump
+```
+
+- `--no-owner` : ignore les `ALTER ... OWNER TO …` (utile si l'utilisateur n'existe pas sur la cible).
+- `--no-acl` : ignore les `GRANT`/`REVOKE`.
+- `--if-exists` : ajoute `IF EXISTS` aux `DROP` (utile avec `-c`).
+- `--no-comments` : ignore les `COMMENT ON …`.
+
+#### 3.7.3. Mode transaction unique (`--single-transaction` / `-1`)
+
+```bash
+# Restaurer en une seule transaction : tout ou rien
+pg_restore --single-transaction -d mabase backup.dump
+```
+
+**Comportement** :
+- Toute la restauration est encapsulée dans un seul `BEGIN`/`COMMIT`.
+- Si **une** commande échoue → **`ROLLBACK` global** : la base reste dans son état initial.
+- Implique automatiquement `--exit-on-error`.
+
+**⚠️ Contraintes** :
+- **Incompatible avec `-j`** (parallélisme) — la transaction unique impose une exécution sérielle.
+- Consomme plus de mémoire pour les très gros dumps (snapshot + verrous accumulés).
+- Idéal pour les bases **critiques** où une restauration partielle est inacceptable.
+
+**Mémo des trois modes** :
+
+| Aspect | Défaut | `--exit-on-error` | `--single-transaction` |
+|---|---|---|---|
+| À l'erreur | Continue | **Stoppe** | **Stoppe** |
+| Transaction | Par commande | Par commande | **Une seule** transaction |
+| Rollback automatique | Non | Non | **Oui** (tout) |
+| Compatible `-j` parallèle | Oui | Oui | **Non** |
 
 ### 3.8. Options de Connexion
 
@@ -1973,8 +2015,9 @@ SELECT pg_reload_conf();
 - Vérifier le statut → **pg_ctl status**
 
 **Sauvegardes :**
-- Backup d'une base (production) → **pg_dump -F c -j 4**
-- Backup de toutes les bases → **pg_dumpall** + **pg_dump** (par base)
+- Backup d'une base, grosse volumétrie (parallèle) → **pg_dump -F d -j 4** *(le `-j N` exige le format `directory`)*
+- Backup d'une base, fichier unique → **pg_dump -F c** *(custom : seul format compressé monofichier)*
+- Backup de toutes les bases → **pg_dumpall** *(SQL plain ; pour le parallélisme, `pg_dumpall --globals-only` + un `pg_dump -F d -j N` par base est plus rapide)*
 - Backup quotidien automatisé → **pg_dump -F c** + script cron
 - Export de données pour migration → **pg_dump --data-only**
 - Versioning du schéma → **pg_dump --schema-only** (SQL)
@@ -2001,14 +2044,14 @@ SELECT pg_reload_conf();
 
 #### Pour pg_dump :
 - [ ] Automatiser avec cron  
-- [ ] Utiliser format custom (-F c) en production  
-- [ ] Activer compression maximale (-Z 9)  
-- [ ] Paralléliser pour grandes bases (-j)  
+- [ ] Utiliser format custom `-F c` (1 fichier) ou directory `-F d` (un répertoire) en production  
+- [ ] Choisir un algorithme de compression adapté : `-Z zstd:9` (équilibré) ou `-Z gzip:9` (compatibilité)  
+- [ ] Paralléliser pour grandes bases : `-j N` **requiert `-F d`** (directory) — incompatible avec `-F c`  
 - [ ] Mettre en place rotation des backups  
 - [ ] Tester régulièrement la restauration  
 - [ ] Stocker hors site (NAS, S3, etc.)  
 - [ ] Monitorer taille et durée des backups  
-- [ ] Sauvegarder aussi les objets globaux (pg_dumpall --globals-only)
+- [ ] Sauvegarder aussi les objets globaux (`pg_dumpall --globals-only`)
 
 #### Pour pg_restore :
 - [ ] Toujours vérifier le backup avant (--list)  
@@ -2028,7 +2071,8 @@ SELECT pg_reload_conf();
 
 # Script backup_daily.sh :
 # - pg_dumpall --globals-only
-# - pg_dump -F c -Z 9 -j 4 pour chaque base
+# - pg_dump -F d -j 4 -Z zstd:9 pour chaque base
+#   (-j N nécessite -F d ; pour -F c, omettre -j)
 # - Rotation 30 jours
 # - Upload vers S3/NAS
 ```
@@ -2051,19 +2095,21 @@ SELECT pg_reload_conf();
 
 ```bash
 # 1. Installer PostgreSQL sur nouveau serveur
-apt-get install postgresql-18
+sudo apt-get install postgresql-18
 
-# 2. Restaurer les objets globaux
-psql -f globals.sql
+# 2. Restaurer les objets globaux (rôles, tablespaces)
+sudo -u postgres psql -d postgres -f globals.sql
 
 # 3. Restaurer chaque base
+# -C : la commande CREATE DATABASE est rejouée → on se connecte à 'postgres'
+# -j : parallélisme (nécessite format custom ou directory)
 for dump in /backups/*.dump; do
-    db=$(basename "$dump" .dump)
-    pg_restore -C -d postgres -j 8 "$dump"
+    sudo -u postgres pg_restore -C -d postgres -j 8 -- "$dump"
 done
 
 # 4. Vérifier l'intégrité
-psql -l
+sudo -u postgres psql -l                # liste des bases  
+sudo -u postgres psql -c "SELECT version();"  
 # Tester les connexions applicatives
 ```
 

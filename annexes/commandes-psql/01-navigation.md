@@ -87,18 +87,20 @@ Dans ce guide :
 # Lister toutes les bases
 \l
 
-# Sortie typique :
-#                                   List of databases
-#      Name      |  Owner   | Encoding |   Collate   |    Ctype    |   Access privileges
-# ---------------+----------+----------+-------------+-------------+-----------------------
-#  ma_boutique   | postgres | UTF8     | fr_FR.UTF-8 | fr_FR.UTF-8 |
-#  postgres      | postgres | UTF8     | fr_FR.UTF-8 | fr_FR.UTF-8 |
-#  template0     | postgres | UTF8     | fr_FR.UTF-8 | fr_FR.UTF-8 | =c/postgres          +
-#                |          |          |             |             | postgres=CTc/postgres
-#  template1     | postgres | UTF8     | fr_FR.UTF-8 | fr_FR.UTF-8 | =c/postgres          +
-#                |          |          |             |             | postgres=CTc/postgres
-#  test          | postgres | UTF8     | fr_FR.UTF-8 | fr_FR.UTF-8 |
+# Sortie typique en PG 18 :
+#                                              List of databases
+#      Name      |  Owner   | Encoding | Locale Provider |   Collate   |    Ctype    | Locale | ICU Rules | Access privileges
+# ---------------+----------+----------+-----------------+-------------+-------------+--------+-----------+-----------------------
+#  ma_boutique   | postgres | UTF8     | libc            | fr_FR.UTF-8 | fr_FR.UTF-8 |        |           |
+#  postgres      | postgres | UTF8     | libc            | fr_FR.UTF-8 | fr_FR.UTF-8 |        |           |
+#  template0     | postgres | UTF8     | libc            | fr_FR.UTF-8 | fr_FR.UTF-8 |        |           | =c/postgres          +
+#                |          |          |                 |             |             |        |           | postgres=CTc/postgres
+#  template1     | postgres | UTF8     | libc            | fr_FR.UTF-8 | fr_FR.UTF-8 |        |           | =c/postgres          +
+#                |          |          |                 |             |             |        |           | postgres=CTc/postgres
+#  test          | postgres | UTF8     | libc            | fr_FR.UTF-8 | fr_FR.UTF-8 |        |           |
 ```
+
+> 💡 Depuis PostgreSQL 15, la colonne **Locale Provider** distingue le fournisseur de locale par base : `libc` (historique, locale système) ou `icu` (bibliothèque ICU, comportement stable d'une plateforme à l'autre). Pour les nouvelles bases, ICU est souvent préférable pour la portabilité des comparaisons.
 
 **Version détaillée** :
 ```bash
@@ -479,9 +481,19 @@ Dans ce guide :
 **Valeur actuelle d'une séquence** :
 ```sql
 -- Ceci est du SQL, pas une méta-commande
-SELECT currval('clients_id_seq');  
+
+-- Lire le compteur stocké (last_value), valable même sans nextval préalable
 SELECT last_value FROM clients_id_seq;  
+SELECT * FROM pg_sequences WHERE sequencename = 'clients_id_seq';  
+
+-- Lire la dernière valeur renvoyée *dans cette session* par nextval()
+-- ⚠️ Erreur si la session n'a jamais appelé nextval sur cette séquence.
+SELECT currval('clients_id_seq');
 ```
+
+> ⚠️ Ne pas confondre :  
+> - `last_value` (vue `pg_sequences`) : valeur stockée côté serveur, partagée.  
+> - `currval()` : valeur renvoyée par le dernier `nextval()` de la **session courante**, isolée par connexion.
 
 ---
 
@@ -1027,23 +1039,101 @@ Signifie : "alice a le droit SELECT, accordé par postgres"
 
 ---
 
+### \dconfig - Lister les paramètres serveur (PG 15+)
+
+**Syntaxe** :
+```
+\dconfig[+] [PATTERN]
+```
+
+**Description** : Affiche les paramètres de configuration du serveur (équivalent rapide de `SHOW` ou d'une requête sur `pg_settings`). Le pattern accepte les wildcards `*` et `?`.
+
+**Exemples** :
+
+```bash
+# Tous les paramètres dont la valeur diffère du défaut compilé
+\dconfig
+
+# Filtrer
+\dconfig shared_buffers
+\dconfig work_mem
+\dconfig io_*           # nouveautés PG 18 : io_method, io_workers, etc.
+
+# Version détaillée (avec contexte, type, description)
+\dconfig+ work_mem
+```
+
+> 💡 `\dconfig` est plus rapide à taper que `SELECT name, setting FROM pg_settings WHERE name LIKE …` et reste très utile pour les audits.
+
+---
+
+### \dRp et \dRs - Publications et souscriptions (réplication logique)
+
+**Syntaxe** :
+```
+\dRp[+] [PATTERN]     # publications (côté primaire)
+\dRs[+] [PATTERN]     # subscriptions (côté secondaire)
+```
+
+**Description** : Inspecte la configuration de réplication logique.
+
+```bash
+# Publications définies sur ce serveur
+\dRp+
+
+#                                  List of publications
+#  Name | Owner | All tables | Inserts | Updates | Deletes | Truncates | Via root
+# ------+-------+------------+---------+---------+---------+-----------+----------
+#  pub1 | repli | f          | t       | t       | t       | t         | f
+# Tables:
+#   "public.clients", "public.commandes"
+
+# Souscriptions actives
+\dRs
+```
+
+---
+
+### \dy - Lister les *event triggers*
+
+**Syntaxe** :
+```
+\dy[+] [PATTERN]
+```
+
+**Description** : Affiche les *event triggers* (déclenchés par des événements DDL du cluster : `ddl_command_start`, `ddl_command_end`, `sql_drop`, `table_rewrite`).
+
+```bash
+\dy
+
+#         List of event triggers
+#    Name   |     Event     | Owner | Enabled |         Function          | Tags
+# ----------+---------------+-------+---------+---------------------------+------
+#  audit_ddl| ddl_command_end| postgres | enabled | public.log_ddl_command |
+```
+
+---
+
 ## Navigation Entre Schémas
 
 ### Comprendre le Search Path
 
 Le `search_path` détermine dans quels schémas PostgreSQL cherche les objets.
 
-**Voir le search_path actuel** :
+**Voir le search_path actuel (session)** :
 ```sql
 SHOW search_path;
 -- Résultat typique : "$user", public
 ```
 
-**Ou via méta-commande** :
+**Voir les `search_path` configurés par rôle ou par base** :
 ```bash
-\drds
-# Affiche tous les paramètres, y compris search_path
+\drds                       # tous les paramètres ALTER ROLE/DATABASE SET …
+\drds alice                 # uniquement pour le rôle alice
+\drds - app                 # uniquement pour la base app (tiret = wildcard rôle)
 ```
+
+> ℹ️ `\drds` ne renvoie **que** les paramètres définis explicitement par `ALTER ROLE … SET` ou `ALTER DATABASE … SET`. Le `search_path` effectif d'une session reste celui exposé par `SHOW search_path` (qui combine défauts compilés, valeurs `postgresql.conf`, `ALTER`/`SET` en cascade).
 
 **Modifier temporairement** :
 ```sql
@@ -1168,6 +1258,10 @@ psql -U postgres -d ma_base -c "\dt" | grep client
 | `\do` | Lister les opérateurs | `\do @>` |
 | `\da` | Lister les agrégats | `\da` |
 | `\dA` | Lister les méthodes d'accès | `\dA` |
+| `\dconfig` | Paramètres serveur (PG 15+) | `\dconfig io_*` |
+| `\dRp` | Publications (réplication logique) | `\dRp+` |
+| `\dRs` | Souscriptions (réplication logique) | `\dRs+` |
+| `\dy` | *Event triggers* | `\dy+` |
 
 **Astuce** 💡 : Presque toutes les commandes acceptent `+` pour plus de détails et un pattern pour filtrer !
 

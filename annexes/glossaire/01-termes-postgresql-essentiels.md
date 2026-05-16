@@ -35,9 +35,11 @@ Ce glossaire présente les concepts et termes fondamentaux de PostgreSQL que tou
 **Analogie** : C'est comme un document Google Docs avec historique des versions. Plusieurs personnes peuvent travailler simultanément, et chacun peut voir l'état du document à un instant donné sans que les modifications en cours des autres ne gênent.
 
 **Avantages** :
-- Les lectures ne bloquent jamais les écritures
+- Les lectures (`SELECT`) ne bloquent jamais les écritures
 - Les écritures ne bloquent jamais les lectures
 - Excellentes performances en environnement multi-utilisateurs
+
+> ⚠️ **Précision importante** : MVCC ne supprime pas tous les blocages. Deux transactions qui veulent **modifier la même ligne** (`UPDATE`/`DELETE`) se bloquent mutuellement : la seconde attend que la première commit ou rollback. C'est un verrou *row-level* (`RowExclusiveLock`), inévitable pour garantir la cohérence.
 
 **Contrepartie** : Les anciennes versions doivent être nettoyées régulièrement (c'est le rôle de VACUUM).
 
@@ -59,9 +61,23 @@ COMMIT;
 - `BEGIN` : Démarre la transaction  
 - `COMMIT` : Valide définitivement les modifications  
 - `ROLLBACK` : Annule toutes les modifications depuis le BEGIN  
-- `SAVEPOINT` : Crée un point de sauvegarde intermédiaire
+- `SAVEPOINT` : Crée un point de sauvegarde intermédiaire (permet un rollback partiel)
 
-**En cas d'erreur**, toute la transaction est automatiquement annulée (rollback automatique).
+**En cas d'erreur** :  
+- PostgreSQL **interrompt** la transaction (état `aborted`) : toutes les commandes suivantes échouent avec *« current transaction is aborted, commands ignored until end of transaction block »*.  
+- Il faut alors envoyer **explicitement** `ROLLBACK` (ou `COMMIT` — qui sera traité comme un ROLLBACK car la transaction est cassée).  
+- Pour pouvoir **continuer** après une erreur sans tout perdre, utiliser un `SAVEPOINT` avant l'opération risquée puis `ROLLBACK TO SAVEPOINT nom` en cas d'échec.
+
+```sql
+BEGIN;
+    UPDATE compte SET solde = solde - 100 WHERE id = 1;
+    SAVEPOINT avant_credit;
+    -- Une erreur ici (ex : violation de contrainte) abort le SAVEPOINT, pas la transaction
+    UPDATE compte SET solde = solde + 100 WHERE id = 2;
+    -- En cas d'erreur, on peut faire :
+    -- ROLLBACK TO SAVEPOINT avant_credit;  -- la 1ʳᵉ UPDATE reste valide
+COMMIT;
+```
 
 ---
 
@@ -299,17 +315,28 @@ Un **lock** (verrou) empêche des opérations conflictuelles de s'exécuter simu
 
 **Types principaux** :
 - **Row-level locks** : Verrouillent des lignes spécifiques  
-  - `FOR UPDATE` : Verrouillage exclusif  
-  - `FOR SHARE` : Verrouillage partagé
+  - `SELECT ... FOR UPDATE` : verrou exclusif sur la ligne  
+  - `SELECT ... FOR SHARE` : verrou partagé sur la ligne  
+  - `SELECT ... FOR NO KEY UPDATE` / `FOR KEY SHARE` : variantes plus permissives sur les clés étrangères
 
-- **Table-level locks** : Verrouillent toute une table  
-  - `ACCESS SHARE` : Lecture (peu restrictif)  
-  - `EXCLUSIVE` : Modification de structure (très restrictif)
+- **Table-level locks** : PostgreSQL définit **8 modes** au niveau table, du plus permissif au plus restrictif :  
+  `AccessShareLock` (SELECT) → `RowShareLock` (SELECT FOR UPDATE) → `RowExclusiveLock` (INSERT/UPDATE/DELETE) → `ShareUpdateExclusiveLock` (VACUUM, CREATE INDEX CONCURRENTLY) → `ShareLock` (CREATE INDEX) → `ShareRowExclusiveLock` (CREATE TRIGGER) → `ExclusiveLock` (LOCK TABLE … IN EXCLUSIVE MODE) → **`AccessExclusiveLock`** (ALTER TABLE, DROP TABLE, VACUUM FULL, CLUSTER, REINDEX, `LOCK TABLE` sans MODE).
+
+  > ⚠️ `LOCK TABLE foo;` (sans `MODE` explicite) pose un **`AccessExclusiveLock`** — le plus restrictif. À utiliser avec parcimonie.
+
+- **Advisory locks** : verrous applicatifs nommés (`pg_advisory_lock()`), gérés entièrement par l'application — ne sont pas associés à une table.
 
 **Voir les verrous actifs** :
 ```sql
 SELECT * FROM pg_locks;
+
+-- Identifier qui bloque qui (PG 9.6+)
+SELECT pid, pg_blocking_pids(pid) AS bloqueurs, query  
+FROM pg_stat_activity  
+WHERE cardinality(pg_blocking_pids(pid)) > 0;  
 ```
+
+> 🔗 La matrice complète de compatibilité entre modes est dans la [doc PG 18](https://www.postgresql.org/docs/18/explicit-locking.html#LOCKING-TABLES). Le tableau détaillé avec exemples est dans `requetes-sql-reference/01-requetes-administration.md` (section 2.1).
 
 ---
 
@@ -342,24 +369,23 @@ Le **niveau d'isolation** définit le degré de visibilité des modifications en
 
 **Les 4 niveaux SQL standard** (du moins au plus strict) :
 
-1. **Read Uncommitted** (non supporté par PostgreSQL)
-   - Lit les modifications non validées des autres
-   - Non fiable
+1. **Read Uncommitted**
+   - Le standard SQL autorise la lecture des modifications non validées.
+   - **PostgreSQL accepte la syntaxe mais se comporte exactement comme `READ COMMITTED`** : il n'expose jamais de données non validées (les *dirty reads* sont impossibles, conséquence directe de MVCC).
 
 2. **Read Committed** (défaut PostgreSQL)
-   - Lit uniquement les modifications validées
-   - Chaque requête voit les dernières données commitées
-   - Convient à 95% des cas
+   - Chaque **instruction** voit un nouveau *snapshot* des données committées au moment où elle démarre.
+   - Convient à la majorité des cas applicatifs.
 
 3. **Repeatable Read**
-   - Voit un snapshot fixe au début de la transaction
-   - Protège contre les "non-repeatable reads"
-   - Idéal pour les rapports consistants
+   - Toutes les instructions de la transaction voient le **même snapshot**, pris au début de la première lecture.
+   - Implémenté en PostgreSQL comme un *snapshot isolation* : protège des *non-repeatable reads* **et** des *phantom reads*.
+   - Idéal pour les rapports cohérents.
 
 4. **Serializable**
-   - Le plus strict : comme si les transactions s'exécutaient en série
-   - Détecte et empêche les anomalies complexes
-   - Plus lent, mais garantit la cohérence maximale
+   - Le plus strict : équivaut à une exécution série des transactions.
+   - PostgreSQL utilise **SSI** (*Serializable Snapshot Isolation*) : détecte les conflits de dépendances et annule la transaction fautive avec une erreur `40001` que l'application doit retenter.
+   - Plus coûteux, mais garantit la cohérence maximale sans verrouillage explicite.
 
 **Définir le niveau** :
 ```sql
@@ -403,9 +429,11 @@ CREATE TABLE ventes.produits (...);
 
 ### Search Path
 
-Le **search_path** définit l'ordre de recherche des schemas quand un objet n'est pas qualifié.
+Le **search_path** définit l'ordre de recherche des schémas quand un objet n'est pas qualifié.
 
 **Défaut** : `"$user", public`
+
+**⚠️ Sécurité depuis PostgreSQL 15** : le schéma `public` n'accorde plus le privilège `CREATE` à `PUBLIC` par défaut (changement issu du *fix* CVE-2018-1058). Seul le propriétaire de la base peut y créer des objets, sauf privilège explicitement accordé. Concrètement, on déclare souvent ses schémas applicatifs en début de `search_path` et on n'y laisse plus traîner d'objets dans `public`.
 
 **Exemple** :
 ```sql
@@ -415,7 +443,13 @@ SELECT * FROM ventes.produits;
 -- Avec search_path = ventes, public
 SET search_path TO ventes, public;  
 SELECT * FROM produits;  -- Cherche d'abord dans "ventes", puis "public"  
+
+-- Persistance par utilisateur ou par base
+ALTER ROLE alice    SET search_path TO ventes, public;  
+ALTER DATABASE app  SET search_path TO ventes, reporting, public;  
 ```
+
+> 🏆 **Bonne pratique** : dans les fonctions et triggers (`SECURITY DEFINER` notamment), **qualifier explicitement** les objets ou fixer un `SET search_path = …` dans la définition. Ne jamais se reposer sur le `search_path` de la session pour des objets sensibles.
 
 ---
 
@@ -539,10 +573,26 @@ SELECT age(datfrozenxid) FROM pg_database WHERE datname = 'ma_base';
 **JSONB** est le type JSON binaire de PostgreSQL, optimisé pour les requêtes.
 
 **Différence JSON vs JSONB** :
-- `JSON` : Stocke le texte tel quel (plus lent)  
-- `JSONB` : Stocke en format binaire décomposé (plus rapide, plus de fonctionnalités)
+- `JSON` : Stocke le texte tel quel — préserve l'ordre des clés, les espaces, les doublons (plus lent à requêter)  
+- `JSONB` : Stocke en format binaire décomposé — normalise (clés triées, espaces supprimés, doublons éliminés), beaucoup plus rapide à requêter, supporte les index GIN
 
-**Recommandation** : Toujours utiliser JSONB sauf cas très spécifique.
+**Recommandation** : Toujours utiliser JSONB sauf cas très spécifique (préservation exacte du texte d'entrée).
+
+**Opérateurs essentiels** :
+
+| Opérateur | Retourne | Usage typique |
+|---|---|---|
+| `->` | `jsonb` (clé enfant) | `data->'specs'->'cpu'` (navigation) |
+| `->>` | `text` (valeur terminale) | `data->>'nom'` (extraction pour `WHERE`) |
+| `#>` | `jsonb` (par chemin) | `data #> '{specs,cpu,cores}'` (navigation profonde) |
+| `#>>` | `text` (par chemin) | `data #>> '{specs,cpu,model}'` (extraction profonde) |
+| `@>` | `boolean` (contient) | `data @> '{"en_stock": true}'` (index GIN-friendly) |
+| `<@` | `boolean` (contenu par) | inverse de `@>` |
+| `?` | `boolean` (clé existe) | `data ? 'description'` |
+| `?&` | `boolean` (toutes les clés) | `data ?& array['nom','prix']` |
+| `?\|` | `boolean` (au moins une clé) | `data ?\| array['promo','solde']` |
+| `\|\|` | `jsonb` (concaténation) | `data \|\| '{"vu": true}'::jsonb` |
+| `-` | `jsonb` (suppression clé) | `data - 'cle_obsolete'` |
 
 **Exemple** :
 ```sql
@@ -552,12 +602,22 @@ CREATE TABLE produits (
 );
 
 -- Requêtes sur JSONB
-SELECT * FROM produits WHERE data->>'categorie' = 'electronique';  
-SELECT * FROM produits WHERE data @> '{"en_stock": true}';  
+SELECT * FROM produits WHERE data->>'categorie' = 'electronique';        -- ->> rend du text  
+SELECT * FROM produits WHERE data @> '{"en_stock": true}';               -- containment  
+SELECT * FROM produits WHERE data #>> '{specs,cpu,model}' = 'M3';        -- chemin profond  
+SELECT * FROM produits WHERE data ? 'promo';                             -- présence de clé  
 
--- Index pour performance
+-- Index GIN générique (supporte @>, ?, ?&, ?|)
 CREATE INDEX idx_data ON produits USING GIN(data);
+
+-- Index GIN spécialisé (jsonb_path_ops) : plus petit, plus rapide pour @> seul
+CREATE INDEX idx_data_path ON produits USING GIN(data jsonb_path_ops);
+
+-- Index B-tree sur une expression (très efficace pour égalité sur clé unique)
+CREATE INDEX idx_data_categorie ON produits((data->>'categorie'));
 ```
+
+> 💡 Pour des accès fréquents sur **une clé donnée** : un index B-tree sur l'expression (`(data->>'cle')`) est souvent plus performant qu'un index GIN sur tout le JSONB.
 
 ---
 
@@ -598,51 +658,78 @@ Un **UUID** (Universally Unique Identifier) est un identifiant unique de 128 bit
 
 **Avantages** :
 - Pas besoin de coordination entre serveurs (distribué)
-- Pas de révélation d'informations (contrairement aux séquences)
+- Pas de révélation d'informations (contrairement aux séquences exposant un compteur)
 - Fusion de bases facilitée
 
 **Inconvénients** :
 - Plus gros qu'un INTEGER (16 octets vs 4)
-- Aléatoire → fragmentation d'index
+- Aléatoire (UUID v4) → fragmentation des index B-tree à l'insertion
 
-**Nouveauté PostgreSQL 18 : UUIDv7**
-- Version 7 ordonnée par timestamp
-- Résout le problème de fragmentation
-- Meilleure performance que UUID v4
+**Trois fonctions à connaître** :
 
-**Exemple** :
+| Fonction | Disponibilité | Type | Tri |
+|---|---|---|---|
+| `uuid_generate_v4()` | Extension `uuid-ossp` | Aléatoire (v4) | Non |
+| `gen_random_uuid()` | Natif depuis PG 13 | Aléatoire (v4) | Non |
+| `uuidv7()` | **Natif depuis PG 18** 🆕 | Horodaté (v7) | Oui, par timestamp |
+
+🆕 **Nouveauté PostgreSQL 18 : `uuidv7()` (RFC 9562)**
+
+La fonction `uuidv7()` est intégrée au cœur de PostgreSQL 18 — **aucune extension à charger**. Les 48 premiers bits encodent un timestamp Unix en millisecondes, ce qui :
+
+- préserve un ordre temporel naturel (utile pour les index B-tree, le partitionnement par date, la pagination par clé) ;
+- résout la fragmentation d'index typique de l'UUID v4 ;
+- garde l'unicité globale grâce aux 74 bits aléatoires restants.
+
+**Exemple PG 18** :
 ```sql
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+-- Méthode moderne (PG 18) : aucune extension requise
+CREATE TABLE evenements (
+    id      UUID DEFAULT uuidv7() PRIMARY KEY,
+    payload JSONB,
+    cree_le TIMESTAMPTZ DEFAULT now()
+);
 
-CREATE TABLE users (
-    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-    -- ou en PG 18
-    id UUID DEFAULT uuidv7() PRIMARY KEY,
+-- Méthode portable (PG 13+) : UUID aléatoire
+CREATE TABLE utilisateurs (
+    id  UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    nom TEXT
+);
+
+-- Méthode historique (extension uuid-ossp, conservée pour compatibilité)
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";  
+CREATE TABLE legacy (  
+    id  UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
     nom TEXT
 );
 ```
+
+> 💡 Pour une nouvelle table en PG 18, `uuidv7()` est presque toujours le bon choix : on garde les avantages de l'UUID (unicité distribuée, opacité) **sans** payer le coût de fragmentation des inserts.
 
 ---
 
 ### ENUM
 
-Un **ENUM** est un type défini par l'utilisateur avec une liste fixe de valeurs.
+Un **ENUM** est un type défini par l'utilisateur avec une liste fixe et **ordonnée** de valeurs.
 
 **Avantages** :
 - Validation automatique des données
-- Économie d'espace (stocké comme entier)
+- Économie d'espace (stocké comme `oid` 4 octets, pas comme texte)
 - Lisibilité du code
+- Tri naturel selon l'ordre déclaré (utile pour les statuts hiérarchisés)
 
-**Limitations** :
-- Difficile à modifier (ajouter/supprimer des valeurs)
-- Ordre défini à la création
+**Limitations à connaître (asymétriques)** :
+- **Ajout** facile : `ALTER TYPE … ADD VALUE 'nouvelle' [BEFORE|AFTER 'existante']`. L'ajout est **non transactionnel** depuis PG 12 (commit immédiat).
+- **Renommage** facile : `ALTER TYPE … RENAME VALUE 'ancien' TO 'nouveau'` (PG 10+).
+- **Suppression impossible** directement : pas de `DROP VALUE`. Il faut recréer le type, migrer les colonnes, puis dropper l'ancien — opération invasive en production.
+- Pas idéal pour des listes qui changent souvent : préférer une table de référence + clé étrangère.
 
 **Exemple** :
 ```sql
 CREATE TYPE statut_commande AS ENUM ('en_attente', 'payee', 'expediee', 'livree', 'annulee');
 
 CREATE TABLE commandes (
-    id SERIAL PRIMARY KEY,
+    id     SERIAL PRIMARY KEY,
     statut statut_commande DEFAULT 'en_attente'
 );
 
@@ -651,7 +738,12 @@ INSERT INTO commandes (statut) VALUES ('payee');
 
 -- Erreur : valeur invalide
 INSERT INTO commandes (statut) VALUES ('invalide');
+
+-- Ajout d'une valeur (à exécuter hors transaction explicite)
+ALTER TYPE statut_commande ADD VALUE 'remboursee' AFTER 'livree';
 ```
+
+> ⚠️ Quand vous hésitez entre `ENUM` et une table de référence : choisissez la table si la liste change souvent ou si vous avez besoin d'attacher des métadonnées (libellé localisé, ordre d'affichage, actif/inactif…).
 
 ---
 
@@ -674,7 +766,32 @@ Un **replication slot** garantit que le serveur primaire conserve le WAL nécess
 - **Physical slot** : Pour la réplication physique (streaming)  
 - **Logical slot** : Pour la réplication logique (publications/subscriptions)
 
-**Attention** : Un slot peut faire exploser l'espace disque si le replica ne se reconnecte jamais. Monitoring essentiel !
+**Pré-requis côté primaire** (`postgresql.conf`) :
+```
+max_replication_slots = 10        # nombre max de slots (défaut 10 ; restart requis)  
+max_wal_senders      = 10         # nombre max de connexions sortantes de réplication  
+wal_level            = replica    # ou 'logical' pour les slots logiques  
+```
+
+**Créer / lister / supprimer un slot** :
+```sql
+-- Créer un slot physique nommé
+SELECT pg_create_physical_replication_slot('replica_paris');
+
+-- Créer un slot logique (réplication logique)
+SELECT pg_create_logical_replication_slot('app_subscriber', 'pgoutput');
+
+-- Lister tous les slots et leur état
+SELECT slot_name, slot_type, active, restart_lsn, wal_status,
+       pg_size_pretty(pg_wal_lsn_diff(pg_current_wal_lsn(), restart_lsn)) AS retard
+FROM pg_replication_slots  
+ORDER BY restart_lsn;  
+
+-- Supprimer un slot orphelin (replica disparu) — INDISPENSABLE pour libérer le WAL
+SELECT pg_drop_replication_slot('replica_paris');
+```
+
+> ⚠️ Un slot **inactif** (replica disparu, jamais reconnecté) **bloque le recyclage du WAL** : `pg_wal/` grossit sans limite jusqu'à saturation du disque. Surveiller `wal_status` (`reserved` / `extended` / `unreserved` / `lost`) et **supprimer les slots orphelins**.
 
 ---
 
@@ -686,8 +803,17 @@ Le **WAL archiving** consiste à copier les fichiers WAL vers un stockage extern
 ```
 wal_level = replica  (ou logical)  
 archive_mode = on  
-archive_command = 'cp %p /backup/wal_archives/%f'  
+# Forme minimaliste (à éviter en production : écrase silencieusement si destination existe déjà)
+# archive_command = 'cp %p /backup/wal_archives/%f'
+
+# Forme sûre : refuse d'écraser et signale l'erreur à PostgreSQL
+# (PostgreSQL re-tentera plus tard si exit != 0)
+archive_command = 'test ! -f /backup/wal_archives/%f && cp %p /backup/wal_archives/%f'
 ```
+
+> ⚠️ `archive_command` doit retourner **0 uniquement** en cas de succès complet. Un `cp` qui écrase silencieusement masque les corruptions. Préférer `test ! -f` en garde-fou, ou un outil dédié comme **pgBackRest**, **WAL-G** ou **Barman**.
+
+**Alternative PG 14+** : `archive_library` (au lieu de `archive_command`) permet de charger un module C dédié, plus performant et atomique — utilisé par exemple par `basic_archive` (module de référence livré avec PostgreSQL).
 
 **Cas d'usage** :
 - Sauvegarde continue (alternative/complément à pg_dump)
@@ -966,12 +1092,14 @@ SELECT
 FROM commandes  
 GROUP BY 1;  
 
--- Créer un index sur la vue matérialisée
+-- Index pour accélérer les requêtes sur la vue
 CREATE INDEX ON stats_mensuelles(mois);
 
--- Rafraîchir les données
+-- Rafraîchir les données (bloque les lectures pendant l'opération)
 REFRESH MATERIALIZED VIEW stats_mensuelles;
 ```
+
+> 💡 **Variante sans blocage** : `REFRESH MATERIALIZED VIEW CONCURRENTLY` ne bloque pas les lectures pendant le refresh, mais exige un index **UNIQUE** (et non un index ordinaire) sur la vue. Remplacer alors `CREATE INDEX ON stats_mensuelles(mois)` par `CREATE UNIQUE INDEX ON stats_mensuelles(mois)` (le `GROUP BY mois` garantit l'unicité). Plus lent et plus gourmand en disque, mais indispensable en production sur des vues consultées en continu.
 
 **Cas d'usage** : Rapports coûteux calculés périodiquement (nuit, toutes les heures...).
 
@@ -1015,6 +1143,103 @@ EXECUTE get_produit(99);
 ```
 
 **En pratique** : Les drivers (psycopg2, node-pg...) utilisent automatiquement des prepared statements.
+
+---
+
+## Nouveautés PostgreSQL 18 🆕
+
+Ces termes apparaissent fréquemment dans la formation et la documentation PG 18. On les regroupe ici pour servir de point d'entrée rapide.
+
+### AIO (Asynchronous I/O)
+
+🆕 PG 18 introduit un **sous-système d'I/O asynchrone** pour les lectures (et certaines écritures). Au lieu d'attendre qu'une page revienne du disque, un *worker* émet la demande et le backend continue. Trois implémentations selon la plateforme et la configuration :
+
+- `worker` : *background workers* dédiés (portable, défaut sur Linux et autres).
+- `io_uring` : interface Linux moderne (kernel ≥ 5.1), plus efficace quand disponible.
+- `sync` : fallback bloquant (comportement antérieur à PG 18).
+
+**Paramètre** : `io_method = worker | io_uring | sync` (impact mesurable sur les charges OLAP et le *prefetch*).
+
+> 🔗 Voir aussi : [[shared-buffers]], [[checkpoint]], les chapitres 3.5 et 14 de la formation.
+
+---
+
+### Skip Scan (sur B-tree)
+
+🆕 PG 18 ajoute le **Skip Scan** aux index B-tree multi-colonnes. Auparavant, un index sur `(a, b)` n'était utilisable que si la requête contenait un prédicat sur `a` (la colonne de tête). Avec le Skip Scan, le planificateur peut « sauter » les valeurs distinctes de `a` pour retrouver les valeurs filtrées sur `b` — utile quand `a` a peu de valeurs distinctes.
+
+**Exemple typique** : index `(tenant_id, created_at)`, requête `WHERE created_at > now() - interval '1 day'` sans filtre sur `tenant_id`. PG 17 fait un *Seq Scan* ; PG 18 peut utiliser l'index via Skip Scan.
+
+---
+
+### Virtual Generated Columns
+
+🆕 PG 18 généralise les colonnes générées en mode **virtuel** (jamais stockées, calculées à la lecture), en plus du mode `STORED` existant. Le mode virtuel devient **le défaut** quand le mot-clé `STORED`/`VIRTUAL` est omis.
+
+```sql
+CREATE TABLE produits (
+    prix_ht   NUMERIC,
+    tva       NUMERIC,
+    prix_ttc  NUMERIC GENERATED ALWAYS AS (prix_ht * (1 + tva)) VIRTUAL
+);
+```
+
+**Avantages du mode virtuel** : pas de coût d'écriture, pas d'espace disque, expression mise à jour dès l'instant où on modifie la définition.  
+**Limite** : ne peut pas être indexée directement (les colonnes `STORED` le peuvent).  
+
+---
+
+### NOT NULL en contrainte de 1ʳᵉ classe
+
+🆕 PG 18 fait de `NOT NULL` une **vraie contrainte** visible dans `pg_constraint` (`contype = 'n'`), au même titre que `CHECK`/`FK`. Trois conséquences pratiques :
+
+- Possibilité d'ajouter une contrainte `NOT NULL` en `NOT VALID`, puis de la valider plus tard en arrière-plan — opération *zero-downtime* sur de grosses tables.
+- `\d+` et `pg_constraint` deviennent la source unique de vérité.
+- Héritage et partitionnement plus prévisibles.
+
+```sql
+ALTER TABLE clients ADD CONSTRAINT clients_email_nn NOT NULL email NOT VALID;
+-- … plus tard, à froid …
+ALTER TABLE clients VALIDATE CONSTRAINT clients_email_nn;
+```
+
+---
+
+### Contraintes temporelles (WITHOUT OVERLAPS, FOREIGN KEY PERIOD)
+
+🆕 PG 18 implémente les **contraintes temporelles SQL:2011** :
+
+- `UNIQUE (id, plage WITHOUT OVERLAPS)` et `PRIMARY KEY (id, plage WITHOUT OVERLAPS)` empêchent deux lignes du même `id` d'avoir des plages qui se chevauchent.
+- `FOREIGN KEY (..., PERIOD plage) REFERENCES ...` exige que la plage référencée couvre la plage référençante.
+- Nécessite que `plage` soit une **colonne de type range** (`tsrange`, `tstzrange`, `daterange`…) et **l'extension `btree_gist`** pour le `UNIQUE`.
+
+> 💡 Idéal pour modéliser des affectations historiques, des prix variables dans le temps, des plannings sans chevauchement.
+
+---
+
+### OLD et NEW dans RETURNING
+
+🆕 PG 18 étend la clause `RETURNING` (existante en `INSERT`/`UPDATE`/`DELETE`/`MERGE`) avec les références `OLD.*` et `NEW.*`, à l'image des triggers :
+
+```sql
+UPDATE compte
+   SET solde = solde - 100
+ WHERE id = 42
+RETURNING OLD.solde AS ancien, NEW.solde AS nouveau;
+```
+
+Utile pour exposer en un seul aller-retour réseau l'avant/après d'une modification (par exemple à un appelant qui veut journaliser le delta).
+
+---
+
+### Améliorations COPY (PG 18)
+
+🆕 La commande `COPY` reçoit plusieurs nouveautés :
+
+- `REJECT_LIMIT n` : tolère jusqu'à `n` lignes en erreur avant de stopper (couplé à `ON_ERROR ignore`).
+- `LOG_VERBOSITY verbose` : trace dans les *server logs* chaque ligne rejetée, avec sa raison.
+- `COPY TO` accepte maintenant une **vue matérialisée** comme source.
+- Gestion plus stricte du marqueur de fin `\.` en CSV (les *clients legacy* qui en abusaient sont impactés).
 
 ---
 

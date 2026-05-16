@@ -1751,16 +1751,16 @@ mount /mnt/nas
 ### 7.3. Stockage Cloud (AWS S3)
 
 **Avantages :**
-- ✅ Stockage illimité  
-- ✅ Haute disponibilité (99.999999999%)  
-- ✅ Protection géographique  
+- ✅ Stockage virtuellement illimité (paiement à l'usage)  
+- ✅ **Durabilité** très élevée — 99,999999999 % (« onze 9 ») pour S3 Standard. À ne pas confondre avec la **disponibilité**, qui est de 99,99 % (S3 Standard) ou 99,9 % (One Zone-IA) selon la classe choisie.  
+- ✅ Protection géographique (réplication multi-AZ par défaut)  
 - ✅ Versioning intégré  
-- ✅ Lifecycle policies automatiques
+- ✅ *Lifecycle policies* automatiques (transition Standard → IA → Glacier)
 
 **Inconvénients :**
-- ❌ Coûts récurrents  
+- ❌ Coûts récurrents (stockage + requêtes + sortie réseau)  
 - ❌ Dépend d'Internet  
-- ❌ Transferts lents pour gros backups
+- ❌ Transferts lents pour très gros backups (penser à `aws s3 cp --expected-size` pour les fichiers > 5 Go)
 
 **Prérequis : Installer AWS CLI**
 
@@ -2620,6 +2620,87 @@ chown postgres:postgres ~/.pgpass
 # Ne JAMAIS mettre de mots de passe dans les scripts
 # Utiliser .pgpass ou variables d'environnement
 ```
+
+---
+
+### 10.3-bis. Bash *safe-mode* : `set -euo pipefail` et `trap`
+
+Tous les scripts pédagogiques de ce chapitre se sont concentrés sur la **lisibilité**. En production, on ajoute systématiquement un *préambule* qui transforme bash en mode strict : une commande qui échoue arrête le script, une variable non définie devient une erreur, et l'échec d'une commande dans un pipe n'est plus masqué par le `$?` de la dernière.
+
+**Le squelette à mettre en tête de tout script de prod** :
+
+```bash
+#!/usr/bin/env bash
+# backup_production.sh — version durcie
+
+# ─── Mode strict ───────────────────────────────────────────────
+set -Eeuo pipefail
+#   -E : un ERR trap se propage aux fonctions et sous-shells
+#   -e : sort dès qu'une commande renvoie un code ≠ 0
+#   -u : sort si on lit une variable non définie
+#   -o pipefail : le code de sortie d'un pipe = code du premier qui échoue
+IFS=$'\n\t'   # IFS sûr (évite les surprises sur les noms avec espaces)
+
+# ─── Variables ─────────────────────────────────────────────────
+readonly DATABASE="${DATABASE:-mabase}"  
+readonly BACKUP_DIR="${BACKUP_DIR:-/var/backups/postgresql}"  
+readonly TIMESTAMP="$(date +%Y%m%d_%H%M%S)"  
+readonly BACKUP_FILE="${BACKUP_DIR}/${DATABASE}_${TIMESTAMP}.dump"  
+readonly TMP_DIR="$(mktemp -d -t pgbk-XXXXXX)"  
+readonly LOG_FILE="/var/log/postgresql_backup/${DATABASE}_${TIMESTAMP}.log"  
+
+# ─── Logging ───────────────────────────────────────────────────
+log()  { printf '[%s] %s\n' "$(date '+%F %T')" "$*" | tee -a "$LOG_FILE"; }  
+fail() { log "ÉCHEC : $*"; exit 1; }  
+
+# ─── Nettoyage garanti ─────────────────────────────────────────
+cleanup() {
+    local rc=$?
+    rm -rf -- "$TMP_DIR"
+    if (( rc != 0 )); then
+        log "Script terminé en ERREUR (code=$rc, ligne=$BASH_LINENO)"
+    else
+        log "Script terminé OK"
+    fi
+}
+trap cleanup EXIT  
+trap 'fail "interruption (signal reçu)"' INT TERM  
+
+# ─── Pré-conditions ────────────────────────────────────────────
+mkdir -p -- "$BACKUP_DIR" "$(dirname "$LOG_FILE")"  
+command -v pg_dump   >/dev/null  || fail "pg_dump introuvable dans le PATH"  
+command -v pg_isready >/dev/null || fail "pg_isready introuvable dans le PATH"  
+pg_isready -d "$DATABASE" >/dev/null || fail "PostgreSQL inaccessible pour $DATABASE"  
+
+# ─── Backup ────────────────────────────────────────────────────
+log "Backup de $DATABASE → $BACKUP_FILE"  
+pg_dump --format=custom --compress=9 --verbose \  
+        --file="$BACKUP_FILE" "$DATABASE" \
+    2>>"$LOG_FILE"
+[[ -s "$BACKUP_FILE" ]] || fail "fichier de dump vide"
+pg_restore --list -- "$BACKUP_FILE" >/dev/null \
+    || fail "validation pg_restore --list KO (dump corrompu)"
+
+log "✅ Backup OK : $(du -h "$BACKUP_FILE" | cut -f1)"
+```
+
+**Pourquoi chaque ingrédient compte** :
+
+| Ligne | Rôle | Sans ça |
+|---|---|---|
+| `set -e` | Arrête sur erreur | Le script continue malgré un `pg_dump` qui crashe |
+| `set -u` | Variable non définie = erreur | Un `rm -rf "$DIR/"` quand `DIR` est vide → catastrophe |
+| `set -o pipefail` | Code d'échec d'un pipe propagé | `pg_dump … | gzip > f` masque l'échec de `pg_dump` |
+| `set -E` + `trap … ERR` | Le trap couvre aussi les fonctions | Un échec dans une fonction passe inaperçu |
+| `IFS=$'\n\t'` | IFS sûr | Itération buggée sur des chemins avec espaces |
+| `mktemp -d` | Répertoire temporaire isolé | Collision si deux instances tournent en même temps |
+| `trap cleanup EXIT` | Cleanup *toujours* exécuté | Fichiers temporaires qui s'accumulent |
+| `readonly` | Variables figées | Une faute de frappe les écrase silencieusement |
+| `command -v` | Pré-flight | Crash mystérieux quand un binaire manque |
+| `"$VAR"` partout | Quoting | Mots cassés sur espaces, expansion glob accidentelle |
+| `mkdir -p --` / `rm -rf --` | Séparateur d'options | Un fichier nommé `-rf` interprété comme un flag |
+
+> 💡 Pour vos scripts critiques, faites-les valider par **ShellCheck** (`shellcheck script.sh`) — il détecte automatiquement quoting manquant, `$()` mal imbriqué, `[ ]` à remplacer par `[[ ]]`, etc.
 
 ### 10.4. Performance
 

@@ -175,10 +175,14 @@ uptime
 mpstat -P ALL 1 1
 
 # Utilisation CPU de PostgreSQL
-ps aux | grep postgres | awk '{sum+=$3} END {print sum"%"}'
+# Astuce : grep "[p]ostgres" évite que le grep lui-même apparaisse dans le résultat
+# (les crochets sont une regex qui ne matche pas la chaîne littérale "[p]ostgres")
+ps aux | grep "[p]ostgres" | awk '{sum+=$3} END {print sum"%"}'
+# Ou plus moderne avec pgrep :
+# ps -o pid,pcpu,pmem,cmd -p $(pgrep -d, postgres) | awk 'NR>1 {sum+=$2} END {print sum"%"}'
 
-# Top 10 processus PostgreSQL
-ps aux | grep postgres | sort -k3 -r | head -10
+# Top 10 processus PostgreSQL (par CPU)
+ps aux | grep "[p]ostgres" | sort -k3 -r | head -10
 ```
 
 #### 2.1.3. Script de Monitoring CPU
@@ -253,8 +257,8 @@ free -h
 # Détails
 cat /proc/meminfo
 
-# Utilisation mémoire de PostgreSQL
-ps aux | grep postgres | awk '{sum+=$4} END {print sum"%"}'
+# Utilisation mémoire de PostgreSQL (RES vs total, en %)
+ps aux | grep "[p]ostgres" | awk '{sum+=$4} END {print sum"%"}'
 
 # Top 10 processus par mémoire
 ps aux | sort -k4 -r | head -10
@@ -905,27 +909,39 @@ FROM pg_stat_database
 WHERE datname NOT IN ('template0', 'template1')  
 ORDER BY cache_hit_ratio;  
 
--- Cache Hit Ratio par table
+-- Cache Hit Ratio par table (pg_statio_user_tables expose 'relname', pas 'tablename')
 SELECT
     schemaname,
-    tablename,
+    relname AS tablename,
     ROUND(
         100.0 * heap_blks_hit / NULLIF(heap_blks_hit + heap_blks_read, 0),
         2
-    ) as cache_hit_ratio,
-    pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename)) as table_size
+    ) AS cache_hit_ratio,
+    pg_size_pretty(pg_total_relation_size(relid)) AS table_size
 FROM pg_statio_user_tables  
 ORDER BY heap_blks_read DESC  
 LIMIT 10;  
 
 -- Buffer allocation stats
+-- ⚠️ PG 17+ : les colonnes liées au checkpointer (buffers_checkpoint,
+--    checkpoint_write_time, checkpoint_sync_time, etc.) ont migré de
+--    pg_stat_bgwriter vers la nouvelle vue pg_stat_checkpointer.
 SELECT
-    buffers_alloc,
-    buffers_backend,
-    buffers_backend_fsync,
-    buffers_checkpoint,
-    buffers_clean
-FROM pg_stat_bgwriter;
+    b.buffers_alloc,
+    b.buffers_clean,
+    b.maxwritten_clean,
+    c.num_timed       AS checkpoints_timed,
+    c.num_requested   AS checkpoints_req,
+    c.buffers_written AS buffers_checkpoint,
+    c.write_time      AS checkpoint_write_time_ms,
+    c.sync_time       AS checkpoint_sync_time_ms
+FROM pg_stat_bgwriter b  
+CROSS JOIN pg_stat_checkpointer c;          -- PG 17+  
+
+-- Pour PG ≤ 16, garder l'ancienne forme :
+-- SELECT buffers_alloc, buffers_backend, buffers_backend_fsync,
+--        buffers_checkpoint, buffers_clean
+-- FROM pg_stat_bgwriter;
 ```
 
 #### 3.4.3. Script de Monitoring Cache
@@ -1088,6 +1104,10 @@ ORDER BY deadlocks DESC;
 
 ```sql
 -- État de la réplication
+-- ⚠️ Les colonnes write_lag / flush_lag / replay_lag de pg_stat_replication
+--    sont DÉJÀ des 'interval' (durée écoulée entre l'envoi/le flush/le replay
+--    du WAL côté primaire et la confirmation côté standby).
+--    On extrait directement les secondes ; pas de soustraction à NOW().
 SELECT
     client_addr,
     application_name,
@@ -1097,10 +1117,10 @@ SELECT
     write_lsn,
     flush_lsn,
     replay_lsn,
-    pg_wal_lsn_diff(sent_lsn, replay_lsn) as lag_bytes,
-    EXTRACT(EPOCH FROM (NOW() - write_lag)) as write_lag_sec,
-    EXTRACT(EPOCH FROM (NOW() - flush_lag)) as flush_lag_sec,
-    EXTRACT(EPOCH FROM (NOW() - replay_lag)) as replay_lag_sec
+    pg_wal_lsn_diff(sent_lsn, replay_lsn)        AS lag_bytes,
+    EXTRACT(EPOCH FROM write_lag)                AS write_lag_sec,
+    EXTRACT(EPOCH FROM flush_lag)                AS flush_lag_sec,
+    EXTRACT(EPOCH FROM replay_lag)               AS replay_lag_sec
 FROM pg_stat_replication;
 
 -- Slots de réplication
@@ -1711,17 +1731,19 @@ echo "PostgreSQL Index Analysis"
 echo "=========================================="  
 
 # Index non utilisés
+# pg_stat_user_indexes expose 'relname' et 'indexrelname' (pas 'tablename'/'indexname')
+# et 'indexrelid' utilisable directement avec pg_relation_size().
 echo "🗑️  Unused Indexes (0 scans):"  
 psql -d "$DB_NAME" -c "  
     SELECT
         schemaname,
-        tablename,
-        indexname,
-        pg_size_pretty(pg_relation_size(schemaname||'.'||indexname)) as index_size
+        relname      AS tablename,
+        indexrelname AS indexname,
+        pg_size_pretty(pg_relation_size(indexrelid)) as index_size
     FROM pg_stat_user_indexes
     WHERE idx_scan = 0
     AND schemaname NOT IN ('pg_catalog', 'information_schema')
-    ORDER BY pg_relation_size(schemaname||'.'||indexname) DESC
+    ORDER BY pg_relation_size(indexrelid) DESC
     LIMIT 10;
 "
 
@@ -1731,10 +1753,10 @@ echo "⚠️  Rarely Used Indexes (<10 scans):"
 psql -d "$DB_NAME" -c "  
     SELECT
         schemaname,
-        tablename,
-        indexname,
+        relname      AS tablename,
+        indexrelname AS indexname,
         idx_scan,
-        pg_size_pretty(pg_relation_size(schemaname||'.'||indexname)) as index_size
+        pg_size_pretty(pg_relation_size(indexrelid)) as index_size
     FROM pg_stat_user_indexes
     WHERE idx_scan > 0 AND idx_scan < 10
     AND schemaname NOT IN ('pg_catalog', 'information_schema')
@@ -1748,12 +1770,13 @@ echo "✅ Most Used Indexes:"
 psql -d "$DB_NAME" -c "  
     SELECT
         schemaname,
-        tablename,
-        indexname,
+        relname      AS tablename,
+        indexrelname AS indexname,
         idx_scan,
+        last_idx_scan,                                 -- PG 16+
         idx_tup_read,
         idx_tup_fetch,
-        pg_size_pretty(pg_relation_size(schemaname||'.'||indexname)) as index_size
+        pg_size_pretty(pg_relation_size(indexrelid)) AS index_size
     FROM pg_stat_user_indexes
     WHERE schemaname NOT IN ('pg_catalog', 'information_schema')
     ORDER BY idx_scan DESC
@@ -1764,27 +1787,29 @@ psql -d "$DB_NAME" -c "
 echo ""  
 echo "📊 Total Index Size:"  
 psql -d "$DB_NAME" -t -c "  
-    SELECT pg_size_pretty(SUM(pg_relation_size(schemaname||'.'||indexname)))
+    SELECT pg_size_pretty(SUM(pg_relation_size(indexrelid)))
     FROM pg_stat_user_indexes
     WHERE schemaname NOT IN ('pg_catalog', 'information_schema');
 "
 
 # Index invalides
+# Note : on attaque directement les catalogues système (pg_index/pg_class/pg_namespace)
+# car la vue pg_indexes n'expose pas la colonne 'indisvalid'. Les alias 'tablename'
+# et 'indexname' ne reprennent ici que la sémantique de cette vue, sans en dépendre.
 echo ""  
 echo "❌ Invalid Indexes:"  
 psql -d "$DB_NAME" -c "  
     SELECT
-        schemaname,
-        tablename,
-        indexname
-    FROM pg_indexes
-    WHERE schemaname NOT IN ('pg_catalog', 'information_schema')
-    AND indexname IN (
-        SELECT indexrelname
-        FROM pg_index i
-        JOIN pg_class c ON i.indexrelid = c.oid
-        WHERE NOT indisvalid
-    );
+        n.nspname AS schemaname,
+        t.relname AS tablename,
+        i.relname AS indexname
+    FROM pg_index x
+    JOIN pg_class i ON i.oid = x.indexrelid
+    JOIN pg_class t ON t.oid = x.indrelid
+    JOIN pg_namespace n ON n.oid = i.relnamespace
+    WHERE NOT x.indisvalid
+      AND n.nspname NOT IN ('pg_catalog', 'information_schema')
+    ORDER BY n.nspname, t.relname;
 "
 
 echo "=========================================="
@@ -1803,12 +1828,13 @@ echo "PostgreSQL Bloat Analysis"
 echo "=========================================="  
 
 # Table bloat estimation
+# Rappel : pg_stat_user_tables expose relname (pas tablename) et relid.
 echo "🗂️  Table Bloat (Top 10):"  
 psql -d "$DB_NAME" -c "  
     SELECT
         schemaname,
-        tablename,
-        pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename)) as total_size,
+        relname AS tablename,
+        pg_size_pretty(pg_total_relation_size(relid)) as total_size,
         n_dead_tup,
         n_live_tup,
         ROUND(100.0 * n_dead_tup / NULLIF(n_live_tup + n_dead_tup, 0), 2) as dead_pct
@@ -1824,7 +1850,7 @@ echo "🧹 Tables Needing VACUUM (>10% dead tuples):"
 psql -d "$DB_NAME" -c "  
     SELECT
         schemaname,
-        tablename,
+        relname AS tablename,
         n_dead_tup,
         n_live_tup,
         ROUND(100.0 * n_dead_tup / NULLIF(n_live_tup + n_dead_tup, 0), 2) as dead_pct,
@@ -1837,20 +1863,22 @@ psql -d "$DB_NAME" -c "
 "
 
 # Index bloat estimation
+# Rappel : pg_stat_user_indexes expose relname/indexrelname (pas tablename/indexname)
+# et indexrelid utilisable directement avec pg_relation_size().
 echo ""  
 echo "📇 Index Bloat (estimated):"  
 psql -d "$DB_NAME" -c "  
     SELECT
         schemaname,
-        tablename,
-        indexname,
-        pg_size_pretty(pg_relation_size(schemaname||'.'||indexname)) as index_size,
+        relname AS tablename,
+        indexrelname AS indexname,
+        pg_size_pretty(pg_relation_size(indexrelid)) as index_size,
         idx_scan,
         idx_tup_read,
         idx_tup_fetch
     FROM pg_stat_user_indexes
     WHERE schemaname NOT IN ('pg_catalog', 'information_schema')
-    ORDER BY pg_relation_size(schemaname||'.'||indexname) DESC
+    ORDER BY pg_relation_size(indexrelid) DESC
     LIMIT 10;
 "
 
@@ -1930,7 +1958,7 @@ echo "  Established: $ESTABLISHED"
 # PostgreSQL Memory Usage
 echo ""  
 echo "🐘 PostgreSQL Memory:"  
-PG_MEM=$(ps aux | grep postgres | awk '{sum+=$6} END {print sum/1024}')  
+PG_MEM=$(ps aux | grep "[p]ostgres" | awk '{sum+=$6} END {print sum/1024}')  
 echo "  Total: ${PG_MEM} MB"  
 
 SHARED_BUFFERS=$(psql -d "$DB_NAME" -t -c "SHOW shared_buffers;" | xargs)  
@@ -2036,18 +2064,23 @@ if [ -f "$HISTORY_DIR/disk_${YESTERDAY}.csv" ] && [ -f "$HISTORY_DIR/disk_${DATE
 fi
 
 # Top tables par taille
+# pg_tables expose bien 'tablename' (≠ pg_stat_user_tables qui utilise 'relname').
+# format('%I.%I', …) quote correctement les identifiants à casse mixte ou réservés.
 echo ""  
 echo "📦 Top 10 Largest Tables:"  
 psql -d "$DB_NAME" -c "  
     SELECT
         schemaname,
         tablename,
-        pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename)) as total_size,
-        pg_size_pretty(pg_relation_size(schemaname||'.'||tablename)) as table_size,
-        pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename) - pg_relation_size(schemaname||'.'||tablename)) as indexes_size
+        pg_size_pretty(pg_total_relation_size(format('%I.%I', schemaname, tablename))) as total_size,
+        pg_size_pretty(pg_relation_size(format('%I.%I', schemaname, tablename))) as table_size,
+        pg_size_pretty(
+            pg_total_relation_size(format('%I.%I', schemaname, tablename))
+          - pg_relation_size(format('%I.%I', schemaname, tablename))
+        ) as indexes_size
     FROM pg_tables
     WHERE schemaname NOT IN ('pg_catalog', 'information_schema')
-    ORDER BY pg_total_relation_size(schemaname||'.'||tablename) DESC
+    ORDER BY pg_total_relation_size(format('%I.%I', schemaname, tablename)) DESC
     LIMIT 10;
 "
 
@@ -2166,12 +2199,12 @@ echo "===== 6. TOP 10 LARGEST TABLES ====="
 psql -d "$DB_NAME" -c "  
     SELECT
         schemaname,
-        tablename,
-        pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename)) as total_size,
+        relname AS tablename,
+        pg_size_pretty(pg_total_relation_size(relid)) AS total_size,
         n_live_tup,
         n_dead_tup
     FROM pg_stat_user_tables
-    ORDER BY pg_total_relation_size(schemaname||'.'||tablename) DESC
+    ORDER BY pg_total_relation_size(relid) DESC
     LIMIT 10;
 "
 echo ""
@@ -2459,10 +2492,13 @@ check_postgresql() {
     fi
 
     # Replication lag
+    # ⚠️ pg_stat_replication.replay_lag est DÉJÀ un interval (durée écoulée
+    #    entre l'arrivée du WAL et son replay côté standby). Pas besoin de
+    #    soustraire NOW() — l'extraction directe en secondes est correcte.
     local replication_count=$(psql -d "$DB_NAME" -t -c "SELECT COUNT(*) FROM pg_stat_replication;" 2>/dev/null | xargs)
     if [ -n "$replication_count" ] && [ $replication_count -gt 0 ]; then
         local max_lag=$(psql -d "$DB_NAME" -t -c "
-            SELECT COALESCE(MAX(EXTRACT(EPOCH FROM (NOW() - replay_lag))), 0)
+            SELECT COALESCE(MAX(EXTRACT(EPOCH FROM replay_lag)), 0)
             FROM pg_stat_replication;
         " 2>/dev/null | xargs)
 
@@ -2627,18 +2663,19 @@ echo "<h2>3. Database Statistics</h2>" >> "$REPORT_FILE"
 echo "<table>" >> "$REPORT_FILE"  
 echo "<tr><th>Database</th><th>Size</th><th>Connections</th><th>Transactions</th></tr>" >> "$REPORT_FILE"  
 
-psql -d "$DB_NAME" -t -c "
+# ⚠️ Mode unaligned + séparateur explicite pour parser fiablement avec awk
+psql -d "$DB_NAME" -At -F'|' -c "
     SELECT
         d.datname,
         pg_size_pretty(pg_database_size(d.datname)),
         (SELECT COUNT(*) FROM pg_stat_activity WHERE datname = d.datname),
-        s.xact_commit + s.xact_rollback
+        COALESCE(s.xact_commit + s.xact_rollback, 0)
     FROM pg_database d
     LEFT JOIN pg_stat_database s ON d.datname = s.datname
     WHERE d.datistemplate = false
     ORDER BY pg_database_size(d.datname) DESC;
-" 2>/dev/null | while read line; do
-    echo "<tr><td>$(echo "$line" | awk '{print $1}')</td><td>$(echo "$line" | awk '{print $2}')</td><td>$(echo "$line" | awk '{print $3}')</td><td>$(echo "$line" | awk '{print $4}')</td></tr>" >> "$REPORT_FILE"
+" 2>/dev/null | while IFS='|' read -r datname size conns tx; do
+    echo "<tr><td>$datname</td><td>$size</td><td>$conns</td><td>$tx</td></tr>" >> "$REPORT_FILE"
 done
 
 echo "</table>" >> "$REPORT_FILE"

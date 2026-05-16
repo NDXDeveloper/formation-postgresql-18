@@ -286,7 +286,7 @@ Annexe C : Requêtes SQL de Référence
 - Réduction de l'empreinte disque
 - Amélioration du cache hit ratio
 
-**📄 Document détaillé** : `requetes-administration-postgresql.md`
+**📄 Document détaillé** : `01-requetes-administration.md`
 
 ### 3.3. Catégorie 2 : Requêtes de Monitoring
 
@@ -326,7 +326,7 @@ Annexe C : Requêtes SQL de Référence
 - Alertes automatisées
 - Planification de capacité
 
-**📄 Document détaillé** : `requetes-monitoring-postgresql.md`
+**📄 Document détaillé** : `02-requetes-monitoring.md`
 
 ### 3.4. Catégorie 3 : Requêtes d'Analyse
 
@@ -376,7 +376,7 @@ Annexe C : Requêtes SQL de Référence
 - Amélioration des performances
 - Maintenance préventive
 
-**📄 Document détaillé** : `requetes-analyse-postgresql.md`
+**📄 Document détaillé** : `03-requetes-analyse.md`
 
 ---
 
@@ -504,13 +504,23 @@ GRANT EXECUTE ON FUNCTION pg_stat_statements_reset() TO monitoring_user;
 **Permissions requises** :
 ```sql
 -- Pour pg_terminate_backend(), pg_cancel_backend()
+-- (rôle prédéfini depuis PG 13)
 GRANT pg_signal_backend TO admin_user;
 
--- Pour VACUUM, ANALYZE
-GRANT ma_table TO admin_user;
+-- Pour pg_stat_activity complet (voir les requêtes des autres rôles)
+-- (rôle prédéfini : lecture des vues de monitoring)
+GRANT pg_monitor TO admin_user;
 
--- Pour REINDEX
--- Nécessite ALTER privilège ou être owner
+-- Pour VACUUM, ANALYZE, REINDEX, REFRESH MATERIALIZED VIEW, CLUSTER, LOCK TABLE
+-- 🆕 PG 17 : rôle prédéfini pg_maintain, sans besoin d'être propriétaire
+GRANT pg_maintain TO admin_user;
+-- Avant PG 17 : il fallait être propriétaire de la table, ou alors :
+-- GRANT MAINTAIN ON TABLE ma_table TO admin_user;  (granularité par table)
+
+-- Pour la lecture/écriture sur toutes les tables non-système
+-- (rôles prédéfinis depuis PG 14, utiles pour les comptes d'audit/ETL)
+GRANT pg_read_all_data  TO audit_user;     -- SELECT partout  
+GRANT pg_write_all_data TO etl_user;       -- INSERT/UPDATE/DELETE partout  
 ```
 
 ### 4.4. Configuration de l'Environnement
@@ -698,7 +708,7 @@ git commit -m "Initial SQL library"
 
 ### 6.1. Requêtes d'Administration
 
-📄 **Document complet** : `requetes-administration-postgresql.md`
+📄 **Document complet** : `01-requetes-administration.md`
 
 #### Gestion des Locks
 
@@ -726,7 +736,7 @@ git commit -m "Initial SQL library"
 
 ### 6.2. Requêtes de Monitoring
 
-📄 **Document complet** : `requetes-monitoring-postgresql.md`
+📄 **Document complet** : `02-requetes-monitoring.md`
 
 #### Cache Hit Ratio
 
@@ -757,7 +767,7 @@ git commit -m "Initial SQL library"
 
 ### 6.3. Requêtes d'Analyse
 
-📄 **Document complet** : `requetes-analyse-postgresql.md`
+📄 **Document complet** : `03-requetes-analyse.md`
 
 #### Taille des Objets
 
@@ -887,20 +897,20 @@ Cette annexe est un **document vivant**. Vos contributions sont les bienvenues :
 ```
 Annexe C : Requêtes SQL de Référence
 │
-├── 📄 requetes-sql-reference-introduction.md (ce fichier)
+├── 📄 README.md (ce fichier)
 │   └── Vue d'ensemble et guide d'utilisation
 │
-├── 📄 requetes-administration-postgresql.md
+├── 📄 01-requetes-administration.md
 │   ├── Locks (Verrous)
 │   ├── Bloat (Gonflement)
 │   └── Index Usage
 │
-├── 📄 requetes-monitoring-postgresql.md
+├── 📄 02-requetes-monitoring.md
 │   ├── Cache Hit Ratio
 │   ├── Slow Queries
-│   └── Métriques Complémentaires
+│   └── Métriques Complémentaires (incluant pg_stat_io 🆕 PG 16+)
 │
-└── 📄 requetes-analyse-postgresql.md
+└── 📄 03-requetes-analyse.md
     ├── Taille des Objets
     ├── Statistiques des Tables
     ├── Statistiques des Colonnes
@@ -911,9 +921,9 @@ Annexe C : Requêtes SQL de Référence
 
 📖 Consultez maintenant les documents détaillés selon vos besoins :
 
-- **Problème immédiat** (app figée, lenteur) → `requetes-administration-postgresql.md`  
-- **Suivi de santé quotidien** → `requetes-monitoring-postgresql.md`  
-- **Planification et croissance** → `requetes-analyse-postgresql.md`
+- **Problème immédiat** (app figée, lenteur) → `01-requetes-administration.md`  
+- **Suivi de santé quotidien** → `02-requetes-monitoring.md`  
+- **Planification et croissance** → `03-requetes-analyse.md`
 
 ---
 

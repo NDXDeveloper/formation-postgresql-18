@@ -220,10 +220,14 @@ CREATE TABLE commandes (
 );
 ```
 
-**Actions possibles** :
-- `ON DELETE CASCADE` : Supprime les lignes liées  
-- `ON DELETE SET NULL` : Met à NULL les références  
-- `ON DELETE RESTRICT` : Empêche la suppression (défaut)
+**Actions possibles** (`ON DELETE` et `ON UPDATE`) :
+- `NO ACTION` *(défaut)* : vérifie la contrainte **à la fin de la transaction** — laisse une fenêtre pour corriger l'incohérence avant le `COMMIT`.
+- `RESTRICT` : vérifie **immédiatement**, refuse la suppression/mise à jour sans attendre la fin de transaction.
+- `CASCADE` : applique la même opération sur les lignes référençantes (DELETE → DELETE en cascade, UPDATE → UPDATE de la FK).
+- `SET NULL` : met les colonnes référençantes à `NULL` (la colonne FK doit être nullable).
+- `SET DEFAULT` : met les colonnes référençantes à leur valeur `DEFAULT`.
+
+> 💡 `NO ACTION` et `RESTRICT` se comportent quasi-identiquement, mais `NO ACTION` permet de fixer la cohérence en cours de transaction (par exemple : `DELETE` du parent suivi d'un `INSERT` réparateur avant le `COMMIT`). En pratique, on choisit `NO ACTION` (laisser le moteur valider à la fin) ou `CASCADE` (propagation explicite) selon le besoin métier.
 
 ---
 
@@ -304,49 +308,164 @@ CREATE TABLE users (
 **Transaction ID**
 (Identifiant de Transaction)
 
-**Définition** : Un numéro unique sur 32 bits attribué à chaque transaction.
+**Définition** : Un numéro unique sur 32 bits attribué à chaque transaction (espace total : ~4 milliards).
 
-**Problème** : Après 4 milliards de transactions, risque de "wraparound".
+**Problème : « wraparound »** : PostgreSQL utilise une comparaison **modulaire** des XIDs (passé/futur). Seule la moitié de l'espace est « visible à un instant T » — soit **~2 milliards d'XIDs**. Au-delà de cet âge, les transactions anciennes deviendraient subitement « futures » : *catastrophe*. PostgreSQL refuse alors d'accepter de nouvelles transactions et bascule en lecture seule pour protéger les données (`autovacuum_freeze_max_age` déclenche un VACUUM forcé bien avant, à 200 M par défaut).
 
-**Solution** : VACUUM gèle (freeze) les anciennes transactions pour éviter ce problème.
+**Solution** : VACUUM **gèle** (freeze) les anciennes transactions (`vacuum_freeze_min_age`, défaut 50 M) : leurs XID sont remplacés par le marqueur spécial `FrozenTransactionId` qui n'a plus à participer à la comparaison modulaire. La table peut alors continuer à vivre indéfiniment.
 
-**Monitoring** : Surveiller l'âge des transactions avec `age(datfrozenxid)`.
+**Monitoring** : Surveiller l'âge maximal avec `age(datfrozenxid)` (par base) et `age(relfrozenxid)` (par table). Le seuil dur est ~2 milliards ; l'autovacuum doit avoir agi bien avant.
 
----
-
-### TID
-**Tuple ID**
-(Identifiant de Tuple)
-
-**Définition** : L'adresse physique d'une ligne (page, offset) dans la base.
-
-**Format** : `(page_number, item_number)` - Ex: `(0,1)`
-
-**Usage** : Rarement manipulé directement, sauf pour le debugging avancé.
-
-**Accès** :
 ```sql
-SELECT ctid, * FROM ma_table;
+SELECT datname, age(datfrozenxid),
+       ROUND(100.0 * age(datfrozenxid) / 2000000000, 2) AS pct_to_wraparound
+FROM pg_database  
+ORDER BY age(datfrozenxid) DESC;  
 ```
 
 ---
 
-### CTID
-**Current Tuple ID**
-(Identifiant de Tuple Actuel)
+### TID / CTID
+**Tuple ID / *Current Tuple ID***
 
-**Définition** : Une colonne système disponible dans toutes les tables, contenant le TID de la ligne.
+**Définition** :
+- `tid` est le **type de données** qui représente l'adresse physique d'une ligne, sous la forme `(page, item)`.
+- `ctid` est la **colonne système** présente dans toutes les tables ordinaires (sauf vues, FDW, etc.), de type `tid`, qui expose cette adresse pour la ligne courante.
 
-**Usage** : Debugging, identification physique des lignes.
+**Format** : `(numéro_de_page, offset_dans_la_page)` — ex. `(15,3)` = 4ᵉ entrée (offset 1-indexé) de la 16ᵉ page de 8 ko.
 
 **Exemple** :
 ```sql
--- Trouver la position physique d'une ligne
 SELECT ctid, id, nom FROM produits WHERE id = 100;
--- Résultat : (15,3) | 100 | 'Ordinateur'
+-- ctid  | id  | nom
+--(15,3) | 100 | Ordinateur
 ```
 
-**Attention** : Le CTID peut changer après un VACUUM FULL ou UPDATE.
+**Cas d'usage légitimes** :
+- Diagnostic de fragmentation (corrélation `ctid` ↔ valeurs).
+- Suppression rapide de doublons identifiés (`DELETE … WHERE ctid IN (…)`).
+- Inspection bas-niveau avec `pageinspect`.
+
+**⚠️ Attention** : un `ctid` n'est **pas stable**. Toute opération qui réécrit la ligne le change : `UPDATE` (sauf HOT update sur la même page), `VACUUM FULL`, `CLUSTER`, `pg_repack`. Ne jamais stocker un `ctid` comme clé applicative.
+
+---
+
+### LSN
+**Log Sequence Number**
+(Numéro de Séquence du Journal)
+
+**Définition** : Position absolue **en octets** dans le flux WAL, exprimée en hexadécimal sous la forme `XXX/YYYYYYYY` (haut 32 bits / bas 32 bits). Le type SQL associé est `pg_lsn`.
+
+**Usage** :
+- Identifier un point de reprise (`pg_basebackup`, PITR).
+- Mesurer le **retard de réplication** (résultat en octets) :
+  - **Côté primaire** : `pg_wal_lsn_diff(pg_current_wal_lsn(), replay_lsn)` via `pg_stat_replication`.
+  - **Côté standby** : `pg_wal_lsn_diff(pg_last_wal_receive_lsn(), pg_last_wal_replay_lsn())` (retard d'application local).
+- Suivre la progression du WAL : `pg_wal_lsn_diff(a, b)` retourne le nombre d'octets entre deux LSN.
+
+**Exemple** :
+```sql
+SELECT pg_current_wal_lsn();                        -- ex. 7/3A2C8000
+
+-- Nom du fichier WAL contenant ce LSN (segment de 16 Mo par défaut,
+-- ajustable via wal_segment_size à l'initdb depuis PG 11)
+SELECT pg_walfile_name(pg_current_wal_lsn());       -- 000000010000000700000003
+--                                                    └TLID┘└─high LSN─┘└─seg─┘
+
+-- Volume WAL généré entre deux instants
+SELECT pg_size_pretty(
+    pg_wal_lsn_diff(pg_current_wal_lsn(), '7/3A000000'::pg_lsn)
+) AS wal_genere;
+```
+
+---
+
+### HBA
+**Host-Based Authentication**
+(Authentification Basée sur l'Hôte)
+
+**Définition** : Mécanisme PostgreSQL qui décide *qui peut se connecter, depuis où, à quelle base, avec quelle méthode*, configuré via le fichier **`pg_hba.conf`**.
+
+**Format d'une ligne** :
+```
+# TYPE   DATABASE   USER     ADDRESS         METHOD
+local    all        all                      peer  
+host     app        alice    10.0.0.0/24     scram-sha-256  
+host     all        all      0.0.0.0/0       reject  
+hostssl  all        all      0.0.0.0/0       scram-sha-256  
+```
+
+**Règles** :
+- Évalué **dans l'ordre** : la première règle qui *matche* s'applique.
+- `local` = socket Unix ; `host` = TCP/IP ; `hostssl` = TCP/IP **avec** SSL ; `hostnossl` = TCP/IP **sans** SSL.
+- Méthodes courantes : `trust`, `reject`, `peer`, `md5` (legacy), `scram-sha-256` (recommandé), `cert`, `ldap`, `oauth` 🆕 (PG 18).
+
+**Recharger après modification** :
+```sql
+SELECT pg_reload_conf();   -- ou pg_ctl reload
+```
+
+---
+
+### HOT
+***Heap-Only Tuple***
+
+**Définition** : Optimisation PostgreSQL qui permet à un `UPDATE` de **rester dans la même page** sans toucher aux index, à condition qu'aucune colonne indexée ne change et qu'il reste de la place dans la page.
+
+**Bénéfices** :
+- Pas de réécriture des entrées d'index → écritures réduites.
+- Les anciennes versions sont nettoyées au passage par le mécanisme de *HOT chain pruning*, sans attendre `VACUUM`.
+
+**Levier de configuration** : le **`fillfactor`** d'une table fréquemment mise à jour. Le baisser (ex. `fillfactor = 90`) laisse de l'espace dans chaque page pour favoriser les HOT updates.
+
+```sql
+ALTER TABLE compteurs SET (fillfactor = 80);
+```
+
+---
+
+### SSI
+***Serializable Snapshot Isolation***
+
+**Définition** : Implémentation PostgreSQL du niveau d'isolation `SERIALIZABLE` (depuis PG 9.1). Au lieu de poser des verrous prédicats coûteux, SSI :
+
+1. travaille en *snapshot isolation* (comme `REPEATABLE READ`) ;
+2. trace les dépendances de lecture/écriture entre transactions concurrentes ;
+3. annule l'une des transactions impliquées dans un cycle de dépendances pouvant produire une anomalie de sérialisation (erreur SQLSTATE `40001`).
+
+**Conséquence pour l'application** : prévoir une logique de *retry* sur l'erreur `serialization_failure` (`40001`).
+
+---
+
+### BGW
+***Background Worker***
+
+**Définition** : Processus serveur démarré et supervisé par le postmaster, destiné à des tâches asynchrones internes ou fournies par des extensions.
+
+**Exemples natifs** : autovacuum *launcher*/*workers*, *parallel workers* (exécution parallèle de requêtes), *logical replication workers*, *walwriter*, *checkpointer*, *walsender*/*walreceiver*.
+
+**Exemples d'extensions** : `pg_cron`, `pg_partman`, `pg_stat_kcache`, `pglogical`.
+
+**Paramètres clés** :
+- `max_worker_processes` (défaut 8)
+- `max_parallel_workers` (sous-ensemble dédié aux requêtes parallèles)
+- `max_parallel_workers_per_gather`
+
+---
+
+### AIO
+***Asynchronous I/O***
+
+🆕 **Nouveauté PostgreSQL 18** : sous-système d'entrées/sorties asynchrones pour les lectures (et certaines écritures). Au lieu d'attendre une page disque, le backend délègue la demande et continue à travailler.
+
+**Trois implémentations sélectionnables** :
+- `worker` : *background workers* dédiés (portable, défaut).
+- `io_uring` : interface Linux moderne (kernel ≥ 5.1), plus efficace quand disponible.
+- `sync` : *fallback* bloquant (comportement antérieur à PG 18).
+
+**Paramètre** : `io_method = worker | io_uring | sync` dans `postgresql.conf`.
+
+**Impact attendu** : meilleurs débits sur les workloads dominés par les lectures séquentielles et le *prefetch* (OLAP, *bitmap heap scans*, `VACUUM`).
 
 ---
 
@@ -675,25 +794,37 @@ CREATE INDEX idx_data ON produits USING GIN(data);
 **Universally Unique Identifier**
 (Identifiant Unique Universel)
 
-**Définition** : Identifiant de 128 bits, garanti unique globalement.
+**Définition** : Identifiant de 128 bits, garanti unique globalement (probabilité de collision négligeable).
 
 **Format** : `550e8400-e29b-41d4-a716-446655440000`
 
 **Avantages** :
 - Pas de coordination nécessaire entre serveurs
-- Sécurité (pas d'énumération séquentielle)
+- Sécurité (pas d'énumération séquentielle exploitable)
 - Fusion de bases facilitée
 
-**Versions** :
-- **UUID v4** : Aléatoire (classique)  
-- **UUID v7** : Ordonné par timestamp (nouveau en PG 18)
+**Versions courantes en pratique** :
 
-**Exemple** :
+| Version | Caractéristique | Génération PostgreSQL |
+|---|---|---|
+| **v4** | 122 bits aléatoires | `gen_random_uuid()` (natif PG 13+) ou `uuid_generate_v4()` (extension `uuid-ossp`) |
+| **v7** | 48 bits timestamp Unix ms + 74 bits aléatoires (RFC 9562) | `uuidv7()` 🆕 **natif PG 18** |
+
+🆕 **Nouveauté PG 18** : `uuidv7()` est intégrée au noyau, **aucune extension** à charger. Les UUID v7 sont **triés naturellement par instant de génération**, ce qui réduit la fragmentation d'index B-tree à l'insertion (problème classique de l'UUID v4).
+
+**Exemple PG 18** :
 ```sql
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE TABLE evenements (
+    id      UUID DEFAULT uuidv7() PRIMARY KEY,
+    payload JSONB,
+    cree_le TIMESTAMPTZ DEFAULT now()
+);
+```
 
-CREATE TABLE users (
-    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+**Exemple portable (PG 13+)** :
+```sql
+CREATE TABLE utilisateurs (
+    id  UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     nom TEXT
 );
 ```
@@ -704,24 +835,33 @@ CREATE TABLE users (
 **Point-In-Time Recovery**
 (Récupération à un Point dans le Temps)
 
-**Définition** : Capacité de restaurer la base à n'importe quel instant précis.
+**Définition** : Capacité de restaurer la base à n'importe quel instant précis entre la dernière base de sauvegarde et la dernière transaction archivée.
 
-**Nécessite** :
-- WAL archiving activé
-- Sauvegarde de base (pg_basebackup)
-- Fichiers WAL archivés
+**Prérequis** :
+- `wal_level = replica` (ou `logical`)
+- `archive_mode = on` et `archive_command` (ou `archive_library`) qui copie les segments WAL vers un stockage durable
+- Une base de sauvegarde cohérente (`pg_basebackup`)
+- Les segments WAL archivés couvrant la fenêtre cible
 
 **Cas d'usage** :
-- "Annuler" une erreur humaine (suppression accidentelle)
-- Récupérer l'état avant une panne
+- « Annuler » une erreur humaine (suppression accidentelle)
+- Récupérer l'état avant une panne logique
 - Audits et conformité
 
-**Exemple** :
-```bash
-# Restaurer à 14h30 précises aujourd'hui
-pg_ctl start -D /data/pgdata \
-    -o "--recovery-target-time='2024-11-20 14:30:00'"
-```
+**Procédure (PG 12+)** :
+
+1. Restaurer la base de sauvegarde dans un répertoire vide (`pg_basebackup` ou copie + `restore_command`).
+2. Configurer la cible dans `postgresql.conf` (ou `postgresql.auto.conf`) :
+   ```
+   restore_command       = 'cp /backup/wal/%f %p'
+   recovery_target_time  = '2026-05-15 14:30:00+02'
+   recovery_target_action = 'pause'   # ou 'promote'
+   ```
+3. Créer le fichier marqueur `recovery.signal` à la racine du `PGDATA`.
+4. Démarrer PostgreSQL : `pg_ctl start -D /data/pgdata`.
+5. Une fois la cible atteinte, basculer en mode normal : `SELECT pg_wal_replay_resume();` puis `pg_promote()` si besoin.
+
+> 💡 Depuis PostgreSQL 12, le fichier historique `recovery.conf` a disparu : tout passe par les paramètres `recovery_target_*` du `postgresql.conf` et le marqueur `recovery.signal`.
 
 ---
 
@@ -757,19 +897,26 @@ pg_ctl start -D /data/pgdata \
 **Exemple** :
 ```sql
 -- Activer RLS sur la table
-ALTER TABLE documents ENABLE ROW LEVEL SECURITY;
+ALTER TABLE documents ENABLE ROW LEVEL SECURITY;  
+ALTER TABLE documents FORCE  ROW LEVEL SECURITY;  -- s'applique aussi au propriétaire  
+
+-- L'identité applicative passe par un GUC custom 'app.user_id' positionné par
+-- l'application après connexion (SET LOCAL app.user_id = '42'). Le 2e paramètre
+-- 'true' rend la lecture tolérante quand le GUC n'est pas défini (renvoie NULL).
+-- (current_user_id() n'est PAS une fonction PostgreSQL standard.)
 
 -- Politique : les users ne voient que leurs documents
 CREATE POLICY user_documents ON documents
     FOR SELECT
-    USING (user_id = current_user_id());
+    USING (user_id = current_setting('app.user_id', true)::int);
 
--- Politique : un manager voit tout son équipe
+-- Politique : un manager voit toute son équipe
 CREATE POLICY manager_team ON documents
     FOR SELECT
     USING (
         team_id IN (
-            SELECT team_id FROM teams WHERE manager_id = current_user_id()
+            SELECT team_id FROM teams
+            WHERE manager_id = current_setting('app.user_id', true)::int
         )
     );
 ```
@@ -844,17 +991,19 @@ ssl_ca_file = 'root.crt'
 ---
 
 ### WAL-G
-**Write-Ahead Log - Go** (implémentation)
 
-**Définition** : Outil de sauvegarde et archivage WAL pour PostgreSQL, écrit en Go.
+**Définition** : Outil tiers de sauvegarde et d'archivage WAL pour PostgreSQL, écrit en Go (le nom n'est pas un acronyme officiel : il dérive de l'outil historique **WAL-E**, dont WAL-G est la réimplémentation performante).
 
 **Fonctionnalités** :
-- Sauvegardes continues et incrémentielles
-- Compression et chiffrement
-- Support cloud (S3, GCS, Azure)
-- PITR facilité
+- Sauvegardes de base complètes et **incrémentielles différentielles** (block-level)
+- Archivage WAL continu avec compression (lz4, zstd, brotli) et chiffrement
+- Backends de stockage : S3, GCS, Azure Blob, Swift, fichier local
+- Restauration PITR (intègre la chaîne `restore_command`)
 
-**Alternative** : pgBackRest (autre outil populaire)
+**Alternatives populaires** :
+- **pgBackRest** (en C, très utilisé en entreprise, parallélisme natif)
+- **Barman** (en Python, l'outil historique de 2ndQuadrant/EDB)
+- **pg_probackup** (en C, fork de pg_arman par Postgres Pro)
 
 ---
 
@@ -1158,12 +1307,20 @@ pgbench -c 10 -j 2 -t 1000 ma_base
 
 **Usage PostgreSQL** :
 ```sql
--- Export
+-- Export — ⚠️ COPY (SQL) lit/écrit côté SERVEUR (superuser ou rôle pg_write_server_files)
 COPY (SELECT * FROM clients) TO '/tmp/clients.csv' CSV HEADER;
 
 -- Import
 COPY clients FROM '/tmp/clients.csv' CSV HEADER;
 ```
+
+```sql
+-- Équivalent côté CLIENT (psql) — pas de privilège spécial, fichier local au poste
+\copy (SELECT * FROM clients) TO '/tmp/clients.csv' CSV HEADER
+\copy clients FROM '/tmp/clients.csv' CSV HEADER
+```
+
+> 💡 **Piège classique** : `COPY` (SQL) accède au système de fichiers du **serveur** ; `\copy` (méta-commande psql) accède à celui du **client**. Les deux ont la même syntaxe SQL, mais des privilèges et chemins différents.
 
 **Alternative** : TSV (Tab-Separated Values)
 

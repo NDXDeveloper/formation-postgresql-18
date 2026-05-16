@@ -933,19 +933,28 @@ psql a trois niveaux de prompts configurables :
 
 **Variables de prompt disponibles** :
 
-| Variable | Description | Exemple |
+| Variable | Description | Valeurs prises |
 |----------|-------------|---------|
-| `%M` | Nom complet de l'hôte | `localhost` |
-| `%m` | Nom court de l'hôte | `localhost` |
-| `%>` | Port | `5432` |
-| `%n` | Nom d'utilisateur | `postgres` |
-| `%/` | Base de données actuelle | `ma_boutique` |
-| `%~` | Base de données (avec ~ si HOME) | `ma_boutique` |
-| `%#` | `#` si superuser, sinon `>` | `>` |
-| `%R` | État de transaction | `=` (aucune), `^` (transaction), `!` (erreur) |
-| `%x` | État de transaction (verbose) | ` ` ou `*` |
-| `%?` | Code d'erreur de la dernière commande | `0` |
-| `%[...%]` | Séquences d'échappement terminal | Couleurs |
+| `%M` | Nom complet de l'hôte | `localhost.example.com` ou `[local]` |
+| `%m` | Nom court de l'hôte | `localhost` ou `[local]` |
+| `%>` | Port d'écoute | `5432` |
+| `%n` | Nom d'utilisateur de session | `postgres` |
+| `%/` | Base de données courante | `ma_boutique` |
+| `%~` | Base de données (avec `~` si == `current_user`) | `ma_boutique` |
+| `%#` | `#` si superuser, sinon `>` | `#` / `>` |
+| `%R` | Type de prompt / **état du tampon de requête** | en PROMPT1 : `=` (normal), `!` (déconnecté). En PROMPT2 : `'` (chaîne simple), `"` (chaîne double), `` ` `` (backtick), `$` (dollar-quoting), `*` (commentaire `/* */`) |
+| `%x` | **État de la transaction** | *(rien)* hors transaction, `*` dans une transaction, `!` transaction échouée, `?` état indéterminé (déconnexion) |
+| `%?` | Code de retour de la dernière commande backend | `0` (OK) ou code d'erreur |
+| `%l` | Numéro de ligne courant dans le tampon | `1`, `2`, … |
+| `%p` | PID du backend serveur connecté | `12345` |
+| `%[...%]` | Séquences d'échappement terminal (couleurs) | ex. `%[%033[1;32m%]` |
+
+> ⚠️ **Ne pas confondre `%R` et `%x`** :  
+>  
+> - `%R` indique **où** vous en êtes dans la saisie (commande complète, dans une chaîne, dans un commentaire…). Le caractère `=` apparaît en PROMPT1 quand le tampon est vide ou complet.  
+> - `%x` indique **l'état de la transaction** côté serveur (`*` = transaction ouverte, `!` = transaction en erreur attendant `ROLLBACK`).  
+>  
+> La plupart des `.psqlrc` utilisent **les deux** en combinaison : `%x%R%# ` donne à la fois l'info transaction et l'info de continuation.
 
 ### Exemples de prompts personnalisés
 
@@ -971,16 +980,20 @@ postgres@localhost:5432 ma_boutique =#
 ```bash
 \set PROMPT1 '%n@%/ %x%R%# '
 
-# Sans transaction
+# Sans transaction (en autocommit) — %x vide, %R = '='
 postgres@ma_boutique =#
 
-# Dans une transaction
+# Dans une transaction — %x = '*', %R = '='
 BEGIN;  
 postgres@ma_boutique *=#  
 
-# Après erreur
+# Après une erreur dans la transaction — %x = '!', %R = '='
 SELECT * FROM table_inexistante;  
 postgres@ma_boutique !=#  
+
+# Tampon en attente (chaîne non terminée) — %R = '''
+SELECT 'string sans fermeture  
+postgres@ma_boutique '#  
 ```
 
 #### Mon prompt recommandé
@@ -1147,12 +1160,17 @@ export PAGER=more
 
 ### PSQL_EDITOR ou EDITOR
 
+`psql` cherche l'éditeur à utiliser pour `\e`, `\ef`, `\ev` dans cet ordre : `PSQL_EDITOR`, `EDITOR`, `VISUAL`.
+
 ```bash
-# Définir l'éditeur pour \e
-export PSQL_EDITOR=nano  
-export PSQL_EDITOR=vim  
-export PSQL_EDITOR=code  # VS Code  
+# Définir l'éditeur pour \e, \ef, \ev
+export PSQL_EDITOR=nano                 # nano (simple)  
+export PSQL_EDITOR=vim                  # vim  
+export PSQL_EDITOR="code --wait"        # VS Code — --wait est OBLIGATOIRE  
+export PSQL_EDITOR="subl --wait"        # Sublime Text — idem  
 ```
+
+> ⚠️ **L'option `--wait` est indispensable** pour les éditeurs graphiques (`code`, `subl`, `atom`…). Sans elle, l'éditeur s'ouvre puis rend immédiatement la main à `psql`, qui croit que vous avez « terminé l'édition » avec un fichier vide. Avec `--wait`, `psql` attend que vous fermiez la fenêtre d'édition avant de reprendre la requête.
 
 ---
 
@@ -1417,7 +1435,9 @@ Voici la configuration que je recommande pour la plupart des utilisateurs :
 \set COMP_KEYWORD_CASE upper
 
 -- Raccourcis utiles
-\set show_slow_queries 'SELECT query, calls, total_time, mean_time FROM pg_stat_statements ORDER BY mean_time DESC LIMIT 20;'
+-- ⚠️ Depuis PostgreSQL 13, pg_stat_statements utilise total_exec_time / mean_exec_time
+--    (les anciennes colonnes total_time / mean_time n'existent plus).
+\set show_slow_queries 'SELECT substring(query, 1, 80) AS query, calls, round(mean_exec_time::numeric, 2) AS mean_ms, round(total_exec_time::numeric, 2) AS total_ms FROM pg_stat_statements ORDER BY mean_exec_time DESC LIMIT 20;'
 
 -- Message de bienvenue
 \echo ''
@@ -1503,7 +1523,7 @@ Si vous avez fait des modifications et voulez revenir à la normale :
 
 La configuration de psql est essentielle pour une expérience optimale. Les points clés à retenir :
 
-🎯 **Essentiels** :  
+🎯 **Essentiels** :
 - `\timing` pour mesurer les performances  
 - `\x auto` pour un affichage adaptatif  
 - `\pset null '(null)'` pour voir les NULL

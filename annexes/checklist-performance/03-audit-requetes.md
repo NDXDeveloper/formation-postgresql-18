@@ -373,18 +373,45 @@ EXPLAIN (
 
 **Recommandation** : Toujours utiliser `ANALYZE` et `BUFFERS` pour un audit complet.
 
-### 4.3. PostgreSQL 18 : Améliorations d'EXPLAIN
+### 4.3. PostgreSQL 18 : Améliorations d'EXPLAIN 🆕
 
-**Nouveauté** : Affichage automatique des buffers et statistiques I/O enrichies.
+PG 18 enrichit la sortie d'`EXPLAIN` sur plusieurs points utiles à l'audit :
+
+#### a) `BUFFERS` activé par défaut sous `ANALYZE`
+
+Auparavant, il fallait écrire explicitement `EXPLAIN (ANALYZE, BUFFERS)` pour voir les compteurs de pages lues en cache vs disque. PG 18 inclut **`BUFFERS` automatiquement** quand `ANALYZE` est utilisé. Pour l'inverse :
 
 ```sql
--- PostgreSQL 18 : Plus de détails par défaut
-EXPLAIN (ANALYZE) SELECT * FROM employes WHERE nom = 'Dupont';
+-- PG 18 : équivaut à (ANALYZE, BUFFERS)
+EXPLAIN ANALYZE SELECT * FROM employes WHERE nom = 'Dupont';
 
--- Nouvelles métriques :
--- - I/O timing par opération
--- - WAL generation
--- - Statistiques par backend
+-- Désactiver BUFFERS si besoin (ex. pour des diffs reproductibles)
+EXPLAIN (ANALYZE, BUFFERS OFF) SELECT * FROM employes WHERE nom = 'Dupont';
+```
+
+#### b) Compteurs I/O détaillés
+
+PG 18 affiche les volumes de lecture **shared** (cache + disque, séparés), **local** (buffers locaux par backend) et **temp** (fichiers temporaires sur disque). Particulièrement utile pour repérer un *spill* de tri/hash sur disque.
+
+```text
+Buffers: shared hit=12 read=4, temp read=3 written=3
+```
+
+#### c) Métriques WAL (pour requêtes en écriture)
+
+Pour `INSERT`/`UPDATE`/`DELETE`/`MERGE`, `EXPLAIN (ANALYZE, WAL)` détaille `wal records`, `wal fpi` (full-page images), `wal bytes`. Permet d'évaluer l'impact d'un `UPDATE` mal indexé sur la volumétrie WAL.
+
+```sql
+EXPLAIN (ANALYZE, WAL)  
+UPDATE commandes SET statut = 'expediee' WHERE date_commande < CURRENT_DATE - 30;  
+```
+
+#### d) Format JSON enrichi
+
+Le format `FORMAT JSON` expose les nouveaux compteurs nominativement (utile pour les outils d'analyse type **dalibo's pev**, **explain.depesz**) :
+
+```sql
+EXPLAIN (ANALYZE, FORMAT JSON) <requête>;
 ```
 
 ### 4.4. pg_stat_activity
@@ -824,23 +851,48 @@ hit_ratio = hit / (hit + read)
 
 **Objectif** : > 99%
 
-### 5.7. PostgreSQL 18 : Améliorations EXPLAIN
+### 5.7. PostgreSQL 18 : Améliorations EXPLAIN 🆕
 
-**Nouveautés** :
-- Statistiques I/O par backend
-- Génération WAL par opération
-- Temps passé dans chaque phase
-- Auto-affichage des buffers (plus besoin de spécifier)
+PostgreSQL 18 enrichit la sortie d'`EXPLAIN`, mais attention aux nuances : **toutes les nouveautés ne sont pas activées par défaut**.
+
+#### a) `BUFFERS` activé par défaut sous `ANALYZE`
+
+C'est **la** nouveauté la plus visible : `EXPLAIN ANALYZE` inclut maintenant **automatiquement** les compteurs de pages lues en cache / sur disque / écrites. Pour revenir au comportement antérieur :
 
 ```sql
--- PostgreSQL 18
-EXPLAIN (ANALYZE) SELECT ...;
+-- PostgreSQL 18 : équivalent automatique à (ANALYZE, BUFFERS)
+EXPLAIN ANALYZE SELECT * FROM employes WHERE nom = 'Dupont';
 
--- Affiche automatiquement :
--- - Buffers
--- - I/O timing
--- - WAL generation
+-- Si vous voulez désactiver BUFFERS (ex. pour des diffs reproductibles)
+EXPLAIN (ANALYZE, BUFFERS OFF) SELECT * FROM employes WHERE nom = 'Dupont';
 ```
+
+#### b) `WAL` reste opt-in
+
+Les compteurs **WAL** (nombre d'enregistrements, FPI, octets, *buffers full*) ne sont **pas** affichés par défaut. Il faut toujours les demander explicitement avec l'option `WAL`, et ils n'apparaissent que pour les requêtes en écriture :
+
+```sql
+EXPLAIN (ANALYZE, WAL)  
+UPDATE commandes SET statut = 'expediee' WHERE date_commande < CURRENT_DATE - 30;  
+
+-- Sortie type (extrait) :
+--   WAL: records=42, fpi=3, bytes=4321, buffers full=0
+```
+
+> 🆕 PG 18 : nouveau compteur **`buffers full`** dans les sorties `EXPLAIN (WAL)`, `VACUUM/ANALYZE VERBOSE` et le log autovacuum — il compte le nombre de fois où `wal_buffers` a été saturé pendant l'opération. Un compteur > 0 régulier suggère qu'il faut augmenter `wal_buffers`.
+
+#### c) Compteurs I/O timing (déjà disponible avant PG 18)
+
+Les compteurs `I/O Timings: read=… write=…` n'apparaissent que si **`track_io_timing = on`** côté serveur. Ce n'est pas une nouveauté PG 18, mais c'est souvent confondu. Activation :
+
+```sql
+ALTER SYSTEM SET track_io_timing = on;  
+SELECT pg_reload_conf();  
+```
+
+#### d) `VERBOSE` détaille davantage
+
+En PG 18, `EXPLAIN (ANALYZE, VERBOSE)` ajoute aussi des moyennes par ligne et des statistiques CPU plus fines pour les nœuds parallèles.
 
 ---
 
@@ -1169,14 +1221,17 @@ ANALYZE commandes;
 -- Pour toute la base
 ANALYZE;
 
--- Vérifier les dernières stats
+-- Vérifier les dernières stats (note : pg_stat_user_tables expose 'relname')
 SELECT
     schemaname,
-    tablename,
+    relname AS tablename,
     last_analyze,
-    last_autoanalyze
+    last_autoanalyze,
+    n_mod_since_analyze,         -- nb de modifs depuis le dernier ANALYZE
+    analyze_count,
+    autoanalyze_count
 FROM pg_stat_user_tables  
-WHERE tablename = 'commandes';  
+WHERE relname = 'commandes';  
 ```
 
 ---
@@ -1410,48 +1465,69 @@ LEFT JOIN (
 
 ### 9.3. Technique 2 : EXISTS vs IN vs JOIN
 
-#### Problème avec IN + Sous-Requête
+> ⚠️ **Mythe à démythifier** : « `EXISTS` s'arrête au premier match, `IN` charge tout en mémoire ». **Faux depuis PostgreSQL 10**. Le planificateur transforme `EXISTS (sous-requête)` et `WHERE x IN (sous-requête)` en un **Semi Join** identique. Les deux formes produisent le même plan d'exécution dans la grande majorité des cas.
+
+Ce qui compte aujourd'hui, c'est **la sémantique** (que voulez-vous exprimer ?) plutôt que la performance, et un point précis : **`NOT IN` vs `NOT EXISTS`**, qui diffèrent radicalement face aux `NULL`.
+
+#### Forme `IN (sous-requête)`
 
 ```sql
--- Potentiellement lent
 SELECT * FROM clients  
 WHERE id IN (SELECT client_id FROM commandes WHERE total > 1000);  
 ```
 
-**Problème** : Si la sous-requête retourne beaucoup de lignes, `IN` peut être lent.
+Lit naturellement : « les clients dont l'id apparaît dans la sous-liste ». Bien adapté quand vous ne référencez **pas** d'autres colonnes du client dans la sous-requête.
 
-#### Solution 1 : EXISTS (Souvent Plus Rapide)
+#### Forme `EXISTS` (corrélée)
 
 ```sql
--- Souvent plus rapide
 SELECT * FROM clients c  
 WHERE EXISTS (  
-    SELECT 1 FROM commandes cmd
-    WHERE cmd.client_id = c.id AND cmd.total > 1000
+    SELECT 1
+    FROM commandes cmd
+    WHERE cmd.client_id = c.id
+      AND cmd.total > 1000
 );
 ```
 
-**Avantage** : S'arrête dès qu'une ligne est trouvée (pas besoin de toutes les lire).
+Lit : « pour chaque client, existe-t-il une commande qui valide la condition ? ». Bien adapté quand vous **réutilisez** des colonnes du client dans la condition.
 
-#### Solution 2 : JOIN (Alternative)
+#### Forme `JOIN` + `DISTINCT`
 
 ```sql
--- Équivalent avec JOIN
 SELECT DISTINCT c.*  
 FROM clients c  
 JOIN commandes cmd ON cmd.client_id = c.id  
 WHERE cmd.total > 1000;  
 ```
 
-**Note** : Le `DISTINCT` est nécessaire pour éviter les doublons.
+`DISTINCT` est nécessaire pour ne pas dupliquer un client qui a plusieurs commandes éligibles. Préférez `EXISTS` ou `IN` si vous n'avez pas besoin de remonter de colonnes de `commandes`.
 
-#### Comparaison
+#### Le piège des `NULL` : `NOT IN` ↔ `NOT EXISTS` (vrai écart sémantique)
 
-| Technique | Quand l'utiliser |
-|-----------|------------------|
-| **IN** | Petite liste de valeurs littérales |
-| **EXISTS** | Vérifier l'existence (pas besoin des valeurs) |
-| **JOIN** | Besoin des colonnes de la sous-requête |
+```sql
+-- Si la sous-requête retourne au moins un NULL, ceci ne renvoie aucune ligne :
+SELECT * FROM clients WHERE id NOT IN (SELECT client_id FROM commandes);
+
+-- Toujours sûr face aux NULL :
+SELECT * FROM clients c  
+WHERE NOT EXISTS (  
+    SELECT 1 FROM commandes cmd WHERE cmd.client_id = c.id
+);
+```
+
+**Règle** : pour les anti-jointures (« qui n'a *pas* de … »), **préférer `NOT EXISTS`** — `NOT IN` est piégeux dès qu'un `NULL` peut traîner dans la sous-requête.
+
+#### Mémo récapitulatif
+
+| Forme | Quand l'utiliser | Performance |
+|---|---|---|
+| `IN (liste littérale)` | Liste fixe en clair (`WHERE statut IN ('a','b')`) | Excellente |
+| `IN (sous-requête)` | Vérifier l'appartenance, pas de colonne à remonter | ≈ `EXISTS` (Semi Join) |
+| `EXISTS (...)` | Vérifier l'existence, corrélation avec table externe | ≈ `IN` (Semi Join) |
+| `JOIN` + `DISTINCT` | Besoin de **colonnes** de la table jointe | Souvent moins bonne (Sort + DISTINCT) |
+| `NOT EXISTS` | Anti-jointure (« qui n'a pas … ») | **Toujours préférée** à `NOT IN` |
+| `NOT IN` | À éviter si la sous-requête peut produire `NULL` | Dangereux sémantiquement |
 
 ### 9.4. Technique 3 : CTE vs Sous-Requêtes
 
@@ -1475,28 +1551,45 @@ JOIN commandes_recentes cr ON cr.client_id = c.id;
 - ✅ Peut être référencé plusieurs fois  
 - ✅ Facilite la maintenance
 
-#### CTE MATERIALIZED (PostgreSQL 12+)
+#### CTE MATERIALIZED / NOT MATERIALIZED (PostgreSQL 12+)
+
+> ⚠️ **Changement de comportement par défaut en PG 12** : avant PG 12, **toute** CTE était *matérialisée* (calculée une fois, stockée en mémoire/disque, opérée ensuite). C'était une **barrière d'optimisation** : le planificateur ne pouvait pas pousser les prédicats à travers la CTE. Depuis PG 12, les CTE référencées **une seule fois et sans effet de bord** sont **inlinées par défaut** — comme une sous-requête classique.
+
+Les trois formes explicites :
 
 ```sql
--- Forcer la matérialisation
-WITH commandes_recentes AS MATERIALIZED (
-    SELECT client_id, COUNT(*) AS nb
-    FROM commandes
-    WHERE date_commande > CURRENT_DATE - INTERVAL '30 days'
-    GROUP BY client_id
-)
-SELECT ...;
+-- 1. Comportement par défaut PG 12+ : inlining si référencée une fois, sinon matérialisée
+WITH cte AS (...)  
+SELECT ... FROM cte;  
+
+-- 2. Forcer la matérialisation (barrière d'optimisation)
+WITH cte AS MATERIALIZED (...)  
+SELECT ... FROM cte;  
+
+-- 3. Forcer l'inlining même si référencée plusieurs fois
+WITH cte AS NOT MATERIALIZED (...)  
+SELECT ... FROM cte  
+UNION ALL  
+SELECT ... FROM cte;  
 ```
 
-**Quand utiliser MATERIALIZED** :
-- CTE utilisé plusieurs fois
-- CTE coûteux à calculer
-- Éviter la réévaluation
+**Cas où `MATERIALIZED` est utile** :
 
-**Quand NE PAS utiliser MATERIALIZED** :
-- CTE utilisé une seule fois
-- CTE simple
-- Le planificateur peut optimiser sans matérialisation
+| Situation | Pourquoi `MATERIALIZED` aide |
+|---|---|
+| CTE coûteuse référencée **plusieurs fois** | Évite de réexécuter la requête à chaque référence |
+| CTE avec **agrégation** filtrant beaucoup | Réduit le volume avant les jointures |
+| Plan d'inlining catastrophique (Seq Scan involontaire) | Force le planificateur à pré-calculer |
+| CTE **récursive** (`WITH RECURSIVE`) | Toujours matérialisée automatiquement |
+| CTE contenant `INSERT`/`UPDATE`/`DELETE` (CTE *data-modifying*) | Toujours matérialisée (effet de bord) |
+
+**Cas où `NOT MATERIALIZED` (ou pas de mot-clé) est mieux** :
+
+- CTE référencée **une seule fois**, dont vous souhaitez que les prédicats du `SELECT` extérieur soient poussés à l'intérieur.
+- CTE simple qui sert juste à structurer/nommer une sous-requête.
+- Petit volume où l'inlining permet un meilleur plan global.
+
+> 💡 En cas de doute, comparer avec `EXPLAIN ANALYZE` les deux variantes : la version avec `MATERIALIZED` montre explicitement un nœud **CTE Scan**, l'inlining transforme la CTE en sous-requête fusionnée dans le plan principal.
 
 ### 9.5. Technique 4 : Éviter SELECT *
 
@@ -1985,13 +2078,14 @@ SELECT
 FROM commandes  
 GROUP BY client_id;  
 
--- Index sur la vue
-CREATE INDEX idx_stats_clients ON stats_clients(client_id);
+-- Index UNIQUE indispensable pour REFRESH ... CONCURRENTLY
+-- (GROUP BY client_id garantit l'unicité de chaque ligne)
+CREATE UNIQUE INDEX idx_stats_clients ON stats_clients(client_id);
 
 -- Utilisation (très rapide)
 SELECT * FROM stats_clients WHERE client_id = 123;
 
--- Rafraîchissement (quand nécessaire)
+-- Rafraîchissement non bloquant (requiert l'index UNIQUE ci-dessus)
 REFRESH MATERIALIZED VIEW CONCURRENTLY stats_clients;
 ```
 
@@ -2077,106 +2171,109 @@ HAVING COUNT(*) > 10;
 
 ## 13. PostgreSQL 18 : Nouveautés d'Optimisation
 
-### 13.1. Skip Scan pour Index Multi-Colonnes
+### 13.1. Skip Scan pour Index Multi-Colonnes B-tree 🆕
 
-**Description** : Permet d'utiliser un index multi-colonnes même sans filtrer la première colonne.
+**Description** : Permet d'utiliser un index B-tree multi-colonnes même quand la requête ne filtre pas sur la **colonne de tête**.
 
 **Avant PostgreSQL 18** :
+
 ```sql
 CREATE INDEX idx_ventes_region_date ON ventes(region, date_vente);
 
--- Index NON utilisé
-SELECT * FROM ventes WHERE date_vente = '2025-01-01';
+-- region n'est pas filtrée → l'index n'est pas utilisable efficacement
+EXPLAIN ANALYZE SELECT * FROM ventes WHERE date_vente = DATE '2026-01-01';
+-- → Seq Scan
 ```
 
 **PostgreSQL 18** :
+
 ```sql
--- Index UTILISÉ avec Skip Scan
-SELECT * FROM ventes WHERE date_vente = '2025-01-01';
+-- Le planificateur génère un Index Scan avec « sauts » sur region
+EXPLAIN ANALYZE SELECT * FROM ventes WHERE date_vente = DATE '2026-01-01';
 ```
 
-**Détection dans EXPLAIN** :
+> ⚠️ **Important pour l'analyse d'`EXPLAIN`** : Skip Scan **ne crée pas** de nouveau type de nœud. La sortie reste un `Index Scan` ou `Index Only Scan` classique. **L'indice de skip scan est la nouvelle ligne `Index Searches: N`** :  
+>  
+> - PG ≤ 17 : cette ligne **n'existe pas**.  
+> - PG 18, scan classique : `Index Searches: 1` (une seule descente dans l'arbre).  
+> - PG 18, **skip scan** : `Index Searches: N > 1` (un saut par valeur distincte de la colonne de tête).
+
+```text
+Index Scan using idx_ventes_region_date on ventes
+  Index Cond: (date_vente = '2026-01-01'::date)
+  Index Searches: 12          ← skip scan : 12 sauts (12 régions distinctes)
+  Buffers: shared hit=48
 ```
-Index Skip Scan using idx_ventes_region_date on ventes
-  Skip Cond: (date_vente = '2025-01-01'::date)
-```
 
-**Impact** : Réduit le besoin de créer des index redondants.
+**Quand c'est rentable** : la **colonne de tête a une cardinalité faible** (peu de valeurs distinctes) et la deuxième colonne est **sélective**. Si la première colonne a des millions de valeurs distinctes, le saut devient plus coûteux qu'un *Seq Scan*.
 
-### 13.2. Optimisation OR → ANY
+---
 
-**Description** : Transformation automatique des OR en ANY pour permettre l'utilisation d'index.
+### 13.2. Transformation `OR` → `= ANY (…)`
 
-**Avant PostgreSQL 18** :
+**Description** : Le planificateur réécrit automatiquement les chaînes de `OR` portant sur **la même colonne avec des constantes** en une forme `= ANY (ARRAY[…])`, ce qui permet l'utilisation d'index.
+
 ```sql
--- Seq Scan (OR empêche index)
+-- Écriture utilisateur (PG 18)
 SELECT * FROM produits WHERE id = 1 OR id = 2 OR id = 3;
+
+-- Réécriture interne par le planificateur en PG 18 :
+-- WHERE id = ANY (ARRAY[1, 2, 3])
+-- → Bitmap Index Scan possible
 ```
 
-**PostgreSQL 18** :
+> ℹ️ Limite : la transformation ne s'applique qu'aux `OR` portant **tous** sur la même expression de gauche. Un mélange (`a = 1 OR b = 2`) reste inchangé.
+
+---
+
+### 13.3. Auto-élimination des self-joins
+
+**Description** : Quand une table est jointe à elle-même sur sa **clé primaire** et que toutes les colonnes proviennent d'un seul des deux côtés, le planificateur supprime la jointure.
+
 ```sql
--- Transformation automatique en :
-SELECT * FROM produits WHERE id = ANY(ARRAY[1, 2, 3]);
--- Index Scan possible
-```
-
-**Pas de changement de code nécessaire** : Optimisation automatique.
-
-### 13.3. Auto-Élimination des Self-Joins
-
-**Description** : Le planificateur détecte et élimine les self-joins inutiles.
-
-**Exemple** :
-```sql
--- Requête avec self-join redondant
+-- Self-join redondant (typiquement produit par un ORM)
 SELECT e1.nom, e1.salaire  
 FROM employes e1  
 JOIN employes e2 ON e1.id = e2.id  
 WHERE e1.salaire > 50000;  
+
+-- PG 18 simplifie en interne en :
+-- SELECT nom, salaire FROM employes WHERE salaire > 50000;
 ```
 
-**PostgreSQL 18** : Simplifie automatiquement en :
-```sql
-SELECT nom, salaire FROM employes WHERE salaire > 50000;
-```
+**Comment vérifier** : exécuter `EXPLAIN` et constater que la table `employes` n'apparaît **qu'une seule fois** dans le plan (pas de `Nested Loop` ou `Hash Join` interne). Il n'y a pas de message « Self-join eliminated » dans les logs — l'élimination est silencieuse, visible uniquement dans la forme du plan.
 
-**Détection dans EXPLAIN** :
-```
--- Message dans les logs du planificateur
--- "Self-join eliminated"
-```
+---
 
-### 13.4. Réorganisation Automatique des DISTINCT
+### 13.4. Réorganisation des clés `DISTINCT`
 
-**Description** : Optimise les requêtes avec plusieurs DISTINCT.
-
-**Exemple** :
-```sql
-SELECT DISTINCT ON (client_id, produit_id) *  
-FROM ventes  
-ORDER BY client_id, produit_id, date_vente DESC;  
-```
-
-**PostgreSQL 18** : Réorganise automatiquement pour utiliser les index efficacement.
-
-### 13.5. EXPLAIN Enrichi
-
-**Nouvelles métriques** :
-- Statistiques I/O par opération
-- Génération WAL
-- Temps par phase
-- Buffers automatiquement affichés
+**Description** : Le planificateur peut désormais **réordonner les colonnes** d'un `SELECT DISTINCT a, b, c` pour exploiter un index ou éviter un tri explicite.
 
 ```sql
--- PostgreSQL 18
-EXPLAIN (ANALYZE) SELECT ...;
+-- Index utile
+CREATE INDEX ON ventes (date_vente, region);
 
--- Affiche automatiquement :
--- I/O Read Time
--- I/O Write Time
--- WAL Bytes
--- Local Buffers
+-- L'utilisateur écrit (a, b) ; PG 18 essaie (b, a) si l'index aide
+SELECT DISTINCT region, date_vente FROM ventes;
 ```
+
+**Paramètre de contrôle** : `enable_distinct_reordering` (défaut `on`). Pour comparer avant/après désactivation :
+
+```sql
+SET enable_distinct_reordering = off;  
+EXPLAIN ANALYZE SELECT DISTINCT region, date_vente FROM ventes;  
+
+SET enable_distinct_reordering = on;  
+EXPLAIN ANALYZE SELECT DISTINCT region, date_vente FROM ventes;  
+```
+
+> ℹ️ Cette optimisation **ne concerne pas** `DISTINCT ON (...)`, qui impose un ordre explicite (la clause `ORDER BY` dicte la sélection des lignes).
+
+---
+
+### 13.5. `EXPLAIN` enrichi (voir aussi section 5.7)
+
+PG 18 active **`BUFFERS` automatiquement** sous `ANALYZE`. Les compteurs **WAL** et **`Index Searches`** sont nouveaux mais opt-in (selon options et type de nœud). La section 5.7 détaille les nuances : ce n'est pas tout activé d'un coup, certaines colonnes restent à demander explicitement.
 
 ---
 
@@ -2510,9 +2607,10 @@ SELECT
 FROM commandes  
 GROUP BY DATE_TRUNC('day', date_commande);  
 
-CREATE INDEX idx_stats_jour ON stats_quotidiennes(jour);
+-- Index UNIQUE indispensable pour REFRESH ... CONCURRENTLY (GROUP BY jour → unicité)
+CREATE UNIQUE INDEX idx_stats_jour ON stats_quotidiennes(jour);
 
--- Rafraîchissement quotidien (cron ou pg_cron)
+-- Rafraîchissement quotidien non bloquant (cron ou pg_cron)
 REFRESH MATERIALIZED VIEW CONCURRENTLY stats_quotidiennes;
 ```
 

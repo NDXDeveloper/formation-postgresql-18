@@ -53,17 +53,20 @@ Un **lock (verrou)** est un mécanisme qui empêche deux transactions d'accéder
 
 #### Types de Locks Courants
 
-PostgreSQL utilise différents types de verrous :
+PostgreSQL définit **8 modes de verrous** au niveau table, du plus permissif au plus restrictif :
 
 | Type de Lock | Description | Exemple |
 |--------------|-------------|---------|
 | **AccessShareLock** | Le plus permissif, posé par SELECT | `SELECT * FROM users` |
-| **RowShareLock** | Posé par SELECT FOR UPDATE | `SELECT * FROM users FOR UPDATE` |
-| **RowExclusiveLock** | Posé par INSERT, UPDATE, DELETE | `UPDATE users SET ...` |
-| **ShareUpdateExclusiveLock** | Posé par VACUUM, CREATE INDEX CONCURRENTLY | `VACUUM users` |
+| **RowShareLock** | Posé par SELECT FOR UPDATE / FOR SHARE | `SELECT * FROM users FOR UPDATE` |
+| **RowExclusiveLock** | Posé par INSERT, UPDATE, DELETE, MERGE | `UPDATE users SET ...` |
+| **ShareUpdateExclusiveLock** | Posé par VACUUM (non FULL), ANALYZE, CREATE INDEX CONCURRENTLY, REINDEX CONCURRENTLY, ALTER TABLE VALIDATE CONSTRAINT | `VACUUM users` |
 | **ShareLock** | Posé par CREATE INDEX (non concurrent) | `CREATE INDEX idx_users ...` |
-| **ExclusiveLock** | Bloque tout sauf AccessShareLock | `LOCK TABLE users` |
-| **AccessExclusiveLock** | Le plus restrictif, bloque tout | `ALTER TABLE users ...` |
+| **ShareRowExclusiveLock** | Posé par CREATE TRIGGER, certains ALTER TABLE | `CREATE TRIGGER trg_users ...` |
+| **ExclusiveLock** | Bloque tout sauf AccessShareLock | `LOCK TABLE users IN EXCLUSIVE MODE` |
+| **AccessExclusiveLock** | Le plus restrictif, bloque tout | `ALTER TABLE users ADD COLUMN ...`, `DROP TABLE`, `VACUUM FULL`, `CLUSTER`, `REINDEX` (non concurrent), `LOCK TABLE` (sans `MODE`, défaut) |
+
+> 💡 La compatibilité entre modes est définie par PostgreSQL : par exemple `AccessShareLock` et `RowExclusiveLock` se permettent mutuellement (les SELECT n'attendent pas les UPDATE et inversement), tandis que `AccessExclusiveLock` est incompatible avec tous les autres. La matrice complète est dans la [doc officielle](https://www.postgresql.org/docs/18/explicit-locking.html#LOCKING-TABLES).
 
 ### 2.2. Problèmes Causés par les Locks
 
@@ -223,11 +226,11 @@ Cette requête estime le pourcentage de bloat dans vos tables :
 ```sql
 SELECT
     schemaname,
-    tablename,
-    pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename)) AS total_size,
-    pg_size_pretty(pg_relation_size(schemaname||'.'||tablename)) AS table_size,
-    round(100 * pg_relation_size(schemaname||'.'||tablename) /
-          NULLIF(pg_total_relation_size(schemaname||'.'||tablename), 0), 2) AS table_pct,
+    relname AS tablename,
+    pg_size_pretty(pg_total_relation_size(schemaname||'.'||relname)) AS total_size,
+    pg_size_pretty(pg_relation_size(schemaname||'.'||relname)) AS table_size,
+    round(100 * pg_relation_size(schemaname||'.'||relname) /
+          NULLIF(pg_total_relation_size(schemaname||'.'||relname), 0), 2) AS table_pct,
     n_live_tup,
     n_dead_tup,
     round(100 * n_dead_tup / NULLIF(n_live_tup + n_dead_tup, 0), 2) AS dead_tuple_pct,
@@ -241,6 +244,8 @@ ORDER BY
     n_dead_tup DESC
 LIMIT 20;
 ```
+
+> ⚠️ La vue `pg_stat_user_tables` expose la colonne **`relname`** (et non `tablename`, qui appartient à `pg_tables`). On la renomme via `AS tablename` pour conserver une sortie lisible, mais la référence directe `tablename` dans le `FROM/WHERE` provoquerait une erreur `column "tablename" does not exist`.
 
 **Colonnes importantes** :
 
@@ -285,13 +290,12 @@ Les index aussi peuvent souffrir de bloat :
 ```sql
 SELECT
     schemaname,
-    tablename,
-    indexname,
+    relname        AS tablename,
+    indexrelname   AS indexname,
     pg_size_pretty(pg_relation_size(indexrelid)) AS index_size,
     idx_scan,
     idx_tup_read,
     idx_tup_fetch,
-    pg_size_pretty(pg_relation_size(indexrelid)) AS index_size,
     CASE
         WHEN idx_scan = 0 THEN 'NEVER USED'
         ELSE 'OK'
@@ -304,6 +308,8 @@ ORDER BY
     pg_relation_size(indexrelid) DESC
 LIMIT 20;
 ```
+
+> ⚠️ Dans `pg_stat_user_indexes`, le nom de la table porteuse de l'index s'appelle **`relname`** et celui de l'index **`indexrelname`** (pas `tablename`/`indexname`). On utilise `AS` pour des alias plus parlants.
 
 **Indicateurs de bloat d'index** :
 
@@ -387,13 +393,13 @@ Cette requête identifie les index qui **ne sont jamais utilisés** :
 ```sql
 SELECT
     schemaname,
-    tablename,
-    indexname,
+    relname        AS tablename,
+    indexrelname   AS indexname,
     pg_size_pretty(pg_relation_size(indexrelid)) AS index_size,
-    idx_scan AS number_of_scans,
-    idx_tup_read AS tuples_read,
-    idx_tup_fetch AS tuples_fetched,
-    pg_size_pretty(pg_relation_size(tablename::regclass)) AS table_size
+    idx_scan       AS number_of_scans,
+    idx_tup_read   AS tuples_read,
+    idx_tup_fetch  AS tuples_fetched,
+    pg_size_pretty(pg_relation_size(relid))      AS table_size
 FROM
     pg_stat_user_indexes
 WHERE
@@ -403,6 +409,8 @@ WHERE
 ORDER BY
     pg_relation_size(indexrelid) DESC;
 ```
+
+> 💡 `relid` (oid de la table porteuse) est fourni par la vue ; on l'utilise directement avec `pg_relation_size()` pour récupérer la taille de la table sans cast textuel.
 
 **Interprétation** :
 
@@ -420,8 +428,8 @@ Pour voir quelle proportion de requêtes utilise les index vs scan séquentiel :
 ```sql
 SELECT
     schemaname,
-    tablename,
-    pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename)) AS total_size,
+    relname AS tablename,
+    pg_size_pretty(pg_total_relation_size(relid)) AS total_size,
     seq_scan AS sequential_scans,
     idx_scan AS index_scans,
     round(100.0 * idx_scan / NULLIF(seq_scan + idx_scan, 0), 2) AS index_usage_pct,
@@ -432,7 +440,7 @@ WHERE
     (seq_scan + idx_scan) > 0
 ORDER BY
     seq_scan DESC,
-    pg_total_relation_size(schemaname||'.'||tablename) DESC
+    pg_total_relation_size(relid) DESC
 LIMIT 20;
 ```
 
@@ -446,10 +454,12 @@ LIMIT 20;
 
 ### 4.4. Requête : Index Redondants
 
-Des index redondants sont des index qui font "doublon". Par exemple :
+Deux notions distinctes à ne pas confondre :
 
-- Index 1 : `(a, b, c)`
-- Index 2 : `(a, b)` ← **Redondant**, car l'index 1 peut le remplacer
+- **Doublons stricts** : deux index avec **exactement les mêmes colonnes dans le même ordre** — ex. `(a, b)` et `(a, b)` (souvent issus d'une PRIMARY KEY + un index utilisateur créé par erreur). L'un est à supprimer sans discussion.
+- **Préfixes redondants** : index `(a, b)` *peut* être remplacé par `(a, b, c)` qui répond aux mêmes requêtes (ainsi qu'à plus). Mais `(a, b)` reste plus petit et plus rapide à scanner ; le « gain » d'une suppression n'est intéressant que si l'on cherche à réduire la maintenance d'écriture.
+
+La requête ci-dessous détecte les **doublons stricts** uniquement :
 
 ```sql
 SELECT
@@ -479,7 +489,9 @@ ORDER BY
 
 **Cette requête détecte** :
 - Les index ayant exactement les mêmes colonnes dans le même ordre
-- Ces index sont des **doublons parfaits** et l'un peut être supprimé
+- Ces index sont des **doublons parfaits** ; l'un peut être supprimé sans risque (vérifier qu'aucun n'appuie une contrainte `PRIMARY KEY` / `UNIQUE`).
+
+> ⚠️ Pour détecter les **préfixes redondants** (cas plus complexe), il faut comparer chaque index à tous les autres index de la même table et vérifier que le tableau de colonnes de l'un est un préfixe strict de l'autre. C'est généralement laissé à un outil externe (par ex. `pg_qualstats`, ou un audit manuel via `\d table`).
 
 ### 4.5. Requête : Cache Hit Ratio des Index
 
@@ -488,10 +500,10 @@ Mesure l'efficacité du cache pour les index :
 ```sql
 SELECT
     schemaname,
-    tablename,
-    indexrelname,
+    relname       AS tablename,
+    indexrelname  AS indexname,
     idx_blks_read AS disk_reads,
-    idx_blks_hit AS cache_hits,
+    idx_blks_hit  AS cache_hits,
     round(100.0 * idx_blks_hit / NULLIF(idx_blks_hit + idx_blks_read, 0), 2) AS cache_hit_ratio
 FROM
     pg_statio_user_indexes
@@ -512,7 +524,7 @@ Pour connaître l'empreinte disque de vos index :
 
 ```sql
 SELECT
-    indexname,
+    indexrelname AS indexname,
     pg_size_pretty(pg_relation_size(indexrelid)) AS index_size,
     idx_scan,
     idx_tup_read,
@@ -520,7 +532,7 @@ SELECT
 FROM
     pg_stat_user_indexes
 WHERE
-    tablename = 'ma_table'  -- Remplacer par votre table
+    relname = 'ma_table'  -- Remplacer par votre table (colonne 'relname' dans pg_stat_user_indexes)
 ORDER BY
     pg_relation_size(indexrelid) DESC;
 ```
@@ -609,10 +621,17 @@ WHERE state != 'idle';
 -- Étape 2 : Identifier qui bloque qui
 -- (Utiliser la requête de la section 2.4)
 
--- Étape 3 : Décision
--- Si une transaction bloque tout depuis longtemps :
-SELECT pg_terminate_backend(123456);  -- PID de la transaction bloquante
+-- Étape 3 : Action graduée
+-- D'abord, tenter d'annuler proprement (rollback de la requête en cours,
+-- la connexion reste vivante — l'application peut se reconnecter sans plantage)
+SELECT pg_cancel_backend(123456);  -- PID de la transaction bloquante
+
+-- Si pg_cancel_backend() ne suffit pas (transaction "idle in transaction" sans requête active),
+-- terminer la connexion (équivalent SIGTERM côté processus, rollback forcé)
+SELECT pg_terminate_backend(123456);  -- en dernier recours
 ```
+
+> ⚠️ `pg_cancel_backend()` n'annule **que la requête en cours** ; sur un `idle in transaction`, il n'a rien à annuler et seul `pg_terminate_backend()` libère les locks.
 
 ### Scénario 2 : Table qui Grossit sans Cesse
 
@@ -623,25 +642,31 @@ SELECT pg_terminate_backend(123456);  -- PID de la transaction bloquante
 ```sql
 -- Vérifier le bloat
 SELECT
-    tablename,
+    relname AS tablename,
     n_live_tup,
     n_dead_tup,
     round(100 * n_dead_tup / NULLIF(n_live_tup + n_dead_tup, 0), 2) AS dead_pct,
     last_autovacuum
 FROM pg_stat_user_tables  
-WHERE tablename = 'orders';  
+WHERE relname = 'orders';  
 ```
 
 **Si dead_pct > 40%** :
 
 ```sql
--- Solution 1 : VACUUM standard (rapide mais ne réduit pas la taille)
+-- Solution 1 : VACUUM standard (rapide, marque les pages réutilisables,
+-- ne rend PAS l'espace au système de fichiers — la table reste à 500 GB
+-- mais les nouveaux INSERT réutilisent l'espace mort)
 VACUUM ANALYZE orders;
 
--- Solution 2 : VACUUM FULL (hors prod, bloque la table)
+-- Solution 2 : VACUUM FULL (réécrit la table en place)
+-- ⚠️ Pose un AccessExclusiveLock : aucune lecture ni écriture pendant
+-- l'opération. Réservé aux fenêtres de maintenance.
 VACUUM FULL orders;
 
--- Solution 3 : pg_repack (recommandé, pas de blocage)
+-- Solution 3 : pg_repack (recommandé en production)
+-- Réécrit la table sans bloquer les lectures/écritures (juste un bref
+-- AccessExclusiveLock à la fin pour le swap).
 -- En ligne de commande :
 -- pg_repack -d ma_base -t orders
 ```
@@ -653,20 +678,24 @@ VACUUM FULL orders;
 **Diagnostic** :
 
 ```sql
--- Étape 1 : Vérifier les index inutilisés
--- (Section 4.2)
+-- Étape 1 : Mettre à jour les statistiques (cause #1 de dégradation soudaine)
+-- Des stats obsolètes après un gros INSERT/UPDATE/DELETE peuvent faire basculer
+-- le planner d'un Index Scan vers un Seq Scan en quelques minutes.
+ANALYZE products;
 
 -- Étape 2 : Analyser le plan d'exécution
-EXPLAIN ANALYZE  
+EXPLAIN (ANALYZE, BUFFERS)  -- BUFFERS : actif par défaut sous ANALYZE en PG 18  
 SELECT * FROM products WHERE category = 'Electronics';  
 
--- Étape 3 : Si vous voyez "Seq Scan" sur une grosse table
--- Créer un index :
-CREATE INDEX idx_products_category ON products(category);
+-- Étape 3 : Si "Seq Scan" persiste sur une grosse table avec un filtre sélectif,
+-- créer un index :
+CREATE INDEX CONCURRENTLY idx_products_category ON products(category);
 
--- Étape 4 : Forcer la mise à jour des statistiques
-ANALYZE products;
+-- Étape 4 : Vérifier les index inutilisés (peut révéler un index manquant adjacent)
+-- (Section 4.2)
 ```
+
+> 💡 **Pourquoi ANALYZE en premier ?** Une requête « subitement lente » est très souvent un changement de plan d'exécution dû à des statistiques périmées, pas un véritable problème d'indexation. ANALYZE est gratuit et résout 30 à 40 % des cas avant même d'avoir à créer un index.
 
 ### Scénario 4 : Trop d'Index, Performances INSERT Dégradées
 
@@ -677,21 +706,26 @@ ANALYZE products;
 ```sql
 -- Lister tous les index d'une table avec leur usage
 SELECT
-    indexname,
+    indexrelname AS indexname,
     pg_size_pretty(pg_relation_size(indexrelid)) AS size,
     idx_scan
 FROM pg_stat_user_indexes  
-WHERE tablename = 'ma_table'  
+WHERE relname = 'ma_table'  
 ORDER BY idx_scan ASC;  
 ```
 
 **Solution** : Supprimer les index avec `idx_scan = 0` :
 
 ```sql
-DROP INDEX idx_unused_column;
+-- En production : CONCURRENTLY évite l'AccessExclusiveLock sur la table
+-- (ne peut PAS s'exécuter dans une transaction)
+DROP INDEX CONCURRENTLY idx_unused_column;
 ```
 
-**Attention** : Surveillez les performances après suppression pendant quelques jours.
+**Attention** :
+- Vérifier d'abord que l'index n'est pas une contrainte (UNIQUE/PRIMARY KEY) — auquel cas il faut `ALTER TABLE … DROP CONSTRAINT`.  
+- Avant PG 16, `last_idx_scan` n'existait pas : un `idx_scan = 0` pouvait simplement signifier que les stats avaient été réinitialisées récemment (`pg_stat_reset()`). En PG 16+, vérifier `last_idx_scan IS NULL` ou très ancien avant de supprimer.  
+- Surveillez les performances pendant quelques jours après suppression — au besoin, recréer l'index avec `CREATE INDEX CONCURRENTLY` est rapide.
 
 ---
 
@@ -713,7 +747,7 @@ DROP INDEX idx_unused_column;
 
 ### 6.2. Configuration de l'Autovacuum
 
-**PostgreSQL 18** : Autovacuum amélioré avec ajustements dynamiques.
+**PostgreSQL 18** : Autovacuum amélioré avec ajustements dynamiques (`autovacuum_max_workers` désormais rechargeable à chaud, plafonné par le nouveau `autovacuum_worker_slots`).
 
 Paramètres clés à tuner dans `postgresql.conf` :
 
@@ -721,29 +755,37 @@ Paramètres clés à tuner dans `postgresql.conf` :
 # Activer autovacuum (par défaut activé)
 autovacuum = on
 
-# Nombre de workers (augmenter si beaucoup de tables actives)
-autovacuum_max_workers = 3  # Défaut, augmenter à 5-10 si nécessaire
+# PG 18 : pool statique de slots de workers (restart requis pour modifier)
+autovacuum_worker_slots = 16          # défaut PG 18, plafond physique
 
-# PostgreSQL 18 : Nouveau paramètre
-autovacuum_vacuum_max_threshold = 50000000
+# Nombre de workers concurrents (PG 18 : modifiable à chaud par reload)
+autovacuum_max_workers = 3            # défaut, monter à 5-10 si nécessaire
+# Contrainte : autovacuum_max_workers ≤ autovacuum_worker_slots
+
+# PG 18 : plafond absolu de dead tuples avant déclenchement
+# (utile pour les très grandes tables où le scale_factor seul tarderait trop)
+autovacuum_vacuum_max_threshold = 100000000   # 100M lignes mortes (défaut PG 18)
 
 # Seuil de déclenchement (% de lignes modifiées)
 autovacuum_vacuum_scale_factor = 0.1  # 10% de la table
 
 # Coût du vacuum (limiter l'impact I/O)
-autovacuum_vacuum_cost_delay = 2ms  # Pause entre I/O  
-autovacuum_vacuum_cost_limit = 200  # Budget I/O  
+autovacuum_vacuum_cost_delay = 2ms    # Pause entre I/O  
+autovacuum_vacuum_cost_limit = 200    # Budget I/O  
 ```
+
+> 💡 **À retenir (PG 18)** : `autovacuum_worker_slots` (statique, 16 par défaut) dimensionne le pool ; `autovacuum_max_workers` (dynamique, 3 par défaut) plafonne le nombre de workers actifs. Provisionner `autovacuum_worker_slots` généreusement dès l'initdb pour pouvoir monter `autovacuum_max_workers` à chaud sans redémarrage.
 
 ### 6.3. Stratégie d'Indexation
 
 **Principes** :
 
-1. **Indexez les colonnes de filtrage (WHERE)** : Toujours  
-2. **Indexez les colonnes de jointure (JOIN)** : FK notamment  
-3. **Indexez les colonnes de tri (ORDER BY)** : Si tri fréquent  
-4. **N'indexez pas les petites tables** : < 10 000 lignes, inutile  
-5. **Utilisez des index partiels** : Pour filtrer sur des valeurs spécifiques
+1. **Indexez les colonnes de filtrage (WHERE)** : si la sélectivité est bonne (< 5-10 % des lignes)  
+2. **Indexez les colonnes de jointure (JOIN)** : FK notamment (PostgreSQL n'indexe pas les FK automatiquement)  
+3. **Indexez les colonnes de tri (ORDER BY)** : si tri fréquent et combiné avec un WHERE indexable  
+4. **Inutile sur les très petites tables** : sous quelques milliers de lignes, un Seq Scan est souvent plus rapide qu'un Index Scan  
+5. **Utilisez des index partiels** : pour filtrer sur des valeurs spécifiques (`WHERE status = 'pending'`)  
+6. **PG 18 — Skip Scan** : les B-tree composites bénéficient désormais d'un Skip Scan quand la première colonne n'est pas filtrée mais a peu de valeurs distinctes — moins d'index redondants nécessaires.
 
 **Exemple d'index partiel** :
 

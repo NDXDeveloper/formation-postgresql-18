@@ -123,7 +123,7 @@ ORDER BY schemaname, tablename;
 
 ## Organisation de ce Guide
 
-Ce guide est organisé en **5 sections progressives**, de la navigation de base aux techniques avancées. Chaque section peut être lue indépendamment, mais nous recommandons de les parcourir dans l'ordre si vous débutez avec psql.
+Ce guide est organisé en **4 sections progressives**, de la navigation de base aux techniques avancées. Chaque section peut être lue indépendamment, mais nous recommandons de les parcourir dans l'ordre si vous débutez avec psql.
 
 ### 📘 Section 1 : Navigation
 
@@ -380,7 +380,7 @@ CREATE TABLE commandes (
     id SERIAL PRIMARY KEY,
     client_id INTEGER REFERENCES clients(id),
     montant_total NUMERIC(10, 2),
-    date_commande TIMESTAMP DEFAULT NOW()
+    date_commande TIMESTAMPTZ DEFAULT NOW()   -- TIMESTAMPTZ recommandé (stocké en UTC)
 );
 
 -- Insérer des données de test

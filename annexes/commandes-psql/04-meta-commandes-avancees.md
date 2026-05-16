@@ -28,10 +28,12 @@ Ces méta-commandes sont souvent méconnues, même par des utilisateurs expérim
 ### Syntaxe
 
 ```
-\watch [SECONDS]
+\watch [ [ i= ]SECONDS ] [ c= COUNT ] [ m= MIN_ROWS ]
 ```
 
-**Par défaut** : 2 secondes si aucun intervalle n'est spécifié.
+- `SECONDS` : intervalle entre exécutions (par défaut **2 s**, fractions acceptées depuis PG 14, ex. `0.5`).
+- `c=COUNT` (PG 16+) : nombre maximum d'itérations (sinon `\watch` tourne jusqu'à interruption).
+- `m=MIN_ROWS` (PG 16+) : interrompt automatiquement dès que le résultat retourne **moins** de `MIN_ROWS` lignes (parfait pour « attendre qu'une file se vide »).
 
 ---
 
@@ -47,7 +49,7 @@ WHERE state = 'active';
 
 \watch
 
-# Résultat : La requête s'exécute toutes les 2 secondes
+# Résultat : la requête s'exécute toutes les 2 secondes
 # Thu Nov 21 14:23:45 2024 (every 2s)
 #  connexions_actives
 # --------------------
@@ -61,7 +63,19 @@ WHERE state = 'active';
 # (1 row)
 ```
 
-**Arrêter** : Appuyez sur `Ctrl+C` ou `q`
+**Arrêter** : `Ctrl+C` à tout moment, ou la touche `q` (PG 15+). En PG 14 et antérieures, seul `Ctrl+C` fonctionne.
+
+#### Variantes utiles (PG 16+)
+
+```sql
+-- Exécuter 5 fois toutes les 10 secondes puis s'arrêter
+SELECT pg_current_wal_lsn();
+\watch i=10 c=5
+
+-- Attendre que la file de jobs soit vide (s'arrête dès que la requête renvoie 0 ligne)
+SELECT id FROM job_queue WHERE state = 'pending' LIMIT 1;
+\watch i=1 m=1
+```
 
 ---
 
@@ -108,11 +122,11 @@ SELECT generate_series(1, 1000000), 'message', NOW();
 -- Terminal 2 : Surveiller la progression
 SELECT
     schemaname,
-    tablename,
+    relname AS tablename,
     n_tup_ins as insertions,
     n_tup_upd as updates
 FROM pg_stat_user_tables  
-WHERE tablename = 'logs';  
+WHERE relname = 'logs';   -- pg_stat_user_tables expose 'relname', pas 'tablename'  
 
 \watch 1
 ```
@@ -270,7 +284,7 @@ SELECT
     n_tup_upd as updates,
     n_tup_del as deletions
 FROM pg_stat_user_tables  
-WHERE tablename = 'clients'  
+WHERE relname = 'clients'   -- pg_stat_user_tables expose 'relname'  
 \gset stats_
 
 -- Variables créées : stats_insertions, stats_updates, stats_deletions
@@ -408,14 +422,18 @@ WHERE tablename LIKE 'old_%'
 
 ```sql
 -- Créer une fonction d'exemple
-CREATE OR REPLACE FUNCTION calculer_total(commande_id INTEGER)  
+-- ⚠️ On préfixe le paramètre avec p_ pour éviter le piège classique d'ambiguïté
+-- en PL/pgSQL : si paramètre et colonne portent le même nom, le paramètre
+-- masque la colonne dans la requête → WHERE commande_id = commande_id devient
+-- toujours vrai et retourne tout. Toujours utiliser p_<nom> ou _<nom>.
+CREATE OR REPLACE FUNCTION calculer_total(p_commande_id INTEGER)  
 RETURNS NUMERIC AS $$  
 DECLARE  
     total NUMERIC;
 BEGIN
     SELECT SUM(prix * quantite) INTO total
     FROM lignes_commandes
-    WHERE commande_id = $1;
+    WHERE commande_id = p_commande_id;
 
     RETURN COALESCE(total, 0);
 END;
@@ -425,7 +443,7 @@ $$ LANGUAGE plpgsql;
 \sf calculer_total
 
 # Résultat :
-# CREATE OR REPLACE FUNCTION public.calculer_total(commande_id integer)
+# CREATE OR REPLACE FUNCTION public.calculer_total(p_commande_id integer)
 #  RETURNS numeric
 #  LANGUAGE plpgsql
 # AS $function$
@@ -434,7 +452,7 @@ $$ LANGUAGE plpgsql;
 # BEGIN
 #     SELECT SUM(prix * quantite) INTO total
 #     FROM lignes_commandes
-#     WHERE commande_id = $1;
+#     WHERE commande_id = p_commande_id;
 #
 #     RETURN COALESCE(total, 0);
 # END;
@@ -1216,7 +1234,13 @@ FROM generate_series(1, 10) as i
 \pset footer off
 \pset border 2
 
-\o /tmp/rapport_$(date +%Y%m%d).txt
+-- ⚠️ La syntaxe $(…) du shell n'est PAS interprétée par psql.
+--    Pour incorporer la date dans un nom de fichier, on capture
+--    la sortie d'une commande shell avec des `backticks` dans \set.
+\set report_date `date +%Y%m%d`
+\set report_path '/tmp/rapport_' :report_date '.txt'
+
+\o :report_path
 
 \echo '╔════════════════════════════════════════╗'
 \echo '║   RAPPORT QUOTIDIEN                    ║'
@@ -1251,7 +1275,7 @@ LIMIT 10;
 
 \o
 \set QUIET off
-\echo 'Rapport sauvegardé dans /tmp/rapport_$(date +%Y%m%d).txt'
+\echo 'Rapport sauvegardé dans' :report_path
 ```
 
 ---
@@ -1555,16 +1579,16 @@ ROLLBACK;
 
 Les méta-commandes avancées de psql transforment votre productivité. Points clés :
 
-🎯 **Surveillance** :  
+🎯 **Surveillance** :
 - `\watch` pour monitoring en temps réel
 - Parfait pour développement et debugging
 
-⚡ **Automatisation** :  
+⚡ **Automatisation** :
 - `\gexec` pour générer et exécuter du SQL  
 - `\gset` pour scripts dynamiques
 - Variables pour scripts réutilisables
 
-✏️ **Édition** :  
+✏️ **Édition** :
 - `\ef` et `\ev` pour éditer fonctions/vues  
 - `\e` pour requêtes complexes  
 - `\sf` et `\sv` pour apprendre

@@ -882,17 +882,23 @@ effective_io_concurrency = 100 à 300
 ```
 Dépend du type de volume (gp2, gp3, io1, io2).
 
-#### PostgreSQL 18 : Nouveautés I/O
+#### PostgreSQL 18 : Nouveautés I/O 🆕
 
-**Nouveau paramètre** : `io_method`
+**Nouveau paramètre** : `io_method` (sous-système d'**I/O asynchrone**, AIO).
 
+```ini
+# Trois valeurs possibles (défaut PG 18 : 'worker')
+io_method = worker     # Background workers dédiés — portable, sans prérequis
+# io_method = io_uring # Linux kernel ≥ 5.1, binaire compilé --with-liburing
+# io_method = sync     # Comportement antérieur à PG 18 (bloquant)
+
+# Optionnel : nombre de workers I/O
+io_workers = 3         # défaut 3, à augmenter pour des workloads OLAP
 ```
-# PostgreSQL 18
-io_method = 'worker'  # Nouveau : I/O asynchrone (AIO)
-                     # Ancienne valeur : 'sync'
-```
 
-Le mode `async` peut améliorer les performances I/O de **jusqu'à 3×** sur des charges de travail intensives.
+> ⚠️ Seul `io_uring` exige un noyau Linux ≥ 5.1 et un binaire compilé avec `liburing`. `worker` est portable. En cas de doute, garder `worker`.
+
+L'AIO bénéficie surtout aux charges dominées par les lectures séquentielles et le *prefetch* (OLAP, *bitmap heap scan*, `VACUUM`). Les bénéfices côté OLTP transactionnel court sont plus modestes.
 
 #### Impact d'une Mauvaise Configuration
 
@@ -1367,17 +1373,22 @@ Désactiver l'autovacuum peut causer :
 autovacuum_max_workers = 3
 ```
 
-#### PostgreSQL 18 : Nouveautés
+#### PostgreSQL 18 : Nouveautés 🆕
 
-**Nouveau paramètre** : `autovacuum_worker_slots`
+PG 18 sépare nettement deux notions :
 
-Permet d'augmenter dynamiquement le nombre de workers autovacuum selon la charge.
+- **`autovacuum_worker_slots`** *(nouveau, défaut 16)* : dimensionne le **pool de slots** de workers réservés en mémoire partagée au démarrage. **Statique** — nécessite un `restart` pour être modifié.
+- **`autovacuum_max_workers`** *(défaut 3)* : nombre maximum de workers autovacuum **concurrents**. **Désormais modifiable à chaud** (`reload`), tant que ≤ `autovacuum_worker_slots`.
 
-```
+Cette séparation permet d'ajuster la concurrence de vacuum **sans redémarrer** PostgreSQL, ce qui était la principale limite de `autovacuum_max_workers` en PG ≤ 17.
+
+```ini
 # PostgreSQL 18
-autovacuum_max_workers = 5  
-autovacuum_worker_slots = 10  # Nouveau  
+autovacuum_max_workers   = 5    # ajustable à chaud (SIGHUP)  
+autovacuum_worker_slots  = 10   # plafond statique (restart requis)  
 ```
+
+> ⚠️ Si `autovacuum_max_workers > autovacuum_worker_slots`, l'excédent est ignoré : seul le minimum des deux est effectif. Pensez à dimensionner `autovacuum_worker_slots` généreusement dès l'`initdb`/restart pour pouvoir monter `autovacuum_max_workers` plus tard sans interruption.
 
 #### Recommandations
 
@@ -1595,19 +1606,35 @@ ssl_key_file = '/etc/ssl/private/server.key'
 ssl_ca_file = '/etc/ssl/certs/ca.crt'  # Optionnel  
 ```
 
-#### PostgreSQL 18 : Nouveautés TLS
+#### PostgreSQL 18 : Nouveautés TLS et FIPS 🆕
 
-**TLS 1.3 et chiffrements FIPS** :
-```
+**Nouveau paramètre `ssl_tls13_ciphers`** : permet de **configurer explicitement** les suites cryptographiques pour TLS 1.3 (avant PG 18, seules les suites TLS ≤ 1.2 étaient configurables via `ssl_ciphers`).
+
+```ini
 # PostgreSQL 18
 ssl_min_protocol_version = 'TLSv1.3'  
-ssl_tls13_ciphers = 'TLS_AES_256_GCM_SHA384:TLS_AES_128_GCM_SHA256'  
+ssl_tls13_ciphers = 'TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_SHA256:TLS_AES_128_GCM_SHA256'  
+ssl_ciphers = 'HIGH:MEDIUM:!aNULL:!3DES'   # suites TLS 1.2 (déjà existant)  
 ```
 
-**Mode FIPS** (pour conformité gouvernementale) :
+> ⚠️ Liste séparée par des `:`. Si vide (défaut), OpenSSL choisit les suites par défaut.
+
+**Mode FIPS (conformité gouvernementale FIPS 140-2/3)** :
+
+Il n'existe **pas** de paramètre PostgreSQL `ssl_library = 'fips'` qui activerait FIPS. Le mode FIPS s'active **au niveau d'OpenSSL** (provider FIPS d'OpenSSL 3.x ou kernel `fips=1` côté RHEL). PostgreSQL 18 ajoute en revanche des outils pour **vérifier** et **adapter** son comportement :
+
+```sql
+-- 1. Vérifier que la lib OpenSSL liée tourne en mode FIPS
+SELECT fips_mode();   -- fourni par l'extension pgcrypto
+
+-- 2. Désactiver les implémentations cryptos intégrées de pgcrypto
+--    quand OpenSSL est en mode FIPS (pour ne garder que des algos validés)
+ALTER SYSTEM SET pgcrypto.builtin_crypto_enabled = 'fips';
+-- Valeurs : 'on' (défaut) | 'off' | 'fips'
+SELECT pg_reload_conf();
 ```
-ssl_library = 'fips'  # Nouveau dans PG 18
-```
+
+> 🏆 **Bonne pratique conformité** : combiner `ssl_min_protocol_version = 'TLSv1.3'`, `password_encryption = scram-sha-256`, OpenSSL compilé/configuré FIPS, et `pgcrypto.builtin_crypto_enabled = 'fips'` pour limiter strictement la cryptographie aux algorithmes validés.
 
 #### Recommandations
 
@@ -1697,22 +1724,36 @@ log_statement = 'all'
 
 ---
 
-### 10.5. PostgreSQL 18 : Authentification OAuth 2.0
+### 10.5. PostgreSQL 18 : Authentification OAuth 2.0 🆕
 
-**Nouveauté majeure** : PostgreSQL 18 supporte nativement OAuth 2.0 pour l'authentification.
+**Nouveauté majeure** : PostgreSQL 18 supporte nativement OAuth 2.0 pour l'authentification — via une méthode `oauth` dans `pg_hba.conf` (et non `oauth2`).
 
-#### Configuration pg_hba.conf
+#### Configuration `pg_hba.conf`
+
+La syntaxe exige **trois paramètres** au minimum : `issuer`, `scope`, `validator` (référence à un module de validation côté serveur). L'URL `issuer` doit être en **HTTPS** et matcher *exactement* celle déclarée par le fournisseur d'identité.
 
 ```
-# Authentification via OAuth 2.0
-host all all 0.0.0.0/0 oauth2 issuer=https://auth.example.com
+# TYPE   DATABASE  USER    ADDRESS         METHOD  OPTIONS
+hostssl  all       all     0.0.0.0/0       oauth   issuer="https://auth.example.com" \
+                                                   scope="openid profile" \
+                                                   validator=my_validator \
+                                                   map="oauth_map"
 ```
+
+**Paramètres clés** :
+- `issuer="https://…"` : URL exacte du fournisseur OAuth/OIDC (Keycloak, Okta, Auth0, Azure AD, Google Workspace…). HTTPS obligatoire, même en local.
+- `scope="…"` : scopes OAuth nécessaires, séparés par des espaces (ex. `"openid profile email"`).
+- `validator=…` : nom d'un *validator module* compilé/installé côté serveur (responsable de vérifier les tokens auprès du fournisseur).
+- `map="…"` *(optionnel)* : mapping `pg_ident.conf` entre identité externe et rôle PostgreSQL.
+
+> ⚠️ Le `validator` n'est **pas fourni par PostgreSQL** lui-même : c'est une extension/module à installer (par exemple un module spécifique à Keycloak ou Azure AD). PG 18 fournit l'**infrastructure** OAuth, les *validators* sont écrits par la communauté ou les fournisseurs.
 
 #### Avantages
 
-- Intégration avec des fournisseurs d'identité (Okta, Auth0, Azure AD)
-- Single Sign-On (SSO)
-- Authentification moderne et sécurisée
+- Intégration avec des fournisseurs d'identité (Okta, Auth0, Azure AD, Keycloak, Google Workspace)
+- *Single Sign-On* (SSO) homogène avec le reste du SI
+- Authentification moderne, *bearer tokens*, plus de mots de passe partagés côté DB
+- Compatible *workflow* MFA délégué au fournisseur d'identité
 
 ---
 
@@ -1724,32 +1765,27 @@ PostgreSQL 18 introduit un **nouveau sous-système I/O asynchrone** qui peut am�
 
 **Description** : Méthode d'I/O utilisée par PostgreSQL.
 
-**Nouveau dans PostgreSQL 18**.
+**Nouveau dans PostgreSQL 18** 🆕.
 
 **Valeurs possibles** :
-- `sync` : I/O synchrone (ancien comportement)  
-- `async` : I/O asynchrone (nouveau, plus rapide)
+- `worker` *(défaut PG 18)* : *background workers* dédiés émettant les I/O en asynchrone. Portable, **aucun prérequis kernel**.
+- `io_uring` : interface Linux moderne. Exige un kernel **≥ 5.1** et un binaire compilé avec `--with-liburing`. Souvent plus efficace quand disponible.
+- `sync` : comportement bloquant antérieur à PG 18 (utile pour reproduire le comportement historique ou contourner un bug).
 
-**Valeur par défaut (PostgreSQL 18)** :
-```
-io_method = 'worker'
-```
+**Recommandations** :
 
-#### Performances
+```ini
+# Production PG 18 (défaut, fonctionne partout)
+io_method = worker
 
-Le mode `async` peut améliorer les performances de **jusqu'à 3× sur des charges I/O intensives**.
+# Production PG 18 sur Linux récent avec gains mesurés (benchmark)
+# io_method = io_uring
 
-#### Recommandations
-
-**PostgreSQL 18 en production** :
-```
-io_method = 'worker'
+# Repli si problème observé attribuable à l'AIO
+# io_method = sync
 ```
 
-**Si problèmes de stabilité** :
-```
-io_method = 'sync'  # Retour au comportement classique
-```
+**Paramètre associé** : `io_workers` (défaut 3, à augmenter pour OLAP).
 
 ---
 
@@ -2189,26 +2225,29 @@ FROM pg_statio_user_tables;
 #### Index Usage
 
 ```sql
+-- pg_stat_user_indexes expose 'relname' (table) et 'indexrelname' (index)
 SELECT
     schemaname,
-    tablename,
-    indexrelname,
+    relname       AS tablename,
+    indexrelname  AS indexname,
     idx_scan,
+    last_idx_scan,           -- 🆕 PG 16+ : timestamp du dernier scan
     idx_tup_read,
     idx_tup_fetch
 FROM pg_stat_user_indexes  
 ORDER BY idx_scan DESC;  
 ```
 
-**Recherchez** : Index avec `idx_scan = 0` (inutilisés)
+**Recherchez** : Index avec `idx_scan = 0` (inutilisés) **et** un `last_idx_scan` ancien ou `NULL`.
 
 #### Table Bloat (estimation)
 
 ```sql
+-- pg_stat_user_tables expose 'relname' (et non 'tablename')
 SELECT
     schemaname,
-    tablename,
-    pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename)) AS size,
+    relname AS tablename,
+    pg_size_pretty(pg_total_relation_size(relid)) AS size,
     n_live_tup,
     n_dead_tup,
     round(n_dead_tup * 100.0 / NULLIF(n_live_tup + n_dead_tup, 0), 2) AS dead_pct

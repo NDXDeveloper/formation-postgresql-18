@@ -682,16 +682,20 @@ ORDER BY cache_hit_ratio ASC;
 **Script : Index Inutilisés**
 
 ```sql
+-- pg_stat_user_indexes expose 'relname' (table) et 'indexrelname' (index),
+-- pas 'tablename' / 'indexname' (qui sont les noms exposés par pg_indexes).
+-- Exclure aussi les index supportant une PRIMARY KEY / UNIQUE (contype = p/u)
+-- pour ne pas suggérer de supprimer un index lié à une contrainte.
 SELECT
     schemaname,
-    tablename,
-    indexname,
+    relname       AS tablename,
+    indexrelname  AS indexname,
     idx_scan,
-    pg_size_pretty(pg_relation_size(indexrelid)) as size
+    pg_size_pretty(pg_relation_size(indexrelid)) AS size
 FROM pg_stat_user_indexes  
 WHERE idx_scan = 0  
     AND indexrelid NOT IN (
-        SELECT indexrelid FROM pg_constraint WHERE contype IN ('p','u')
+        SELECT conindid FROM pg_constraint WHERE contype IN ('p','u')
     )
 ORDER BY pg_relation_size(indexrelid) DESC;
 ```

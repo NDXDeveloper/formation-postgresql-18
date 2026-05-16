@@ -329,33 +329,62 @@ SELECT
 - **cache_coverage_pct > 50%** : Excellent, une grande partie de la DB peut tenir en cache  
 - **cache_coverage_pct < 10%** : Très peu de données en cache, augmentez shared_buffers si possible
 
-### 2.8. Nouveauté PostgreSQL 18 : Statistiques I/O par Backend
+### 2.8. Statistiques I/O détaillées : `pg_stat_io`
 
-PostgreSQL 18 ajoute des statistiques I/O détaillées par processus backend :
+> ℹ️ **Disponibilité** : la vue `pg_stat_io` est disponible depuis **PostgreSQL 16**. En **PG 18**, elle s'enrichit notamment d'informations supplémentaires liées au sous-système d'**I/O asynchrone** (AIO 🆕, sélectionnable via `io_method`).
+
+`pg_stat_io` détaille les I/O par **combinaison** *type de backend × type d'objet × contexte × opération* (au lieu d'agréger globalement). On peut ainsi répondre à : *« quels backends génèrent le plus de lectures disque ? sur quelles structures (`relation`, `temp relation`, `bgwriter`, `checkpointer`…) ? avec quelle latence ? »*
+
+**Exemple : où passe l'I/O sur le cluster** :
+
+**Variante PostgreSQL 18** (colonnes `read_bytes` / `write_bytes` / `extend_bytes` ajoutées, `op_bytes` supprimée) :
 
 ```sql
--- Requête pour voir les I/O par session active
+-- PostgreSQL 18+
 SELECT
-    pid,
-    usename,
-    application_name,
-    query,
     backend_type,
-    -- Statistiques I/O (PostgreSQL 18)
-    CASE
-        WHEN backend_type = 'client backend' THEN 'Active Connection'
-        ELSE backend_type
-    END AS connection_type
-FROM
-    pg_stat_activity
-WHERE
-    state = 'active'
-    AND pid != pg_backend_pid()  -- Exclure cette requête
-ORDER BY
-    query_start DESC;
+    object,
+    context,
+    reads,
+    pg_size_pretty(read_bytes)   AS reads_volume,
+    writes,
+    pg_size_pretty(write_bytes)  AS writes_volume,
+    extends,
+    pg_size_pretty(extend_bytes) AS extends_volume,
+    hits,
+    evictions
+FROM pg_stat_io  
+WHERE reads > 0 OR writes > 0  
+ORDER BY read_bytes DESC NULLS LAST, write_bytes DESC NULLS LAST  
+LIMIT 20;  
 ```
 
-**Note** : Les colonnes I/O détaillées sont disponibles dans les vues `pg_stat_io` (PostgreSQL 18).
+**Variante PostgreSQL 16-17** (la vue existait déjà, avec une seule colonne `op_bytes` partagée) :
+
+```sql
+-- PostgreSQL 16-17 : taille par opération via op_bytes (généralement 8192)
+SELECT
+    backend_type,
+    object,
+    context,
+    reads,
+    pg_size_pretty((reads * op_bytes)::bigint)   AS reads_volume,
+    writes,
+    pg_size_pretty((writes * op_bytes)::bigint)  AS writes_volume,
+    extends,
+    hits
+FROM pg_stat_io  
+WHERE reads > 0 OR writes > 0  
+ORDER BY reads DESC NULLS LAST, writes DESC NULLS LAST  
+LIMIT 20;  
+```
+
+> ⚠️ **Changement non rétrocompatible PG 18** : la colonne **`op_bytes` a été supprimée** au profit de **`read_bytes`**, **`write_bytes`** et **`extend_bytes`**. Motif : avec `io_combine_limit`, une « opération » peut désormais couvrir plusieurs pages d'un coup, et les opérations WAL ne sont pas alignées sur la taille de page. Les scripts portés de PG 17 vers PG 18 doivent être ajustés.
+
+**Backends typiques** : `client backend`, `autovacuum worker`, `background writer`, `checkpointer`, `walwriter`, `walsender`, `standalone backend`.  
+**Contextes** : `normal`, `bulkread`, `bulkwrite`, `vacuum`.  
+
+> 💡 Couplée à `\dconfig io_*` (paramètres `io_method`, `io_workers`…), `pg_stat_io` permet de mesurer concrètement l'impact du choix de l'I/O asynchrone PG 18.
 
 ---
 
@@ -721,25 +750,30 @@ LIMIT 20;
 
 ### 4.3. Checkpoint Frequency et WAL Generation
 
-Les checkpoints fréquents indiquent une écriture intensive :
+Les checkpoints fréquents indiquent une écriture intensive.
+
+> ⚠️ **PostgreSQL 17+** : les statistiques liées au *checkpointer* ont été **déplacées** de `pg_stat_bgwriter` vers une nouvelle vue dédiée **`pg_stat_checkpointer`**. La requête ci-dessous joint les deux pour rester compatible avec PG 17 et PG 18.
 
 ```sql
+-- PostgreSQL 17 / 18 : checkpointer ↔ bgwriter séparés
 SELECT
-    checkpoints_timed,
-    checkpoints_req,
-    checkpoint_write_time,
-    checkpoint_sync_time,
-    buffers_checkpoint,
-    buffers_clean,
-    buffers_backend
-FROM
-    pg_stat_bgwriter;
+    c.num_timed       AS checkpoints_timed,
+    c.num_requested   AS checkpoints_req,
+    c.write_time      AS checkpoint_write_time_ms,
+    c.sync_time       AS checkpoint_sync_time_ms,
+    c.buffers_written AS buffers_checkpoint,
+    b.buffers_clean,
+    b.maxwritten_clean
+FROM pg_stat_checkpointer c  
+CROSS JOIN pg_stat_bgwriter b;  
 ```
+
+> Sur **PostgreSQL ≤ 16**, gardez l'ancienne forme : `SELECT checkpoints_timed, checkpoints_req, checkpoint_write_time, checkpoint_sync_time, buffers_checkpoint, buffers_clean FROM pg_stat_bgwriter;`.
 
 **Analyse** :
 
 - **checkpoints_req > checkpoints_timed** : Checkpoints forcés, augmentez `max_wal_size`  
-- **checkpoint_write_time élevé** : Disque lent ou surcharge I/O
+- **checkpoint_write_time_ms élevé** : Disque lent ou surcharge I/O
 
 **Configuration recommandée** :
 
@@ -800,9 +834,14 @@ FROM
 - **replay_lag_mb < 100 MB** : Bon  
 - **replay_lag_mb > 1 GB** : Le standby est en retard, enquêter
 
-### 4.6. Nouveauté PostgreSQL 18 : Statistiques VACUUM et ANALYZE
+### 4.6. Suivi des passages VACUUM / ANALYZE
 
-PostgreSQL 18 enrichit les statistiques de maintenance :
+> ℹ️ Les compteurs `vacuum_count`, `autovacuum_count`, `analyze_count`, `autoanalyze_count` **ne sont pas nouveaux en PG 18** : ils existent depuis plusieurs versions majeures. Ce qui change *vraiment* côté autovacuum en PG 18 :  
+> - 🆕 **4 nouvelles colonnes de temps cumulé** dans `pg_stat_all_tables` : `total_vacuum_time`, `total_autovacuum_time`, `total_analyze_time`, `total_autoanalyze_time` (en millisecondes) — on peut désormais distinguer une table à `autovacuum_count = 100` qui passe en 50 ms d'une autre qui consomme 30 minutes par passe.  
+> - 🆕 Le paramètre `autovacuum_vacuum_max_threshold` (plafond absolu, défaut 100 M).  
+> - 🆕 La possibilité de changer `autovacuum_max_workers` à chaud (limité par `autovacuum_worker_slots`, défaut 16, statique).
+
+Cette requête reste utile pour vérifier que **VACUUM** et **ANALYZE** passent à une fréquence cohérente avec l'activité des tables — et, en PG 18, à un coût raisonnable :
 
 ```sql
 SELECT
@@ -812,11 +851,19 @@ SELECT
     last_autovacuum,
     vacuum_count,
     autovacuum_count,
+    -- 🆕 PG 18 : temps cumulé en ms (NULL ou 0 sur versions antérieures)
+    total_vacuum_time,
+    total_autovacuum_time,
     last_analyze,
     last_autoanalyze,
     analyze_count,
     autoanalyze_count,
-    n_dead_tup
+    -- 🆕 PG 18 : idem pour ANALYZE
+    total_analyze_time,
+    total_autoanalyze_time,
+    n_live_tup,
+    n_dead_tup,
+    n_mod_since_analyze
 FROM
     pg_stat_all_tables
 WHERE
@@ -826,7 +873,53 @@ ORDER BY
 LIMIT 20;
 ```
 
-**Nouveauté** : Compteurs `vacuum_count` et `analyze_count` pour suivre la fréquence de maintenance.
+**Compteurs disponibles** :
+- `vacuum_count` / `autovacuum_count` : nombre de `VACUUM` manuels / autovacuum.
+- `analyze_count` / `autoanalyze_count` : idem pour `ANALYZE`.
+- 🆕 **PG 18** — `total_*_time` : temps cumulé en millisecondes. Permet de repérer une table qui *coûte trop cher* à entretenir (plutôt que simplement *visitée souvent*).
+- `n_mod_since_analyze` : nombre de modifications depuis le dernier `ANALYZE`.
+
+> 💡 **Exploitation PG 18** : trier par `total_autovacuum_time DESC` plutôt que par `autovacuum_count DESC` pour identifier les tables qui consomment réellement les ressources du worker autovacuum.
+
+### 4.7. Suivre les opérations longues en cours : `pg_stat_progress_*`
+
+Les vues `pg_stat_progress_*` exposent, **en temps réel**, l'avancement des opérations bloquantes pour pouvoir répondre à *« VACUUM tourne depuis 2 heures, en est-il à 10 % ou à 95 % ? »* sans le tuer pour le redémarrer.
+
+| Vue | Depuis | Suit |
+|---|---|---|
+| `pg_stat_progress_vacuum` | PG 9.6 | `VACUUM` (manuel et autovacuum) |
+| `pg_stat_progress_create_index` | PG 12 | `CREATE INDEX` / `REINDEX` (CONCURRENTLY ou non) |
+| `pg_stat_progress_cluster` | PG 12 | `CLUSTER`, `VACUUM FULL` |
+| `pg_stat_progress_analyze` | PG 13 | `ANALYZE` |
+| `pg_stat_progress_basebackup` | PG 13 | `pg_basebackup` côté serveur |
+| `pg_stat_progress_copy` | PG 14 | `COPY` et `\copy` |
+
+```sql
+-- Suivi d'un VACUUM en cours : phase + nombre d'octets traités
+SELECT
+    p.pid,
+    a.query,
+    p.phase,
+    pg_size_pretty(p.heap_blks_total * current_setting('block_size')::int) AS taille_table,
+    round(100.0 * p.heap_blks_scanned / NULLIF(p.heap_blks_total, 0), 2) AS scan_pct,
+    round(100.0 * p.heap_blks_vacuumed / NULLIF(p.heap_blks_total, 0), 2) AS vacuum_pct,
+    p.index_vacuum_count
+FROM pg_stat_progress_vacuum p  
+JOIN pg_stat_activity a ON a.pid = p.pid;  
+```
+
+```sql
+-- Suivi d'un CREATE INDEX CONCURRENTLY (utile : ces commandes durent souvent des heures)
+SELECT
+    p.pid,
+    p.phase,                           -- ex : 'building index: scanning table'
+    p.blocks_done,
+    p.blocks_total,
+    round(100.0 * p.blocks_done / NULLIF(p.blocks_total, 0), 2) AS pct
+FROM pg_stat_progress_create_index p;
+```
+
+> ⚠️ Si la vue est vide alors qu'une commande tourne : c'est probablement qu'**elle est bloquée par un lock** (et non en train de progresser). Croiser avec `pg_locks` / `pg_blocking_pids()`.
 
 ---
 

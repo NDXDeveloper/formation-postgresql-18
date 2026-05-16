@@ -43,14 +43,17 @@ PostgreSQL suit un modèle de développement prévisible :
 ```
 2023 : PostgreSQL 16 (Septembre)
 2024 : PostgreSQL 17 (Septembre)
-2025 : PostgreSQL 18 (Septembre) ← Nous sommes ici
+2025 : PostgreSQL 18 (Septembre)   ← version cible de cette formation
 2026 : PostgreSQL 19 (prévu en Septembre)
+2030 : Fin du support de PG 18 (5 ans minimum)
 ```
 
 Chaque version majeure est supportée pendant **5 ans minimum**, garantissant :
 - Des correctifs de sécurité réguliers
 - Des corrections de bugs
 - Une stabilité à long terme
+
+> 💡 Au moment où cette annexe est consultée (mai 2026), PG 18 est mûr (~8 mois de production en aval, versions mineures 18.1+ déjà disponibles).
 
 ### Évolution des Priorités
 

@@ -527,14 +527,14 @@ Format propriétaire PostgreSQL, très rapide mais non-portable.
 #### Exporter pour Excel
 
 ```bash
-# Configuration optimale pour Excel (français)
+# Configuration optimale pour Excel (français) — syntaxe moderne avec WITH (…)
 \copy clients TO '/tmp/clients_excel.csv'
-    DELIMITER ';'
-    CSV HEADER
-    ENCODING 'UTF8'
+    WITH (FORMAT csv, HEADER, DELIMITER ';', ENCODING 'UTF8')
 
 # Excel ouvrira automatiquement ce fichier correctement
 ```
+
+> 💡 La forme parenthésée `WITH (option, …)` est recommandée depuis PostgreSQL 9.0 — elle est plus lisible et accepte **toutes** les options (`ENCODING`, `FORCE_NULL`, `FORCE_QUOTE`, `REJECT_LIMIT`, etc.). La forme historique sans parenthèses (`CSV HEADER DELIMITER ';'`) reste acceptée mais ne couvre pas toutes les options récentes.
 
 ---
 
@@ -796,7 +796,7 @@ CREATE TABLE users (
     id SERIAL PRIMARY KEY,
     username VARCHAR(50) UNIQUE NOT NULL,
     email VARCHAR(255) UNIQUE NOT NULL,
-    created_at TIMESTAMP DEFAULT NOW()
+    created_at TIMESTAMPTZ DEFAULT NOW()      -- TIMESTAMPTZ : préférer la version avec fuseau
 );
 
 -- Index
@@ -807,7 +807,7 @@ CREATE INDEX idx_users_email ON users(email);
 CREATE TABLE IF NOT EXISTS migrations (
     id SERIAL PRIMARY KEY,
     version VARCHAR(50) UNIQUE NOT NULL,
-    applied_at TIMESTAMP DEFAULT NOW()
+    applied_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 INSERT INTO migrations (version) VALUES ('001_add_users');
@@ -1089,12 +1089,16 @@ SELECT json_agg(row_to_json(clients)) FROM clients;
 
 #### 4. Valider avant import massif
 
-```sql
--- ✅ Toujours tester d'abord
-CREATE TEMP TABLE test_import (...);
-\copy test_import FROM '/data/huge_file.csv' CSV HEADER LIMIT 100
--- Vérifier que tout est OK
--- Puis importer en vrai
+> ⚠️ **Attention** : `COPY FROM` n'accepte **pas** de clause `LIMIT`. Pour ne charger qu'un échantillon, utilisez `head` côté shell, ou tronquez le fichier avant l'import, ou — en PG 18 — combinez `ON_ERROR ignore` + `REJECT_LIMIT` pour borner les erreurs tolérées.
+
+```bash
+# ✅ Tester avec un échantillon (côté shell)
+head -n 100 /data/huge_file.csv > /tmp/sample.csv
+
+# Puis dans psql
+CREATE TEMP TABLE test_import (LIKE clients INCLUDING ALL);
+\copy test_import FROM '/tmp/sample.csv' WITH (FORMAT csv, HEADER)
+-- Vérifier que tout est OK, puis importer le fichier complet
 ```
 
 ---
@@ -1262,6 +1266,49 @@ echo "1,Test,User,test@mail.fr" | psql -c "\copy clients FROM STDIN CSV"
 
 ---
 
+### Nouveautés COPY en PostgreSQL 18 🆕
+
+Trois améliorations majeures s'appliquent aussi bien à `COPY` côté serveur qu'à `\copy` côté psql :
+
+#### Tolérance aux erreurs : `ON_ERROR ignore` + `REJECT_LIMIT`
+
+Auparavant, une seule ligne malformée stoppait tout l'import. PG 18 permet d'en ignorer un nombre borné et de remplir la table avec ce qui passe :
+
+```bash
+\copy clients FROM '/data/clients.csv'
+    WITH (FORMAT csv, HEADER, ON_ERROR ignore, REJECT_LIMIT 50)
+```
+
+- `ON_ERROR ignore` : les lignes en erreur sont **comptées** mais **ignorées**.
+- `REJECT_LIMIT n` : au-delà de `n` lignes rejetées, l'opération échoue (sécurité).
+- Sans `REJECT_LIMIT`, la valeur par défaut est 0 (mode strict — comportement pré-18 si `ON_ERROR` n'est pas précisé).
+
+#### Tracer les lignes rejetées : `LOG_VERBOSITY verbose`
+
+Couplée à `ON_ERROR ignore`, l'option `LOG_VERBOSITY` détaille dans les logs serveur la **raison** de chaque rejet (numéro de ligne, colonne fautive, message d'erreur) :
+
+```bash
+\copy clients FROM '/data/clients.csv'
+    WITH (FORMAT csv, HEADER, ON_ERROR ignore, REJECT_LIMIT 50,
+          LOG_VERBOSITY verbose)
+```
+
+> 💡 Pratique pour itérer sur des imports « sales » sans deviner ce qui cloche.
+
+#### `COPY TO` depuis une vue matérialisée
+
+PG 18 étend `COPY ... TO` aux *materialized views*, ce qui simplifie l'export de rapports précalculés sans passer par une sous-requête :
+
+```bash
+-- PG 18 : direct
+\copy stats_mensuelles TO '/exports/stats.csv' WITH (FORMAT csv, HEADER)
+
+-- Avant PG 18 : il fallait passer par une requête
+\copy (SELECT * FROM stats_mensuelles) TO '/exports/stats.csv' WITH (FORMAT csv, HEADER)
+```
+
+---
+
 ## Scripts Utilitaires
 
 ### Script de Backup Automatique
@@ -1312,8 +1359,10 @@ echo "Backup sauvegardé dans /backup/backup_$DATE.tar.gz"
 BEGIN;
 
 -- Log
+-- Note : 'timestamp' est un mot réservé SQL pour le TYPE — utilisable comme nom de colonne
+-- mais à quoter (`"timestamp"`) si on veut l'utiliser ailleurs ; préférer ts/log_ts en pratique.
 CREATE TEMP TABLE import_log (
-    timestamp TIMESTAMP DEFAULT NOW(),
+    ts      TIMESTAMPTZ DEFAULT NOW(),
     message TEXT
 );
 
@@ -1369,7 +1418,7 @@ COMMIT;
 
 L'import/export de données est une compétence essentielle. Les points clés :
 
-🎯 **Essentiels** :  
+🎯 **Essentiels** :
 - `\copy` pour importer/exporter des données (CSV)  
 - `\o` pour sauvegarder des résultats formatés  
 - `\i` pour exécuter des scripts SQL

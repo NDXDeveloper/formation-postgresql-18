@@ -1,3 +1,5 @@
+🔝 Retour au [Sommaire](/SOMMAIRE.md)
+
 # Annexes : Ressources Complémentaires
 
 ## Introduction
@@ -487,64 +489,47 @@ Les annexes ne remplacent pas la documentation officielle, elles la complètent 
 
 ---
 
-## Feuille de Route des Annexes
+## État des Annexes
 
-### Annexes Actuelles (v1.0)
+Toutes les annexes décrites ci-dessous sont **disponibles** et accompagnent la formation PostgreSQL 18.
 
 ✅ **A. Glossaire des Termes Techniques**
-- Termes essentiels
-- Acronymes courants
+- Termes essentiels  
+- Acronymes courants  
 - Explications détaillées
 
 ✅ **B. Commandes psql Essentielles**
-- Navigation complète
-- Configuration optimale
-- Export/Import
+- Navigation complète  
+- Configuration optimale  
+- Export/Import  
 - Méta-commandes avancées
 
-📝 **C. Requêtes SQL de Référence** (En préparation)
-- Requêtes d'administration
-- Requêtes de monitoring
+✅ **C. Requêtes SQL de Référence**
+- Requêtes d'administration  
+- Requêtes de monitoring  
 - Requêtes d'analyse
 
-📝 **D. Configuration de Référence** (En préparation)
-- Configurations par cas d'usage
-- Explications des paramètres
+✅ **D. Configuration de Référence**
+- Configurations par cas d'usage  
+- Explications des paramètres  
 - Tuning guidé
 
-📝 **E. Checklist de Performance** (En préparation)
-- Audits structurés
-- Méthodologie d'optimisation
+✅ **E. Checklist de Performance**
+- Audits structurés  
+- Méthodologie d'optimisation  
 - Points de contrôle
 
-📝 **F. Nouveautés PostgreSQL 18** (En préparation)
-- Features détaillées
-- Guide de migration
+✅ **F. Nouveautés PostgreSQL 18**
+- Features détaillées  
+- Guide de migration  
 - Recommandations d'adoption
 
-📝 **G. Commandes Shell et Scripts** (En préparation)
-- Scripts de backup
-- Scripts de monitoring
+✅ **G. Commandes Shell et Scripts**
+- Scripts de backup  
+- Scripts de monitoring  
 - Automatisation
 
----
-
-### Annexes Futures (Roadmap)
-
-**Version 1.1** (Q1 2026)
-- Annexe C complète
-- Annexe D complète
-- Ajout d'exemples pratiques supplémentaires
-
-**Version 1.2** (Q2 2026)
-- Annexe E complète
-- Annexe F complète
-- Intégration PostgreSQL 19 (preview)
-
-**Version 2.0** (Q3 2026)
-- Annexe G complète
-- Nouvelles annexes selon retours
-- Version interactive web
+> 📌 Les annexes sont des **documents vivants** : elles évoluent au fil des retours, des nouveautés mineures de PostgreSQL et des cas d'usage rencontrés. Si vous identifiez une coquille, une syntaxe obsolète ou un exemple à enrichir, merci de signaler le point précis (fichier, section, motivation).
 
 ---
 
@@ -589,7 +574,28 @@ Vous êtes maintenant prêt à explorer les annexes ! Nous vous recommandons de 
 
 ### 📘 Liste des Annexes
 
-Les sections suivantes détaillent chaque annexe disponible. Cliquez sur les liens pour accéder directement à l'annexe qui vous intéresse.
+Cliquez sur les liens pour accéder directement à l'annexe qui vous intéresse :
+
+- 📘 **[Annexe A — Glossaire des Termes Techniques](/annexes/glossaire/README.md)**  
+  Termes essentiels, acronymes courants, vocabulaire PostgreSQL.
+
+- 📗 **[Annexe B — Commandes psql Essentielles](/annexes/commandes-psql/README.md)**  
+  Navigation, configuration, export/import, méta-commandes avancées.
+
+- 📙 **[Annexe C — Requêtes SQL de Référence](/annexes/requetes-sql-reference/README.md)**  
+  Administration, monitoring, analyse.
+
+- 📕 **[Annexe D — Configuration de Référence](/annexes/configuration-reference/README.md)**  
+  Profils OLTP, OLAP, mixed-workload, développement local.
+
+- 📓 **[Annexe E — Checklist de Performance](/annexes/checklist-performance/README.md)**  
+  Audit configuration, indexation, requêtes, schéma.
+
+- 📔 **[Annexe F — Nouveautés PostgreSQL 18](/annexes/nouveautes-pg18/README.md)**  
+  Features majeures, impact migration, recommandations d'adoption.
+
+- 📒 **[Annexe G — Commandes Shell et Scripts Utiles](/annexes/commandes-shell-scripts/README.md)**  
+  pg_ctl, pg_dump, pg_restore, scripts de backup, scripts de monitoring.
 
 ---
 

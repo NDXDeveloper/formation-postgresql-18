@@ -153,7 +153,7 @@ Tous les exemples SQL de ce glossaire sont :
 ✅ **Commentés** : Chaque ligne importante est expliquée  
 ✅ **Réalistes** : Inspirés de cas d'usage réels  
 ✅ **Progressifs** : Du simple au complexe  
-✅ **Compatibles** : Fonctionnent avec PostgreSQL 12+ (sauf mention contraire)
+✅ **Compatibles** : conçus pour **PostgreSQL 18** (cible de la formation) ; les exemples « de base » (`CREATE TABLE`, `SELECT`, `JOIN`, …) restent valables dès **PG 12**. La version minimale est précisée au cas par cas lorsque l'exemple repose sur une nouveauté plus récente (`gen_random_uuid` → PG 13+, `MERGE` → PG 15+, `uuidv7()`/Skip Scan → PG 18, etc.).
 
 #### Format des exemples
 
@@ -360,10 +360,11 @@ GROUP BY c.id, c.nom, c.email;
 #### Environnement de test
 
 Tous les exemples supposent :
-- PostgreSQL 12 ou supérieur (sauf mention contraire)
-- Encoding UTF-8
-- Locale par défaut
-- Configuration standard
+- **PostgreSQL 18** (cible de la formation). Les exemples « legacy » sont annotés (`SERIAL`, `md5`, etc.) ; les nouveautés sont marquées 🆕.
+- Certains exemples fonctionnent dès PG 12+ (CTE inlining, IDENTITY) ou PG 14+ (SCRAM par défaut) ; les versions minimales sont indiquées au cas par cas.
+- Encoding `UTF8` côté base (`fr_FR.UTF-8` côté locale système).
+- Locale par défaut, *time zone* `UTC` côté serveur.
+- Configuration standard (`postgresql.conf` post-`initdb`).
 
 Pour tester les exemples :
 ```bash
@@ -484,6 +485,15 @@ La maîtrise de la terminologie PostgreSQL est un investissement qui paiera rapi
     - Connection Pooling
     - Prepared Statement
 
+11. **Nouveautés PostgreSQL 18** 🆕
+    - AIO (Asynchronous I/O)
+    - Skip Scan sur B-tree
+    - Virtual Generated Columns
+    - NOT NULL en contrainte de 1ʳᵉ classe
+    - Contraintes temporelles (WITHOUT OVERLAPS, FOREIGN KEY PERIOD)
+    - OLD/NEW dans RETURNING
+    - Améliorations COPY
+
 ### 📗 Document 2 : Acronymes Courants
 
 1. **Acronymes Fondamentaux**
@@ -496,7 +506,7 @@ La maîtrise de la terminologie PostgreSQL est un investissement qui paiera rapi
    - PK, FK, UK
 
 4. **Architecture**
-   - MVCC, WAL, TOAST, XID, TID, CTID
+   - MVCC, WAL, TOAST, XID, TID / CTID, LSN, HBA, HOT, SSI, BGW, AIO 🆕
 
 5. **Types d'Index**
    - B-Tree, GIN, GiST, BRIN, SP-GiST

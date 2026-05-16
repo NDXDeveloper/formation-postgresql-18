@@ -249,17 +249,17 @@ Pour examiner en détail les index d'une table spécifique :
 ```sql
 SELECT
     schemaname,
-    tablename,
-    indexname,
+    relname       AS tablename,
+    indexrelname  AS indexname,
     pg_size_pretty(pg_relation_size(indexrelid)) AS index_size,
     pg_relation_size(indexrelid) AS index_bytes,
-    idx_scan AS number_of_scans,
-    idx_tup_read AS tuples_read,
+    idx_scan      AS number_of_scans,
+    idx_tup_read  AS tuples_read,
     idx_tup_fetch AS tuples_fetched
 FROM
     pg_stat_user_indexes
 WHERE
-    tablename = 'orders'  -- Remplacer par votre table
+    relname = 'orders'  -- Remplacer par votre table (colonne 'relname' dans pg_stat_user_indexes)
 ORDER BY
     pg_relation_size(indexrelid) DESC;
 ```
@@ -575,9 +575,11 @@ LIMIT 20;
   - Archiver données anciennes
 - **disk_reads élevé** : Consomme beaucoup d'I/O
 
-### 3.6. Nouveauté PostgreSQL 18 : Statistiques VACUUM Enrichies
+### 3.6. Suivi des passages de VACUUM et ANALYZE
 
-PostgreSQL 18 ajoute des compteurs détaillés pour VACUUM et ANALYZE :
+Les vues de statistiques de tables exposent des **compteurs** et des **horodatages** pour `VACUUM` et `ANALYZE`. Contrairement à ce que l'on lit parfois, les compteurs eux-mêmes (`vacuum_count`/`autovacuum_count`/`analyze_count`/`autoanalyze_count`) ne sont **pas nouveaux en PG 18** : ils existent depuis plusieurs versions majeures.
+
+🆕 **En revanche, PG 18 ajoute 4 nouvelles colonnes de *temps cumulé*** dans `pg_stat_all_tables` : `total_vacuum_time`, `total_autovacuum_time`, `total_analyze_time`, `total_autoanalyze_time` (en millisecondes). Combinées aux compteurs existants, elles permettent enfin de distinguer une table « visitée 100 fois en 50 ms » d'une autre « visitée 100 fois en 30 minutes ». L'écosystème autour évolue aussi : autovacuum plus dynamique, nouveau plafond `autovacuum_vacuum_max_threshold`, AIO bénéficiant aux passes de VACUUM.
 
 ```sql
 SELECT
@@ -587,12 +589,18 @@ SELECT
     n_dead_tup AS dead_rows,
     last_vacuum,
     last_autovacuum,
-    vacuum_count,           -- Nouveau dans PG 18
-    autovacuum_count,       -- Nouveau dans PG 18
+    vacuum_count,
+    autovacuum_count,
+    -- 🆕 PG 18 : temps cumulé en ms (NULL avant PG 18)
+    total_vacuum_time,
+    total_autovacuum_time,
     last_analyze,
     last_autoanalyze,
-    analyze_count,          -- Nouveau dans PG 18
-    autoanalyze_count       -- Nouveau dans PG 18
+    analyze_count,
+    autoanalyze_count,
+    -- 🆕 PG 18
+    total_analyze_time,
+    total_autoanalyze_time
 FROM
     pg_stat_all_tables
 WHERE
@@ -602,13 +610,14 @@ ORDER BY
 LIMIT 20;
 ```
 
-**Nouveaux compteurs** :
+**Compteurs disponibles** :
 
-- **vacuum_count** : Nombre de VACUUM manuels  
-- **autovacuum_count** : Nombre d'autovacuum exécutés  
-- **analyze_count** / **autoanalyze_count** : Idem pour ANALYZE
+- **vacuum_count** : nombre de `VACUUM` lancés *manuellement*.
+- **autovacuum_count** : nombre de `VACUUM` lancés par autovacuum.
+- **analyze_count** / **autoanalyze_count** : idem pour `ANALYZE`.
+- 🆕 **PG 18** — `total_vacuum_time` / `total_autovacuum_time` / `total_analyze_time` / `total_autoanalyze_time` : durée cumulée en millisecondes. Pour repérer une table dont le **coût** de maintenance est élevé, pas seulement la **fréquence**.
 
-**Utilité** : Vérifier que VACUUM/ANALYZE s'exécutent régulièrement.
+**Utilité** : vérifier que `VACUUM`/`ANALYZE` passent à une fréquence cohérente avec l'activité de la table (`n_mod_since_analyze`, `n_dead_tup`), **et** — en PG 18 — qu'ils ne saturent pas le budget temps des workers autovacuum.
 
 ---
 
@@ -1045,16 +1054,18 @@ free_percent       | 18.05         -- % d'espace libre
 Estimation rapide sans scan complet :
 
 ```sql
+-- pg_stat_user_tables expose 'relname' (et non 'tablename')
 SELECT
     schemaname,
-    tablename,
-    pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename)) AS total_size,
+    relname AS tablename,
+    pg_size_pretty(pg_total_relation_size(relid)) AS total_size,
     n_live_tup AS live_rows,
     n_dead_tup AS dead_rows,
-    round(100.0 * n_dead_tup / NULLIF(n_live_tup, 0), 2) AS bloat_pct,
+    round(100.0 * n_dead_tup / NULLIF(n_live_tup + n_dead_tup, 0), 2) AS bloat_pct,
+    -- ⚠️ Ordre des cas important : le seuil le plus strict vient en premier
     CASE
-        WHEN n_dead_tup > n_live_tup * 0.2 THEN 'VACUUM recommended'
         WHEN n_dead_tup > n_live_tup * 0.5 THEN 'VACUUM URGENT'
+        WHEN n_dead_tup > n_live_tup * 0.2 THEN 'VACUUM recommended'
         ELSE 'OK'
     END AS recommendation
 FROM
@@ -1066,20 +1077,32 @@ ORDER BY
 LIMIT 20;
 ```
 
+> ⚠️ **Petite subtilité de `CASE`** : les branches sont évaluées **dans l'ordre**, première branche qui matche gagne. Si on écrit `WHEN > 0.2 ... WHEN > 0.5`, le seuil 0.5 ne sera **jamais atteint** (toute table avec 50 % de morts a aussi plus de 20 %). Toujours mettre le **seuil le plus strict en premier**.
+
 ### 6.4. Fragmentation des Index
 
 Les index aussi souffrent de fragmentation :
 
 ```sql
--- Avec pgstattuple
+-- Analyse d'un seul index B-tree (pgstattuple installé)
+SELECT * FROM pgstatindex('public.idx_orders_user_id');
+
+-- Sur tous les index utilisateurs (coûteux : à exécuter hors heures de pointe)
 SELECT
-    indexrelname,
-    *
-FROM
-    pgstatindex('idx_orders_user_id');
+    ui.schemaname,
+    ui.relname        AS tablename,
+    ui.indexrelname   AS indexname,
+    pg_size_pretty(pg_relation_size(ui.indexrelid)) AS index_size,
+    s.avg_leaf_density,
+    s.leaf_fragmentation
+FROM pg_stat_user_indexes ui  
+CROSS JOIN LATERAL pgstatindex(format('%I.%I', ui.schemaname, ui.indexrelname)) AS s  
+WHERE pg_relation_size(ui.indexrelid) > 1024 * 1024  
+ORDER BY s.leaf_fragmentation DESC NULLS LAST  
+LIMIT 20;  
 ```
 
-**Résultat** :
+**Résultat** (par index) :
 
 ```
 version            | 4  
@@ -1094,6 +1117,8 @@ avg_leaf_density   | 67.45          -- Densité moyenne des feuilles (%)
 leaf_fragmentation | 15.23          -- % de fragmentation  
 ```
 
+> 💡 La qualification `format('%I.%I', schema, index)` évite les ratés sur le `search_path` quand l'index n'est pas dans `public`.
+
 **Analyse** :
 
 - **leaf_fragmentation > 30%** : Index fragmenté, REINDEX recommandé  
@@ -1107,42 +1132,43 @@ REINDEX INDEX CONCURRENTLY idx_orders_user_id;
 
 ### 6.5. Calcul du Bloat Théorique (Formule Avancée)
 
-Estimation du bloat en bytes :
+Estimation **grossière** du bloat sans `pgstattuple` :
 
 ```sql
+WITH widths AS (
+    SELECT schemaname, tablename, sum(avg_width) AS total_avg_width
+    FROM pg_stats
+    GROUP BY schemaname, tablename
+)
 SELECT
-    schemaname,
-    tablename,
-    pg_relation_size(schemaname||'.'||tablename) AS actual_size_bytes,
-    (n_live_tup *
-     (SELECT sum(avg_width) FROM pg_stats
-      WHERE schemaname = pst.schemaname
-      AND tablename = pst.relname)
-    ) AS estimated_useful_bytes,
-    pg_relation_size(schemaname||'.'||tablename) -
-    (n_live_tup *
-     (SELECT sum(avg_width) FROM pg_stats
-      WHERE schemaname = pst.schemaname
-      AND tablename = pst.relname)
-    ) AS bloat_bytes,
-    pg_size_pretty(
-        pg_relation_size(schemaname||'.'||tablename) -
-        (n_live_tup *
-         (SELECT sum(avg_width) FROM pg_stats
-          WHERE schemaname = pst.schemaname
-          AND tablename = pst.relname)
-        )
-    ) AS bloat_size
-FROM
-    pg_stat_user_tables pst
-WHERE
-    n_live_tup > 0
-ORDER BY
-    bloat_bytes DESC
-LIMIT 20;
+    pst.schemaname,
+    pst.relname AS tablename,
+    pg_size_pretty(pg_relation_size(pst.relid))          AS actual_size,
+    pg_size_pretty((pst.n_live_tup * w.total_avg_width)::bigint) AS estimated_useful,
+    pg_size_pretty(GREATEST(
+        pg_relation_size(pst.relid) - pst.n_live_tup * w.total_avg_width,
+        0
+    )::bigint) AS estimated_bloat,
+    round(
+        100.0 * GREATEST(
+            pg_relation_size(pst.relid) - pst.n_live_tup * w.total_avg_width,
+            0
+        ) / NULLIF(pg_relation_size(pst.relid), 0),
+        2
+    ) AS bloat_pct
+FROM pg_stat_user_tables pst  
+JOIN widths w  
+  ON w.schemaname = pst.schemaname AND w.tablename = pst.relname
+WHERE pst.n_live_tup > 0  
+ORDER BY (pg_relation_size(pst.relid) - pst.n_live_tup * w.total_avg_width) DESC  
+LIMIT 20;  
 ```
 
-**Note** : C'est une estimation approximative, pgstattuple est plus précis.
+> ⚠️ **Limites de cette estimation** :  
+>  
+> - On multiplie `n_live_tup × Σ(avg_width)` : on **ne tient pas compte** de l'overhead par tuple (header 23 octets, padding/alignement, line pointers, *fillfactor*, *toast pointers*), donc on **sous-estime** la « taille utile » et **surestime** le bloat.  
+> - `GREATEST(..., 0)` évite d'afficher un bloat négatif quand l'estimation surévalue.  
+> - **Pour une mesure fiable, utilisez `pgstattuple` ou `pgstattuple_approx`** (section 6.2) — quitte à payer le coût d'un scan.
 
 ---
 
@@ -1206,35 +1232,67 @@ ANALYZE ma_table;
 ANALYZE;
 ```
 
-### 7.3. Statistiques Étendues (Extended Statistics)
+### 7.3. Statistiques Étendues (`CREATE STATISTICS`)
 
-PostgreSQL 10+ supporte les statistiques multi-colonnes :
+PostgreSQL **10+** supporte les statistiques **multi-colonnes**, indispensables quand deux colonnes ont une **corrélation logique** que le planificateur ne peut deviner avec les statistiques par colonne. Trois types existent (à demander explicitement) :
+
+| Type | Apparu en | Ce qu'il capture | Cas d'usage |
+|---|---|---|---|
+| `ndistinct` | PG 10 | Cardinalité des **combinaisons** de colonnes | `GROUP BY a, b` mal estimé |
+| `dependencies` | PG 10 | Dépendance fonctionnelle (`a → b`) | `WHERE a = X AND b = Y` corrélés (ex. ville/code postal) |
+| `mcv` | PG 12 | Combinaisons de valeurs les plus fréquentes (Most Common Values multi-colonnes) | Filtres très sélectifs et corrélés |
+
+**Syntaxe** :
 
 ```sql
--- Créer des statistiques étendues
-CREATE STATISTICS stats_orders_user_status  
-ON user_id, status  
-FROM orders;  
+-- 1. Créer plusieurs types en même temps (PG 12+)
+CREATE STATISTICS stats_orders_user_status (ndistinct, dependencies, mcv)
+    ON user_id, status FROM orders;
 
--- Mettre à jour
+-- 2. Sans préciser les types : les trois sont créés (par défaut)
+CREATE STATISTICS stats_orders_default ON user_id, status FROM orders;
+
+-- 3. Faire collecter par ANALYZE
 ANALYZE orders;
-
--- Voir les statistiques étendues
-SELECT
-    stxnamespace::regnamespace AS schema,
-    stxname AS statistics_name,
-    stxkeys AS column_ids,
-    (SELECT string_agg(attname, ', ')
-     FROM pg_attribute
-     WHERE attrelid = stxrelid
-     AND attnum = ANY(stxkeys)) AS columns
-FROM
-    pg_statistic_ext
-ORDER BY
-    stxname;
 ```
 
-**Utilité** : Aide le planificateur quand deux colonnes sont corrélées.
+**Lister les statistiques étendues créées** :
+
+```sql
+SELECT
+    n.nspname               AS schema,
+    s.stxname               AS statistics_name,
+    c.relname               AS table_name,
+    array_agg(a.attname ORDER BY x.ord) AS columns,
+    s.stxkind               AS types     -- {d,f,m} = ndistinct, dependencies, mcv
+FROM pg_statistic_ext s  
+JOIN pg_namespace n ON n.oid = s.stxnamespace  
+JOIN pg_class     c ON c.oid = s.stxrelid  
+JOIN LATERAL unnest(s.stxkeys) WITH ORDINALITY AS x(attnum, ord) ON TRUE  
+JOIN pg_attribute a ON a.attrelid = s.stxrelid AND a.attnum = x.attnum  
+GROUP BY n.nspname, s.stxname, c.relname, s.stxkind  
+ORDER BY schema, statistics_name;  
+```
+
+**Vérifier l'effet sur le planificateur** :
+
+```sql
+-- Avant : sans CREATE STATISTICS, les estimations peuvent être très fausses
+EXPLAIN ANALYZE  
+SELECT * FROM orders WHERE user_id = 42 AND status = 'pending';  
+-- → rows=1 (estimé) ... rows=500 (réel) : très mauvais
+
+-- Après CREATE STATISTICS + ANALYZE
+EXPLAIN ANALYZE  
+SELECT * FROM orders WHERE user_id = 42 AND status = 'pending';  
+-- → rows=480 (estimé) ... rows=500 (réel) : excellent
+```
+
+**Quand créer des statistiques étendues** :
+
+- Filtre `WHERE a = X AND b = Y` sur **deux colonnes corrélées** (pays/devise, marque/modèle, ville/code postal, user_id/email…).
+- `GROUP BY a, b` où le nombre réel de groupes diffère beaucoup de `n_distinct(a) × n_distinct(b)`.
+- Détection de mauvaise estimation : `actual rows` et `rows=` divergent fortement dans `EXPLAIN ANALYZE`.
 
 ---
 

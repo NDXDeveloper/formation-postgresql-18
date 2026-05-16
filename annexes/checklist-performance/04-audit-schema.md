@@ -217,8 +217,9 @@ CREATE TABLE articles (
     contenu TEXT,
 
     -- Colonnes d'audit (RECOMMANDÉ)
-    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    -- ⚠️ TIMESTAMPTZ (avec fuseau) plutôt que TIMESTAMP — voir section "Date et Temps" plus bas
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     created_by BIGINT,  -- Optionnel : référence à utilisateurs.id
     updated_by BIGINT   -- Optionnel
 );
@@ -276,17 +277,24 @@ DELETE FROM utilisateurs WHERE id = 42;
 
 ```sql
 -- Ajout d'une colonne deleted_at
+-- TIMESTAMPTZ (avec fuseau) — cohérent avec la recommandation "Date et Temps" plus bas.
+-- Sur PG 11+, ADD COLUMN avec un DEFAULT non-volatile (ou sans DEFAULT) est instantané
+-- et ne réécrit pas la table (optimisation "fast default").
 ALTER TABLE utilisateurs  
-ADD COLUMN deleted_at TIMESTAMP;  
+ADD COLUMN deleted_at TIMESTAMPTZ;  
 
 -- "Suppression" logique
 UPDATE utilisateurs  
 SET deleted_at = NOW()  
 WHERE id = 42;  
 
--- Requêtes sur données actives
+-- Requêtes sur données actives — toujours filtrer sur deleted_at IS NULL
 SELECT * FROM utilisateurs  
 WHERE deleted_at IS NULL;  
+
+-- Index partiel sur deleted_at IS NULL si la majorité des lignes sont supprimées,
+-- ou index sur (deleted_at) si on requête souvent l'historique des suppressions.
+CREATE INDEX idx_utilisateurs_actifs ON utilisateurs(id) WHERE deleted_at IS NULL;
 ```
 
 ✅ **Avantages** :
@@ -418,21 +426,23 @@ CONSTRAINT fk_commandes_client
 -- ON DELETE SET NULL : Met client_id à NULL
 ON DELETE SET NULL
 
--- ON DELETE RESTRICT : Interdit la suppression (par défaut)
-ON DELETE RESTRICT
-
--- ON DELETE NO ACTION : Similaire à RESTRICT
+-- ON DELETE NO ACTION : valeur par défaut — vérifie à la fin de la transaction
+-- (similaire à RESTRICT mais permet de fixer l'incohérence avant le COMMIT)
 ON DELETE NO ACTION
+
+-- ON DELETE RESTRICT : interdit la suppression IMMÉDIATEMENT (pas de fenêtre transactionnelle)
+ON DELETE RESTRICT
 ```
 
 **Quand Utiliser Quoi ?**
 
 | Action | Cas d'Usage |
 |--------|-------------|
+| **NO ACTION** *(défaut)* | Vérification **différée** en fin de transaction (laisse une fenêtre pour réparer) |
 | CASCADE | Relations parents-enfants strictes (ex: facture → lignes_facture) |
 | SET NULL | Relations optionnelles (ex: commande → commercial_responsable) |
-| RESTRICT | Protection contre suppression accidentelle (par défaut) |
-| NO ACTION | Vérification différée (dans une transaction) |
+| SET DEFAULT | Relations avec valeur de repli (ex: catégorie → catégorie "Divers") |
+| RESTRICT | Refus **immédiat** de la suppression (pas de fenêtre transactionnelle) |
 
 **Audit des Foreign Keys**
 
@@ -606,7 +616,7 @@ CREATE TABLE commandes (
     id BIGSERIAL PRIMARY KEY,
     client_id BIGINT NOT NULL,
     statut VARCHAR(20) NOT NULL DEFAULT 'en_attente',
-    date_commande TIMESTAMP NOT NULL DEFAULT NOW(),
+    date_commande TIMESTAMPTZ NOT NULL DEFAULT NOW(),  -- TIMESTAMPTZ : cohérent avec la recommandation "Date et Temps" plus bas
     priorite INTEGER NOT NULL DEFAULT 1,
     remise NUMERIC(5,2) NOT NULL DEFAULT 0.00
 );
@@ -622,7 +632,7 @@ VALUES (42);
 ✅ **Valeurs Sensées**
 ```sql
 -- BON : Valeur par défaut logique
-created_at TIMESTAMP NOT NULL DEFAULT NOW()  
+created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()   -- TIMESTAMPTZ : avec fuseau (cf. "Date et Temps")  
 is_active BOOLEAN NOT NULL DEFAULT TRUE  
 quantity INTEGER NOT NULL DEFAULT 1  
 
@@ -647,6 +657,58 @@ Points à vérifier :
 
 ---
 
+### 6. Contraintes Temporelles : `WITHOUT OVERLAPS` (PG 18) 🆕
+
+**Le problème.** Comment garantir que deux lignes de la même entité (client, ressource, employé) **n'ont pas de plages temporelles qui se chevauchent** ? Avant PG 18, il fallait soit un trigger maison, soit une contrainte `EXCLUDE USING gist (...)` avec l'extension `btree_gist` — fonctionnel mais lourd.
+
+**PG 18** introduit la syntaxe SQL:2011 standardisée :
+
+```sql
+-- Extension nécessaire pour les contraintes UNIQUE/PK avec WITHOUT OVERLAPS
+CREATE EXTENSION IF NOT EXISTS btree_gist;
+
+-- Affectation d'un employé à un poste, sans chevauchement temporel
+CREATE TABLE affectations (
+    employe_id   INTEGER NOT NULL,
+    poste_id     INTEGER NOT NULL,
+    periode      DATERANGE NOT NULL,
+    -- 🆕 PG 18 : la même paire (employe_id, poste_id) ne peut PAS
+    --           avoir deux affectations qui se chevauchent
+    UNIQUE (employe_id, poste_id, periode WITHOUT OVERLAPS)
+);
+
+-- OK
+INSERT INTO affectations VALUES (1, 10, '[2026-01-01, 2026-06-30]');
+-- OK : pas de chevauchement
+INSERT INTO affectations VALUES (1, 10, '[2026-07-01, 2026-12-31]');
+-- ERREUR : chevauchement avec la première ligne
+INSERT INTO affectations VALUES (1, 10, '[2026-06-01, 2026-08-31]');
+-- ERROR:  conflicting key value violates exclusion constraint
+```
+
+**FOREIGN KEY temporelle** :
+
+```sql
+-- Référence : un prix dépend d'un produit ET d'une période active
+CREATE TABLE produits_prix (
+    produit_id   INTEGER NOT NULL,
+    prix         NUMERIC(10, 2) NOT NULL,
+    periode      DATERANGE NOT NULL,
+    PRIMARY KEY (produit_id, periode WITHOUT OVERLAPS),
+    FOREIGN KEY (produit_id, PERIOD periode)
+        REFERENCES produits_validite (produit_id, PERIOD periode)
+);
+```
+
+**Limites à connaître** :
+- `WITHOUT OVERLAPS` exige une **colonne de type range** (`daterange`, `tsrange`, `tstzrange`, `int4range`…).
+- L'extension `btree_gist` est requise pour `UNIQUE`/`PRIMARY KEY` (la combinaison colonnes scalaires + range est implémentée par un index GiST sous le capot).
+- `FOREIGN KEY ... PERIOD` ne supporte **pas** `ON DELETE CASCADE` / `ON UPDATE CASCADE` à ce stade.
+
+**Quand l'utiliser** : affectations historiques, prix variables, plannings, abonnements, locations, droits d'accès temporaires.
+
+---
+
 ## Audit des Index
 
 Les index sont cruciaux pour les performances, mais mal gérés, ils peuvent aussi les dégrader.
@@ -655,7 +717,7 @@ Les index sont cruciaux pour les performances, mais mal gérés, ils peuvent aus
 
 **Quelles Colonnes Doivent Être Indexées ?**
 
-✅ **TOUJOURS Indexer**  
+✅ **TOUJOURS Indexer**
 1. **Clés primaires** : Automatique (PostgreSQL le fait)  
 2. **Clés étrangères** : TRÈS IMPORTANT (pas automatique !)  
 3. **Colonnes dans WHERE fréquents** : Filtres courants  
@@ -704,21 +766,25 @@ PostgreSQL suit l'utilisation des index dans `pg_stat_user_indexes` :
 
 ```sql
 -- Requête pour trouver les index inutilisés
+-- Note : pg_stat_user_indexes expose 'relname' (table) et 'indexrelname' (index)
 SELECT
     schemaname,
-    tablename,
-    indexname,
-    idx_scan AS utilisations,
+    relname       AS tablename,
+    indexrelname  AS indexname,
+    idx_scan      AS utilisations,
+    last_idx_scan,                                    -- 🆕 PG 16+ : dernier scan
     pg_size_pretty(pg_relation_size(indexrelid)) AS taille
 FROM pg_stat_user_indexes  
 WHERE idx_scan = 0  -- Jamais utilisé  
     AND indexrelid NOT IN (
-        SELECT indexrelid
+        SELECT conindid
         FROM pg_constraint
         WHERE contype IN ('p', 'u')  -- Exclure PK et UNIQUE
     )
 ORDER BY pg_relation_size(indexrelid) DESC;
 ```
+
+> ⚠️ Pour rapprocher un index d'une éventuelle contrainte PK/UNIQUE, la colonne correcte côté `pg_constraint` est **`conindid`** (oid de l'index associé), pas `indexrelid`.
 
 **Pourquoi les Supprimer ?**
 
@@ -788,19 +854,23 @@ Un index `(A, B, C)` peut être utilisé pour :
 
 **Ordre Optimal**
 
-1. **Colonnes avec égalité** (`=`) en premier  
-2. **Colonnes triées** (`ORDER BY`) en dernier  
-3. **Colonnes les plus sélectives** en premier (celles qui filtrent le plus)
+L'ordre des colonnes dépend de **vos requêtes**, pas d'une règle universelle. Trois critères, par ordre d'importance :
+
+1. **Colonne de tête utilisée dans TOUTES les requêtes** ciblées par l'index (sinon l'index sera ignoré, sauf Skip Scan PG 18).
+2. **Égalité avant plage** : colonnes filtrées avec `=` en tête, colonnes filtrées avec `<`/`>`/`BETWEEN` après.
+3. **Colonnes utilisées dans `ORDER BY`** en dernier (l'index peut alors éviter un `Sort`).
 
 ```sql
--- BON : Filtre d'abord sur client (très sélectif), puis date
+-- BON : Filtre par client (égalité), trie par date (plage/ordre)
 CREATE INDEX idx_orders_client_date ON orders(client_id, order_date);
 
--- Usage optimal
+-- Usage optimal (sert pour le filtre ET le tri)
 SELECT * FROM orders  
 WHERE client_id = 42  
 ORDER BY order_date DESC;  
 ```
+
+> ⚠️ La règle simpliste « colonne la plus sélective d'abord » est **partiellement fausse** : si la colonne « sélective » n'est pas filtrée dans vos requêtes, l'index est inutilisable (cf. section 15.4 de l'audit d'indexation).
 
 ### 4. Sur-Indexation
 
@@ -1137,21 +1207,42 @@ CREATE TABLE commandes (
 
 ✅ **Avantages ENUM** :
 - Validation automatique
-- Stockage compact
+- Stockage compact (4 octets, comme un `oid`)
+- Tri naturel selon l'ordre déclaré
 - Clarté du schéma
 
-❌ **Inconvénients ENUM** :
-- Difficile à modifier (ajout de valeurs)
-- Nécessite une migration pour changer
+⚠️ **Limites de l'ENUM (asymétriques)** :
+- **Ajout** facile : `ALTER TYPE … ADD VALUE 'nouvelle' [BEFORE|AFTER 'existante']`. Non transactionnel depuis PG 12 (commit immédiat).
+- **Renommage** facile : `ALTER TYPE … RENAME VALUE 'ancien' TO 'nouveau'` (PG 10+).
+- **Suppression** : **pas de `DROP VALUE`**. Il faut recréer le type, migrer les colonnes, dropper l'ancien — opération invasive.
 
 **Alternative : VARCHAR + CHECK**
+
 ```sql
 statut VARCHAR(20) NOT NULL
     CHECK (statut IN ('en_attente', 'traitee', 'annulee'))
     DEFAULT 'en_attente'
 ```
 
-Plus flexible mais moins efficace en espace.
+Plus flexible (ajout/suppression de valeurs par simple `ALTER TABLE … DROP CONSTRAINT … ADD CONSTRAINT …`), mais moins efficace en espace.
+
+**Alternative recommandée pour listes très évolutives : table de référence**
+
+```sql
+CREATE TABLE statut_commande_ref (
+    code VARCHAR(20) PRIMARY KEY,
+    libelle TEXT NOT NULL,
+    actif BOOLEAN NOT NULL DEFAULT true,
+    ordre_affichage INT
+);
+
+CREATE TABLE commandes (
+    id BIGSERIAL PRIMARY KEY,
+    statut VARCHAR(20) NOT NULL REFERENCES statut_commande_ref(code)
+);
+```
+
+Meilleure approche pour des listes qui évoluent, ou si on veut attacher des **métadonnées** au statut (libellé localisé, ordre d'affichage, actif/inactif).
 
 ---
 
@@ -1349,17 +1440,31 @@ CREATE TABLE documents (
 -- Activer RLS
 ALTER TABLE documents ENABLE ROW LEVEL SECURITY;
 
--- Politique : Chaque tenant ne voit que ses documents
+-- Politique : chaque tenant ne voit que ses documents
+-- ⚠️ Le deuxième argument 'true' de current_setting() évite une erreur
+--    si la variable applicative n'est pas définie (renvoie NULL à la place).
 CREATE POLICY tenant_isolation ON documents
-    USING (tenant_id = current_setting('app.current_tenant_id')::BIGINT);
+    USING (tenant_id = NULLIF(current_setting('app.current_tenant_id', true), '')::BIGINT);
 
 -- L'application définit le tenant au début de chaque session
-SET app.current_tenant_id = 42;
+SET app.current_tenant_id = '42';
 
 -- Toutes les requêtes sont automatiquement filtrées
 SELECT * FROM documents;
 -- Ne retourne QUE les documents du tenant 42
 ```
+
+> ⚠️ Pour que RLS soit **réellement étanche**, il faut aussi penser à :  
+>  
+> 1. Ne **PAS** donner le privilège `BYPASSRLS` au rôle applicatif (`ALTER ROLE app_user NOBYPASSRLS`). Les superusers contournent toujours RLS.  
+> 2. Activer aussi RLS pour les écritures avec `WITH CHECK (...)` (sinon un INSERT/UPDATE peut écrire dans un autre tenant) :  
+>    ```sql  
+>    CREATE POLICY tenant_isolation_w ON documents  
+>        FOR ALL                                            -- SELECT + INSERT + UPDATE + DELETE  
+>        USING       (tenant_id = NULLIF(current_setting('app.current_tenant_id', true), '')::BIGINT)  
+>        WITH CHECK  (tenant_id = NULLIF(current_setting('app.current_tenant_id', true), '')::BIGINT);  
+>    ```  
+> 3. Forcer l'application des policies au propriétaire de la table avec `ALTER TABLE documents FORCE ROW LEVEL SECURITY` (sinon le propriétaire bypass RLS par défaut).
 
 **Avantages RLS**
 
@@ -1499,12 +1604,15 @@ ANALYZE collecte des statistiques sur les données pour aider le planificateur �
 **Vérifier les Statistiques**
 
 ```sql
--- Dernière analyse par table
+-- Dernière analyse par table (pg_stat_user_tables expose 'relname')
 SELECT
     schemaname,
-    tablename,
+    relname AS tablename,
     last_analyze,
-    last_autoanalyze
+    last_autoanalyze,
+    n_mod_since_analyze,   -- nb de modifs depuis le dernier ANALYZE
+    analyze_count,
+    autoanalyze_count
 FROM pg_stat_user_tables  
 ORDER BY last_analyze NULLS FIRST;  
 ```
@@ -1608,15 +1716,35 @@ CREATE INDEX idx_lignes_total ON lignes_commandes(total);
 SELECT * FROM lignes_commandes WHERE total > 100;
 ```
 
-**Solution 2 : Colonnes Virtuelles (PG 18)**
+**Solution 2 : Colonnes Virtuelles (PG 18) 🆕**
 
 ```sql
--- Nouveauté PostgreSQL 18
+-- Nouveauté PostgreSQL 18 : colonnes générées VIRTUAL
 ALTER TABLE lignes_commandes  
 ADD COLUMN total NUMERIC(10, 2)  
-    GENERATED ALWAYS AS (prix * quantite);  -- VIRTUAL par défaut
+    GENERATED ALWAYS AS (prix * quantite) VIRTUAL;
+-- Si on omet STORED/VIRTUAL en PG 18, c'est VIRTUAL qui est appliqué par défaut.
+```
 
--- Pas de stockage, calcul à la volée, mais index possible
+**Caractéristiques d'une colonne `VIRTUAL`** :
+
+| Aspect | `STORED` (PG 12+) | `VIRTUAL` (PG 18 🆕) |
+|---|---|---|
+| Calcul | À l'`INSERT`/`UPDATE` | À la **lecture** |
+| Espace disque | Oui (stockée) | **Non** |
+| Coût d'écriture | Oui | Aucun |
+| **Indexable directement** | **Oui** | **Non** |
+| Modification de l'expression | Réécrit la table | Instantanée |
+
+> ⚠️ **Limitation importante** : une colonne `VIRTUAL` **ne peut pas être indexée directement**. Si vous voulez un index sur `prix * quantite`, deux options :  
+>  
+> 1. Choisir `STORED` au lieu de `VIRTUAL` (coût d'écriture + espace).  
+> 2. Créer un **index sur expression** : `CREATE INDEX ON lignes_commandes ((prix * quantite));` — disponible depuis longtemps, fonctionne très bien.
+
+```sql
+-- Option B : index sur expression (sans colonne générée)
+CREATE INDEX idx_lignes_total ON lignes_commandes ((prix * quantite));  
+SELECT * FROM lignes_commandes WHERE prix * quantite > 100;  -- utilise l'index  
 ```
 
 ### 5. Configuration Inadaptée

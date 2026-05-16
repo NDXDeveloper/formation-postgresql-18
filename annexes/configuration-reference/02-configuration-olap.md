@@ -392,16 +392,23 @@ effective_io_concurrency = 400
 
 ---
 
-#### **Nouveauté PostgreSQL 18 : I/O Asynchrone**
+#### **Nouveauté PostgreSQL 18 : I/O Asynchrone (AIO) 🆕**
 
-PostgreSQL 18 introduit le sous-système I/O asynchrone qui peut améliorer significativement les performances des scans séquentiels massifs.
+PostgreSQL 18 introduit le sous-système d'I/O asynchrone — particulièrement bénéfique en OLAP, où *Seq Scan*, *Bitmap Heap Scan* et `VACUUM` profitent du *prefetch* asynchrone.
 
 **Configuration dans postgresql.conf :**
 ```ini
-io_method = 'worker'  # Nécessite Linux 5.1+ avec io_uring
+# 'worker' : portable, défaut PG 18 (aucun prérequis)
+io_method = worker  
+io_workers = 6       # à augmenter pour des scans massifs  
+
+# Alternative : 'io_uring' pour Linux ≥ 5.1 (binaire compilé --with-liburing)
+# io_method = io_uring
 ```
 
-**Impact typique :** Amélioration de 20-30% sur les requêtes avec gros scans séquentiels.
+> ⚠️ Seul `io_method = io_uring` exige un kernel Linux ≥ 5.1 et un binaire compilé avec `liburing`. Le mode `worker` fonctionne sur toutes les plateformes supportées.
+
+**Impact typique** : sur les workloads OLAP dominés par les lectures séquentielles en *cache miss*, on observe couramment 15–30 % d'amélioration de débit selon le stockage.
 
 ---
 
@@ -556,13 +563,15 @@ max_parallel_workers = 32               # Pool global
 max_parallel_maintenance_workers = 8  
 
 # Favoriser parallélisation (réduire seuils)
-parallel_setup_cost = 100               # Défaut 1000  
-parallel_tuple_cost = 0.01              # Défaut 0.1  
-min_parallel_table_scan_size = 8MB      # Défaut 8MB  
-min_parallel_index_scan_size = 512kB    # Défaut 512kB  
+parallel_setup_cost = 100               # défaut 1000  
+parallel_tuple_cost = 0.01              # défaut 0.1  
+min_parallel_table_scan_size = 8MB      # défaut 8MB (laissé pour mémoire — déjà au défaut)  
+min_parallel_index_scan_size = 512kB    # défaut 512kB  
 
-# Force parallélisation pour tests (désactiver en prod)
-# force_parallel_mode = on
+# Forcer la parallélisation pour DEBUG/TEST (jamais en production)
+# ⚠️ Le paramètre 'force_parallel_mode' a été RENOMMÉ en 'debug_parallel_query' à partir de PG 16.
+# debug_parallel_query = on             # PG 16+
+# force_parallel_mode = on              # PG ≤ 15 (alias historique)
 
 # ===================================
 # CONNEXIONS (peu en OLAP)
@@ -618,8 +627,9 @@ jit_above_cost = 100000
 jit_inline_above_cost = 500000  
 jit_optimize_above_cost = 500000  
 
-# PostgreSQL 18 : I/O asynchrone
-io_method = 'worker'
+# PostgreSQL 18 : I/O asynchrone (AIO)
+io_method = worker          # portable, défaut PG 18 ; 'io_uring' si kernel Linux ≥ 5.1  
+io_workers = 6              # plus de workers pour les scans OLAP  
 
 # ===================================
 # LIMITES DE REQUÊTE
@@ -684,10 +694,11 @@ default_text_search_config = 'pg_catalog.english'
 #### **Pourquoi Partitionner en OLAP ?**
 
 Tables de faits avec plusieurs années de données = milliards de lignes. Avantages du partitionnement :
-- **Partition Pruning** : PostgreSQL ignore les partitions non concernées  
+- **Partition Pruning** : PostgreSQL ignore les partitions non concernées (paramètre `enable_partition_pruning`, activé par défaut depuis PG 11 — vérifiable via `SHOW enable_partition_pruning`)  
 - **Maintenance ciblée** : VACUUM/ANALYZE seulement les partitions récentes  
-- **Archivage facile** : Détacher partitions anciennes  
-- **Requêtes plus rapides** : Traiter 50M lignes au lieu de 2B
+- **Archivage facile** : Détacher partitions anciennes (`ALTER TABLE … DETACH PARTITION`)  
+- **Requêtes plus rapides** : Traiter 50M lignes au lieu de 2B  
+- **Partition-Wise Join / Aggregate** : `enable_partitionwise_join` et `enable_partitionwise_aggregate` (désactivés par défaut, à activer en OLAP) permettent au planificateur de joindre/agréger partition par partition, en parallèle.
 
 #### **Exemple : Partitionnement par Mois**
 
@@ -727,23 +738,28 @@ GROUP BY product_id;
 
 #### **Automatiser avec pg_partman**
 
-Extension pour gérer automatiquement les partitions :
+Extension pour gérer automatiquement les partitions (création, drop des vieilles partitions, etc.).
+
+> ⚠️ **Changement d'API en `pg_partman` 5.x** (sorti en 2024) : les valeurs *spécialisées* `'monthly'`, `'daily'`, `'weekly'`, `'hourly'` **ne sont plus acceptées**. Il faut utiliser des **intervals PostgreSQL standards** (`'1 month'`, `'1 day'`, `'1 week'`, `'1 hour'`).
 
 ```sql
 CREATE EXTENSION pg_partman;
 
--- Créer partitions automatiquement
+-- Créer la configuration de partitionnement (pg_partman 5.x)
 SELECT partman.create_parent(
-    p_parent_table => 'public.fact_sales',
-    p_control => 'sale_date',
-    p_type => 'native',
-    p_interval => 'monthly',
-    p_premake => 3  -- Créer 3 mois à l'avance
+    p_parent_table  => 'public.fact_sales',
+    p_control       => 'sale_date',
+    p_type          => 'range',          -- 'range' (5.x) ; 'native' (4.x déprécié)
+    p_interval      => '1 month',        -- 5.x : interval PostgreSQL standard
+    p_premake       => 3                 -- créer 3 mois en avance
 );
 
--- Job pour maintenir les partitions
+-- Job de maintenance à planifier (pg_cron, cron système, …)
+-- Crée les nouvelles partitions à venir et purge les anciennes selon p_retention
 SELECT partman.run_maintenance('public.fact_sales');
 ```
+
+> 💡 Pour migrer un setup existant de pg_partman 4.x → 5.x avec les anciennes valeurs (`'monthly'`, etc.), consulter `pg_partman_5.0.1_upgrade.md` — un script d'upgrade est fourni.
 
 ---
 
@@ -832,8 +848,12 @@ SELECT
 FROM fact_sales  
 GROUP BY DATE_TRUNC('month', sale_date), product_id;  
 
--- Index sur la vue matérialisée
-CREATE INDEX idx_mv_sales_month_product
+-- Index UNIQUE indispensable pour REFRESH ... CONCURRENTLY
+-- (les colonnes doivent identifier uniquement chaque ligne de la vue ;
+-- ici GROUP BY (month, product_id) garantit l'unicité)
+-- Un index UNIQUE couvre aussi les besoins d'un index simple sur (month, product_id)
+-- → on n'a PAS besoin de créer un deuxième index non-unique.
+CREATE UNIQUE INDEX idx_mv_sales_month_product
     ON mv_sales_by_month_product(month, product_id);
 
 -- Requête sur vue : < 10ms (au lieu de 30 secondes)
@@ -844,12 +864,14 @@ WHERE month = '2024-01-01';
 #### **Rafraîchir les Données**
 
 ```sql
--- Rafraîchissement complet (bloquant)
+-- Rafraîchissement complet : pose un AccessExclusiveLock pendant toute la durée
+-- (lectures impossibles le temps du refresh) — réservé aux fenêtres de maintenance
 REFRESH MATERIALIZED VIEW mv_sales_by_month_product;
 
--- Rafraîchissement concurrent (non bloquant, nécessite UNIQUE index)
-CREATE UNIQUE INDEX ON mv_sales_by_month_product(month, product_id);  
-REFRESH MATERIALIZED VIEW CONCURRENTLY mv_sales_by_month_product;  
+-- Rafraîchissement concurrent : pas de blocage des lectures
+-- ⚠️ Requiert un index UNIQUE non partiel sur la vue (créé plus haut)
+-- ⚠️ Plus lent et plus gourmand en disque (réécriture temporaire avant swap)
+REFRESH MATERIALIZED VIEW CONCURRENTLY mv_sales_by_month_product;
 ```
 
 #### **Automatiser avec pg_cron**
@@ -925,25 +947,34 @@ SET default_toast_compression = 'lz4';
 
 ---
 
-### 6. Nouveauté PostgreSQL 18 : Colonnes Générées Virtuelles
+### 6. Nouveauté PostgreSQL 18 : Colonnes Générées Virtuelles 🆕
 
-**Concept :** Colonnes calculées à la volée (non stockées physiquement), utiles pour simplifier les requêtes.
+**Concept :** Colonnes calculées à la volée, jamais stockées physiquement — utiles pour simplifier les requêtes répétitives.
 
 ```sql
--- Avant PostgreSQL 18 : Calculer à chaque requête
-SELECT
-    amount * 1.20 AS amount_with_tax
-FROM fact_sales;
+-- Avant PostgreSQL 18 : recalculer à chaque requête, ou STORED (coûteux en écriture)
+SELECT amount * 1.20 AS amount_with_tax FROM fact_sales;
 
--- PostgreSQL 18 : Colonne virtuelle
+-- PostgreSQL 18 : colonne virtuelle (recalculée à la lecture, pas de stockage)
 ALTER TABLE fact_sales
     ADD COLUMN amount_with_tax NUMERIC GENERATED ALWAYS AS (amount * 1.20) VIRTUAL;
 
--- Requête simplifiée
+-- Lecture transparente
 SELECT amount_with_tax FROM fact_sales;
 ```
 
-**Avantage :** Pas de stockage supplémentaire, mais requêtes plus lisibles.
+| Aspect | `STORED` (PG 12+) | `VIRTUAL` (PG 18) 🆕 |
+|---|---|---|
+| Stockage | Oui (espace disque) | **Non** |
+| Coût à l'`INSERT`/`UPDATE` | Oui | Aucun |
+| Coût à la lecture | Aucun (déjà stocké) | Calcul à la volée |
+| **Indexable directement** | **Oui** | **Non** |
+| Réécriture si l'expression change | Oui (table rewrite) | Instantanée (DDL léger) |
+
+> ⚠️ **Limitation en OLAP** : une colonne `VIRTUAL` **n'est pas indexable**. Si vous voulez optimiser un filtre `WHERE amount_with_tax > X`, deux choix :  
+>  
+> 1. Choisir `STORED` (coût d'écriture mais indexable).  
+> 2. Créer un **index sur expression** sans colonne générée : `CREATE INDEX ON fact_sales ((amount * 1.20));` — fonctionne depuis longtemps.
 
 ---
 
@@ -1041,15 +1072,20 @@ FROM pg_matviews;
 
 ```sql
 -- Top 10 tables par taille
+-- pg_tables expose 'tablename' (≠ pg_stat_user_tables qui utilise 'relname').
+-- format('%I.%I', …) quote correctement les identifiants à casse mixte ou réservés.
 SELECT
     schemaname,
     tablename,
-    pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename)) AS total_size,
-    pg_size_pretty(pg_relation_size(schemaname||'.'||tablename)) AS table_size,
-    pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename) - pg_relation_size(schemaname||'.'||tablename)) AS index_size
+    pg_size_pretty(pg_total_relation_size(format('%I.%I', schemaname, tablename))) AS total_size,
+    pg_size_pretty(pg_relation_size(format('%I.%I', schemaname, tablename))) AS table_size,
+    pg_size_pretty(
+        pg_total_relation_size(format('%I.%I', schemaname, tablename))
+      - pg_relation_size(format('%I.%I', schemaname, tablename))
+    ) AS index_size
 FROM pg_tables  
 WHERE schemaname NOT IN ('pg_catalog', 'information_schema')  
-ORDER BY pg_total_relation_size(schemaname||'.'||tablename) DESC  
+ORDER BY pg_total_relation_size(format('%I.%I', schemaname, tablename)) DESC  
 LIMIT 10;  
 ```
 
@@ -1104,7 +1140,8 @@ Avant de mettre en production un data warehouse, vérifiez :
 - [ ] **jit** = on
 
 ### Stockage et I/O
-- [ ] **PostgreSQL 18** : io_method = 'worker' (si compatible)  
+- [ ] **PostgreSQL 18** : `io_method` = `worker` (défaut, portable) ou `io_uring` (Linux ≥ 5.1)  
+- [ ] **PostgreSQL 18** : `io_workers` augmenté (≥ 6) si charge OLAP soutenue  
 - [ ] **effective_io_concurrency** ≥ 200
 
 ### Autovacuum et Maintenance

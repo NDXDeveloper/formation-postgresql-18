@@ -42,26 +42,31 @@ psql -d mon_projet -c "SELECT version();"
 
 #### Configuration Recommandée pour Débutants
 
-```sql
--- Dans postgresql.conf (configuration minimale)
+> ℹ️ Ces lignes vont dans `postgresql.conf` (format **clé = valeur**, **pas de SQL**). C'est un fichier de configuration, pas une requête.
 
-# Connexions
+```ini
+# === Connexions ===
 max_connections = 100
 
-# Mémoire (adapter selon votre RAM)
-shared_buffers = 256MB          # 25% de la RAM  
-work_mem = 4MB  
+# === Mémoire (à adapter à votre RAM) ===
+# Pour 1 Go RAM :  shared_buffers = 256MB, effective_cache_size = 768MB
+# Pour 4 Go RAM :  shared_buffers = 1GB,   effective_cache_size = 3GB
+shared_buffers       = 256MB         # ~25 % de la RAM  
+effective_cache_size = 768MB         # ~75 % de la RAM (estimation pour le planificateur)  
+work_mem             = 4MB  
 maintenance_work_mem = 64MB  
 
-# I/O (Laissez en automatique)
-io_method = 'worker'             # Nouveau ! Plus rapide
+# === I/O asynchrone (PG 18) ===
+io_method = worker                   # défaut PG 18, portable
+# io_method = io_uring               # Linux kernel ≥ 5.1 + binaire compilé --with-liburing
 
-# Sécurité
+# === Sécurité ===
 ssl = on  
-password_encryption = scram-sha-256  # Moderne et sécurisé  
+password_encryption = scram-sha-256  # moderne, à la place de md5  
 
-# Data checksums (automatique dans PG18)
-# Rien à faire, c'est activé par défaut !
+# === Data checksums ===
+# 🆕 PG 18 : activés par défaut sur les nouvelles bases créées
+# avec `initdb` (--data-checksums implicite). Rien à configurer ici.
 ```
 
 #### Timeline Recommandée
@@ -169,10 +174,10 @@ SELECT * FROM pg_extension;
 
 **Mois 1-2 : Préparation**
 ```
-✓ Audit de compatibilité
-✓ Tests en environnement de staging
-✓ Formation de l'équipe
-✓ Documentation de la procédure
+✓ Audit de compatibilité  
+✓ Tests en environnement de staging  
+✓ Formation de l'équipe  
+✓ Documentation de la procédure  
 ```
 
 **Mois 3-4 : Migration Staging/Pré-production**
@@ -320,27 +325,53 @@ CREATE SUBSCRIPTION from_prod
 #### Métriques à Surveiller Post-Migration
 
 ```sql
--- 1. Taux de cache (doit être > 95%)
+-- 1. Taux de cache global (cible : > 95 %)
 SELECT
-  sum(blks_hit) * 100.0 / (sum(blks_hit) + sum(blks_read)) AS cache_hit_ratio
+    round(100.0 * sum(blks_hit) / NULLIF(sum(blks_hit) + sum(blks_read), 0), 2)
+        AS cache_hit_ratio_pct
 FROM pg_stat_database;
 
--- 2. Temps de réponse moyen
-SELECT mean_exec_time, query  
+-- 2. Top 10 des requêtes les plus lentes (temps moyen)
+SELECT
+    round(mean_exec_time::numeric, 2) AS avg_ms,
+    calls,
+    query
 FROM pg_stat_statements  
 ORDER BY mean_exec_time DESC  
 LIMIT 10;  
 
 -- 3. Connexions actives
-SELECT COUNT(*)  
-FROM pg_stat_activity  
-WHERE state = 'active';  
+SELECT count(*) FROM pg_stat_activity WHERE state = 'active';
 
--- 4. Bloat des tables
-SELECT schemaname, tablename,
-  pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename))
+-- 4. Top 10 des tables par taille (à comparer avant/après migration)
+SELECT
+    schemaname,
+    tablename,
+    pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename)) AS total_size
 FROM pg_tables  
-ORDER BY pg_total_relation_size(schemaname||'.'||tablename) DESC;  
+WHERE schemaname NOT IN ('pg_catalog', 'information_schema')  
+ORDER BY pg_total_relation_size(schemaname||'.'||tablename) DESC  
+LIMIT 10;  
+
+-- 5. Bloat estimé (proxy via pg_stat_user_tables)
+SELECT
+    schemaname,
+    relname AS tablename,
+    n_live_tup,
+    n_dead_tup,
+    round(100.0 * n_dead_tup / NULLIF(n_live_tup + n_dead_tup, 0), 2) AS dead_pct,
+    last_autovacuum
+FROM pg_stat_user_tables  
+WHERE n_dead_tup > 0  
+ORDER BY n_dead_tup DESC  
+LIMIT 10;  
+
+-- 6. 🆕 PG 18 : ventilation I/O par type de backend (pg_stat_io existe depuis PG 16)
+SELECT backend_type, object, context, reads, writes, evictions, hits  
+FROM pg_stat_io  
+WHERE reads + writes > 0  
+ORDER BY reads + writes DESC  
+LIMIT 20;  
 ```
 
 #### Critères de GO/NO-GO Stricts
@@ -428,17 +459,28 @@ ALTER SYSTEM SET password_encryption = 'scram-sha-256';
 -- 2. SSL/TLS obligatoire
 ALTER SYSTEM SET ssl = on;  
 ALTER SYSTEM SET ssl_min_protocol_version = 'TLSv1.3';  
+-- Note : TLSv1.3 exige des clients récents (libpq ≥ 12, JDBC ≥ 42.5, etc.).
+-- Pour un parc client mixte, TLSv1.2 reste un minimum acceptable.
 
 -- 3. Row-Level Security (selon besoins)
-ALTER TABLE donnees_sensibles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE donnees_sensibles ENABLE ROW LEVEL SECURITY;  
+ALTER TABLE donnees_sensibles FORCE ROW LEVEL SECURITY;  -- s'applique même au propriétaire  
 
+-- L'identité applicative est injectée via current_setting() avec un GUC custom
+-- ('app.user_id') positionné par l'application après connexion (SET LOCAL).
+-- Le 2e paramètre 'true' rend la lecture tolérante à un GUC non défini.
 CREATE POLICY politique_acces ON donnees_sensibles
-  USING (utilisateur_id = current_user_id());
+  USING (utilisateur_id = current_setting('app.user_id', true)::int);
 
 -- 4. Audit logging
-ALTER SYSTEM SET log_statement = 'all';  
+-- ⚠️ log_statement = 'all' génère un VOLUME ÉNORME (chaque SELECT loggué).
+-- À réserver à l'audit forensique court terme ou conformité stricte.
+-- En production normale, préférer 'ddl' (toutes les commandes DDL) ou 'mod' (DDL + INSERT/UPDATE/DELETE).
+ALTER SYSTEM SET log_statement = 'ddl';        -- ou 'mod' / 'all' selon le besoin  
 ALTER SYSTEM SET log_connections = on;  
 ALTER SYSTEM SET log_disconnections = on;  
+-- Pour les requêtes lentes spécifiquement, préférer log_min_duration_statement :
+ALTER SYSTEM SET log_min_duration_statement = '1s';
 ```
 
 #### Checklist de Conformité
@@ -549,17 +591,24 @@ docker run -d \
 
 #### Actions essentielles :
 ```sql
--- 1. Analyse de la base actuelle
+-- 1. Analyse de la base actuelle : top 20 tables par taille (pg_tables a 'tablename')
 SELECT
-  schemaname,
-  tablename,
-  pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename)) as size
+    schemaname,
+    tablename,
+    pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename)) AS size
 FROM pg_tables  
+WHERE schemaname NOT IN ('pg_catalog', 'information_schema')  
 ORDER BY pg_total_relation_size(schemaname||'.'||tablename) DESC  
 LIMIT 20;  
 
--- 2. Vérifier les index
-SELECT schemaname, tablename, indexname, idx_scan, idx_tup_read, idx_tup_fetch  
+-- 2. Vérifier l'utilisation des index (pg_stat_user_indexes expose 'relname' / 'indexrelname')
+SELECT
+    schemaname,
+    relname       AS tablename,
+    indexrelname  AS indexname,
+    idx_scan, last_idx_scan,   -- last_idx_scan disponible depuis PG 16
+    idx_tup_read,
+    idx_tup_fetch
 FROM pg_stat_user_indexes  
 ORDER BY idx_scan ASC;  
 

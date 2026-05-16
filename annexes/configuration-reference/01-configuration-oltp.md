@@ -252,11 +252,11 @@ checkpoint_completion_target = 0.9
 **Qu'est-ce que c'est ?**
 Pourcentage de `checkpoint_timeout` pendant lequel PostgreSQL étale les écritures du checkpoint.
 
-**Valeur par défaut :** 0.5 (écrit pendant 50% de l'intervalle)  
-**Recommandation OLTP :** 0.9 (écrit pendant 90% de l'intervalle)  
+**Valeur par défaut :** **0.9** depuis PG 14 (auparavant : 0.5) — écrit pendant 90 % de l'intervalle  
+**Recommandation OLTP :** garder 0.9 (= défaut) — étaler au maximum pour lisser les I/O  
 
 **Pourquoi 0.9 ?**
-Étaler les écritures sur une plus longue période réduit les pics d'I/O et donc les pics de latence.
+Étaler les écritures sur une plus longue période réduit les pics d'I/O et donc les pics de latence. C'est pourquoi le projet PostgreSQL a basculé le défaut de 0.5 à 0.9 en PG 14.
 
 **Configuration dans postgresql.conf :**
 ```ini
@@ -383,16 +383,26 @@ effective_io_concurrency = 200  # SSD
 
 ---
 
-#### **Nouveauté PostgreSQL 18 : I/O Asynchrone**
+#### **Nouveauté PostgreSQL 18 : I/O Asynchrone (AIO) 🆕**
 
-PostgreSQL 18 introduit un nouveau sous-système I/O asynchrone qui peut améliorer les performances jusqu'à 3× pour certaines charges OLTP.
+PostgreSQL 18 introduit un sous-système d'**I/O asynchrone** qui peut sensiblement améliorer les performances de lecture (sur les charges qui font du *prefetch* et des scans massifs en cache miss). Trois implémentations au choix via `io_method` :
+
+| `io_method` | Quand l'utiliser | Prérequis |
+|---|---|---|
+| `worker` (défaut PG 18) | Toujours disponible, portable | Aucun |
+| `io_uring` | Linux récent | **Kernel ≥ 5.1** + binaire compilé `--with-liburing` |
+| `sync` | Restaurer le comportement antérieur à PG 18 | Aucun |
 
 **Configuration dans postgresql.conf :**
 ```ini
-io_method = 'worker'  # Défaut : 'sync'
+# Implémentation par défaut, sans prérequis kernel
+io_method = worker
+
+# Optionnel : nombre de workers I/O (défaut 3)
+io_workers = 3
 ```
 
-**⚠️ Attention :** Nécessite un noyau Linux récent (5.1+) avec support io_uring.
+> ⚠️ Seul `io_method = io_uring` exige un kernel Linux ≥ 5.1 et un binaire compilé avec `liburing`. Le mode `worker` fonctionne sur toutes les plateformes supportées (Linux, macOS, Windows, *BSD). En cas de doute, garder `worker`.
 
 ---
 
@@ -460,6 +470,15 @@ max_connections = 300
 superuser_reserved_connections = 3  
 
 # ===================================
+# TIMEOUTS (essentiels en OLTP : libérer rapidement les ressources)
+# ===================================
+statement_timeout = 30s                 # Toute requête > 30s est tuée  
+lock_timeout = 5s                       # Pose de verrou : 5s max  
+idle_in_transaction_session_timeout = 60s   # Tue les transactions zombies  
+# idle_session_timeout = 0              # 0 = désactivé (PG 14+) — utile côté ROLE/DATABASE
+deadlock_timeout = 1s                   # Délai avant détection de deadlock
+
+# ===================================
 # WAL et CHECKPOINTS
 # ===================================
 wal_level = replica                     # Pour réplication  
@@ -486,6 +505,17 @@ autovacuum_analyze_scale_factor = 0.05
 autovacuum_vacuum_cost_delay = 2ms  
 autovacuum_vacuum_cost_limit = 2000  
 
+# 🆕 PostgreSQL 18 : plafond absolu (en nb de lignes mortes) avant déclenchement
+# - défaut PG 18 : 100 000 000
+# - met une borne supérieure quand n_live_tup × scale_factor devient trop grand
+# - -1 pour désactiver
+autovacuum_vacuum_max_threshold = 100000000
+
+# 🆕 PostgreSQL 18 : pool global de slots autovacuum
+# (autovacuum_max_workers reste le nombre de workers concurrents,
+#  autovacuum_worker_slots dimensionne le pool sous-jacent)
+autovacuum_worker_slots = 16
+
 # ===================================
 # PLANIFICATEUR (optimisé SSD/NVMe)
 # ===================================
@@ -493,8 +523,8 @@ random_page_cost = 1.1                  # SSD/NVMe
 effective_io_concurrency = 300          # NVMe  
 default_statistics_target = 100  
 
-# PostgreSQL 18 : I/O asynchrone
-io_method = 'worker'
+# PostgreSQL 18 : I/O asynchrone (worker = portable, io_uring si kernel ≥ 5.1)
+io_method = worker
 
 # ===================================
 # PARALLÉLISATION (si applicable)
@@ -617,19 +647,34 @@ SELECT * FROM orders WHERE created_at > '2025-01-01';
 
 ### 3. Prepared Statements
 
-**Principe :** Pré-compiler les requêtes fréquentes pour économiser le temps de parsing et planning.
+**Principe :** Pré-compiler les requêtes fréquentes pour économiser le temps de *parsing* et *planning* — le serveur retient le plan et le réutilise.
 
-**Exemple en Python (psycopg3) :**
+**psycopg3 prépare automatiquement** : depuis la v3, le driver bascule en mode *prepared statement* après quelques appels d'une même requête (5 par défaut, paramétré par `cursor.connection.prepare_threshold`). On n'a donc **pas besoin** d'écrire `PREPARE` à la main dans la plupart des cas.
+
 ```python
-# Mauvais : Planning à chaque exécution
+# Idiomatique : psycopg3 prépare TOUT SEUL après prepare_threshold appels
+# (5 par défaut). Aucune action requise.
 cursor.execute("SELECT * FROM users WHERE email = %s", (email,))
 
-# Bon : Préparer une fois, exécuter plusieurs fois
-cursor.execute("PREPARE get_user AS SELECT * FROM users WHERE email = $1")  
-cursor.execute("EXECUTE get_user(%s)", (email,))  
+# Pour forcer la préparation dès le 1er appel :
+conn.prepare_threshold = 0          # toutes les requêtes préparées
+# ou désactiver :
+# conn.prepare_threshold = None    # jamais de préparation côté driver
 ```
 
-**Gain typique :** 10-30% de réduction de latence sur requêtes simples fréquentes.
+**Équivalent SQL explicite** (utile pour valider/inspecter, rarement nécessaire dans le code applicatif) :
+
+```sql
+PREPARE get_user (text) AS SELECT * FROM users WHERE email = $1;  
+EXECUTE get_user('alice@example.com');  
+DEALLOCATE get_user;  
+```
+
+> 💡 **Pièges** :  
+> - Avec un *connection pooler* en mode **transaction** (PgBouncer `pool_mode = transaction`), les prepared statements ne survivent **pas** entre transactions. Mettre `prepare_threshold = None` côté psycopg, ou utiliser un pooler PG 17+ qui supporte les *protocol-level prepared statements* (PgBouncer 1.21+).  
+> - `EXECUTE` SQL ne accepte que la syntaxe `EXECUTE nom(valeur, …)` (pas de `%s` côté driver dans la même chaîne).
+
+**Gain typique :** 10-30 % de réduction de latence sur requêtes simples fréquentes (quand la phase planning est non négligeable).
 
 ---
 
@@ -743,9 +788,12 @@ Avant de mettre en production, vérifiez :
 - [ ] **Autovacuum** : Activé et configuré agressivement  
 - [ ] **Autovacuum** : `autovacuum_naptime` = 10s  
 - [ ] **Autovacuum** : `scale_factor` = 0.05  
+- [ ] **Autovacuum (PG 18)** : `autovacuum_vacuum_max_threshold` choisi (plafond absolu)  
+- [ ] **Autovacuum (PG 18)** : `autovacuum_worker_slots` ≥ `autovacuum_max_workers`  
 - [ ] **Disques** : `random_page_cost` = 1.1 (SSD/NVMe)  
 - [ ] **I/O** : `effective_io_concurrency` = 200-300  
-- [ ] **PostgreSQL 18** : `io_method` = 'worker' (défaut) ou 'io_uring' (Linux 5.1+)  
+- [ ] **PostgreSQL 18** : `io_method` = `worker` (défaut, portable) ou `io_uring` (Linux ≥ 5.1, binaire `--with-liburing`)  
+- [ ] **PostgreSQL 18** : `data_checksums` activé à l'`initdb` (`-k`), vérifiable via `SHOW data_checksums;`  
 - [ ] **Monitoring** : `log_min_duration_statement` configuré  
 - [ ] **Monitoring** : pg_stat_statements activé  
 - [ ] **Sécurité** : `password_encryption` = scram-sha-256  

@@ -67,9 +67,17 @@ Le **développement local** désigne l'environnement de travail d'un développeu
 **Installation :**
 
 ```bash
-# Ubuntu/Debian
+# Ubuntu/Debian — utiliser le dépôt PostgreSQL officiel (PGDG) pour PG 18
+# (les paquets par défaut d'Ubuntu/Debian peuvent être en retard sur la version mineure)
+sudo install -d /usr/share/postgresql-common/pgdg  
+sudo curl -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc \  
+    --fail https://www.postgresql.org/media/keys/ACCC4CF8.asc
+echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] \  
+https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" \  
+    | sudo tee /etc/apt/sources.list.d/pgdg.list
+
 sudo apt update  
-sudo apt install postgresql postgresql-contrib  
+sudo apt install postgresql-18 postgresql-contrib-18  
 
 # macOS (Homebrew)
 brew install postgresql@18  
@@ -77,8 +85,10 @@ brew services start postgresql@18
 
 # Windows
 # Télécharger depuis https://www.postgresql.org/download/windows/
-# Installer avec GUI
+# Installer avec GUI (EDB Installer recommandé)
 ```
+
+> 💡 Pour une installation rapide sur un poste de dev (sans repo PGDG), `sudo apt install postgresql postgresql-contrib` fonctionne aussi mais installe la version *par défaut* du dépôt Ubuntu/Debian — qui peut être plus ancienne que PG 18.
 
 ---
 
@@ -482,20 +492,33 @@ Seq Scan on orders  (cost=0.00..5000.00 rows=10000 width=100) (actual time=0.123
 
 ---
 
-### 3. pgcrypto : Génération de Données de Test
+### 3. Génération de Données de Test (UUID, séries)
+
+> ℹ️ **Depuis PostgreSQL 13**, la fonction `gen_random_uuid()` est **native** : pas besoin de charger `pgcrypto` juste pour générer des UUID. L'extension reste utile pour `digest()`, `crypt()`, `hmac()`, `pgp_sym_encrypt()` etc.
 
 ```sql
-CREATE EXTENSION pgcrypto;
-
--- Générer des UUID
+-- PG 13+ : UUID v4 natif (aléatoire)
 SELECT gen_random_uuid();
 
--- Générer des données aléatoires
-INSERT INTO users (email, name)  
+-- 🆕 PG 18 : UUID v7 natif (RFC 9562, trié par timestamp)
+SELECT uuidv7();
+
+-- Générer 1000 lignes de test
+INSERT INTO users (id, email, name)  
 SELECT  
+    uuidv7(),                              -- ou gen_random_uuid() en PG < 18
     'user' || i || '@example.com',
     'User ' || i
 FROM generate_series(1, 1000) AS i;
+```
+
+**Si vous avez vraiment besoin de pgcrypto** (chiffrement, hash, HMAC) :
+
+```sql
+CREATE EXTENSION pgcrypto;  
+SELECT digest('mon mot de passe', 'sha256');                -- hash SHA-256  
+SELECT crypt('motdepasse', gen_salt('bf'));                 -- bcrypt  
+SELECT encode(hmac('payload', 'cle', 'sha256'), 'hex');     -- HMAC-SHA256  
 ```
 
 ---
@@ -610,15 +633,30 @@ WHERE datname = current_database();
 
 ---
 
-#### Tuer une Connexion
+#### Annuler ou Tuer une Connexion
+
+> ⚠️ Attention à ne pas inverser ces deux fonctions :  
+>  
+> | Fonction | Signal envoyé | Effet | Quand l'utiliser |  
+> |---|---|---|---|  
+> | `pg_cancel_backend(pid)` | `SIGINT` (~ `Ctrl+C`) | **Annule la requête en cours**, la session reste ouverte | Premier recours, plus doux |  
+> | `pg_terminate_backend(pid)` | `SIGTERM` | **Tue la connexion** entière | Dernier recours, si `cancel` ne suffit pas |
 
 ```sql
--- Terminer proprement
-SELECT pg_terminate_backend(12345);  -- Remplacer par PID
-
--- Forcer (si ne répond pas)
+-- 1. Annuler poliment la requête en cours (laisse la session vivante)
 SELECT pg_cancel_backend(12345);
+
+-- 2. Si la session refuse de se terminer, fermer brutalement
+SELECT pg_terminate_backend(12345);
 ```
+
+> 💡 Pour annuler / terminer en lot toutes les connexions `idle in transaction` depuis plus de 10 minutes :  
+> ```sql  
+> SELECT pg_terminate_backend(pid)  
+> FROM pg_stat_activity  
+> WHERE state = 'idle in transaction'  
+>   AND state_change < now() - interval '10 minutes';  
+> ```
 
 ---
 
@@ -1138,8 +1176,16 @@ tail /var/log/postgresql/postgresql-*.log
 ```sql
 -- Donner tous les droits (dev uniquement)
 GRANT ALL PRIVILEGES ON DATABASE devdb TO devuser;  
-GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO devuser;  
+GRANT USAGE, CREATE ON SCHEMA public TO devuser;  -- ⚠️ PG 15+ : CREATE n'est plus donné par défaut sur 'public'  
+GRANT ALL PRIVILEGES ON ALL TABLES    IN SCHEMA public TO devuser;  
 GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO devuser;  
+
+-- ⚠️ Piège classique : ces GRANT ne s'appliquent qu'aux objets DÉJÀ EXISTANTS.
+-- Pour que les futures tables/séquences créées dans public héritent automatiquement,
+-- ajouter une politique de privilèges par défaut :
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES    TO devuser;  
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO devuser;  
+-- (à exécuter par le rôle qui créera les futures tables)
 ```
 
 ---

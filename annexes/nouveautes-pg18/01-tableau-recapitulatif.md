@@ -62,9 +62,9 @@ PostgreSQL 18, sorti en septembre 2025, apporte des améliorations significative
 | **Vérifications Parallèles (--jobs)** | Utilisation de plusieurs CPU pendant l'upgrade pour accélérer les vérifications | Upgrade beaucoup plus rapide sur machines multi-cœurs | ⭐⭐⭐⭐ |
 | **Autovacuum Dynamique** | Ajustement automatique du nombre de workers autovacuum selon la charge | Maintenance automatique plus efficace, moins d'intervention manuelle | ⭐⭐⭐⭐ |
 | **autovacuum_vacuum_max_threshold** | Nouveau paramètre pour limiter le vacuum sur les très grandes tables | Meilleur contrôle de l'impact du vacuum sur les performances | ⭐⭐⭐ |
-| **Statistiques VACUUM/ANALYZE** | Nouvelles colonnes dans pg_stat_all_tables pour suivre la maintenance | Monitoring amélioré, détection facile des tables mal entretenues | ⭐⭐⭐ |
-| **Statistiques I/O par Backend** | Suivi détaillé des lectures/écritures disque par processus | Diagnostic précis des problèmes de performance | ⭐⭐⭐⭐ |
-| **Statistiques WAL par Backend** | Suivi de la génération de journaux de transactions par processus | Identification des processus générant beaucoup d'écritures | ⭐⭐⭐ |
+| **Temps cumulé VACUUM/ANALYZE** | 4 nouvelles colonnes dans `pg_stat_all_tables` : `total_vacuum_time`, `total_autovacuum_time`, `total_analyze_time`, `total_autoanalyze_time` (en ms) | Identifie les tables qui *coûtent cher* à entretenir (et pas seulement celles visitées souvent) | ⭐⭐⭐⭐ |
+| **Statistiques I/O par Backend** | Nouvelle vue `pg_stat_io` ventilée *par backend type* + vue `pg_stat_get_backend_io(pid)` pour un backend ciblé | Diagnostic précis : qui génère les lectures/écritures disque ? | ⭐⭐⭐⭐ |
+| **Statistiques WAL par Backend** | Suivi de la génération de WAL par processus via `pg_stat_get_backend_wal(pid)` | Identification des processus générant beaucoup d'écritures | ⭐⭐⭐ |
 
 ---
 

@@ -351,23 +351,31 @@ SELECT * FROM employes WHERE email LIKE '%@example.com';
 
 **Exemple** :
 ```sql
--- Géométrie avec PostGIS
+-- Géométrie avec PostGIS (cas typique GiST)
 CREATE INDEX idx_lieux_geom ON lieux USING gist(geom);  
 SELECT * FROM lieux WHERE ST_DWithin(geom, point_reference, 1000);  
 
--- Recherche de texte
+-- Plages (range types) — GiST est le bon choix
+CREATE INDEX idx_resa_periode ON reservations USING gist(periode);  
+SELECT * FROM reservations WHERE periode && tstzrange('2026-01-01', '2026-01-31');  
+
+-- Recherche de texte (full-text search)
+-- GiST fonctionne, MAIS GIN est presque toujours préférable pour FTS
+-- (lookups plus rapides). Voir section 4.4 GIN ci-dessous.
 CREATE INDEX idx_documents_texte ON documents USING gist(to_tsvector('french', contenu));  
 SELECT * FROM documents WHERE to_tsvector('french', contenu) @@ to_tsquery('postgresql');  
 ```
 
 **Avantages** :
 - ✅ Très flexible et extensible  
-- ✅ Optimal pour les données spatiales  
-- ✅ Supporte de nombreux types de données
+- ✅ Optimal pour les données spatiales (PostGIS) et les types `range`  
+- ✅ Supporte de nombreux types de données  
+- ✅ Écritures plus rapides que GIN (utile si la table est très mise à jour)
 
 **Limites** :
 - ❌ Plus lent que B-Tree pour les comparaisons simples  
-- ❌ Taille d'index plus importante
+- ❌ Taille d'index plus importante  
+- ❌ Pour le **full-text search** et les **arrays/JSONB**, GIN est plus performant en lecture
 
 ---
 
@@ -545,14 +553,16 @@ Identifiez quels index sont réellement utilisés :
 ```sql
 SELECT
     schemaname,
-    tablename,
-    indexrelname,
+    relname       AS tablename,    -- colonne réelle : relname (pas tablename)
+    indexrelname  AS indexname,    -- colonne réelle : indexrelname
     idx_scan,
     idx_tup_read,
     idx_tup_fetch
 FROM pg_stat_user_indexes  
 ORDER BY idx_scan ASC;  
 ```
+
+> ℹ️ `pg_stat_user_indexes` expose **`relname`** pour la table porteuse et **`indexrelname`** pour l'index. Les noms `tablename`/`indexname` n'existent que dans la vue `pg_indexes`.
 
 **Indicateurs** :
 - `idx_scan = 0` : Index jamais utilisé  
@@ -598,18 +608,22 @@ WHERE i1.indexrelid < i2.indexrelid
 Calculez le bloat (fragmentation) des index :
 
 ```sql
--- Estimation du bloat
+-- Estimation rapide de la taille des index utilisateurs
+-- (pour un bloat *précis*, voir la section 9 avec pgstattuple/pgstatindex)
 SELECT
     schemaname,
-    tablename,
-    indexrelname,
+    relname       AS tablename,
+    indexrelname  AS indexname,
     pg_size_pretty(pg_relation_size(indexrelid)) AS index_size,
-    ROUND(100 * (pg_relation_size(indexrelid) - pg_relation_size(indexrelid, 'main'))::numeric /
-          NULLIF(pg_relation_size(indexrelid), 0), 2) AS bloat_pct
+    idx_scan,
+    idx_tup_read,
+    idx_tup_fetch
 FROM pg_stat_user_indexes  
 ORDER BY pg_relation_size(indexrelid) DESC  
 LIMIT 20;  
 ```
+
+> ⚠️ Il n'existe **pas** de formule simple pour estimer le *bloat* d'un B-tree à partir des seules vues système : `pg_relation_size(indexrelid, 'main')` n'est *pas* un indicateur de tuples vivants vs morts. Pour une mesure fiable, utilisez **`pgstatindex()`** (extension `pgstattuple`) — c'est l'objet de la section 9.
 
 #### Étape 6 : Évaluation des Performances
 
@@ -644,7 +658,7 @@ Classez les actions par priorité :
 ```sql
 SELECT
     schemaname,
-    tablename,
+    relname AS tablename,         -- pg_stat_user_tables expose 'relname'
     seq_scan,
     seq_tup_read,
     idx_scan,
@@ -786,9 +800,10 @@ SELECT hypopg_reset();
 ```sql
 SELECT
     schemaname,
-    tablename,
-    indexrelname AS index_name,
+    relname       AS table_name,    -- pg_stat_user_indexes : 'relname' (table)
+    indexrelname  AS index_name,    -- pg_stat_user_indexes : 'indexrelname'
     idx_scan,
+    last_idx_scan,                  -- 🆕 PG 16+ : dernière utilisation (timestamptz)
     pg_size_pretty(pg_relation_size(indexrelid)) AS index_size,
     pg_relation_size(indexrelid) AS size_bytes
 FROM pg_stat_user_indexes  
@@ -796,6 +811,8 @@ WHERE idx_scan = 0
   AND indexrelname NOT LIKE '%_pkey'  -- Exclure les PK
 ORDER BY pg_relation_size(indexrelid) DESC;
 ```
+
+> 💡 **Astuce PG 16+** : la colonne `last_idx_scan` (`timestamp with time zone`) indique la **date du dernier scan** de l'index. Plus précise que `idx_scan = 0` pour distinguer un index nouveau (jamais scanné encore) d'un index réellement abandonné depuis plusieurs mois. Disponible aussi dans `pg_stat_all_tables` (`last_seq_scan`, `last_idx_scan`).
 
 **Résultat** : Liste des index jamais utilisés, triés par taille.
 
@@ -1050,20 +1067,21 @@ Le **bloat** (gonflement) est l'espace perdu dans un index dû à :
 ```sql
 SELECT
     schemaname,
-    tablename,
-    indexrelname,
+    relname        AS tablename,
+    indexrelname   AS indexname,
     pg_size_pretty(pg_relation_size(indexrelid)) AS index_size,
-    pg_size_pretty(pg_relation_size(pg_class.oid)) AS table_size,
+    pg_size_pretty(pg_relation_size(relid))      AS table_size,
     ROUND(100 * pg_relation_size(indexrelid)::numeric /
-          NULLIF(pg_relation_size(pg_class.oid), 0), 2) AS index_to_table_ratio
+          NULLIF(pg_relation_size(relid), 0), 2) AS index_to_table_ratio
 FROM pg_stat_user_indexes  
-JOIN pg_class ON pg_class.relname = pg_stat_user_indexes.tablename  
 WHERE schemaname = 'public'  
 ORDER BY pg_relation_size(indexrelid) DESC  
 LIMIT 20;  
 ```
 
-**Heuristique** : Si `index_to_table_ratio > 100%`, investiguer le bloat.
+> 💡 Pas besoin de jointure sur `pg_class` : la vue `pg_stat_user_indexes` expose déjà `relid` (oid de la table porteuse de l'index), directement utilisable avec `pg_relation_size()`.
+
+**Heuristique** : Si `index_to_table_ratio > 100 %`, investiguer le bloat (ou simplement la sur-indexation).
 
 #### Méthode 2 : Extension pgstattuple
 
@@ -1087,25 +1105,24 @@ SELECT * FROM pgstatindex('nom_de_lindex');
 #### Méthode 3 : Requête Complète de Bloat
 
 ```sql
--- Estimation du bloat pour tous les index
+-- Mesure réelle du bloat via pgstattuple (à exécuter hors heures de pointe)
+CREATE EXTENSION IF NOT EXISTS pgstattuple;
+
 SELECT
     schemaname,
-    tablename,
-    indexrelname,
+    relname       AS tablename,
+    indexrelname  AS indexname,
     pg_size_pretty(pg_relation_size(indexrelid)) AS index_size,
-    CASE
-        WHEN pg_relation_size(indexrelid) = 0 THEN 0
-        ELSE ROUND((pg_relation_size(indexrelid) -
-                    (pg_relation_size(indexrelid) * 0.9))::numeric /
-                   pg_relation_size(indexrelid) * 100, 2)
-    END AS estimated_bloat_pct
-FROM pg_stat_user_indexes  
-WHERE pg_relation_size(indexrelid) > 1024 * 1024  -- > 1 MB  
+    (s.avg_leaf_density)::numeric(5,2)           AS avg_leaf_density_pct,
+    (s.leaf_fragmentation)::numeric(5,2)         AS leaf_fragmentation_pct
+FROM pg_stat_user_indexes ui  
+CROSS JOIN LATERAL pgstatindex(format('%I.%I', schemaname, indexrelname)) AS s  
+WHERE pg_relation_size(indexrelid) > 1024 * 1024  -- > 1 Mo  
 ORDER BY pg_relation_size(indexrelid) DESC  
 LIMIT 50;  
 ```
 
-**Note** : Cette estimation est simplifiée. Pour une mesure précise, utilisez `pgstattuple`.
+> ⚠️ `pgstatindex()` lit l'index ligne à ligne. C'est **précis** mais **coûteux** : à éviter sur des index > 10 Go pendant les heures pleines. Pour une estimation grossière, on se contente du ratio taille_index / taille_table (méthode 1).
 
 ### 9.3. Solutions au Bloat
 
@@ -1138,16 +1155,33 @@ REINDEX INDEX CONCURRENTLY nom_index;
 ```
 
 **REINDEX CONCURRENTLY** :
-- ✅ N'acquiert pas de verrou exclusif  
+- ✅ N'acquiert pas de verrou exclusif (juste un `ShareUpdateExclusiveLock`)  
 - ✅ La table reste accessible en lecture/écriture  
 - ❌ Plus lent qu'un REINDEX normal  
-- ❌ Nécessite un espace disque temporaire (2× la taille de l'index)
+- ❌ Nécessite un espace disque temporaire (2× la taille de l'index)  
+- ❌ Ne peut PAS s'exécuter dans une transaction explicite (`BEGIN`/`COMMIT`)  
+- ⚠️ **En cas d'échec** : laisse un index en état `INVALID` (visible via `pg_index.indisvalid = false`). Il doit être supprimé manuellement avec `DROP INDEX CONCURRENTLY` avant de retenter.
 
 **REINDEX normal** :
 - ✅ Plus rapide  
 - ❌ Verrou exclusif (table bloquée en écriture)
 
-**Recommandation** : Utilisez toujours `CONCURRENTLY` en production.
+**Recommandation** : Utilisez toujours `CONCURRENTLY` en production. Surveillez les index `indisvalid = false` après chaque opération (cf. `03-scripts-monitoring-systeme.md`, section « Invalid Indexes »).
+
+```sql
+-- Détecter les index laissés en état INVALID après un échec de
+-- CREATE INDEX CONCURRENTLY ou REINDEX CONCURRENTLY
+SELECT
+    n.nspname AS schemaname,
+    t.relname AS tablename,
+    i.relname AS indexname
+FROM pg_index x  
+JOIN pg_class i      ON i.oid = x.indexrelid  
+JOIN pg_class t      ON t.oid = x.indrelid  
+JOIN pg_namespace n  ON n.oid = i.relnamespace  
+WHERE NOT x.indisvalid  
+  AND n.nspname NOT IN ('pg_catalog', 'information_schema');
+```
 
 #### Solution 3 : pg_repack (Extension)
 
@@ -1174,22 +1208,26 @@ pg_repack -d ma_base -t employes
 Alternative à REINDEX CONCURRENTLY :
 
 ```sql
--- 1. Créer un nouvel index identique
+-- 1. Créer un nouvel index identique (peut échouer et laisser un index INVALID)
 CREATE INDEX CONCURRENTLY idx_employes_nom_new ON employes(nom);
 
--- 2. Vérifier qu'il est créé correctement
-\d employes
+-- 2. Vérifier qu'il est marqué valide (indisvalid = true)
+SELECT i.relname, x.indisvalid  
+FROM pg_index x JOIN pg_class i ON i.oid = x.indexrelid  
+WHERE i.relname = 'idx_employes_nom_new';  
 
--- 3. Supprimer l'ancien index
+-- 3. Si invalide → DROP INDEX CONCURRENTLY puis relancer le CREATE INDEX
+-- 4. Si valide → supprimer l'ancien index
 DROP INDEX CONCURRENTLY idx_employes_nom;
 
--- 4. Renommer le nouveau
+-- 5. Renommer le nouveau (opération métadonnée, instantanée)
 ALTER INDEX idx_employes_nom_new RENAME TO idx_employes_nom;
 ```
 
 **Avantages** :
-- ✅ Flexibilité maximale  
-- ✅ Permet de modifier la définition en même temps
+- ✅ Flexibilité maximale (permet de modifier le type d'index, les colonnes, etc.)  
+- ✅ Aucun verrou exclusif à aucune étape  
+- ⚠️ **Caveat** : `CREATE INDEX CONCURRENTLY` doit s'exécuter hors transaction (un `BEGIN` invalide la commande).
 
 ### 9.4. Planification de la Maintenance
 
@@ -1205,24 +1243,36 @@ ALTER INDEX idx_employes_nom_new RENAME TO idx_employes_nom;
 #### Automatisation
 
 ```sql
--- Script de monitoring à exécuter hebdomadairement
+-- Squelette d'audit hebdomadaire (à compléter avec votre canal d'alerte)
 DO $$  
 DECLARE  
     idx_record RECORD;
+    leaf_density numeric;
 BEGIN
     FOR idx_record IN
-        SELECT schemaname, tablename, indexrelname, pg_relation_size(indexrelid) AS size
+        SELECT schemaname, relname AS tablename, indexrelname,
+               pg_relation_size(indexrelid) AS size
         FROM pg_stat_user_indexes
-        WHERE pg_relation_size(indexrelid) > 100 * 1024 * 1024  -- > 100 MB
+        WHERE pg_relation_size(indexrelid) > 100 * 1024 * 1024  -- > 100 Mo
     LOOP
-        -- Analyser le bloat avec pgstattuple
-        EXECUTE format('SELECT avg_leaf_density FROM pgstatindex(%L)', idx_record.indexrelname);
+        -- Récupérer la densité de feuilles via pgstatindex
+        EXECUTE format(
+            'SELECT avg_leaf_density FROM pgstatindex(%L)',
+            format('%I.%I', idx_record.schemaname, idx_record.indexrelname)
+        ) INTO leaf_density;
 
-        -- Si bloat > 50%, alerter
-        -- (logique d'alerte à implémenter)
+        IF leaf_density < 50 THEN
+            RAISE NOTICE 'Bloat sévère : index %.% (densité=%, taille=% Mo)',
+                idx_record.schemaname,
+                idx_record.indexrelname,
+                round(leaf_density, 1),
+                round(idx_record.size / 1024.0 / 1024.0, 1);
+        END IF;
     END LOOP;
 END $$;
 ```
+
+> 💡 On qualifie l'index avec `format('%I.%I', schema, indexrelname)` plutôt qu'avec son seul nom : sinon `pgstatindex` cherche dans le `search_path` et peut échouer pour les index hors `public`.
 
 ---
 
@@ -1235,8 +1285,8 @@ END $$;
 ```sql
 SELECT
     schemaname,
-    tablename,
-    indexrelname,
+    relname       AS tablename,     -- pg_statio_user_indexes : 'relname'
+    indexrelname  AS indexname,     -- pg_statio_user_indexes : 'indexrelname'
     idx_blks_read,
     idx_blks_hit,
     CASE
@@ -1563,7 +1613,7 @@ CREATE UNIQUE INDEX idx_users_email ON users(email);
 
 ### 11.6. Index avec Ordre de Tri
 
-**Définition** : Spécifier l'ordre de tri (ASC/DESC) et la gestion des NULL dans l'index.
+**Définition** : Spécifier l'ordre de tri (`ASC`/`DESC`) et la gestion des `NULL` dans l'index.
 
 ```sql
 CREATE INDEX idx_produits_prix_desc  
@@ -1571,107 +1621,123 @@ ON produits(prix DESC NULLS LAST);
 ```
 
 **Cas d'usage** :
+
 ```sql
--- Requête bénéficie directement de l'ordre de l'index
+-- La requête bénéficie directement de l'ordre stocké dans l'index
 SELECT * FROM produits ORDER BY prix DESC NULLS LAST LIMIT 10;
 ```
 
 **Options** :
-- `ASC` : Ordre croissant (défaut)  
-- `DESC` : Ordre décroissant  
-- `NULLS FIRST` : Les NULL en premier  
-- `NULLS LAST` : Les NULL en dernier (défaut pour ASC)
+- `ASC` : ordre croissant (défaut).
+- `DESC` : ordre décroissant.
+- `NULLS FIRST` : les `NULL` en premier (défaut pour `DESC`).
+- `NULLS LAST` : les `NULL` en dernier (défaut pour `ASC`).
 
-**Note** : Depuis PostgreSQL 8.3, les index B-Tree peuvent être parcourus dans les deux sens, donc un seul index suffit généralement.
+> ⚠️ **Précision importante** : depuis PostgreSQL 8.3, un index B-tree peut être parcouru **dans les deux sens**, donc un index `(a ASC)` sert aussi pour `ORDER BY a DESC`. **MAIS** cette symétrie ne joue qu'à l'échelle de **l'index entier** :  
+>  
+> - Pour `ORDER BY a ASC, b ASC` → l'index `(a ASC, b ASC)` (ou son inverse complet `(a DESC, b DESC)`) est utilisable.  
+> - Pour `ORDER BY a ASC, b DESC` → il faut **explicitement** un index `(a ASC, b DESC)` ou `(a DESC, b ASC)`. Un index `(a, b)` (tout ASC) ne suffit pas.  
+>  
+> Cas typique : pagination ascendante par date + tri descendant par score → `CREATE INDEX … (created_at ASC, score DESC)`.
 
 ---
 
 ## 12. PostgreSQL 18 : Nouveautés d'Indexation
 
-### 12.1. Skip Scan Optimization
+### 12.1. Skip Scan (B-tree multi-colonnes)
 
-**Description** : Permet d'utiliser un index multi-colonnes même si la première colonne n'est pas filtrée.
+**Le problème historique.** Un index B-tree composite `(a, b)` n'est utilisable efficacement que si la requête filtre sur `a` (la colonne **de tête**). Une requête `WHERE b = …` sans condition sur `a` force un *Sequential Scan*, sauf à créer un index dédié `(b)`.
 
-**Avant PostgreSQL 18** :
-```sql
-CREATE INDEX idx_ventes_region_date ON ventes(region, date_vente);
+**Ce que PG 18 apporte.** Le planificateur peut désormais générer un **Skip Scan** : pour chaque valeur distincte de `a`, il « saute » dans l'index jusqu'aux entrées qui satisfont `b = …`. Coût ≈ `nb_valeurs_distinctes(a) × log(N)` plutôt que `N` (scan séquentiel).
 
--- Index NON utilisé (region non filtré)
-SELECT * FROM ventes WHERE date_vente = '2025-01-01';
-```
-
-**PostgreSQL 18** :
-```sql
--- Index PEUT être utilisé avec Skip Scan
-SELECT * FROM ventes WHERE date_vente = '2025-01-01';
-```
-
-**Mécanisme** : Le planificateur "saute" (skip) les valeurs de la première colonne pour accéder à la seconde.
-
-**Avantages** :
-- ✅ Réduit le besoin d'index redondants  
-- ✅ Améliore automatiquement les requêtes existantes  
-- ✅ Aucune modification de code nécessaire
-
-**Quand est-ce utilisé ?**
-- Première colonne a peu de valeurs distinctes
-- Seconde colonne est sélective
-- Coût estimé de Skip Scan < Coût Seq Scan
-
-### 12.2. Optimisation des OR-Clauses
-
-**Description** : Transformation automatique des OR en ANY pour permettre l'utilisation d'index.
-
-**Avant PostgreSQL 18** :
-```sql
--- Seq Scan (OR empêche l'utilisation d'index)
-SELECT * FROM employes WHERE id = 1 OR id = 2 OR id = 3;
-```
-
-**PostgreSQL 18** :
-```sql
--- Le planificateur transforme automatiquement en :
-SELECT * FROM employes WHERE id = ANY(ARRAY[1, 2, 3]);
--- Index Scan possible
-```
-
-**Avantages** :
-- ✅ Optimisation automatique  
-- ✅ Pas de réécriture de requêtes nécessaire
-
-### 12.3. Auto-Élimination des Self-Joins
-
-**Description** : Le planificateur détecte et élimine automatiquement les self-joins inutiles.
+**Quand c'est rentable** :
+- La colonne de tête a une **cardinalité faible** (peu de valeurs distinctes) — ex. `tenant_id`, `region`, `pays`, statut.
+- La colonne suivante est **sélective**.
+- Le coût estimé du Skip Scan reste inférieur au *Seq Scan*.
 
 **Exemple** :
 ```sql
--- Requête avec self-join redondant
+CREATE INDEX idx_ventes_region_date ON ventes(region, date_vente);
+
+-- PG ≤ 17 : Seq Scan (région non filtrée) → lent
+-- PG 18  : Skip Scan possible, surtout si peu de régions distinctes
+EXPLAIN ANALYZE  
+SELECT * FROM ventes WHERE date_vente = DATE '2026-01-01';  
+```
+
+**Limites connues** :
+- Skip Scan ne supprime *pas* le besoin d'un index `(date_vente)` si vous avez **beaucoup** de régions (le saut devient coûteux).
+- Ne s'applique qu'aux index **B-tree** (pas GIN, GiST, BRIN, etc.).
+- Vérifier `EXPLAIN` pour confirmer l'utilisation (mention « *Index Scan ... using ...* » + filtre `b` dans la condition d'index).
+
+---
+
+### 12.2. Transformation `OR` → `= ANY (…)`
+
+**Avant PG 18.** Le planificateur convertissait `IN (1,2,3)` en `= ANY (ARRAY[1,2,3])` (plus efficace pour les index), mais **pas** les `OR` équivalents : `col = 1 OR col = 2 OR col = 3` restait littéral et empêchait souvent l'utilisation d'un index.
+
+**PG 18.** Le planificateur **réécrit** automatiquement ces chaînes de `OR` portant sur la **même colonne** avec des constantes en une forme `= ANY (…)`, ce qui permet enfin l'*Index Scan* / *Bitmap Index Scan*.
+
+```sql
+-- Écriture utilisateur (PG 18)
+SELECT * FROM employes WHERE id = 1 OR id = 2 OR id = 3;
+
+-- Réécriture interne par le planificateur
+SELECT * FROM employes WHERE id = ANY (ARRAY[1, 2, 3]);
+```
+
+> ℹ️ La transformation se limite aux cas où **tous** les `OR` portent sur la même expression de gauche et des constantes (ou des paramètres) à droite. Un `OR` mixte (`a = 1 OR b = 2`) reste tel quel.
+
+---
+
+### 12.3. Auto-élimination des self-joins
+
+**Description.** Quand le planificateur détecte qu'une jointure d'une table avec elle-même sur sa **clé primaire** ne produit qu'une projection (et que toutes les colonnes utilisées proviennent d'un seul des deux côtés), il **supprime** la jointure.
+
+```sql
+-- Self-join redondant (ex. produit par un ORM)
 SELECT e1.nom  
 FROM employes e1  
 JOIN employes e2 ON e1.id = e2.id  
 WHERE e1.salaire > 50000;  
-```
 
-**PostgreSQL 18** : Le planificateur simplifie automatiquement en :
-```sql
+-- PG 18 simplifie en interne en :
 SELECT nom FROM employes WHERE salaire > 50000;
 ```
 
-**Impact sur les index** : Moins de jointures = meilleure utilisation des index.
+**Impact sur les index** : moins d'accès à l'index PK, moins de tuples manipulés.
 
-### 12.4. Amélioration des EXPLAIN
+**Quand c'est utile** : ORMs, vues empilées, générateurs SQL qui produisent des jointures redondantes.
 
-**Description** : Affichage automatique des buffers et métriques I/O.
+---
+
+### 12.4. `EXPLAIN (ANALYZE)` plus bavard par défaut
+
+PG 18 intègre désormais les compteurs **BUFFERS** dans la sortie d'`EXPLAIN ANALYZE` **sans avoir à les demander explicitement**. On voit pour chaque nœud combien de blocs ont été lus en cache (`shared hit`), en disque (`shared read`), écrits (`shared written`), etc.
 
 ```sql
--- PostgreSQL 18 : Plus de détails par défaut
-EXPLAIN (ANALYZE) SELECT * FROM employes WHERE nom = 'Dupont';
+EXPLAIN ANALYZE  
+SELECT * FROM employes WHERE nom = 'Dupont';  
+
+--                                   QUERY PLAN
+-- ------------------------------------------------------------------------------
+--  Index Scan using idx_employes_nom on employes  (cost=0.43..8.45 rows=1 width=120)
+--                                                  (actual time=0.045..0.047 rows=1 loops=1)
+--    Index Cond: (nom = 'Dupont'::text)
+--    Buffers: shared hit=4
+--  Planning Time: 0.123 ms
+--  Execution Time: 0.072 ms
 ```
 
-**Nouvelles informations** :
-- Statistiques I/O par défaut
-- Temps passé dans chaque opération
-- Détails sur l'utilisation des index
+> 💡 Si vous voulez l'**ancien** comportement (sans BUFFERS), il faut désormais `EXPLAIN (ANALYZE, BUFFERS OFF)`.
+
+---
+
+### 12.5. Plus largement : autres nouveautés indexation
+
+- **NOT NULL en contrainte de 1ʳᵉ classe** (PG 18) : déclarer une colonne `NOT NULL` permet désormais au planificateur de **simplifier** les expressions `IS NULL`/`COALESCE`/jointures, donc d'utiliser mieux les index. Ajouter `NOT NULL NOT VALID` sur une grosse table existante puis `VALIDATE CONSTRAINT` plus tard est désormais *zero-downtime*.
+- **Skip Scan + Virtual Generated Columns** : on peut créer un index sur une expression (virtual ou stored). PG 18 permet d'indexer une `STORED` (et non `VIRTUAL`) — pour les `VIRTUAL`, l'index reste impossible.
+- **Bénéfice indirect de l'AIO** : `CREATE INDEX CONCURRENTLY` et les `Bitmap Heap Scan` profitent du *prefetch* asynchrone (`io_method = worker | io_uring`).
 
 ---
 
@@ -1706,21 +1772,31 @@ ORDER BY mean_exec_time DESC
 LIMIT 20;  
 ```
 
-**Requêtes avec Seq Scan** :
+**Repérer les requêtes lisant beaucoup de blocs disque** (proxy pour *Seq Scan* probable) :
+
+> ⚠️ `pg_stat_statements.query` contient le **texte SQL normalisé**, pas le **plan d'exécution** : un `LIKE '%seq scan%'` n'a aucun sens. Ce qu'on peut faire en revanche, c'est repérer les requêtes qui lisent beaucoup de blocs **shared** (cache + disque), corrélé avec la présence probable d'un *Seq Scan* coûteux.
+
 ```sql
 SELECT
-    query,
+    substring(query, 1, 100)                                       AS query_short,
     calls,
-    mean_exec_time
+    round(mean_exec_time::numeric, 2)                              AS avg_ms,
+    shared_blks_hit,
+    shared_blks_read,
+    round(100.0 * shared_blks_read /
+          NULLIF(shared_blks_hit + shared_blks_read, 0), 2)        AS miss_pct
 FROM pg_stat_statements  
-WHERE query ~* 'seq scan'  -- Approximation  
-ORDER BY total_exec_time DESC;  
+WHERE shared_blks_hit + shared_blks_read > 100000  
+ORDER BY shared_blks_read DESC  
+LIMIT 20;  
 ```
 
-**Analyser ensuite avec EXPLAIN** :
+**Analyser ensuite avec EXPLAIN** sur les candidats identifiés :
 ```sql
-EXPLAIN (ANALYZE, BUFFERS) <requête identifiée>;
+EXPLAIN (ANALYZE, BUFFERS, VERBOSE) <requête identifiée>;
 ```
+
+> 💡 **PG 18** : la sortie d'`EXPLAIN (ANALYZE)` inclut **automatiquement** les compteurs `BUFFERS` (plus besoin de l'ajouter explicitement).
 
 ### 13.2. HypoPG
 
@@ -1801,12 +1877,15 @@ ORDER BY tablename, indexname;
 
 **Vue avec statistiques d'utilisation des index**.
 
+> ℹ️ Cette vue expose **`relname`** (table porteuse) et **`indexrelname`** (index). Les noms `tablename`/`indexname` n'apparaissent que dans la vue `pg_indexes` — confusion courante.
+
 ```sql
 SELECT
     schemaname,
-    tablename,
-    indexrelname,
+    relname       AS tablename,
+    indexrelname  AS indexname,
     idx_scan,           -- Nombre de scans
+    last_idx_scan,      -- 🆕 PG 16+ : timestamp du dernier scan
     idx_tup_read,       -- Tuples lus depuis l'index
     idx_tup_fetch       -- Tuples récupérés depuis la table
 FROM pg_stat_user_indexes  
@@ -1819,9 +1898,10 @@ ORDER BY idx_scan DESC;
 
 ```sql
 SELECT
-    schemaname || '.' || tablename AS table,
+    schemaname || '.' || relname AS table,
     indexrelname AS index,
-    pg_size_pretty(pg_relation_size(indexrelid)) AS size
+    pg_size_pretty(pg_relation_size(indexrelid)) AS size,
+    last_idx_scan                                  -- 🆕 PG 16+
 FROM pg_stat_user_indexes  
 WHERE idx_scan = 0  
   AND indexrelname NOT LIKE '%_pkey'
@@ -1832,7 +1912,7 @@ ORDER BY pg_relation_size(indexrelid) DESC;
 
 ```sql
 SELECT
-    schemaname || '.' || tablename AS table,
+    schemaname || '.' || relname AS table,
     indexrelname AS index,
     pg_size_pretty(pg_relation_size(indexrelid)) AS size,
     idx_scan AS scans
@@ -1845,7 +1925,8 @@ LIMIT 20;
 
 ```sql
 SELECT
-    indexrelname AS index,
+    relname       AS table,
+    indexrelname  AS index,
     idx_blks_hit + idx_blks_read AS total_reads,
     CASE
         WHEN idx_blks_hit + idx_blks_read = 0 THEN NULL
@@ -1860,11 +1941,11 @@ ORDER BY cache_hit_ratio ASC;
 
 ```sql
 SELECT
-    tablename,
+    relname AS tablename,
     pg_size_pretty(SUM(pg_relation_size(indexrelid))) AS total_index_size,
     COUNT(*) AS index_count
 FROM pg_stat_user_indexes  
-GROUP BY tablename  
+GROUP BY schemaname, relname  
 ORDER BY SUM(pg_relation_size(indexrelid)) DESC;  
 ```
 
@@ -2002,21 +2083,36 @@ CREATE INDEX idx_commandes_client_id ON commandes(client_id);
 
 ### 15.4. Index Multi-Colonnes dans le Mauvais Ordre
 
-**Erreur** : Ordre incorrect des colonnes dans l'index.
+**Erreur** : Choisir l'ordre des colonnes au hasard sans tenir compte des requêtes ni du type de prédicat.
+
+> ⚠️ La règle simpliste « *colonne la plus sélective d'abord* » est **partiellement fausse**. Ce qui compte réellement, c'est :  
+>  
+> 1. **L'ordre des prédicats** dans les requêtes (la colonne **de tête** doit être quasi systématiquement filtrée).  
+> 2. Le **type d'opérateur** : les colonnes utilisées avec **égalité** (`=`, `IN`) doivent venir avant celles utilisées avec des **plages** (`<`, `>`, `BETWEEN`).  
+> 3. La possibilité de **partager l'index** entre plusieurs requêtes (préfixe gauche réutilisable).
+
+**Exemple concret** :
 
 ```sql
--- Mauvais : genre (peu sélectif) en premier
-CREATE INDEX idx_mauvais ON employes(genre, nom);
+-- Requêtes principales :
+--   (R1) WHERE statut = ?      AND created_at > ?
+--   (R2) WHERE statut = ?
+--   (R3) WHERE statut = ?      AND user_id = ?
 
--- Bon : nom (sélectif) en premier
-CREATE INDEX idx_bon ON employes(nom, genre);
+-- ❌ Mauvais : created_at en tête fait perdre R2 et R3
+CREATE INDEX bad ON commandes (created_at, statut, user_id);
+
+-- ✅ Bon : statut (égalité, dans toutes les requêtes) en tête,
+--          puis user_id (égalité, R3), puis created_at (plage, R1)
+CREATE INDEX good ON commandes (statut, user_id, created_at);
 ```
 
-**Problème** :
-- Index peu efficace pour `WHERE nom = ...`
-- Nécessite création d'index redondants
+**Règles pratiques** :
 
-**Règle** : Colonnes les plus sélectives en premier.
+- La **colonne de tête** doit être utilisée dans **toutes** les requêtes qui veulent utiliser l'index (sauf avec **Skip Scan** PG 18 — qui aide mais ne résout pas tout).
+- **Égalité avant plage** : `WHERE a = X AND b > Y` ⇒ index `(a, b)`, jamais `(b, a)`.
+- Pour le **tri** : si l'`ORDER BY` est sur les mêmes colonnes que les filtres, l'index peut servir aux deux (économise un Sort).
+- Avant PG 18, créer parfois un index supplémentaire `(b)` était nécessaire. Avec PG 18 + **Skip Scan**, c'est moins fréquent (cf. section 12.1).
 
 ### 15.5. Ne Jamais Faire de REINDEX
 

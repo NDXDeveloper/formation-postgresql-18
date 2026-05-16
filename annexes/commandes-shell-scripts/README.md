@@ -443,7 +443,7 @@ Cette annexe est organisée en **trois parties principales** :
 
 ### 5.1. Partie 1 : Outils PostgreSQL de Base
 
-**Fichier dédié : `postgresql_outils_shell.md`**
+**Fichier dédié : `01-commandes-pg-principales.md`**
 
 **Contenu :**
 - **pg_ctl** : Gestion du serveur PostgreSQL
@@ -469,7 +469,7 @@ Cette annexe est organisée en **trois parties principales** :
 
 ### 5.2. Partie 2 : Scripts de Backup Automatisés
 
-**Fichier dédié : `postgresql_scripts_backup_automatises.md`**
+**Fichier dédié : `02-scripts-backup-automatises.md`**
 
 **Contenu :**
 - **Stratégies de backup** : Fréquence, rétention, règle 3-2-1  
@@ -486,7 +486,7 @@ Cette annexe est organisée en **trois parties principales** :
 
 ### 5.3. Partie 3 : Scripts de Monitoring Système
 
-**Fichier dédié : `postgresql_scripts_monitoring_systeme.md`**
+**Fichier dédié : `03-scripts-monitoring-systeme.md`**
 
 **Contenu :**
 - **Introduction au monitoring** : Concepts, métriques, observabilité  
@@ -505,34 +505,34 @@ Cette annexe est organisée en **trois parties principales** :
 
 ```
 Débutant
-    │
-    ├─→ 1. Lire cette introduction
-    │
-    ├─→ 2. Maîtriser pg_ctl, pg_dump, pg_restore
-    │        (Fichier : postgresql_outils_shell.md)
-    │        • Pratiquer les commandes manuellement
-    │        • Faire quelques backups/restores
-    │
-    ├─→ 3. Créer des scripts de backup simples
-    │        (Fichier : postgresql_scripts_backup_automatises.md)
-    │        • Commencer par scripts minimaux
-    │        • Ajouter progressivement fonctionnalités
-    │        • Automatiser avec cron
-    │
+    │  
+    ├─→ 1. Lire cette introduction  
+    │  
+    ├─→ 2. Maîtriser pg_ctl, pg_dump, pg_restore  
+    │        (Fichier : 01-commandes-pg-principales.md)  
+    │        • Pratiquer les commandes manuellement  
+    │        • Faire quelques backups/restores  
+    │  
+    ├─→ 3. Créer des scripts de backup simples  
+    │        (Fichier : 02-scripts-backup-automatises.md)  
+    │        • Commencer par scripts minimaux  
+    │        • Ajouter progressivement fonctionnalités  
+    │        • Automatiser avec cron  
+    │  
     └─→ 4. Mettre en place le monitoring
-             (Fichier : postgresql_scripts_monitoring_systeme.md)
+             (Fichier : 03-scripts-monitoring-systeme.md)
              • Scripts de santé de base
              • Alertes simples
              • Dashboard HTML
 
 Intermédiaire/Avancé
-    │
-    ├─→ Scripts de backup production
-    │        • Configuration centralisée
-    │        • Destinations multiples (NAS, S3)
-    │        • Rotation GFS
-    │        • Tests automatiques
-    │
+    │  
+    ├─→ Scripts de backup production  
+    │        • Configuration centralisée  
+    │        • Destinations multiples (NAS, S3)  
+    │        • Rotation GFS  
+    │        • Tests automatiques  
+    │  
     └─→ Monitoring complet
              • Métriques système et PostgreSQL
              • Historique et tendances
@@ -816,9 +816,21 @@ pg_dump mabase -f "$BACKUP_DIR/backup.sql"
 ```bash
 #!/bin/bash
 # Arrêter le script en cas d'erreur
-set -e  # Exit si une commande échoue  
-set -u  # Exit si une variable non définie est utilisée  
-set -o pipefail  # Exit si une commande dans un pipe échoue  
+# Forme moderne et recommandée : combiner -E (héritage du trap par les fonctions),
+# -e (exit-on-error), -u (variable non définie = erreur), -o pipefail (pipe).
+set -Eeuo pipefail
+
+# Restreindre le découpage de mots aux séparateurs réels (évite les surprises
+# quand $IFS contient des espaces dans des chemins) :
+IFS=$'\n\t'
+
+# Trap qui affiche la ligne fautive avant de quitter
+trap 'echo "❌ Erreur ligne $LINENO (code $?)" >&2' ERR
+
+# Alternative pour scripts simples (équivalent ligne par ligne) :
+# set -e          # Exit si une commande échoue
+# set -u          # Exit si une variable non définie est utilisée
+# set -o pipefail # Exit si une commande dans un pipe échoue
 
 # Alternative : Gestion manuelle
 DATABASE="mabase"
@@ -945,13 +957,13 @@ BACKUP_DIR="/var/backups/postgresql"
 **Vous êtes maintenant prêt à :**
 
 1. **Découvrir les outils de base** (pg_ctl, pg_dump, pg_restore)  
-   → Fichier : `postgresql_outils_shell.md`
+   → Fichier : `01-commandes-pg-principales.md`
 
 2. **Créer des scripts de backup automatisés**  
-   → Fichier : `postgresql_scripts_backup_automatises.md`
+   → Fichier : `02-scripts-backup-automatises.md`
 
 3. **Mettre en place le monitoring**  
-   → Fichier : `postgresql_scripts_monitoring_systeme.md`
+   → Fichier : `03-scripts-monitoring-systeme.md`
 
 ### Points Clés à Retenir
 
@@ -992,28 +1004,28 @@ Cette annexe vous donnera tous les outils pour administrer PostgreSQL efficaceme
 
 ## Fichiers de cette Annexe
 
-📄 **postgresql_annexe_g_introduction.md** (ce fichier)
+📄 **README.md** (ce fichier)
    - Introduction générale
    - Prérequis et environnement
    - Premiers pas et bonnes pratiques
 
-📄 **postgresql_outils_shell.md**
+📄 **01-commandes-pg-principales.md**
    - pg_ctl, pg_dump, pg_restore
    - Commandes essentielles
    - Exemples concrets
 
-📄 **postgresql_scripts_backup_automatises.md**
+📄 **02-scripts-backup-automatises.md**
    - Stratégies de backup
    - Scripts automatisés
    - Rotation et destinations
 
-📄 **postgresql_scripts_monitoring_systeme.md**
+📄 **03-scripts-monitoring-systeme.md**
    - Monitoring système et PostgreSQL
    - Métriques et alertes
    - Tableaux de bord
 
 ---
 
-**Prêt à commencer ? Passez au fichier suivant : `postgresql_outils_shell.md` ! ✨**
+**Prêt à commencer ? Passez au fichier suivant : `01-commandes-pg-principales.md` ! ✨**
 
 ⏭️ [pg_ctl, pg_dump, pg_restore](/annexes/commandes-shell-scripts/01-commandes-pg-principales.md)

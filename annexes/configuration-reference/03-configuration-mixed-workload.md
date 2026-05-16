@@ -269,7 +269,7 @@ conn.execute("""
 
 **Configuration finale dans postgresql.conf :**
 ```ini
-work_mem = 64MB  # Valeur par défaut (compromis)
+work_mem = 64MB  # Valeur globale modérée (défaut PostgreSQL = 4MB, trop bas en prod)
 # Ajustements par rôle ou session pour OLAP
 ```
 
@@ -279,7 +279,7 @@ work_mem = 64MB  # Valeur par défaut (compromis)
 
 **Configuration recommandée :**
 ```ini
-maintenance_work_mem = 1-2GB
+maintenance_work_mem = 1GB     # Plage usuelle 1-2 GB selon RAM disponible (défaut PG : 64 MB)
 ```
 
 **Raisonnement :**
@@ -398,18 +398,22 @@ wal_compression = on
 **Configuration recommandée :**
 ```ini
 autovacuum = on  
-autovacuum_max_workers = 4-6  
-autovacuum_naptime = 30s  # Compromis entre 10s (OLTP) et 5min (OLAP)  
+autovacuum_max_workers = 5            # Compromis 4-6 selon volumétrie ; PG 18 : rechargeable à chaud  
+autovacuum_worker_slots = 16          # 🆕 PG 18 : pool statique (restart requis)  
+autovacuum_naptime = 30s              # Compromis entre 10s (OLTP) et 5min (OLAP)  
 
 # Seuils modérés
 autovacuum_vacuum_threshold = 50  
-autovacuum_vacuum_scale_factor = 0.1  # Compromis entre 0.05 (OLTP) et 0.2  
+autovacuum_vacuum_scale_factor = 0.1  # Compromis entre 0.05 (OLTP) et 0.2 (OLAP)  
 autovacuum_analyze_threshold = 50  
 autovacuum_analyze_scale_factor = 0.05  
 
+# 🆕 PG 18 : plafond absolu (défaut 100 M lignes mortes)
+autovacuum_vacuum_max_threshold = 100000000
+
 # Throttling modéré
-autovacuum_vacuum_cost_delay = 2ms  # Compromis entre 0 (OLAP) et 2ms (OLTP)  
-autovacuum_vacuum_cost_limit = 1000  # Compromis entre -1 (OLAP) et 2000 (OLTP)  
+autovacuum_vacuum_cost_delay = 2ms    # Compromis entre 0 (OLAP) et 2ms (OLTP)  
+autovacuum_vacuum_cost_limit = 1000   # Compromis entre -1 (OLAP) et 2000 (OLTP)  
 ```
 
 **Stratégie par table :**
@@ -482,14 +486,17 @@ jit_optimize_above_cost = 500000
 
 ---
 
-### 7. I/O Asynchrone (PostgreSQL 18)
+### 7. I/O Asynchrone (PostgreSQL 18) 🆕
 
 **Configuration recommandée :**
 ```ini
-io_method = 'worker'  # Si kernel Linux 5.1+ avec io_uring
+io_method = worker     # Portable, défaut PG 18 — convient à OLTP + OLAP
+# io_method = io_uring # Variante Linux (kernel ≥ 5.1) si gains mesurés en bench
 ```
 
-**Impact :** Bénéficie aux deux charges (OLTP et OLAP).
+> ⚠️ Seul `io_uring` requiert un kernel Linux ≥ 5.1 et un binaire compilé `--with-liburing`. Le mode `worker` n'a aucun prérequis.
+
+**Impact :** Bénéficie aux deux charges. Plus net côté OLAP (gros *Seq Scan*, *Bitmap Heap Scan*), modéré côté OLTP (lectures aléatoires courtes).
 
 ---
 
@@ -607,8 +614,8 @@ jit_above_cost = 200000
 jit_inline_above_cost = 500000  
 jit_optimize_above_cost = 500000  
 
-# PostgreSQL 18 : I/O asynchrone
-io_method = 'worker'
+# PostgreSQL 18 : I/O asynchrone (AIO) — portable, sans prérequis kernel
+io_method = worker
 
 # ===================================
 # TIMEOUTS
@@ -802,6 +809,10 @@ SELECT
 FROM orders  
 GROUP BY DATE_TRUNC('day', created_at), product_id;  
 
+-- Index UNIQUE indispensable pour REFRESH ... CONCURRENTLY
+-- (le GROUP BY garantit que (day, product_id) identifie chaque ligne)
+CREATE UNIQUE INDEX idx_mv_sales_summary ON mv_sales_summary(day, product_id);
+
 -- Rafraîchir périodiquement (pg_cron)
 SELECT cron.schedule('refresh-sales-mv', '0 * * * *',
     'REFRESH MATERIALIZED VIEW CONCURRENTLY mv_sales_summary');
@@ -944,22 +955,28 @@ GROUP BY year_month;
 
 ---
 
-### 5. Nouveauté PostgreSQL 18 : Colonnes Virtuelles pour Calculs
+### 5. Nouveauté PostgreSQL 18 : Colonnes Virtuelles pour Calculs 🆕
 
-**Différence avec STORED :** Ne prend pas d'espace disque (calculé à la volée).
+PG 18 ajoute le mode `VIRTUAL` aux colonnes générées (le mode historique `STORED` reste disponible). En **mixed workload**, le choix dépend du *pattern d'accès* :
 
 ```sql
--- PostgreSQL 18
+-- PG 18 : colonne virtuelle (recalcul à la lecture, aucun coût d'écriture)
 ALTER TABLE orders
     ADD COLUMN amount_with_tax NUMERIC
     GENERATED ALWAYS AS (amount * 1.20) VIRTUAL;
 
--- Requête utilise la colonne virtuelle
-SELECT amount_with_tax FROM orders;
--- Calcul à la volée, pas de stockage supplémentaire
+-- Lecture transparente — utile pour les requêtes OLAP ponctuelles
+SELECT amount_with_tax FROM orders WHERE id = 42;
 ```
 
-**Avantage :** Simplifie requêtes OLAP sans coût de stockage.
+| Situation | Choix recommandé |
+|---|---|
+| Colonne lue **occasionnellement** dans des analyses | **`VIRTUAL`** — pas d'espace, pas de coût d'écriture |
+| Colonne lue **massivement** dans des agrégations OLAP | **`STORED`** + index, ou index sur expression |
+| Colonne filtrée dans `WHERE` (besoin d'un index) | **`STORED`** (`VIRTUAL` n'est **pas** indexable) |
+| Expression susceptible d'évoluer | **`VIRTUAL`** (modification DDL instantanée vs *table rewrite* pour `STORED`) |
+
+> ⚠️ Limitation à connaître : une colonne `VIRTUAL` **ne peut pas être indexée directement**. Pour optimiser `WHERE amount_with_tax > X`, créer un **index sur expression** (`CREATE INDEX ON orders ((amount * 1.20));`) — fonctionne depuis bien longtemps avant PG 18 et reste souvent le bon outil.
 
 ---
 
@@ -1091,7 +1108,7 @@ SELECT pg_terminate_backend(blocking_pid);
 ### Configuration Générale
 - [ ] **shared_buffers** = 25% RAM  
 - [ ] **effective_cache_size** = 75% RAM  
-- [ ] **work_mem** = 64MB (valeur par défaut modérée)  
+- [ ] **work_mem** = 64MB (valeur globale modérée ; défaut PG = 4MB)  
 - [ ] **maintenance_work_mem** = 2GB  
 - [ ] **max_connections** = 200-300 (dimensionné OLTP)
 

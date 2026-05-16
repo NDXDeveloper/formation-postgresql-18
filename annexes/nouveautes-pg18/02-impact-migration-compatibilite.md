@@ -103,22 +103,53 @@ MD5 est une ancienne méthode de chiffrement des mots de passe, moins sécurisé
 - 🔒 **SCRAM-SHA-256** est maintenant le standard recommandé  
 - 📝 **Fichier pg_hba.conf** : Doit être mis à jour
 
-**Migration progressive :**
-```
-# Ancien (MD5) - À remplacer progressivement
+**Migration progressive** :
+
+> ⚠️ **Le champ METHOD de `pg_hba.conf` n'accepte qu'UNE SEULE méthode par ligne**. La syntaxe `scram-sha-256,md5` séparée par virgule **n'existe pas**. Heureusement, la méthode `md5` côté `pg_hba.conf` **accepte aussi les hashes SCRAM stockés en base** — c'est le mécanisme de compatibilité que l'on exploite pendant la transition.
+
+```ini
+# Ancien (MD5 uniquement) — à remplacer progressivement
 host    all    all    0.0.0.0/0    md5
 
-# Nouveau (SCRAM) - Recommandé
+# Nouveau (SCRAM uniquement) — recommandé à terme
 host    all    all    0.0.0.0/0    scram-sha-256
-
-# Transition (supporte les deux)
-host    all    all    0.0.0.0/0    scram-sha-256,md5
 ```
 
-**Plan de migration :**
-1. **Accepter les deux méthodes** (scram-sha-256,md5)  
-2. **Migrer les utilisateurs un par un** vers SCRAM  
-3. **Une fois tous migrés** : Retirer md5 de la configuration
+**Plan de migration en 4 étapes** :
+
+```ini
+# Étape 1 — Configurer le serveur pour générer des hashes SCRAM
+# Dans postgresql.conf :
+password_encryption = scram-sha-256
+
+# Étape 2 — Laisser pg_hba.conf en 'md5' pour le moment :
+#   la méthode 'md5' accepte AUSSI les hashes SCRAM, donc la cohabitation
+#   md5/SCRAM dans pg_authid est gérée de manière transparente.
+host    all    all    0.0.0.0/0    md5
+
+# Étape 3 — Régénérer chaque mot de passe en SCRAM :
+ALTER USER alice PASSWORD 'son-nouveau-mdp';  
+ALTER USER bob   PASSWORD 'son-nouveau-mdp';  
+-- … pour tous les utilisateurs
+
+# Étape 4 — Une fois tous les hashes en SCRAM (vérifier dans pg_authid.rolpassword),
+#   basculer pg_hba.conf en scram-sha-256 strict :
+host    all    all    0.0.0.0/0    scram-sha-256
+```
+
+**Vérifier où en est chaque rôle** :
+
+```sql
+SELECT rolname,
+       CASE
+         WHEN rolpassword LIKE 'SCRAM-SHA-256$%' THEN 'SCRAM'
+         WHEN rolpassword LIKE 'md5%'            THEN 'MD5 (à migrer)'
+         ELSE 'autre / vide'
+       END AS auth_method
+FROM pg_authid  
+WHERE rolcanlogin  
+ORDER BY auth_method, rolname;  
+```
 
 **Commandes de migration des utilisateurs :**
 ```sql
@@ -145,15 +176,27 @@ L'autovacuum est un processus de nettoyage automatique qui récupère l'espace e
 - 📊 **Ajustement dynamique** : Le système s'adapte automatiquement à la charge  
 - 💻 **Consommation CPU** : Peut augmenter légèrement après migration
 
-**Nouveau paramètre :**
-```sql
--- Contrôler le nombre maximum de workers autovacuum
--- Dans postgresql.conf :
-autovacuum_max_workers = 3  -- Défaut (peut monter dynamiquement)
+**Nouveau paramètre PG 18 — `autovacuum_vacuum_max_threshold`** :
 
--- Nouveau seuil pour grandes tables
-autovacuum_vacuum_max_threshold = 2000000000  -- 2 milliards de tuples
+Ce paramètre fixe un **plafond absolu** (en lignes mortes) au-delà duquel `autovacuum` se déclenche, indépendamment du `scale_factor`. Utile pour les très grosses tables où `scale_factor × n_live_tup` deviendrait gigantesque.
+
+```ini
+# Dans postgresql.conf
+
+# Nombre de workers autovacuum (statique, ne s'ajuste pas tout seul)
+autovacuum_max_workers = 3                  # défaut
+
+# 🆕 PG 18 : plafond absolu sur le déclenchement de VACUUM
+autovacuum_vacuum_max_threshold = 100000000 # défaut : 100 millions de lignes mortes
+                                            # mettre -1 pour désactiver le plafond
 ```
+
+> 📌 Ce qui change *vraiment* en PG 18 côté autovacuum, c'est :  
+> 1. l'apparition de `autovacuum_vacuum_max_threshold` (plafond absolu) ;  
+> 2. une meilleure heuristique de répartition entre tables ;  
+> 3. les bénéfices indirects de l'AIO (lectures plus rapides).  
+>  
+> Le paramètre `autovacuum_max_workers` reste statique : il faut toujours `reload` PostgreSQL pour le modifier.
 
 **Recommandation :**
 - ✅ **Laisser les valeurs par défaut** pour la plupart des cas  
@@ -210,31 +253,74 @@ Utiliser l'outil `pg_upgrade` pour mettre à jour votre instance existante.
 - Base 100 GB-1 TB : 1-4 heures
 - Base > 1 TB : Utiliser `--swap` (quelques minutes)
 
-**Exemple simplifié :**
+**Modes de copie de pg_upgrade** :
+
+| Mode | Comportement | Vitesse | Sécurité |
+|---|---|---|---|
+| *par défaut* | Copie complète des fichiers de l'ancien vers le nouveau cluster | Lent | Ancien cluster intact |
+| `--link` | *Hard links* sur les fichiers (FS Unix) — pas de duplication | Rapide | Ancien cluster **inutilisable** ensuite |
+| `--clone` | Reflink CoW (Btrfs, XFS reflink, APFS…) | Rapide | Ancien cluster reste démarrable |
+| **`--swap`** 🆕 PG 18 | **Échange** les répertoires de données puis remplace les fichiers du catalogue | **Le plus rapide** | Ancien cluster **détruit** après commit |
+
+**Exemple complet (mode par défaut, copie)** :
+
 ```bash
 # 1. Arrêter l'ancien serveur PostgreSQL
 pg_ctl stop -D /ancien/data
 
-# 2. Lancer pg_upgrade
+# 2. Test à blanc (TOUJOURS commencer par --check)
 pg_upgrade \
   --old-datadir /ancien/data \
   --new-datadir /nouveau/data \
-  --old-bindir /ancien/bin \
-  --new-bindir /nouveau/bin \
-  --jobs 4  # Utilise 4 CPU pour accélérer
+  --old-bindir  /ancien/bin \
+  --new-bindir  /nouveau/bin \
+  --jobs 4 \
+  --check                   # ← vérifie la compatibilité sans rien modifier
 
-# 3. Démarrer le nouveau serveur
+# 3. Migration réelle (si le --check est OK)
+pg_upgrade \
+  --old-datadir /ancien/data \
+  --new-datadir /nouveau/data \
+  --old-bindir  /ancien/bin \
+  --new-bindir  /nouveau/bin \
+  --jobs 4
+
+# 4. Démarrer le nouveau serveur
 pg_ctl start -D /nouveau/data
+
+# 5. Exécuter le script d'analyse des stats (généré par pg_upgrade)
+./analyze_new_cluster.sh
 ```
 
-**Avec l'option --swap (NOUVEAU PG18) :**
+**Avec l'option `--swap` (🆕 PG 18) — la plus rapide** :
+
 ```bash
+# Test à blanc avec --check + --swap : vérifie aussi les contraintes du mode swap
 pg_upgrade \
   --old-datadir /data \
   --new-datadir /data_nouveau \
-  --swap  # Échange les répertoires ultra-rapidement
-  --jobs 4
+  --old-bindir  /old/bin \
+  --new-bindir  /new/bin \
+  --jobs 4 \
+  --swap \
+  --check
+
+# Migration réelle (après --check OK)
+pg_upgrade \
+  --old-datadir /data \
+  --new-datadir /data_nouveau \
+  --old-bindir  /old/bin \
+  --new-bindir  /new/bin \
+  --jobs 4 \
+  --swap
 ```
+
+> ⚠️ **Contraintes critiques de `--swap`** :  
+>  
+> - Les deux répertoires (`--old-datadir` et `--new-datadir`) doivent être **sur le même système de fichiers** (le swap déplace les inodes, pas de copie inter-FS).  
+> - **Toujours combiner `--swap` avec `--check` lors du test à blanc** : certaines vérifications sont propres à ce mode et n'apparaissent qu'ainsi.  
+> - Une fois le point de non-retour franchi, l'ancien cluster est **détruit** : impossible de revenir en arrière sans restaurer un backup. Faire un `pg_basebackup` ou un snapshot juste avant.  
+> - Incompatible avec `--link` ou `--clone` (modes mutuellement exclusifs).
 
 ---
 
@@ -259,14 +345,29 @@ Exporter toutes les données avec `pg_dump` puis les réimporter dans PostgreSQL
 - Base 100 GB-1 TB : 1-3 jours
 - Base > 1 TB : Non recommandé (utiliser pg_upgrade)
 
-**Exemple simplifié :**
-```bash
-# 1. Créer une sauvegarde complète
-pg_dumpall -h ancien_serveur > backup_complet.sql
+**Exemple simplifié** :
 
-# 2. Restaurer sur le nouveau serveur PostgreSQL 18
-psql -h nouveau_serveur < backup_complet.sql
+```bash
+# 1. Sauvegarde complète du cluster source
+#    --globals-only ne suffit pas : on veut TOUT (rôles + bases + tablespaces + objets globaux)
+sudo -u postgres pg_dumpall -h ancien_serveur -p 5432 \
+    --no-password \
+    --file=backup_complet.sql
+
+# 2. Sur le nouveau serveur PG 18 : restauration via psql
+#    -d postgres : on se connecte à la base 'postgres' (cible neutre, les autres bases
+#                  sont (re)créées par les CREATE DATABASE contenus dans le dump)
+#    -v ON_ERROR_STOP=1 : on stoppe à la première erreur (pas le comportement par défaut)
+sudo -u postgres psql -h nouveau_serveur -p 5432 \
+    -d postgres \
+    -v ON_ERROR_STOP=1 \
+    -f backup_complet.sql
+
+# 3. Une fois la restauration terminée, lancer ANALYZE pour générer les stats
+sudo -u postgres vacuumdb -h nouveau_serveur --all --analyze-only --jobs=4
 ```
+
+> 💡 **Astuce volumétrie** : pour les bases > 50 Go, `pg_dump -F d -j N` (format directory + parallélisme) sur chaque base **individuellement**, puis `pg_dumpall --globals-only` pour les rôles/tablespaces, est généralement **plus rapide** qu'un `pg_dumpall` monolithique.
 
 ---
 
@@ -396,17 +497,30 @@ SELECT * FROM pg_stat_replication;
 **Symptôme :**
 Messages d'avertissement dans les logs concernant MD5.
 
-**Solution :**
+**Solution :** suivre le plan de migration progressif décrit plus haut (section « Plan de migration progressif md5 → scram-sha-256 »). Le principe — rappelé ici :
+
+```bash
+# pg_hba.conf : conserver la méthode 'md5' pendant la transition.
+# IMPORTANT : pg_hba.conf n'accepte qu'UNE SEULE méthode par ligne
+# (la syntaxe 'scram-sha-256,md5' n'existe pas).
+# La méthode 'md5' accepte aussi les hashes SCRAM stockés en base,
+# donc on garde 'md5' le temps de re-hasher tous les mots de passe.
+host all all 0.0.0.0/0 md5
+```
+
 ```sql
--- Migrer progressivement vers SCRAM
--- 1. Modifier pg_hba.conf pour accepter les deux
-host all all 0.0.0.0/0 scram-sha-256,md5
+-- 1. Côté serveur : produire les nouveaux hashes en SCRAM-SHA-256
+ALTER SYSTEM SET password_encryption = 'scram-sha-256';  
+SELECT pg_reload_conf();  
 
--- 2. Recharger la configuration
-SELECT pg_reload_conf();
-
--- 3. Changer les mots de passe des utilisateurs
+-- 2. Demander aux utilisateurs de RE-SAISIR leur mot de passe
+--    (ALTER ROLE … PASSWORD 'xxx' avec password_encryption=scram-sha-256
+--     stocke un hash SCRAM dans pg_authid)
 ALTER USER utilisateur1 WITH PASSWORD 'nouveau_mdp';
+
+-- 3. Une fois TOUS les utilisateurs migrés, basculer pg_hba.conf
+--    sur 'scram-sha-256' pour refuser explicitement les vrais md5.
+-- host all all 0.0.0.0/0 scram-sha-256
 ```
 
 ---
@@ -471,9 +585,14 @@ SHOW maintenance_work_mem;
 shared_buffers = 4GB           -- Exemple pour 16GB RAM  
 work_mem = 64MB                -- Par opération de tri  
 maintenance_work_mem = 512MB   -- Pour VACUUM, CREATE INDEX  
+```
 
--- Redémarrer PostgreSQL
-pg_ctl restart
+```bash
+# Redémarrer PostgreSQL (shared_buffers nécessite un restart, pas un reload)
+# pg_ctl exige le répertoire de données via -D (ou la variable PGDATA)
+pg_ctl -D "$PGDATA" restart
+# Ou avec systemd :
+# sudo systemctl restart postgresql
 ```
 
 ---
