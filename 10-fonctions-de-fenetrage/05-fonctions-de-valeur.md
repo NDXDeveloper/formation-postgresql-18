@@ -175,29 +175,35 @@ SELECT
     ca_journalier,
     ROUND(
         (ca_journalier - LAG(ca_journalier) OVER (ORDER BY date)) * 100.0
-        / LAG(ca_journalier) OVER (ORDER BY date),
+        / NULLIF(LAG(ca_journalier) OVER (ORDER BY date), 0),
         2
     ) AS croissance_pct
 FROM ventes  
 ORDER BY date;  
 ```
 
+⚠️ **Note** : on protège la division avec `NULLIF(..., 0)` pour éviter une erreur `division by zero` si la veille a un CA de 0.
+
 #### 2. Détecter les Changements de Statut
 
+⚠️ **Attention** : on ne peut **pas** mettre `LAG()` dans `WHERE` (les window functions sont calculées **après** `WHERE`). Il faut passer par une CTE. De plus, `statut != LAG(...)` est faux pour la **première ligne** (où `LAG` vaut `NULL`) : `valeur != NULL` retourne `NULL` (= UNKNOWN), donc la première ligne est filtrée. On utilise `IS DISTINCT FROM` pour traiter `NULL` comme une valeur :
+
 ```sql
-SELECT
-    client_id,
-    date_statut,
-    statut,
-    LAG(statut) OVER (
-        PARTITION BY client_id
-        ORDER BY date_statut
-    ) AS statut_precedent
-FROM historique_clients  
-WHERE statut != LAG(statut) OVER (  
-    PARTITION BY client_id
-    ORDER BY date_statut
-);  -- Ne garde que les changements
+WITH historique AS (
+    SELECT
+        client_id,
+        date_statut,
+        statut,
+        LAG(statut) OVER (
+            PARTITION BY client_id
+            ORDER BY date_statut
+        ) AS statut_precedent
+    FROM historique_clients
+)
+SELECT client_id, date_statut, statut, statut_precedent
+FROM historique
+WHERE statut IS DISTINCT FROM statut_precedent;
+-- Garde la première ligne ET tous les vrais changements
 ```
 
 #### 3. Temps entre Deux Événements
@@ -332,19 +338,37 @@ SELECT
 FROM inventaire;
 ```
 
-#### 3. Détecter les Séquences
+#### 3. Détecter les Points de Retournement Locaux
 
 ```sql
--- Trouver les séquences de 3 jours consécutifs de croissance
+-- Détecter les minima/maxima locaux (le jour est entouré de valeurs plus basses ou plus hautes)
 SELECT
     date,
     ventes,
     CASE
         WHEN ventes > LAG(ventes) OVER (ORDER BY date)
-         AND LEAD(ventes) OVER (ORDER BY date) > ventes
-        THEN 'Tendance haussière'
+         AND ventes > LEAD(ventes) OVER (ORDER BY date)
+        THEN 'Pic local (sommet)'
+        WHEN ventes < LAG(ventes) OVER (ORDER BY date)
+         AND ventes < LEAD(ventes) OVER (ORDER BY date)
+        THEN 'Creux local'
         ELSE NULL
-    END AS tendance
+    END AS retournement
+FROM ventes_quotidiennes;
+```
+
+ℹ️ **Pour détecter 3 jours consécutifs de hausse**, on chaîne plutôt les LAG successifs :
+
+```sql
+SELECT
+    date,
+    ventes,
+    CASE
+        WHEN LAG(ventes, 2) OVER (ORDER BY date) < LAG(ventes, 1) OVER (ORDER BY date)
+         AND LAG(ventes, 1) OVER (ORDER BY date) < ventes
+        THEN '3 jours de hausse'
+        ELSE NULL
+    END AS sequence
 FROM ventes_quotidiennes;
 ```
 
@@ -740,6 +764,64 @@ SELECT
 FROM achats;
 ```
 
+## NTH_VALUE() : La Nième Valeur
+
+### Principe
+
+`NTH_VALUE(colonne, N)` retourne la **Nième valeur** de la fenêtre (le rang N, en partant de 1).
+
+C'est une généralisation de `FIRST_VALUE()` (qui correspond à `NTH_VALUE(colonne, 1)`).
+
+### Syntaxe
+
+```sql
+NTH_VALUE(colonne, N) OVER (
+    [PARTITION BY groupe]
+    ORDER BY ordre
+    [frame_clause]
+)
+```
+
+### Exemple : Comparer au 2ème Meilleur
+
+```sql
+-- Pour chaque catégorie, écart entre le prix de chaque produit et celui du 2ème meilleur
+SELECT
+    categorie,
+    produit,
+    prix,
+    NTH_VALUE(prix, 2) OVER (
+        PARTITION BY categorie
+        ORDER BY prix DESC
+        ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING
+    ) AS deuxieme_prix,
+    prix - NTH_VALUE(prix, 2) OVER (
+        PARTITION BY categorie
+        ORDER BY prix DESC
+        ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING
+    ) AS ecart_au_dauphin
+FROM produits;
+```
+
+⚠️ **Mêmes pièges que `LAST_VALUE`** : avec le frame par défaut (`RANGE UNBOUNDED PRECEDING AND CURRENT ROW`), `NTH_VALUE` peut retourner `NULL` si la Nième valeur n'est pas encore atteinte dans la fenêtre. Il faut presque toujours utiliser `ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING`.
+
+### Option FROM FIRST / FROM LAST (SQL Standard)
+
+Le standard SQL permet `NTH_VALUE(col, N) FROM FIRST` (par défaut) ou `FROM LAST`. **PostgreSQL ne supporte que `FROM FIRST`** : pour obtenir l'avant-dernière valeur, par exemple, il faut inverser l'ORDER BY :
+
+```sql
+-- Avant-dernier prix (le N-1 = 2ème dans l'ordre inversé)
+NTH_VALUE(prix, 2) OVER (
+    PARTITION BY categorie
+    ORDER BY prix ASC  -- Inversion : le moins cher en premier
+    ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING
+)
+```
+
+### Option IGNORE NULLS (Non Supportée)
+
+Le standard SQL prévoit `IGNORE NULLS` pour `LAG`, `LEAD`, `FIRST_VALUE`, `LAST_VALUE`, `NTH_VALUE`. **PostgreSQL 18 ne supporte pas cette option** (contrairement à Oracle ou SQL Server). Pour ignorer les NULL, il faut filtrer en amont ou utiliser des CTE avec `WHERE colonne IS NOT NULL`.
+
 ## Combinaisons et Comparaisons
 
 ### Les Quatre Fonctions Ensemble
@@ -788,27 +870,37 @@ ORDER BY date;
 
 | Fonction | Direction | Offset | Valeur Retournée | Frame par Défaut |
 |----------|-----------|--------|------------------|------------------|
-| **LAG()** | Arrière | Paramétrable | Ligne N précédente | N/A (direct access) |
-| **LEAD()** | Avant | Paramétrable | Ligne N suivante | N/A (direct access) |
-| **FIRST_VALUE()** | Début | N/A | Première de la fenêtre | UNBOUNDED PRECEDING → CURRENT ROW |
-| **LAST_VALUE()** | Fin | N/A | Dernière de la fenêtre | UNBOUNDED PRECEDING → CURRENT ROW ⚠️ |
+| **LAG()** | Arrière | Paramétrable | Ligne N précédente | N/A (accès direct, frame ignoré) |
+| **LEAD()** | Avant | Paramétrable | Ligne N suivante | N/A (accès direct, frame ignoré) |
+| **FIRST_VALUE()** | Début | N/A | Première de la fenêtre | RANGE UNBOUNDED PRECEDING → CURRENT ROW |
+| **LAST_VALUE()** | Fin | N/A | Dernière de la fenêtre | RANGE UNBOUNDED PRECEDING → CURRENT ROW ⚠️ |
+| **NTH_VALUE()** | Position N | Position N | Nième valeur de la fenêtre | RANGE UNBOUNDED PRECEDING → CURRENT ROW ⚠️ |
 
 ## Techniques Avancées
 
 ### 1. Calculer la Croissance Moyenne sur N Périodes
 
+⚠️ **Rappel important** : PostgreSQL **interdit** d'imbriquer une window function dans une autre (`ERROR: window function calls cannot be nested`). On calcule la croissance journalière dans une CTE, puis on prend la moyenne mobile dans la requête principale.
+
 ```sql
+WITH croissance_journaliere AS (
+    SELECT
+        date,
+        ventes,
+        (ventes - LAG(ventes) OVER (ORDER BY date)) * 100.0
+        / NULLIF(LAG(ventes) OVER (ORDER BY date), 0) AS croissance_pct
+    FROM ventes_quotidiennes
+)
 SELECT
     date,
     ventes,
-    AVG(
-        (ventes - LAG(ventes) OVER (ORDER BY date)) * 100.0
-        / LAG(ventes) OVER (ORDER BY date)
-    ) OVER (
+    croissance_pct,
+    AVG(croissance_pct) OVER (
         ORDER BY date
         ROWS BETWEEN 6 PRECEDING AND CURRENT ROW
     ) AS croissance_moyenne_7j
-FROM ventes_quotidiennes;
+FROM croissance_journaliere
+ORDER BY date;
 ```
 
 ### 2. Détecter les Pics et Creux
@@ -868,19 +960,24 @@ FROM ventes_trimestrielles;
 
 ### 5. Fenêtres Glissantes Personnalisées
 
+⚠️ **Subtilité** : si le frame se termine à `CURRENT ROW`, alors `LAST_VALUE` retourne **la ligne courante** (pas la « fin » d'une fenêtre antérieure). Pour vraiment lire la dernière valeur d'une fenêtre, il faut que le frame s'étende **jusqu'à la fin** (`UNBOUNDED FOLLOWING`) ou plus loin que la ligne courante (`N FOLLOWING`).
+
 ```sql
--- Première et dernière valeur d'une fenêtre de 30 jours
+-- Première valeur sur 30 jours : utile (la plus ancienne valeur dans la fenêtre)
+-- Dernière valeur sur 30 jours : ici on regarde dans le FUTUR (30 prochains jours)
 SELECT
     date,
     ventes,
+    -- Première valeur de la fenêtre [-30j ; jour courant] : la plus ancienne
     FIRST_VALUE(ventes) OVER (
         ORDER BY date
         RANGE BETWEEN INTERVAL '30 days' PRECEDING AND CURRENT ROW
-    ) AS debut_fenetre_30j,
+    ) AS plus_ancienne_30j_passes,
+    -- Dernière valeur d'une fenêtre [jour courant ; +30j] : la plus future
     LAST_VALUE(ventes) OVER (
         ORDER BY date
-        RANGE BETWEEN INTERVAL '30 days' PRECEDING AND CURRENT ROW
-    ) AS fin_fenetre_30j
+        RANGE BETWEEN CURRENT ROW AND INTERVAL '30 days' FOLLOWING
+    ) AS plus_future_30j_avenir
 FROM ventes;
 ```
 
@@ -1129,45 +1226,54 @@ ORDER BY semaine, rang;
 
 ## Points Clés à Retenir
 
-- ✅ **LAG()** accède à une ligne **précédente** (N lignes en arrière)  
-- ✅ **LEAD()** accède à une ligne **suivante** (N lignes en avant)  
+- ✅ **LAG()** accède à une ligne **précédente** (N lignes en arrière, par défaut 1)  
+- ✅ **LEAD()** accède à une ligne **suivante** (N lignes en avant, par défaut 1)  
 - ✅ **FIRST_VALUE()** accède à la **première** valeur de la fenêtre  
-- ✅ **LAST_VALUE()** accède à la **dernière** valeur (⚠️ spécifier `UNBOUNDED FOLLOWING`)  
+- ✅ **LAST_VALUE()** accède à la **dernière** valeur (⚠️ spécifier `ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING`)  
+- ✅ **NTH_VALUE(col, N)** accède à la **Nième** valeur (⚠️ mêmes pièges que LAST_VALUE)  
 - ✅ Toutes nécessitent **ORDER BY** pour définir l'ordre  
-- ✅ Utilisez des **valeurs par défaut** ou `COALESCE()` pour gérer les NULL  
+- ✅ Utilisez `LAG(col, N, defaut)` ou `COALESCE()` pour gérer les NULL en début/fin de partition  
 - ✅ Combinez avec **PARTITION BY** pour des analyses par groupe  
-- ✅ Créez des **index** sur les colonnes ORDER BY pour la performance
+- ✅ **PG 18 ne supporte pas** `IGNORE NULLS` ni `FROM LAST` (contrairement au standard SQL)  
+- ✅ Créez des **index** sur les colonnes ORDER BY pour la performance  
+- ✅ **Imbrication interdite** : `AVG(LAG(...) OVER (...)) OVER (...)` → utiliser une CTE
 
 ## Tableau de Choix Rapide
 
 | Besoin | Fonction à Utiliser |
 |--------|---------------------|
-| Calculer la croissance jour/jour | `LAG()` |
-| Détecter la prochaine valeur | `LEAD()` |
+| Différence avec la veille | `LAG()` |
+| Différence avec le lendemain | `LEAD()` |
 | Comparer au point de départ | `FIRST_VALUE()` |
-| Comparer au point d'arrivée | `LAST_VALUE()` |
-| Calculer la différence avec hier | `LAG()` |
-| Prévoir le prochain événement | `LEAD()` |
+| Comparer au point d'arrivée | `LAST_VALUE()` + `UNBOUNDED FOLLOWING` |
+| Comparer à la Nième valeur | `NTH_VALUE(col, N)` + `UNBOUNDED FOLLOWING` |
+| Détecter un changement de statut | `LAG()` + `IS DISTINCT FROM` (dans CTE) |
+| Calculer une durée entre événements | `date - LAG(date) OVER (...)` |
 | Analyser la progression depuis le début | `FIRST_VALUE()` |
-| Mesurer l'écart avec l'objectif final | `LAST_VALUE()` |
 
 ## Résumé Visuel
 
 ```sql
--- LAG : Regarder en arrière
+-- LAG : regarder en arrière (N lignes, valeur par défaut si NULL)
 LAG(colonne, N, defaut) OVER (ORDER BY date)
 
--- LEAD : Regarder en avant
+-- LEAD : regarder en avant
 LEAD(colonne, N, defaut) OVER (ORDER BY date)
 
--- FIRST_VALUE : Première de la fenêtre
+-- FIRST_VALUE : première valeur de la fenêtre
 FIRST_VALUE(colonne) OVER (
     ORDER BY date
     [ROWS BETWEEN ... AND ...]
 )
 
--- LAST_VALUE : Dernière de la fenêtre (ATTENTION AU FRAME !)
+-- LAST_VALUE : dernière valeur de la fenêtre (⚠️ ATTENTION AU FRAME)
 LAST_VALUE(colonne) OVER (
+    ORDER BY date
+    ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING
+)
+
+-- NTH_VALUE : Nième valeur de la fenêtre (⚠️ même précaution sur le frame)
+NTH_VALUE(colonne, N) OVER (
     ORDER BY date
     ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING
 )
@@ -1178,10 +1284,11 @@ LAST_VALUE(colonne) OVER (
 Partition ordonnée : [A] [B] [C] [D] [E]
 
 Pour la ligne C :
-- LAG(1)        → B (ligne précédente)
-- LEAD(1)       → D (ligne suivante)
-- FIRST_VALUE() → A (première de la partition)
-- LAST_VALUE()  → E (dernière de la partition, si frame correct)
+- LAG(1)             → B (ligne précédente)
+- LEAD(1)            → D (ligne suivante)
+- FIRST_VALUE()      → A (première de la partition)
+- LAST_VALUE()       → E (dernière de la partition, si frame correct)
+- NTH_VALUE(col, 3)  → C (3ème ligne depuis le début, si frame correct)
 ```
 
 ---

@@ -449,10 +449,11 @@ Fournisseurs EXCEPT Clients: {Diana, Eve}
 ### Exemple
 
 ```sql
--- Table A
-INSERT INTO table_a (valeur) VALUES ('X'), ('X'), ('X'), ('Y'), ('Z');
+-- Tables de démonstration
+CREATE TABLE table_a (valeur TEXT);
+CREATE TABLE table_b (valeur TEXT);
 
--- Table B
+INSERT INTO table_a (valeur) VALUES ('X'), ('X'), ('X'), ('Y'), ('Z');
 INSERT INTO table_b (valeur) VALUES ('X'), ('X'), ('Z');
 ```
 
@@ -1101,7 +1102,7 @@ ORDER BY categorie, ventes DESC;
 ### 4. Construction de rapports dynamiques
 
 ```sql
--- Totaux par ligne + ligne de total général
+-- Totaux par ligne + ligne de total général (avec UNION ALL)
 SELECT
     departement,
     SUM(salaire) AS total
@@ -1119,6 +1120,19 @@ ORDER BY
     CASE WHEN departement = 'TOTAL GÉNÉRAL' THEN 1 ELSE 0 END,
     departement;
 ```
+
+> 💡 **Alternative SQL standard plus concise** : `GROUPING SETS` / `ROLLUP` / `CUBE` produisent les sous-totaux et totaux en **une seule passe** sur la table, sans UNION :  
+>  
+> ```sql  
+> SELECT  
+>     COALESCE(departement, 'TOTAL GÉNÉRAL') AS departement,  
+>     SUM(salaire) AS total  
+> FROM employes  
+> GROUP BY ROLLUP (departement)   -- 1 ligne par département + 1 ligne TOTAL  
+> ORDER BY GROUPING(departement), departement;  
+> ```  
+>  
+> `ROLLUP (a)` ≡ `GROUPING SETS ((a), ())`. La fonction `GROUPING(col)` renvoie `1` pour la ligne de total global (où `col` est `NULL`), `0` sinon — pratique pour le tri ou la mise en forme.
 
 ### 5. Détection d'anomalies entre tables
 

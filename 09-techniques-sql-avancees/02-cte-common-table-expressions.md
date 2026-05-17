@@ -142,7 +142,7 @@ SELECT
 Modifier une CTE est simple : un seul endroit à changer.
 
 ```sql
-WITH donnees_filrees AS (
+WITH donnees_filtrees AS (
     -- Si les critères de filtrage changent,
     -- on ne modifie qu'ici
     SELECT *
@@ -153,7 +153,7 @@ WITH donnees_filrees AS (
 SELECT
     categorie,
     SUM(montant) AS total
-FROM donnees_filrees  
+FROM donnees_filtrees  
 GROUP BY categorie  
 
 UNION ALL
@@ -161,7 +161,7 @@ UNION ALL
 SELECT
     'TOTAL' AS categorie,
     SUM(montant) AS total
-FROM donnees_filrees;
+FROM donnees_filtrees;
 ```
 
 ### 4. Facilité de test et debug
@@ -300,8 +300,10 @@ SELECT ...;
 
 Si une CTE est référencée plusieurs fois et que son calcul est coûteux, la matérialisation évite de la recalculer.
 
+> 💡 **À noter (PG 12+)** : quand une CTE non récursive et sans effet de bord est référencée **deux fois ou plus**, PostgreSQL la matérialise **automatiquement** par défaut — donc le `MATERIALIZED` explicite n'est qu'une garantie/documentation, pas une obligation. À l'inverse, pour une CTE référencée **une seule fois**, le défaut est *inline*.
+
 ```sql
--- Sans MATERIALIZED, cette requête coûteuse peut être exécutée 3 fois
+-- CTE référencée 3 fois : matérialisée par défaut en PG 12+
 WITH stats_ventes AS (
     SELECT
         categorie,
@@ -318,7 +320,7 @@ UNION ALL
 SELECT 'Toutes' AS type, * FROM stats_ventes;  
 ```
 
-**Avec MATERIALIZED (recommandé ici) :**
+**Forme avec `MATERIALIZED` explicite (équivalente, mais auto-documentée) :**
 
 ```sql
 WITH stats_ventes AS MATERIALIZED (
@@ -858,7 +860,9 @@ SELECT
     COALESCE(c.categorie, p.categorie) AS categorie,
     c.total AS mois_courant,
     p.total AS mois_precedent,
-    ROUND((c.total - p.total) / p.total * 100, 2) AS evolution_pct
+    -- NULLIF(p.total, 0) protège contre la division par zéro :
+    -- si une catégorie n'existait pas le mois précédent, evolution_pct = NULL
+    ROUND((c.total - p.total) / NULLIF(p.total, 0) * 100, 2) AS evolution_pct
 FROM ventes_courantes c  
 FULL OUTER JOIN ventes_precedentes p ON c.categorie = p.categorie  
 ORDER BY evolution_pct DESC NULLS LAST;  
@@ -886,9 +890,9 @@ CREATE INDEX idx_cat ON stats_temp(categorie);
 SELECT * FROM stats_temp WHERE categorie = 'Électronique';
 ```
 
-### 2. Pas de MATERIALIZED sur des CTE récursives
+### 2. CTE récursives toujours matérialisées
 
-Les CTE récursives (voir chapitre 9.3) ne peuvent pas être matérialisées explicitement.
+Les CTE récursives (voir chapitre 9.3) sont **toujours matérialisées implicitement** par PostgreSQL (elles ne peuvent pas être *inlinées*). Le mot-clé `MATERIALIZED` y est donc redondant — accepté syntaxiquement, sans effet.
 
 ### 3. Scope limité à la requête
 
@@ -901,6 +905,96 @@ SELECT * FROM ma_cte;  -- ✅ OK
 -- Nouvelle requête
 SELECT * FROM ma_cte;  -- ❌ ERREUR : ma_cte n'existe plus
 ```
+
+---
+
+## CTE en écriture (data-modifying CTEs)
+
+PostgreSQL est l'un des rares SGBD qui autorise des **`INSERT` / `UPDATE` / `DELETE` / `MERGE` directement dans une clause `WITH`**. Combinées à `RETURNING`, ces CTE permettent d'enchaîner plusieurs modifications atomiquement dans **une seule instruction**.
+
+### Syntaxe
+
+```sql
+WITH operation_nommee AS (
+    INSERT INTO … VALUES (…) RETURNING colonnes
+    -- ou UPDATE … SET … RETURNING colonnes
+    -- ou DELETE FROM … RETURNING colonnes
+)
+SELECT … FROM operation_nommee;
+```
+
+### Cas d'usage 1 — Archivage atomique (déplacer une ligne)
+
+```sql
+-- Déplacer les commandes anciennes vers une table d'archive,
+-- en UNE seule instruction (atomique grâce à la transaction implicite)
+WITH supprimees AS (
+    DELETE FROM commandes
+    WHERE date_commande < CURRENT_DATE - INTERVAL '5 years'
+    RETURNING *
+)
+INSERT INTO commandes_archive
+SELECT * FROM supprimees;
+```
+
+### Cas d'usage 2 — Audit en même temps qu'une mise à jour
+
+🆕 **PG 18** introduit `OLD.*` / `NEW.*` dans `RETURNING`, ce qui rend l'audit avant/après trivial :
+
+```sql
+-- Augmenter les salaires + tracer l'opération dans un journal d'audit (PG 18+)
+WITH augmentes AS (
+    UPDATE employes
+       SET salaire = salaire * 1.05
+     WHERE evaluation = 'Excellent'
+    RETURNING id, OLD.salaire AS ancien, NEW.salaire AS nouveau
+)
+INSERT INTO audit_salaires (employe_id, ancien, nouveau, date_modif)
+SELECT id, ancien, nouveau, NOW()
+FROM augmentes;
+```
+
+> 💡 **Avant PG 18**, on devait recalculer l'ancien salaire via la formule inverse (`salaire / 1.05`) — fragile car sujet aux arrondis flottants. La syntaxe `OLD.col` retourne la valeur *exacte* avant modification.
+
+### Cas d'usage 3 — Upsert avec dispatch sur deux tables
+
+```sql
+-- Inserer les commandes ; si elles concernent un produit en rupture,
+-- déclencher en plus un réapprovisionnement.
+WITH nouvelles AS (
+    INSERT INTO commandes (client_id, produit_id, quantite)
+    VALUES (42, 17, 3), (42, 18, 1)
+    RETURNING produit_id, quantite
+),
+ruptures AS (
+    SELECT n.produit_id, n.quantite
+    FROM nouvelles n
+    JOIN produits p USING (produit_id)
+    WHERE p.stock < n.quantite
+)
+INSERT INTO commandes_reappro (produit_id, quantite_a_commander)
+SELECT produit_id, quantite * 10 FROM ruptures;
+```
+
+### Règles et pièges importants
+
+1. **Ordre d'exécution non garanti** : toutes les CTE en écriture d'une même instruction voient le **même snapshot** des données (état avant l'instruction). Une CTE `UPDATE` ne « voit » donc pas les changements d'une autre CTE `DELETE` de la même `WITH`.
+
+   ```sql
+   -- ⚠️ Le DELETE et l'UPDATE travaillent sur le même snapshot
+   WITH suppr AS (DELETE FROM t WHERE x = 1 RETURNING *),
+        upd  AS (UPDATE t SET x = 2 WHERE x = 1 RETURNING *)
+   SELECT * FROM suppr UNION ALL SELECT * FROM upd;
+   -- Comportement non-déterministe : à éviter
+   ```
+
+2. **`RETURNING` est obligatoire** pour exploiter le résultat de la CTE plus loin dans la requête.
+
+3. **Une CTE en écriture est toujours exécutée** (matérialisée), même si elle n'est référencée nulle part dans la requête principale — sa présence dans la `WITH` suffit à déclencher l'opération.
+
+4. **Triggers `BEFORE`/`AFTER`** : se déclenchent normalement comme pour un `INSERT`/`UPDATE`/`DELETE` simple.
+
+5. Sur PG 18 : `MERGE` est également utilisable dans une CTE, avec `RETURNING` (PG 17+) qui expose l'action (`INSERT`/`UPDATE`/`DELETE`) via `merge_action()`.
 
 ---
 

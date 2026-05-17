@@ -220,9 +220,28 @@ Le code est plus facile à comprendre et à modifier. Pas de jointures alambiqu�
 
 ### Ce que les window functions NE font PAS
 
-1. **Elles ne filtrent pas les lignes** : Si vous voulez filtrer, utilisez `WHERE` avant ou `HAVING` dans une requête englobante  
-2. **Elles ne modifient pas les données** : Les window functions sont en lecture seule (comme toutes les fonctions dans SELECT)  
-3. **Elles ne peuvent pas être dans WHERE** : Les calculs de fenêtrage se font après le filtrage
+1. **Elles ne filtrent pas les lignes** : Si vous voulez filtrer **sur le résultat** d'une window function, vous devez l'envelopper dans une CTE ou une sous-requête.
+
+2. **Elles ne modifient pas les données** : Les window functions sont en lecture seule (comme toutes les fonctions dans `SELECT`).
+
+3. **Elles ne sont pas autorisées dans `WHERE`, `GROUP BY`, ni `HAVING`** : les window functions sont **calculées après** ces trois clauses (l'ordre logique d'exécution SQL est `FROM → WHERE → GROUP BY → HAVING → window functions → SELECT → ORDER BY → LIMIT`). Conséquence pratique :
+
+   ```sql
+   -- ❌ ERREUR : "window functions are not allowed in WHERE"
+   SELECT vendeur, montant
+   FROM ventes
+   WHERE ROW_NUMBER() OVER (PARTITION BY vendeur ORDER BY montant DESC) <= 3;
+
+   -- ✅ CORRECT : utiliser une CTE pour filtrer le résultat
+   WITH ranked AS (
+       SELECT vendeur, montant,
+              ROW_NUMBER() OVER (PARTITION BY vendeur ORDER BY montant DESC) AS rn
+       FROM ventes
+   )
+   SELECT vendeur, montant FROM ranked WHERE rn <= 3;
+   ```
+
+4. **Autorisées dans `SELECT` et `ORDER BY`** : c'est leur terrain naturel.
 
 ### Performance
 

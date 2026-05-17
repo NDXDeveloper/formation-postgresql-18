@@ -232,7 +232,10 @@ WITH RECURSIVE hierarchie AS (
 SELECT
     niveau,
     nom,
-    REPEAT('  ', niveau - 1) || '└─ ' || nom AS arborescence
+    -- niveau=1 (Diana) est la feuille, max(niveau) (Alice/PDG) est la racine.
+    -- On indente proportionnellement à la profondeur depuis la racine :
+    -- racine = 0 indentation, Diana = (max_niveau - 1) indentations.
+    REPEAT('  ', MAX(niveau) OVER () - niveau) || '└─ ' || nom AS arborescence
 FROM hierarchie  
 ORDER BY niveau DESC;  -- Du PDG vers Diana  
 ```
@@ -240,12 +243,12 @@ ORDER BY niveau DESC;  -- Du PDG vers Diana
 ### Résultat
 
 ```
-niveau |        nom         |        arborescence
--------+--------------------+---------------------------
-     4 | Alice (PDG)        | └─ Alice (PDG)
-     3 | Bob (Dir IT)       |   └─ Bob (Dir IT)
-     2 | Charlie (Dev Senior)|     └─ Charlie (Dev Senior)
-     1 | Diana (Dev Junior) |       └─ Diana (Dev Junior)
+niveau |         nom          |        arborescence
+-------+----------------------+----------------------------------
+     4 | Alice (PDG)          | └─ Alice (PDG)
+     3 | Bob (Dir IT)         |   └─ Bob (Dir IT)
+     2 | Charlie (Dev Senior) |     └─ Charlie (Dev Senior)
+     1 | Diana (Dev Junior)   |       └─ Diana (Dev Junior)
 ```
 
 ---
@@ -632,49 +635,52 @@ WHERE e.id IS NULL;  -- Pas d'enfants
 
 ```sql
 WITH RECURSIVE hierarchie AS (
+    -- ANCRAGE : chaque employé pointe sur lui-même comme racine
     SELECT
+        id          AS racine_id,   -- l'ancêtre courant
         id,
-        nom,
-        manager_id,
         salaire,
-        salaire AS masse_salariale_totale
+        ARRAY[id]   AS chemin_ids   -- tableau des IDs ancêtre→descendant
     FROM employes
-    WHERE manager_id IS NULL
 
     UNION ALL
 
+    -- RÉCURSIF : descendre vers les enfants de chaque racine
     SELECT
+        h.racine_id,                -- on conserve la racine d'origine
         e.id,
-        e.nom,
-        e.manager_id,
         e.salaire,
-        e.salaire AS masse_salariale_totale
+        h.chemin_ids || e.id
     FROM employes e
     INNER JOIN hierarchie h ON e.manager_id = h.id
 )
--- Agrégation post-récursion
+-- Agrégation : pour chaque racine, somme des salaires de tous les descendants
 SELECT
     manager.id,
     manager.nom,
-    SUM(subordonnes.salaire) AS masse_salariale_equipe
-FROM hierarchie manager  
-LEFT JOIN hierarchie subordonnes  
-    ON subordonnes.chemin_ids @> ARRAY[manager.id]  -- Contient l'ID du manager
-GROUP BY manager.id, manager.nom;
+    (SELECT SUM(h.salaire)
+       FROM hierarchie h
+      WHERE h.racine_id = manager.id) AS masse_salariale_equipe
+FROM employes manager
+ORDER BY masse_salariale_equipe DESC NULLS LAST;
 ```
+
+> 💡 La clé est de garder dans chaque ligne de la CTE l'identifiant de la **racine** d'origine (`racine_id`) ; on peut alors agréger trivialement par `racine_id`.
 
 ### 4. Matérialiser un arbre dans une table dénormalisée
 
+**Forme courte** (PostgreSQL accepte `CREATE TABLE … AS` directement devant un `WITH RECURSIVE`) :
+
 ```sql
-CREATE TABLE employes_denormalises AS  
-WITH RECURSIVE arbre AS (  
+CREATE TABLE employes_denormalises AS
+WITH RECURSIVE arbre AS (
     SELECT
         id,
         nom,
         manager_id,
-        1 AS niveau,
-        nom AS chemin_complet,
-        id::TEXT AS chemin_ids
+        1            AS niveau,
+        nom          AS chemin_complet,
+        ARRAY[id]    AS chemin_ids      -- tableau d'INTEGER (et non TEXT concaténé)
     FROM employes
     WHERE manager_id IS NULL
 
@@ -686,16 +692,38 @@ WITH RECURSIVE arbre AS (
         e.manager_id,
         a.niveau + 1,
         a.chemin_complet || ' → ' || e.nom,
-        a.chemin_ids || '/' || e.id
+        a.chemin_ids || e.id
     FROM employes e
     INNER JOIN arbre a ON e.manager_id = a.id
 )
 SELECT * FROM arbre;
 
--- Créer un index pour les requêtes rapides
-CREATE INDEX idx_niveau ON employes_denormalises(niveau);  
-CREATE INDEX idx_chemin ON employes_denormalises USING GIN(chemin_ids);  
+-- Index utiles
+CREATE INDEX idx_niveau  ON employes_denormalises(niveau);
+-- GIN sur un tableau INTEGER : permet les requêtes
+-- "qui est sous l'ancêtre X ?" via    WHERE chemin_ids @> ARRAY[X]
+CREATE INDEX idx_chemin  ON employes_denormalises USING GIN(chemin_ids);
 ```
+
+> 💡 **Forme alternative — schéma typé explicite** : si vous voulez une `PRIMARY KEY`, des `NOT NULL` ou des contraintes, déclarez d'abord la table puis insérez :  
+>  
+> ```sql  
+> CREATE TABLE employes_denormalises (  
+>     id              INTEGER PRIMARY KEY,  
+>     nom             TEXT,  
+>     manager_id      INTEGER,  
+>     niveau          INTEGER,  
+>     chemin_complet  TEXT,  
+>     chemin_ids      INTEGER[]  
+> );  
+>  
+> WITH RECURSIVE arbre AS ( … )  
+> INSERT INTO employes_denormalises SELECT * FROM arbre;  
+> ```
+
+> 💡 **Pourquoi `INTEGER[]` plutôt que `TEXT`** : GIN n'accepte pas le type `text` par défaut (il faudrait `gin_trgm_ops` via l'extension `pg_trgm`). Avec un **array d'entiers**, GIN est utilisable nativement et l'opérateur `@>` (containment) permet de répondre à *« quels employés ont X dans leur chaîne de hiérarchie ? »* en O(log n).  
+>  
+> Alternative : stocker `chemin_ids` en `ltree` + index `USING GIST` — plus puissant pour les requêtes de type *« descendants directs de X »* via les opérateurs `<@`, `~`, `?`.
 
 ---
 
@@ -719,15 +747,17 @@ CREATE TABLE compositions (
     PRIMARY KEY (piece_parent_id, piece_composant_id)
 );
 
+-- Convention : prix_unitaire = 0 pour les sous-ensembles assemblés en interne
+-- (Vélo et Roue ne sont pas achetés tels quels, leur coût est calculé)
 INSERT INTO pieces VALUES
-    (1, 'Vélo', 0),  -- Prix calculé
-    (2, 'Cadre', 100),
-    (3, 'Roue', 50),
-    (4, 'Pneu', 15),
-    (5, 'Jante', 30),
-    (6, 'Rayons (lot)', 5),
-    (7, 'Guidon', 25),
-    (8, 'Selle', 40);
+    (1, 'Vélo', 0),         -- Sous-ensemble (calculé)
+    (2, 'Cadre', 100),      -- Pièce achetée
+    (3, 'Roue', 0),         -- Sous-ensemble (calculé à partir de Pneu+Jante+Rayons)
+    (4, 'Pneu', 15),        -- Pièce achetée
+    (5, 'Jante', 30),       -- Pièce achetée
+    (6, 'Rayons (lot)', 5), -- Pièce achetée
+    (7, 'Guidon', 25),      -- Pièce achetée
+    (8, 'Selle', 40);       -- Pièce achetée
 
 INSERT INTO compositions VALUES
     (1, 2, 1),  -- 1 Vélo = 1 Cadre
@@ -788,13 +818,14 @@ structure        | qte | prix_unit | cout_total | chemin
 -----------------+-----+-----------+------------+--------------------
   Cadre          |   1 |    100.00 |     100.00 | Vélo → Cadre
   Guidon         |   1 |     25.00 |      25.00 | Vélo → Guidon
-  Roue           |   2 |     50.00 |     100.00 | Vélo → Roue
+  Roue           |   2 |      0.00 |       0.00 | Vélo → Roue          ← sous-assemblage
     Jante        |   2 |     30.00 |      60.00 | Vélo → Roue → Jante
     Pneu         |   2 |     15.00 |      30.00 | Vélo → Roue → Pneu
     Rayons (lot) |   2 |      5.00 |      10.00 | Vélo → Roue → Rayons (lot)
   Selle          |   1 |     40.00 |      40.00 | Vélo → Selle
 
--- Coût total du vélo : 100 + 25 + 60 + 30 + 10 + 40 = 265 €
+-- Coût total du vélo : 100 + 25 + 0 + 60 + 30 + 10 + 40 = 265 €
+-- (la Roue à 0 € évite le double comptage : on ne paye que les pièces achetées)
 ```
 
 ### Calculer le coût total
@@ -819,21 +850,29 @@ WHERE niveau > 0;
 
 ### 1. Limiter la profondeur de récursion
 
-PostgreSQL a une limite par défaut de **100 niveaux de récursion**. Vous pouvez l'ajuster avec un paramètre :
+> ⚠️ **Mythe à démonter** : il n'existe **pas** de paramètre `max_recursion_depth` en PostgreSQL, ni de clause `OPTIONS (...)` après `WITH RECURSIVE`. La protection contre les récursions infinies est entièrement à la charge de l'auteur de la requête.
+
+**Méthodes réelles pour borner la récursion** :
 
 ```sql
--- Augmenter la limite (session actuelle)
-SET max_recursion_depth = 1000;
-
--- Ou dans la requête elle-même
+-- Méthode 1 : condition explicite dans le terme récursif
 WITH RECURSIVE arbre AS (
-    ...
+    SELECT id, nom, manager_id, 1 AS niveau
+    FROM employes WHERE manager_id IS NULL
+    UNION ALL
+    SELECT e.id, e.nom, e.manager_id, a.niveau + 1
+    FROM employes e JOIN arbre a ON e.manager_id = a.id
+    WHERE a.niveau < 100              -- ← borne explicite
 )
-OPTIONS (max_recursion_depth 500)  
-SELECT * FROM arbre;  
+SELECT * FROM arbre;
+
+-- Méthode 2 : clause CYCLE standard SQL (PG 14+) — voir Stratégie 4 plus haut
+
+-- Méthode 3 : détection manuelle via ARRAY chemin_ids
+WHERE NOT (e.id = ANY(a.chemin_ids))
 ```
 
-**Attention :** Une limite trop élevée peut causer des problèmes de mémoire.
+Côté planificateur, **PG 16+** introduit `recursive_worktable_factor` (défaut 10.0) qui aide le moteur à estimer la taille de la *worktable* — utile pour le choix du plan, mais n'a aucun effet de protection. Une `work_mem` insuffisante peut indirectement faire échouer une récursion qui produit trop de lignes intermédiaires.
 
 ### 2. Indexer les colonnes de jointure
 
@@ -927,9 +966,9 @@ SELECT * FROM arbre;
 
 ## Limitations et Considérations
 
-### 1. Pas de matérialisation explicite
+### 1. Toujours matérialisées (implicitement)
 
-Les CTE récursives ne peuvent pas être déclarées `MATERIALIZED` ou `NOT MATERIALIZED`.
+Les CTE récursives sont **toujours matérialisées** par PostgreSQL (jamais *inlinées*). Écrire `WITH RECURSIVE … AS MATERIALIZED (…)` est accepté mais redondant ; `NOT MATERIALIZED` n'est en revanche pas honoré pour une CTE récursive.
 
 ### 2. Mémoire
 
@@ -938,9 +977,10 @@ Les résultats intermédiaires sont stockés en mémoire (ou sur disque si trop 
 ### 3. Performances sur des graphes très connectés
 
 Dans des graphes denses (beaucoup de connexions), les CTE récursives peuvent devenir lentes. Alternatives :
-- Extension `pg_graph` (si disponible)
-- Matérialiser l'arbre dans une table
-- Algorithmes spécialisés côté application
+- **Apache AGE** : extension PostgreSQL qui ajoute un moteur de graphes compatible OpenCypher
+- **pgRouting** : extension spécialisée graphes routiers (sur PostGIS) — algorithmes Dijkstra, A*, etc.
+- Matérialiser l'arbre dans une **table de closure** (cf. section ci-dessous)
+- **Base de données dédiée** : Neo4j, JanusGraph pour les très grands graphes
 
 ### 4. Ordre d'exécution
 
@@ -956,15 +996,28 @@ L'ordre des résultats dans une CTE récursive n'est **pas garanti** sans `ORDER
 
 ```sql
 CREATE TABLE employes_closure (
-    ancetre_id INTEGER,
+    ancetre_id    INTEGER,
     descendant_id INTEGER,
-    profondeur INTEGER,
+    profondeur    INTEGER,
     PRIMARY KEY (ancetre_id, descendant_id)
 );
 
--- Pré-remplir avec toutes les relations
-INSERT INTO employes_closure  
-WITH RECURSIVE ...;  
+-- Pré-remplir avec toutes les relations (CTE récursive + INSERT…SELECT)
+-- ⚠️ La clause WITH se place AVANT INSERT, pas après.
+WITH RECURSIVE chemin AS (
+    -- Chaque employé est son propre ancêtre (profondeur 0)
+    SELECT id AS ancetre_id, id AS descendant_id, 0 AS profondeur
+    FROM employes
+
+    UNION ALL
+
+    -- Étendre vers les descendants
+    SELECT c.ancetre_id, e.id, c.profondeur + 1
+    FROM chemin c
+    JOIN employes e ON e.manager_id = c.descendant_id
+)
+INSERT INTO employes_closure (ancetre_id, descendant_id, profondeur)
+SELECT ancetre_id, descendant_id, profondeur FROM chemin;
 ```
 
 | Approche | Avantages | Inconvénients |

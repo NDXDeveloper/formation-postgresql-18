@@ -245,6 +245,46 @@ Cela retourne les produits qui sont :
 - Soit dans le top 10 global
 - Soit dans le top 3 de leur catégorie
 
+### Alternatives PostgreSQL au Top N
+
+Selon le besoin, deux alternatives PostgreSQL peuvent être préférables aux window functions :
+
+#### `DISTINCT ON` — Idéal pour le Top 1 par groupe
+
+PostgreSQL propose la clause **non-standard** `DISTINCT ON (colonnes)` qui sélectionne la **première ligne** de chaque groupe selon l'`ORDER BY`. Bien plus concis qu'un `ROW_NUMBER + WHERE rn = 1` :
+
+```sql
+-- Le produit le plus vendu de chaque catégorie
+SELECT DISTINCT ON (categorie)
+    categorie, produit, ventes
+FROM produits
+ORDER BY categorie, ventes DESC;  -- L'ordre détermine quelle ligne est "première"
+```
+
+**Limitations** : ne retourne qu'**une ligne par groupe**. Pour N > 1, retomber sur `ROW_NUMBER`.
+
+#### `LATERAL` + `LIMIT` — Performant pour Top N avec peu de groupes
+
+Quand on a une table de groupes (catégories, vendeurs, etc.) et qu'on veut le top N de chacun, `LATERAL` permet à PostgreSQL d'utiliser un index pour ne lire que les N premières lignes par groupe — souvent plus rapide qu'un `ROW_NUMBER` qui doit trier toute la table :
+
+```sql
+-- Top 3 produits par catégorie (en supposant un index sur (categorie, ventes DESC))
+SELECT c.categorie, p.produit, p.ventes
+FROM categories c
+CROSS JOIN LATERAL (
+    SELECT produit, ventes
+    FROM produits
+    WHERE categorie = c.categorie
+    ORDER BY ventes DESC
+    LIMIT 3
+) AS p;
+```
+
+**Quand utiliser quoi** :
+- **`DISTINCT ON`** : top 1 par groupe, syntaxe compacte
+- **`LATERAL` + `LIMIT`** : top N avec un bon index et peu de groupes (très performant)
+- **`ROW_NUMBER`** : top N en mode "scan complet", flexible, standard SQL
+
 ## Moyennes Mobiles
 
 ### Le Concept
@@ -398,27 +438,37 @@ ORDER BY date;
 
 L'EMA donne plus de poids aux valeurs **récentes** :
 
+⚠️ **Piège classique** : ne pas joindre par `c.date = e.date + INTERVAL '1 day'`. Cette approche casse dès qu'un jour manque (week-end, jour férié, panne de collecte). Il faut **numéroter les lignes** avec `ROW_NUMBER()` puis joindre par numéro consécutif :
+
 ```sql
-WITH RECURSIVE ema AS (
-    -- Première valeur : prix initial
+WITH RECURSIVE numerote AS (
+    -- On numérote chaque cours selon l'ordre chronologique
     SELECT
         date,
         cours,
-        cours AS ema_12
+        ROW_NUMBER() OVER (ORDER BY date) AS rn
     FROM cours_bourse
-    WHERE date = (SELECT MIN(date) FROM cours_bourse)
+),
+ema AS (
+    -- Cas de base : la première ligne, l'EMA = cours
+    SELECT date, cours, rn, cours::numeric AS ema_12
+    FROM numerote
+    WHERE rn = 1
 
     UNION ALL
 
-    -- Calcul récursif
+    -- Récursion : EMA_n = cours_n * α + EMA_(n-1) * (1 - α), α = 2/(N+1) = 2/13
     SELECT
-        c.date,
-        c.cours,
-        (c.cours * (2.0 / (12 + 1))) + (e.ema_12 * (1 - (2.0 / (12 + 1)))) AS ema_12
-    FROM cours_bourse c
-    JOIN ema e ON c.date = e.date + INTERVAL '1 day'
+        n.date,
+        n.cours,
+        n.rn,
+        (n.cours * (2.0 / 13)) + (e.ema_12 * (11.0 / 13)) AS ema_12
+    FROM numerote n
+    JOIN ema e ON n.rn = e.rn + 1
 )
-SELECT * FROM ema ORDER BY date;
+SELECT date, cours, ROUND(ema_12, 2) AS ema_12
+FROM ema
+ORDER BY date;
 ```
 
 **Formule EMA** : `EMA_aujourd'hui = (Cours * α) + (EMA_hier * (1-α))`
@@ -451,42 +501,38 @@ Poids : Jour actuel (5), J-1 (4), J-2 (3), J-3 (2), J-4 (1). Total = 15.
 
 ### Détecter les Anomalies avec Moyenne Mobile
 
+⚠️ **Subtilité de référence** : pour détecter une anomalie, la moyenne et l'écart-type doivent porter sur les **autres lignes**, pas inclure la ligne courante (sinon une valeur extrême tire sa propre moyenne et masque l'anomalie). On utilise `1 PRECEDING` comme borne supérieure (ou `EXCLUDE CURRENT ROW` en PG 11+) :
+
 ```sql
+WITH stats AS (
+    SELECT
+        date,
+        ventes,
+        AVG(ventes)    OVER w AS mm7_precedent,
+        STDDEV(ventes) OVER w AS ecart_type_7j_precedent
+    FROM ventes_quotidiennes
+    WINDOW w AS (
+        ORDER BY date
+        ROWS BETWEEN 7 PRECEDING AND 1 PRECEDING  -- 7 jours précédents, hors aujourd'hui
+    )
+)
 SELECT
     date,
     ventes,
-    AVG(ventes) OVER (
-        ORDER BY date
-        ROWS BETWEEN 6 PRECEDING AND CURRENT ROW
-    ) AS mm7,
-    STDDEV(ventes) OVER (
-        ORDER BY date
-        ROWS BETWEEN 6 PRECEDING AND CURRENT ROW
-    ) AS ecart_type_7j,
+    mm7_precedent,
+    ecart_type_7j_precedent,
     CASE
-        WHEN ventes > AVG(ventes) OVER (
-            ORDER BY date
-            ROWS BETWEEN 6 PRECEDING AND CURRENT ROW
-        ) + 2 * STDDEV(ventes) OVER (
-            ORDER BY date
-            ROWS BETWEEN 6 PRECEDING AND CURRENT ROW
-        )
-        THEN 'PIC ANORMAL'
-        WHEN ventes < AVG(ventes) OVER (
-            ORDER BY date
-            ROWS BETWEEN 6 PRECEDING AND CURRENT ROW
-        ) - 2 * STDDEV(ventes) OVER (
-            ORDER BY date
-            ROWS BETWEEN 6 PRECEDING AND CURRENT ROW
-        )
-        THEN 'CHUTE ANORMALE'
+        WHEN ventes > mm7_precedent + 2 * ecart_type_7j_precedent THEN 'PIC ANORMAL'
+        WHEN ventes < mm7_precedent - 2 * ecart_type_7j_precedent THEN 'CHUTE ANORMALE'
         ELSE 'NORMAL'
     END AS alerte
-FROM ventes_quotidiennes  
-ORDER BY date;  
+FROM stats
+ORDER BY date;
 ```
 
-**Logique** : Si une valeur s'écarte de plus de 2 écarts-types de la moyenne mobile, c'est anormal.
+**Logique** : Si la valeur du jour s'écarte de plus de 2 écarts-types de la **moyenne des 7 jours précédents**, c'est anormal. La CTE évite aussi la répétition des window functions.
+
+ℹ️ **Variante PG 11+** avec `EXCLUDE CURRENT ROW` : permet d'écrire `ROWS BETWEEN 7 PRECEDING AND CURRENT ROW EXCLUDE CURRENT ROW` (équivalent fonctionnel ici, mais utile dans des fenêtres centrées).
 
 ## Autres Cas d'Usage Avancés
 
@@ -519,7 +565,7 @@ ORDER BY date;
 
 ### 2. Séquences et Streaks
 
-Détecter des séquences de succès/échecs consécutifs :
+Détecter des séquences de succès/échecs consécutifs avec la technique du **"gaps and islands"** : chaque baisse incrémente un compteur `groupe_sequence`, donc toutes les hausses consécutives partagent le même groupe.
 
 ```sql
 WITH ventes_avec_tendance AS (
@@ -538,37 +584,52 @@ sequences AS (
         date,
         ventes,
         en_hausse,
+        -- Compteur cumulatif : incrémente à chaque jour SANS hausse
         SUM(CASE WHEN en_hausse = 0 THEN 1 ELSE 0 END) OVER (ORDER BY date) AS groupe_sequence
     FROM ventes_avec_tendance
 )
 SELECT
     date,
     ventes,
-    en_hausse,
+    -- On numérote les hausses dans chaque groupe (après filtrage)
     ROW_NUMBER() OVER (PARTITION BY groupe_sequence ORDER BY date) AS jours_consecutifs_hausse
-FROM sequences  
-WHERE en_hausse = 1  
-ORDER BY date;  
+FROM sequences
+WHERE en_hausse = 1  -- Filtre avant ROW_NUMBER : la numérotation démarre à 1 pour chaque streak
+ORDER BY date;
 ```
+
+**Pourquoi `WHERE` avant `ROW_NUMBER` ?** Le `WHERE` s'applique sur la CTE `sequences` (étape 1), puis le `ROW_NUMBER` s'applique sur les lignes restantes (étape 2). On obtient ainsi 1, 2, 3, ... pour chaque streak de hausses consécutives.
 
 **Résultat** : Combien de jours consécutifs de hausse pour chaque séquence.
 
 ### 3. Calcul de Percentile Mobile
 
-Savoir dans quel percentile se trouve une valeur par rapport aux N derniers jours :
+Savoir dans quel percentile se trouve une valeur par rapport aux N derniers jours.
+
+⚠️ **Piège** : `PERCENT_RANK()` est une fonction de rang qui **ignore le frame** — `PERCENT_RANK() OVER (ORDER BY date ROWS BETWEEN 29 PRECEDING AND CURRENT ROW)` ne calcule **pas** un percentile mobile, juste une progression linéaire par date. De plus, on ne pourrait pas trier sur `ventes` car alors le percentile serait calculé sur **toute** la série, pas sur la fenêtre 30 jours.
+
+**✅ Solution correcte avec `LATERAL`** : pour chaque ligne, calculer la position relative dans la fenêtre des 29 jours précédents + le jour courant :
 
 ```sql
 SELECT
-    date,
-    ventes,
-    PERCENT_RANK() OVER (
-        ORDER BY date
-        ROWS BETWEEN 29 PRECEDING AND CURRENT ROW
-    ) AS percentile_30j
-FROM ventes_quotidiennes;
+    v1.date,
+    v1.ventes,
+    -- Proportion des 30 derniers jours dont les ventes sont <= aux ventes du jour
+    ROUND(stats.rang_dans_fenetre * 100.0 / NULLIF(stats.nb_jours_fenetre, 0), 2) AS percentile_pct
+FROM ventes_quotidiennes v1
+CROSS JOIN LATERAL (
+    SELECT
+        COUNT(*) FILTER (WHERE v2.ventes <= v1.ventes) AS rang_dans_fenetre,
+        COUNT(*)                                       AS nb_jours_fenetre
+    FROM ventes_quotidiennes v2
+    WHERE v2.date BETWEEN v1.date - 29 AND v1.date
+) AS stats
+ORDER BY v1.date;
 ```
 
-**Interprétation** : Si `percentile_30j = 0.9`, les ventes d'aujourd'hui sont dans le top 10% des 30 derniers jours.
+**Interprétation** : Si `percentile_pct = 90`, les ventes du jour sont supérieures ou égales à 90 % des 30 derniers jours (top 10 %).
+
+ℹ️ **Performance** : ce pattern fait une jointure par ligne (coûteux sur de grandes tables). Pour un vrai usage production sur séries longues, envisager une **vue matérialisée** rafraîchie quotidiennement.
 
 ### 4. Premier et Dernier par Groupe avec Détails
 
@@ -605,7 +666,9 @@ ORDER BY client_id, numero_commande;
 
 ### 5. Analyse de Cohorte Avancée
 
-Calculer la rétention par cohorte (mois d'inscription) :
+Calculer la rétention par cohorte (mois d'inscription).
+
+⚠️ **Piège classique** : `EXTRACT(MONTH FROM AGE(...))` ne retourne **que le composant mois** (0-11), pas le **nombre total de mois écoulés**. Pour un écart de 13 mois, ça donne 1 (et non 13) — les cohortes seraient mal agrégées. On combine les composants années + mois, ou on utilise une soustraction directe de `DATE_TRUNC('month', ...)` :
 
 ```sql
 WITH cohortes AS (
@@ -613,7 +676,9 @@ WITH cohortes AS (
         u.user_id,
         DATE_TRUNC('month', u.date_inscription) AS mois_cohorte,
         DATE_TRUNC('month', a.date_activite) AS mois_activite,
-        EXTRACT(MONTH FROM AGE(a.date_activite, u.date_inscription)) AS mois_depuis_inscription
+        -- Nombre TOTAL de mois écoulés depuis l'inscription
+        (EXTRACT(YEAR  FROM AGE(a.date_activite, u.date_inscription)) * 12
+       + EXTRACT(MONTH FROM AGE(a.date_activite, u.date_inscription)))::int AS mois_depuis_inscription
     FROM users u
     LEFT JOIN activites a ON u.user_id = a.user_id
 ),
@@ -622,6 +687,7 @@ retention AS (
         mois_cohorte,
         mois_depuis_inscription,
         COUNT(DISTINCT user_id) AS users_actifs,
+        -- La taille initiale = nombre d'utilisateurs au mois 0 de la cohorte
         FIRST_VALUE(COUNT(DISTINCT user_id)) OVER (
             PARTITION BY mois_cohorte
             ORDER BY mois_depuis_inscription
@@ -644,7 +710,13 @@ ORDER BY mois_cohorte, mois_depuis_inscription;
 
 ### 6. Analyse RFM (Recency, Frequency, Monetary)
 
-Segmentation client classique :
+Segmentation client classique. **Convention** : un score de **5 = meilleur client** sur la dimension, **1 = moins bon**.
+
+⚠️ **Piège classique** sur le sens de NTILE : `NTILE(5) OVER (ORDER BY x DESC)` attribue le bucket **1 aux plus grandes valeurs** et **5 aux plus petites**. Pour que « bucket 5 = client meilleur », il faut donc :
+
+- **Récence** : `ORDER BY jours_depuis_dernier_achat DESC` → bucket 5 = peu de jours d'inactivité = client récent ✓
+- **Fréquence** : `ORDER BY nb_achats ASC` → bucket 5 = beaucoup d'achats = client fréquent ✓
+- **Monétaire** : `ORDER BY ca_total ASC` → bucket 5 = gros CA = gros dépensier ✓
 
 ```sql
 WITH rfm_scores AS (
@@ -654,9 +726,12 @@ WITH rfm_scores AS (
         COUNT(*) AS nb_achats,
         SUM(montant) AS ca_total,
         CURRENT_DATE - MAX(date_achat) AS jours_depuis_dernier_achat,
+        -- Bucket 5 = client le plus récent (moins de jours d'inactivité)
         NTILE(5) OVER (ORDER BY CURRENT_DATE - MAX(date_achat) DESC) AS score_recence,
-        NTILE(5) OVER (ORDER BY COUNT(*) DESC) AS score_frequence,
-        NTILE(5) OVER (ORDER BY SUM(montant) DESC) AS score_montant
+        -- Bucket 5 = client le plus fréquent (le plus d'achats) → ASC pour inverser
+        NTILE(5) OVER (ORDER BY COUNT(*) ASC) AS score_frequence,
+        -- Bucket 5 = client le plus gros dépensier → ASC pour inverser
+        NTILE(5) OVER (ORDER BY SUM(montant) ASC) AS score_montant
     FROM achats
     GROUP BY client_id
 )
@@ -684,9 +759,13 @@ FROM rfm_scores
 ORDER BY score_rfm_total DESC;  
 ```
 
+ℹ️ **Astuce mnémotechnique** : avec `NTILE(N) OVER (ORDER BY x ASC)`, le bucket 1 contient les **plus petites** valeurs et le bucket N les **plus grandes** (intuition « du moins au plus »). Avec `DESC`, c'est l'inverse.
+
 ### 7. Analyse de Saisonnalité
 
 Comparer chaque mois à la même période l'année précédente :
+
+⚠️ **Piège** : pour obtenir la moyenne **par mois calendaire** (toutes années confondues), il faut `PARTITION BY EXTRACT(MONTH FROM date)`, **pas** `ORDER BY ...` avec `UNBOUNDED FOLLOWING` (qui donnerait la moyenne globale identique sur toutes les lignes).
 
 ```sql
 SELECT
@@ -699,10 +778,8 @@ SELECT
         NULLIF(LAG(ventes, 12) OVER (ORDER BY date), 0),
         2
     ) AS croissance_annuelle_pct,
-    AVG(ventes) OVER (
-        ORDER BY EXTRACT(MONTH FROM date)
-        ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING
-    ) AS moyenne_mois_tous_ans
+    -- Moyenne du même mois calendaire sur toutes les années (saisonnalité)
+    AVG(ventes) OVER (PARTITION BY EXTRACT(MONTH FROM date)) AS moyenne_mois_tous_ans
 FROM ventes_mensuelles  
 WHERE date >= CURRENT_DATE - INTERVAL '3 years'  
 ORDER BY date;  
@@ -768,29 +845,47 @@ SELECT
     ) AS mm30
 FROM ventes_quotidiennes;
 
--- Créer un index
-CREATE INDEX idx_vmm_date ON ventes_avec_moyennes_mobiles(date);
+-- Index unique pour permettre REFRESH CONCURRENTLY (sans bloquer les lectures)
+CREATE UNIQUE INDEX idx_vmm_date ON ventes_avec_moyennes_mobiles(date);
 
 -- Rafraîchir quotidiennement
-REFRESH MATERIALIZED VIEW ventes_avec_moyennes_mobiles;
+-- ✅ CONCURRENTLY : pas de verrou exclusif, les requêtes continuent à lire l'ancienne version
+REFRESH MATERIALIZED VIEW CONCURRENTLY ventes_avec_moyennes_mobiles;
+
+-- ⚠️ Sans CONCURRENTLY : verrou ACCESS EXCLUSIVE pendant tout le rafraîchissement (lectures bloquées)
 ```
 
-### 2. Limiter la Fenêtre Temporelle
+### 2. Limiter la Fenêtre Temporelle (avec Précaution)
 
 ```sql
--- ❌ Coûteux : Traite toute l'historique
+-- ❌ Coûteux : Traite tout l'historique
 SELECT
     date,
     AVG(ventes) OVER (ORDER BY date ROWS BETWEEN 6 PRECEDING AND CURRENT ROW) AS mm7
 FROM ventes_quotidiennes;
+```
 
--- ✅ Optimisé : Filtre d'abord
-SELECT
-    date,
-    AVG(ventes) OVER (ORDER BY date ROWS BETWEEN 6 PRECEDING AND CURRENT ROW) AS mm7
-FROM ventes_quotidiennes  
-WHERE date >= CURRENT_DATE - INTERVAL '1 year'  
-ORDER BY date;  
+⚠️ **Piège classique** : un simple `WHERE date >= CURRENT_DATE - INTERVAL '1 year'` **tronque la fenêtre** pour les premières lignes du résultat. La moyenne mobile sur 7 jours sera fausse pour les 6 premiers jours (elle ne verra pas les 6 jours antérieurs nécessaires).
+
+**✅ Solution correcte** : étendre la lecture en amont, puis filtrer en sortie via une CTE :
+
+```sql
+WITH ventes_avec_mm AS (
+    -- Lit 6 jours de plus que la plage cible pour avoir une fenêtre complète
+    SELECT
+        date,
+        ventes,
+        AVG(ventes) OVER (
+            ORDER BY date
+            ROWS BETWEEN 6 PRECEDING AND CURRENT ROW
+        ) AS mm7
+    FROM ventes_quotidiennes
+    WHERE date >= CURRENT_DATE - INTERVAL '1 year' - INTERVAL '6 days'
+)
+SELECT date, ventes, mm7
+FROM ventes_avec_mm
+WHERE date >= CURRENT_DATE - INTERVAL '1 year'  -- On enlève les 6 jours de "warm-up"
+ORDER BY date;
 ```
 
 ### 3. Pré-agréger les Données
@@ -882,11 +977,11 @@ ROW_NUMBER() OVER (PARTITION BY categorie ORDER BY ventes DESC, produit_id)
 
 ### 4. Mauvaise Utilisation de RANK vs ROW_NUMBER
 
-```sql
--- Si vous voulez EXACTEMENT 3 produits par catégorie
--- ✅ Utilisez ROW_NUMBER()
--- ❌ PAS RANK() (peut retourner plus de 3)
-```
+Si vous voulez **exactement** N produits par catégorie :
+
+- ✅ Utilisez `ROW_NUMBER()` : garantit exactement N lignes
+- ❌ Pas `RANK()` : en cas d'ex-aequo en position N, peut retourner plus de N lignes
+- ❌ Pas `DENSE_RANK()` : même problème que `RANK`
 
 ### 5. Calculs Redondants
 
@@ -1024,14 +1119,17 @@ ORDER BY pr.produit_a, pr.rang_recommandation;
 
 ## Points Clés à Retenir
 
-- ✅ **Top N par groupe** : Utilisez ROW_NUMBER() avec PARTITION BY puis filtrez sur le rang  
-- ✅ **ROW_NUMBER vs RANK** : ROW_NUMBER pour exactement N lignes, RANK pour inclure les ex-aequo  
-- ✅ **Moyenne mobile** : AVG() avec ROWS BETWEEN N PRECEDING AND CURRENT ROW  
-- ✅ **Moyennes mobiles multiples** : Utiles pour détecter les croisements et tendances  
-- ✅ **Optimisation** : Filtrez d'abord avec WHERE, utilisez des index, considérez les vues matérialisées  
-- ✅ **CTE et WINDOW** : Améliorent la lisibilité et évitent la duplication  
-- ✅ **Z-score** : (valeur - moyenne) / écart-type pour détecter les anomalies  
-- ✅ **Toujours un tri déterministe** : Ajoutez une colonne unique en cas d'égalité
+- ✅ **Top N par groupe** : `ROW_NUMBER()` + `PARTITION BY` + filtre sur rang, ou alternatives PostgreSQL (`DISTINCT ON` pour le top 1, `LATERAL + LIMIT` avec un bon index)  
+- ✅ **ROW_NUMBER vs RANK** : `ROW_NUMBER` pour exactement N lignes, `RANK` pour inclure les ex-aequo  
+- ✅ **Pagination** : préférer la **keyset pagination** (méthode du seek) à `ROW_NUMBER` ou `OFFSET` sur de grandes tables  
+- ✅ **Moyenne mobile** : `AVG()` avec `ROWS BETWEEN N PRECEDING AND CURRENT ROW`  
+- ✅ **Moyennes mobiles multiples** : utiles pour détecter les croisements et tendances  
+- ✅ **Détection d'anomalies** : moyenne mobile **excluant la ligne courante** (`1 PRECEDING` ou `EXCLUDE CURRENT ROW`) pour ne pas diluer l'écart  
+- ✅ **Optimisation** : préférer une CTE avec « warm-up » au lieu d'un `WHERE` qui tronque la fenêtre ; utiliser des index, vues matérialisées (`REFRESH ... CONCURRENTLY`)  
+- ✅ **CTE et WINDOW** : améliorent la lisibilité et évitent la duplication  
+- ✅ **Z-score** : `(valeur - moyenne) / écart-type` pour détecter les anomalies  
+- ✅ **Imbrication interdite** : une window function ne peut pas en contenir une autre — passer par une CTE  
+- ✅ **Toujours un tri déterministe** : ajouter une colonne unique en cas d'égalité (`ORDER BY val, id`)
 
 ## Tableau Récapitulatif
 
@@ -1040,7 +1138,7 @@ ORDER BY pr.produit_a, pr.rang_recommandation;
 | Top 3 par catégorie | `ROW_NUMBER() OVER (PARTITION BY cat ORDER BY val DESC)` filtre <= 3 |
 | Moyenne mobile 7 jours | `AVG(val) OVER (ORDER BY date ROWS BETWEEN 6 PRECEDING AND CURRENT ROW)` |
 | Cumul par groupe | `SUM(val) OVER (PARTITION BY groupe ORDER BY date)` |
-| Croissance % vs hier | `(val - LAG(val) OVER (...)) / LAG(val) OVER (...)` |
+| Croissance % vs hier | `(val - LAG(val) OVER (...)) / NULLIF(LAG(val) OVER (...), 0)` |
 | Détection anomalies | Comparer à `AVG() ± 2*STDDEV()` sur fenêtre glissante |
 | Classement avec ex-aequo | `RANK() OVER (ORDER BY val DESC)` |
 | Segmentation RFM | `NTILE(5) OVER (ORDER BY metrique)` |

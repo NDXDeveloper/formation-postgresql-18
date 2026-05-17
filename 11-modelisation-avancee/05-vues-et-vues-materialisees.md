@@ -1272,12 +1272,28 @@ Contrairement à certains SGBD, PostgreSQL ne rafraîchit pas automatiquement.
 
 **Alternative :** Triggers + Refresh asynchrone (mais coûteux)
 
-**3. Pas de Vues Matérialisées sur Requêtes avec WITH RECURSIVE**
+**3. Restrictions sur la requête sous-jacente**
+
+La requête d'une vue matérialisée s'exécute dans un contexte « security-restricted » :
+
+- Les fonctions qui créent des **tables temporaires** échouent
+- Le `search_path` est temporairement réduit à `pg_catalog, pg_temp` (pensez à qualifier les schémas)
+
+ℹ️ **Bonne nouvelle** : les `CTE` (WITH) et **`WITH RECURSIVE`** sont parfaitement supportés dans une vue matérialisée :
 
 ```sql
--- ❌ Non supporté
-CREATE MATERIALIZED VIEW vm_hierarchie AS  
-WITH RECURSIVE ...  -- Erreur  
+-- ✅ Tout à fait valide : MV avec WITH RECURSIVE pour aplatir une hiérarchie
+CREATE MATERIALIZED VIEW vm_hierarchie_employes AS
+WITH RECURSIVE arbre AS (
+    SELECT employe_id, nom, manager_id, 0 AS niveau
+    FROM employes
+    WHERE manager_id IS NULL  -- racines
+    UNION ALL
+    SELECT e.employe_id, e.nom, e.manager_id, a.niveau + 1
+    FROM employes e
+    JOIN arbre a ON e.manager_id = a.employe_id
+)
+SELECT * FROM arbre;
 ```
 
 ### Alternatives aux Vues Matérialisées

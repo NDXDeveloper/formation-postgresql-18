@@ -118,8 +118,10 @@ L'optimiseur de PostgreSQL 18 applique cette transformation si :
 
 1. ✅ Plusieurs conditions `OR` sur la **même colonne**  
 2. ✅ Toutes les conditions utilisent l'opérateur d'égalité `=`  
-3. ✅ Les valeurs sont des constantes (pas d'expressions complexes)  
-4. ✅ Pas de `NULL` dans les valeurs (comportement différent avec OR vs ANY)
+3. ✅ Les valeurs (côté droit de `=`) sont **constantes** ou *params* (pas d'expressions calculées par ligne)  
+4. ✅ Les prédicats sont vraiment de la forme `col = valeur` (pas de `col IS NULL`, `col IS DISTINCT FROM …`, etc. — ces opérateurs *spéciaux* ne sont pas transformés)
+
+> 💡 Avoir un `NULL` dans la liste de valeurs (`col = 'a' OR col = NULL`) n'empêche pas la transformation, mais ce prédicat ne matchera **jamais** aucune ligne — exactement comme `col = ANY(ARRAY['a', NULL])` — car `col = NULL` renvoie toujours `UNKNOWN`. Pour matcher les NULL, il faut **toujours** écrire `col IS NULL` explicitement.
 
 ---
 
@@ -258,16 +260,18 @@ Les gains varient selon :
 - La sélectivité des conditions (nombre de lignes retournées)
 - La présence d'index
 
-**Tableau des gains typiques :**
+**Ordres de grandeur typiques** (mesures variables selon plan/cache/sélectivité) :
 
 | Nombre de OR | Table 1M lignes | Table 10M lignes | Table 100M lignes |
 |--------------|-----------------|------------------|-------------------|
-| 3 OR         | +50% plus rapide | +75% plus rapide | +100% plus rapide |
-| 5 OR         | +100% plus rapide | +150% plus rapide | +200% plus rapide |
-| 10 OR        | +200% plus rapide | +300% plus rapide | +400% plus rapide |
-| 20 OR        | +400% plus rapide | +600% plus rapide | +800% plus rapide |
+| 3 OR         | ~1,5× plus rapide | ~2× plus rapide | ~2× plus rapide |
+| 5 OR         | ~2× plus rapide | ~2,5× plus rapide | ~3× plus rapide |
+| 10 OR        | ~3× plus rapide | ~3-4× plus rapide | ~4-5× plus rapide |
+| 20 OR        | ~4-5× plus rapide | ~5-6× plus rapide | ~6-8× plus rapide |
 
-**Conclusion :** Plus vous avez de conditions `OR`, plus le gain est important !
+> ⚠️ Ces chiffres sont **indicatifs** : le gain réel dépend du plan choisi (Bitmap Heap Scan vs Index Scan), de la sélectivité des valeurs, de l'état du cache, et de la présence d'un index utilisable. **Mesurez toujours avec `EXPLAIN (ANALYZE, BUFFERS)` sur vos propres données** avant de tirer des conclusions.
+
+**Tendance :** plus le nombre de conditions `OR` est élevé, plus le gain est sensible — car la version « avant PG 18 » multipliait les `Bitmap Index Scan`, alors que la version PG 18 fait un unique `Index Scan` avec un filtre `ANY(ARRAY[…])`.
 
 ### Exemple concret : E-commerce
 
@@ -323,38 +327,46 @@ WHERE prix < 100
 
 **Raison :** Opérateurs différents de `=`.
 
-### 3. Expressions complexes
+### 3. Expressions hétérogènes côté gauche
 
 ```sql
--- ❌ Pas d'optimisation (expressions calculées)
+-- ❌ Pas d'optimisation : côté gauche différent (nom vs UPPER(nom))
 SELECT * FROM employes  
-WHERE UPPER(nom) = 'ALICE'  
+WHERE nom = 'ALICE'  
    OR UPPER(nom) = 'BOB';
 ```
 
-**Raison :** Expressions avec fonctions, pas de valeurs constantes directes.
+**Raison :** L'optimisation exige la **même expression** à gauche de chaque `=`. En revanche, si l'expression est identique, la transformation s'applique :
+
+```sql
+-- ✅ OPTIMISÉ : UPPER(nom) est la même expression des deux côtés
+SELECT * FROM employes  
+WHERE UPPER(nom) = 'ALICE'  
+   OR UPPER(nom) = 'BOB';
+-- Devient : WHERE UPPER(nom) = ANY(ARRAY['ALICE', 'BOB'])
+```
 
 ### 4. OR avec AND imbriqués
 
 ```sql
--- ❌ Pas d'optimisation (logique complexe)
+-- ❌ Pas d'optimisation OR→ANY directe (logique composée)
 SELECT * FROM employes  
 WHERE (departement = 'IT' AND salaire > 50000)  
    OR (departement = 'Sales' AND salaire > 60000);
 ```
 
-**Raison :** Conditions composées avec `AND`.
+**Raison :** Conditions composées avec `AND` — chaque branche du `OR` mélange deux prédicats sur deux colonnes différentes.
 
-### 5. NULL dans les valeurs
+### 5. Prédicats `IS NULL` mélangés
 
 ```sql
--- ❌ Comportement différent avec NULL
+-- ❌ Pas de transformation OR→ANY (IS NULL n'est pas du =)
 SELECT * FROM employes  
 WHERE departement = 'IT'  
-   OR departement = NULL;  -- NULL n'est jamais égal à NULL !
+   OR departement IS NULL;
 ```
 
-**Raison :** `OR` et `ANY` se comportent différemment avec `NULL`.
+**Raison :** `IS NULL` est un prédicat *spécial* (pas un opérateur d'égalité). La forme `col = ANY(ARRAY['IT', NULL])` n'est PAS équivalente à `col = 'IT' OR col IS NULL`, puisque `col = NULL` retourne toujours `UNKNOWN`. Pour matcher les NULL, gardez `IS NULL` explicite — la branche `col = 'IT'` peut être combinée avec d'autres `col = 'XX'` qui, elles, bénéficieront de la transformation.
 
 ---
 
@@ -383,27 +395,18 @@ Vos requêtes existantes :
 EXPLAIN ANALYZE [votre requête avec OR multiples];
 ```
 
-### Désactiver l'optimisation (si nécessaire)
+### Désactiver l'optimisation
 
-Dans de très rares cas, vous pourriez vouloir désactiver cette optimisation :
+Contrairement à d'autres optimisations PG 18 qui exposent un GUC dédié (`enable_self_join_elimination`, `enable_distinct_reordering`, `enable_group_by_reordering`, …), la **transformation `OR → ANY` n'a pas de paramètre on/off propre** dans PG 18 — elle est intégrée au planificateur et toujours active dès que les conditions sont remplies.
 
-```sql
--- Désactiver pour la session
-SET enable_or_transformation = off;
+En cas d'absolue nécessité, on peut :
+- Réécrire **manuellement** la requête sous une forme que le planificateur ne reconnaîtra pas (par ex. `WHERE col = 'a' OR LOWER(col) = 'b'`) ;
+- Forcer un autre plan via les `enable_*` génériques (désactiver temporairement `enable_indexscan`, `enable_bitmapscan` selon le besoin) ;
+- Utiliser l'extension tierce `pg_hint_plan` pour des hints comparables à ceux d'Oracle.
 
--- Réactiver
-SET enable_or_transformation = on;
+> 💡 PostgreSQL ne supporte pas les hints SQL natifs : pour modifier le comportement de l'optimiseur, on utilise `SET` / `SET LOCAL` sur les paramètres `enable_*`, ou des extensions externes.
 
--- Désactiver pour une transaction spécifique
-BEGIN;  
-SET LOCAL enable_or_transformation = off;  
-SELECT * FROM table WHERE col = 'a' OR col = 'b' OR col = 'c';  
-COMMIT;  
-```
-
-> 💡 PostgreSQL ne supporte pas les hints SQL natifs (contrairement à Oracle). Pour modifier le comportement de l'optimiseur, utilisez `SET` ou `SET LOCAL` (dans une transaction).
-
-**Note :** En pratique, vous n'aurez presque jamais besoin de désactiver cette optimisation.
+**Note :** en pratique, vous n'aurez quasiment jamais besoin de contourner cette optimisation — elle est conçue pour ne s'appliquer que quand elle est bénéfique.
 
 ---
 
@@ -610,24 +613,25 @@ WHERE colonne2 = 'a' OR colonne2 = 'b' OR colonne2 = 'c';
 
 ### 2. Parallel Query Execution
 
-Les requêtes avec `ANY` peuvent être parallélisées plus efficacement :
+L'éligibilité au parallélisme dépend du **type de plan** choisi (Seq Scan ou Bitmap Heap Scan), du **coût estimé** (`min_parallel_table_scan_size`, `parallel_setup_cost`), et **non** de la forme `OR` vs `ANY` du prédicat. La transformation `OR → ANY` peut indirectement aider quand elle débloque un `Index Scan` ou simplifie le filtre, mais ce n'est pas un gain garanti.
 
 ```sql
--- Exécution parallèle possible
-SELECT * FROM huge_table  
-WHERE status = ANY(ARRAY['pending', 'processing', 'queued'])  
-AND created_at > '2024-01-01';  
+-- L'exécution parallèle dépend du planificateur, pas de la syntaxe du WHERE
+SELECT * FROM huge_table
+WHERE status = ANY(ARRAY['pending', 'processing', 'queued'])
+  AND created_at > '2024-01-01';
 ```
 
 ### 3. JIT Compilation
 
-L'optimisation `OR` → `ANY` produit des plans plus simples, mieux adaptés à la compilation JIT :
+Le JIT (Just-In-Time) compile les **expressions** (tuple deforming, filtres, agrégats) quand le coût total estimé dépasse `jit_above_cost` (défaut 100 000). La forme `OR multiples` vs `ANY(ARRAY[…])` n'a pas d'effet direct sur l'éligibilité au JIT : c'est le **coût** du plan qui compte, pas la syntaxe.
 
 ```sql
--- JIT peut compiler plus efficacement
-SET jit = on;  
-SELECT * FROM table  
-WHERE category = 'A' OR category = 'B' OR ... OR category = 'Z';  
+-- Vérifier l'éligibilité au JIT via EXPLAIN
+EXPLAIN (ANALYZE, BUFFERS, VERBOSE)
+SELECT * FROM table
+WHERE category = ANY(ARRAY['A','B',/* … */,'Z']);
+-- Chercher "JIT: yes/no" dans la sortie
 ```
 
 ---
@@ -667,11 +671,8 @@ WHERE category = 'A' OR category = 'B' OR ... OR category = 'Z';
 
 ### ❌ À éviter
 
-1. **Ne pas désactiver l'optimisation sans raison**
-   ```sql
-   -- ❌ Sauf cas très spécifique
-   SET enable_or_transformation = off;
-   ```
+1. **Ne pas chercher à désactiver l'optimisation**  
+   PG 18 ne fournit pas de GUC dédié pour ça (cf. section « Désactiver l'optimisation » plus haut). Si un plan généré pose un vrai problème, ouvrir un ticket plutôt que de se battre avec le planificateur.
 
 2. **Ne pas réécrire tout le code existant**
    - L'optimisation est automatique

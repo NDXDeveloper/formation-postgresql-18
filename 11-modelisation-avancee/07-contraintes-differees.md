@@ -140,16 +140,19 @@ Une contrainte **DEFERRABLE** (différable) peut avoir sa vérification **report
 
 ### Syntaxe de Base
 
+⚠️ **Rappel** : seules les contraintes `UNIQUE`, `PRIMARY KEY`, `EXCLUDE` et `REFERENCES` (FK) peuvent être marquées `DEFERRABLE` (voir section suivante pour la liste complète et l'explication). Les exemples ci-dessous utilisent une contrainte UNIQUE.
+
 ```sql
 -- Lors de la création de table
 CREATE TABLE nom_table (
-    colonne TYPE,
-    CONSTRAINT nom_contrainte CHECK (condition) DEFERRABLE INITIALLY DEFERRED
+    colonne1 TYPE,
+    colonne2 TYPE,
+    CONSTRAINT nom_contrainte UNIQUE (colonne2) DEFERRABLE INITIALLY DEFERRED
 );
 
 -- Lors de l'ajout d'une contrainte
 ALTER TABLE nom_table  
-ADD CONSTRAINT nom_contrainte CHECK (condition) DEFERRABLE INITIALLY DEFERRED;  
+ADD CONSTRAINT nom_contrainte UNIQUE (colonne2) DEFERRABLE INITIALLY DEFERRED;  
 ```
 
 **Deux mots-clés importants :**
@@ -158,14 +161,31 @@ ADD CONSTRAINT nom_contrainte CHECK (condition) DEFERRABLE INITIALLY DEFERRED;
 
 ---
 
+## ⚠️ Important : Quelles Contraintes Peuvent Être DEFERRABLE ?
+
+**Seules 4 types de contraintes** peuvent être marquées `DEFERRABLE` en PostgreSQL (doc PG 18) :
+
+> *"Currently, only `UNIQUE`, `PRIMARY KEY`, `EXCLUDE`, and `REFERENCES` (foreign key) constraints accept this clause. `NOT NULL` and `CHECK` constraints are not deferrable."*
+
+- ✅ `UNIQUE`
+- ✅ `PRIMARY KEY`
+- ✅ `EXCLUDE` (contraintes d'exclusion)
+- ✅ `REFERENCES` (clés étrangères)
+
+- ❌ `CHECK` : **toujours** vérifiée immédiatement après chaque modification de ligne
+- ❌ `NOT NULL` : idem
+
+Pour les exemples ci-dessous, nous utiliserons donc principalement des contraintes **UNIQUE** et **FOREIGN KEY**.
+
 ## Les Trois États d'une Contrainte
 
 ### 1. NOT DEFERRABLE (Par Défaut)
 
 ```sql
-CREATE TABLE comptes (
-    compte_id SERIAL PRIMARY KEY,
-    solde NUMERIC(10,2) CHECK (solde >= 0) NOT DEFERRABLE
+CREATE TABLE produits (
+    produit_id SERIAL PRIMARY KEY,
+    sku VARCHAR(50),
+    CONSTRAINT uniq_sku UNIQUE (sku) NOT DEFERRABLE
 );
 ```
 
@@ -178,9 +198,10 @@ CREATE TABLE comptes (
 ### 2. DEFERRABLE INITIALLY IMMEDIATE
 
 ```sql
-CREATE TABLE comptes (
-    compte_id SERIAL PRIMARY KEY,
-    solde NUMERIC(10,2) CHECK (solde >= 0) DEFERRABLE INITIALLY IMMEDIATE
+CREATE TABLE produits (
+    produit_id SERIAL PRIMARY KEY,
+    sku VARCHAR(50),
+    CONSTRAINT uniq_sku UNIQUE (sku) DEFERRABLE INITIALLY IMMEDIATE
 );
 ```
 
@@ -193,9 +214,10 @@ CREATE TABLE comptes (
 ### 3. DEFERRABLE INITIALLY DEFERRED
 
 ```sql
-CREATE TABLE comptes (
-    compte_id SERIAL PRIMARY KEY,
-    solde NUMERIC(10,2) CHECK (solde >= 0) DEFERRABLE INITIALLY DEFERRED
+CREATE TABLE produits (
+    produit_id SERIAL PRIMARY KEY,
+    sku VARCHAR(50),
+    CONSTRAINT uniq_sku UNIQUE (sku) DEFERRABLE INITIALLY DEFERRED
 );
 ```
 
@@ -235,35 +257,42 @@ SET CONSTRAINTS nom_contrainte IMMEDIATE;
 SET CONSTRAINTS ALL IMMEDIATE;
 ```
 
-### Exemple Complet
+### Exemple Complet : Renumérotation de Codes Produits
+
+Cas typique où une contrainte UNIQUE temporaire pose problème : on veut **réorganiser** des codes uniques (par exemple, rotation circulaire).
 
 ```sql
--- Créer une table avec contrainte DEFERRABLE
-CREATE TABLE comptes (
-    compte_id SERIAL PRIMARY KEY,
+-- Créer une table avec contrainte UNIQUE DEFERRABLE
+CREATE TABLE produits (
+    produit_id SERIAL PRIMARY KEY,
     nom VARCHAR(100),
-    solde NUMERIC(10,2),
-    CONSTRAINT check_solde_positif CHECK (solde >= 0) DEFERRABLE INITIALLY IMMEDIATE
+    code VARCHAR(20),
+    CONSTRAINT uniq_code UNIQUE (code) DEFERRABLE INITIALLY IMMEDIATE
 );
 
 -- Insérer des données
-INSERT INTO comptes (nom, solde) VALUES ('Alice', 1000), ('Bob', 500);
+INSERT INTO produits (nom, code) VALUES
+    ('Produit A', 'P001'),
+    ('Produit B', 'P002'),
+    ('Produit C', 'P003');
 
 -- Transaction avec vérification immédiate (par défaut)
 BEGIN;
-    UPDATE comptes SET solde = -100 WHERE nom = 'Alice';  -- ❌ ERREUR immédiate
+    UPDATE produits SET code = 'P002' WHERE nom = 'Produit A';  -- ❌ ERREUR immédiate (doublon avec Produit B)
 ROLLBACK;
 
--- Transaction avec vérification différée
+-- Transaction avec vérification différée : rotation circulaire P001 → P002 → P003 → P001
 BEGIN;
-    SET CONSTRAINTS check_solde_positif DEFERRED;
+    SET CONSTRAINTS uniq_code DEFERRED;
 
-    UPDATE comptes SET solde = -100 WHERE nom = 'Alice';  -- ✅ OK temporairement
-    UPDATE comptes SET solde = 600 WHERE nom = 'Bob';     -- Compensation
-    UPDATE comptes SET solde = 200 WHERE nom = 'Alice';   -- Correction
+    UPDATE produits SET code = 'P002' WHERE nom = 'Produit A';  -- ✅ doublon toléré temporairement
+    UPDATE produits SET code = 'P003' WHERE nom = 'Produit B';  -- ✅ doublon toléré temporairement
+    UPDATE produits SET code = 'P001' WHERE nom = 'Produit C';  -- Restaure l'unicité
 
-COMMIT;  -- ✅ Vérification ici : tout est valide
+COMMIT;  -- ✅ Vérification ici : tous les codes sont uniques (P002, P003, P001)
 ```
+
+ℹ️ **Pourquoi ne pas utiliser CHECK ici ?** Parce que les contraintes `CHECK` ne sont **pas** différables en PostgreSQL. La vérification d'un solde négatif (ex. transfert bancaire) ne peut donc pas être différée — il faut gérer cela autrement (transaction unique avec calcul préalable, contraintes via trigger différé, etc.).
 
 ---
 
@@ -464,17 +493,20 @@ COMMIT;
 |--------------------|----------------------|-------|
 | **PRIMARY KEY** | ✅ Oui | Peut être différé |
 | **UNIQUE** | ✅ Oui | Peut être différé |
-| **FOREIGN KEY** | ✅ Oui | Le plus couramment différé |
-| **CHECK** | ✅ Oui | Peut être différé |
+| **FOREIGN KEY** (`REFERENCES`) | ✅ Oui | Le plus couramment différé |
 | **EXCLUDE** | ✅ Oui | PostgreSQL uniquement |
 
 ### Contraintes Non-Différables
 
 | Type | Pourquoi ? |
 |------|-----------|
-| **NOT NULL** | ❌ Ne peut pas être différé (contrainte de colonne, pas de table) |
+| **CHECK** | ❌ Toujours vérifiée immédiatement (impossible à différer) |
+| **NOT NULL** | ❌ Toujours vérifiée immédiatement (contrainte de colonne) |
 
-**Note importante :** NOT NULL n'est **jamais** différable car c'est une propriété de colonne, pas une contrainte de table.
+**Citation de la doc PG 18** :
+> *"NOT NULL and CHECK constraints are not deferrable."*
+
+⚠️ Pour des règles de cohérence inter-lignes que vous voudriez différer (ex. somme des soldes = 0), il n'y a **pas** de solution native — il faut soit calculer en amont, soit utiliser un **trigger CONSTRAINT trigger** (TRIGGER ... AFTER ... DEFERRABLE), qui est un mécanisme distinct.
 
 ---
 
@@ -500,13 +532,17 @@ CREATE TABLE exemple3 (
     code VARCHAR(50) UNIQUE DEFERRABLE INITIALLY DEFERRED
 );
 
--- Contrainte CHECK différable
+-- Contrainte EXCLUDE différable (ex. : pas de chevauchement de plages horaires)
 CREATE TABLE exemple4 (
     id INTEGER PRIMARY KEY,
-    solde NUMERIC(10,2),
-    CONSTRAINT check_solde CHECK (solde >= 0) DEFERRABLE INITIALLY IMMEDIATE
+    salle_id INTEGER,
+    creneau TSRANGE,
+    EXCLUDE USING gist (salle_id WITH =, creneau WITH &&)
+        DEFERRABLE INITIALLY IMMEDIATE
 );
 ```
+
+❌ **Rappel** : `CHECK (...) DEFERRABLE` est **interdit** par PostgreSQL.
 
 ### Lors de l'Ajout de Contraintes
 
@@ -517,15 +553,17 @@ ADD CONSTRAINT fk_categorie FOREIGN KEY (categorie_id)
     REFERENCES categories(categorie_id)
     DEFERRABLE INITIALLY DEFERRED;
 
--- Ajouter contrainte CHECK différable
-ALTER TABLE comptes  
-ADD CONSTRAINT check_solde_positif CHECK (solde >= 0)  
+-- Ajouter contrainte PRIMARY KEY différable
+ALTER TABLE comptes
+ADD CONSTRAINT pk_compte PRIMARY KEY (compte_id)
     DEFERRABLE INITIALLY IMMEDIATE;
 
 -- Ajouter contrainte UNIQUE différable
 ALTER TABLE codes  
 ADD CONSTRAINT unique_code UNIQUE (code)  
     DEFERRABLE INITIALLY DEFERRED;
+
+-- ❌ Impossible : ALTER TABLE ... ADD CONSTRAINT ... CHECK (...) DEFERRABLE → erreur
 ```
 
 ### Modifier une Contrainte Existante

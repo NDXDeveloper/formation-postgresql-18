@@ -28,13 +28,19 @@ Mais que faire lorsque les questions deviennent plus complexes ?
 
 ### 2. Améliorer les performances
 
-```sql
--- ❌ Approche naïve : 1000 requêtes dans une boucle applicative
-for client in clients:
-    orders = execute_query("SELECT * FROM orders WHERE client_id = ?", client.id)
-    # Traiter les commandes...
+❌ **Approche naïve (anti-pattern N+1)** : 1000 requêtes dans une boucle applicative.
 
--- ✅ Approche avancée : 1 requête SQL bien conçue
+```python
+for client in clients:
+    orders = execute_query(
+        "SELECT * FROM orders WHERE client_id = ?", client.id
+    )
+    # Traiter les commandes...
+```
+
+✅ **Approche avancée** : 1 requête SQL bien conçue.
+
+```sql
 SELECT
     c.*,
     o.*

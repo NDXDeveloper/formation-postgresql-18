@@ -295,13 +295,17 @@ Les lignes 1 et 2 ont le **même cumul** (250) car elles ont la même date. `RAN
 `RANGE` est utile quand vous voulez que les **valeurs égales soient traitées ensemble** :
 
 - Cumuls par date (toutes les transactions du même jour comptent ensemble)
-- Classements sans "sauts" en cas d'égalité
 - Agrégations sur des périodes (tous les montants d'une même période)
+- Fenêtres temporelles glissantes avec `INTERVAL` (les 7 derniers jours **calendaires**, pas les 7 dernières lignes)
 
-### Limites de RANGE
+### Limites de RANGE avec Offset
 
-1. **Colonne ORDER BY unique** : `RANGE` ne fonctionne bien qu'avec une seule colonne dans `ORDER BY`  
-2. **Type de données** : La colonne doit être numérique ou temporelle pour les offsets (ex: `RANGE 7 PRECEDING` pour 7 jours)
+Les formes `RANGE N PRECEDING` / `RANGE INTERVAL '...' PRECEDING` (avec **offset numérique ou temporel**) ont deux contraintes :
+
+1. **Une seule colonne dans `ORDER BY`** : impossible de définir un "écart de N" sur plusieurs colonnes simultanément  
+2. **Type compatible** : la colonne `ORDER BY` doit être numérique (pour `N PRECEDING`) ou temporelle (pour `INTERVAL '... days' PRECEDING`)
+
+⚠️ **Important** : ces contraintes ne s'appliquent **pas** à `RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW` (le frame par défaut), qui fonctionne avec n'importe quel `ORDER BY`.
 
 ### RANGE avec Offset
 
@@ -319,7 +323,9 @@ FROM ventes
 ORDER BY date_vente;  
 ```
 
-Cela inclut **toutes les lignes dont la date est dans les 7 jours précédents** (peu importe le nombre de lignes).
+Cela inclut **toutes les lignes dont la date est dans la fenêtre `[date_courante - 7 jours ; date_courante]`** (peu importe le nombre de lignes).
+
+⚠️ **Attention au comptage** : `INTERVAL '7 days' PRECEDING AND CURRENT ROW` couvre **8 jours calendaires** (de D-7 à D inclus). Pour vraiment 7 jours, utiliser `INTERVAL '6 days'`. Cette subtilité est récurrente — cf. chapitre 10.6 pour les formules de comptage.
 
 **Données** :
 
@@ -400,6 +406,60 @@ ORDER BY date_vente;
 - Analyser des catégories (prix bas, moyen, élevé)
 - Travailler avec des données discrètes par nature
 
+## La Clause EXCLUDE (PostgreSQL 11+)
+
+PostgreSQL supporte une **option d'exclusion** qui retire certaines lignes du frame **après** l'avoir défini. C'est utile pour exclure la ligne courante elle-même d'une moyenne (par exemple, calculer la moyenne **des autres** lignes du groupe).
+
+### Les Quatre Options EXCLUDE
+
+| Option | Effet |
+|--------|-------|
+| `EXCLUDE NO OTHERS` | (Par défaut) N'exclut rien |
+| `EXCLUDE CURRENT ROW` | Exclut **uniquement** la ligne courante |
+| `EXCLUDE GROUP` | Exclut la ligne courante **et tous ses peers** (lignes ayant la même valeur d'`ORDER BY`) |
+| `EXCLUDE TIES` | Exclut les peers de la ligne courante (mais **garde** la ligne courante) |
+
+### Exemple : Moyenne des Autres Lignes
+
+Pour calculer la moyenne d'une partition **en excluant la ligne courante** (utile pour comparer chaque vente à la moyenne des autres ventes du vendeur) :
+
+```sql
+SELECT
+    vendeur,
+    montant,
+    AVG(montant) OVER (
+        PARTITION BY vendeur
+        ORDER BY id
+        ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING
+        EXCLUDE CURRENT ROW
+    ) AS moyenne_des_autres,
+    montant - AVG(montant) OVER (
+        PARTITION BY vendeur
+        ORDER BY id
+        ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING
+        EXCLUDE CURRENT ROW
+    ) AS ecart_aux_autres
+FROM ventes;
+```
+
+Sans `EXCLUDE CURRENT ROW`, la moyenne inclurait la valeur courante, ce qui « dilue » l'écart : la comparaison est moins juste.
+
+### Exemple : EXCLUDE GROUP (Tous les Ex-aequo)
+
+Avec `EXCLUDE GROUP`, on exclut **toutes** les lignes ayant la même valeur d'`ORDER BY` (utile pour des analyses où les valeurs identiques doivent être ignorées) :
+
+```sql
+SELECT
+    date_vente,
+    montant,
+    SUM(montant) OVER (
+        ORDER BY date_vente
+        ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING
+        EXCLUDE GROUP  -- Exclut TOUTES les lignes du même jour
+    ) AS total_autres_jours
+FROM ventes;
+```
+
 ## Syntaxe Complète des Frames
 
 ### Structure Générale
@@ -409,6 +469,7 @@ fonction OVER (
     [PARTITION BY ...]
     ORDER BY colonne
     {ROWS | RANGE | GROUPS} BETWEEN debut AND fin
+    [EXCLUDE {CURRENT ROW | GROUP | TIES | NO OTHERS}]
 )
 ```
 
@@ -604,12 +665,12 @@ ORDER BY date;
 | Aspect | ROWS | RANGE | GROUPS |
 |--------|------|-------|--------|
 | **Unité de mesure** | Lignes physiques | Plage de valeurs | Groupes de valeurs égales |
-| **Gestion des égalités** | Aucune | Groupe toutes les égalités | Compte les groupes |
+| **Gestion des égalités** | Aucune (les ignore) | Groupe toutes les égalités | Compte les groupes |
 | **N PRECEDING** | N lignes avant | N unités de valeur avant | N groupes avant |
 | **Offset numérique** | Toujours possible | Seulement si type compatible | Toujours possible |
 | **Offset temporel** | Non | Oui (INTERVAL) | Non |
-| **Déterminisme** | Toujours | Peut dépendre de l'ordre physique | Peut dépendre de l'ordre |
-| **Usage typique** | Moyennes mobiles | Cumuls, fenêtres temporelles | Analyses par paliers |
+| **Déterminisme en cas d'ex-aequo** | Dépend de l'ordre physique des lignes égales (à sécuriser avec un tri secondaire) | Identique pour toutes les lignes ex-aequo (déterministe) | Identique pour toutes les lignes du même groupe (déterministe) |
+| **Usage typique** | Moyennes mobiles, N lignes glissantes | Cumuls, fenêtres temporelles (INTERVAL) | Analyses par paliers |
 
 ## Erreurs Courantes
 
@@ -717,12 +778,14 @@ La clause `WINDOW` définit un frame réutilisable, évitant la duplication de c
 ## Points Clés à Retenir
 
 - ✅ **ROWS** compte les lignes physiquement, une par une  
-- ✅ **RANGE** groupe les valeurs égales et permet des offsets temporels  
-- ✅ **GROUPS** compte les groupes de valeurs égales  
+- ✅ **RANGE** groupe les valeurs égales et permet des offsets temporels (`INTERVAL`)  
+- ✅ **GROUPS** compte les groupes de valeurs égales (PG 11+)  
 - ✅ Sans frame explicite + ORDER BY → Par défaut : `RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW`  
+- ✅ Sans ORDER BY → fenêtre complète : `ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING`  
 - ✅ `N PRECEDING` / `N FOLLOWING` pour définir la taille de la fenêtre  
 - ✅ `UNBOUNDED` pour inclure tout depuis le début ou jusqu'à la fin  
-- ✅ Les frames nécessitent `ORDER BY` pour définir "avant" et "après"  
+- ✅ `EXCLUDE CURRENT ROW / GROUP / TIES / NO OTHERS` (PG 11+) pour exclure certaines lignes du frame  
+- ✅ Les frames avec offset (`N PRECEDING/FOLLOWING`) nécessitent `ORDER BY`  
 - ✅ Utilisez la clause `WINDOW` pour définir des frames réutilisables
 
 ## Résumé Visuel
@@ -732,23 +795,25 @@ SELECT
     colonne,
     fonction(colonne2) OVER (
         [PARTITION BY groupe]
-        ORDER BY ordre
-        {ROWS | RANGE | GROUPS} BETWEEN debut AND fin
+        [ORDER BY ordre]
+        [{ROWS | RANGE | GROUPS} BETWEEN debut AND fin]
+        [EXCLUDE {CURRENT ROW | GROUP | TIES | NO OTHERS}]
     ) AS resultat
 FROM table;
 
--- Bornes possibles :
--- debut/fin = UNBOUNDED PRECEDING
---           | N PRECEDING
---           | CURRENT ROW
---           | N FOLLOWING
---           | UNBOUNDED FOLLOWING
+-- Bornes possibles (debut/fin) :
+--   UNBOUNDED PRECEDING
+--   N PRECEDING
+--   CURRENT ROW
+--   N FOLLOWING
+--   UNBOUNDED FOLLOWING
 ```
 
 **Formes raccourcies** :
 ```sql
 ROWS 3 PRECEDING              → ROWS BETWEEN 3 PRECEDING AND CURRENT ROW  
 ROWS UNBOUNDED PRECEDING      → ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW  
+RANGE UNBOUNDED PRECEDING     → RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW  
 ```
 
 ---

@@ -464,7 +464,7 @@ Le JSONB n'offre pas de validation native de structure (bien que vous puissiez c
 -- Relationnel : validation native
 CREATE TABLE clients (
     client_id SERIAL PRIMARY KEY,
-    email VARCHAR(255) NOT NULL CHECK (email ~* '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}$'),
+    email VARCHAR(255) NOT NULL CHECK (email ~* '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$'),
     age INTEGER CHECK (age >= 18)
 );
 
@@ -472,7 +472,7 @@ CREATE TABLE clients (
 CREATE TABLE clients_jsonb (
     client_id SERIAL PRIMARY KEY,
     data JSONB,
-    CONSTRAINT valid_email CHECK (data->>'email' ~* '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}$'),
+    CONSTRAINT valid_email CHECK (data->>'email' ~* '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$'),
     CONSTRAINT valid_age CHECK ((data->>'age')::INTEGER >= 18)
 );
 ```
@@ -1028,18 +1028,20 @@ WHERE attributs->>'marque' = 'Apple';
 **Contexte :** Tracking d'événements utilisateur avec données variables.
 
 ```sql
+-- ⚠️ Pour utiliser le partitionnement, la table parent DOIT être créée avec PARTITION BY
+-- et la clé de partition DOIT faire partie de la PRIMARY KEY (contrainte PostgreSQL).
 CREATE TABLE evenements (
-    evenement_id BIGSERIAL PRIMARY KEY,
+    evenement_id BIGSERIAL,
     utilisateur_id INTEGER,
     session_id VARCHAR(100),
     type_evenement VARCHAR(50),
-    timestamp TIMESTAMPTZ DEFAULT NOW(),
-    proprietes JSONB
-);
+    timestamp TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    proprietes JSONB,
+    PRIMARY KEY (evenement_id, timestamp)  -- timestamp inclus pour le partitionnement
+) PARTITION BY RANGE (timestamp);
 
--- Index pour analyses
+-- Index pour analyses (créés sur la table partitionnée → propagés aux partitions)
 CREATE INDEX idx_evenements_type ON evenements(type_evenement);  
-CREATE INDEX idx_evenements_timestamp ON evenements(timestamp);  
 CREATE INDEX idx_evenements_utilisateur ON evenements(utilisateur_id);  
 CREATE INDEX idx_evenements_props_gin ON evenements USING GIN (proprietes);  
 
@@ -1196,12 +1198,14 @@ INSERT INTO reponses_sondage (sondage_id, utilisateur_id, reponses) VALUES (
 );
 
 -- Analyse : Distribution des notes NPS (q2)
+-- ⚠️ reponses->>'q2' retourne TEXT : sans cast, l'ordre serait alphabétique
+--    (0, 1, 10, 2, 3...). On caste en INTEGER pour avoir l'ordre numérique.
 SELECT
-    reponses->>'q2' as note,
+    (reponses->>'q2')::INTEGER as note,
     COUNT(*) as nb_reponses
 FROM reponses_sondage  
 WHERE sondage_id = 1  
-GROUP BY reponses->>'q2'  
+GROUP BY (reponses->>'q2')::INTEGER
 ORDER BY note;  
 
 -- Analyse : Services les plus utilisés
@@ -1423,27 +1427,40 @@ INSERT INTO clients (nom, adresse) VALUES (
 );  -- ERREUR : code_postal manquant
 ```
 
-### PostgreSQL 18 : Colonnes Virtuelles avec JSONB
+### Colonnes Générées pour Exposer des Champs JSONB
+
+Pour bénéficier d'**index B-Tree** sur des champs JSONB sans dupliquer la valeur côté application, on peut utiliser une **colonne générée `STORED`** :
 
 ```sql
--- Extraire des champs JSONB comme colonnes virtuelles
+-- Extraire des champs JSONB comme colonnes générées indexables
 CREATE TABLE produits (
     produit_id SERIAL PRIMARY KEY,
     specifications JSONB,
 
-    -- Colonnes virtuelles calculées à partir de JSONB
-    marque TEXT GENERATED ALWAYS AS (specifications->>'marque') STORED,
-    prix NUMERIC GENERATED ALWAYS AS ((specifications->>'prix')::NUMERIC) STORED,
-    stock INTEGER GENERATED ALWAYS AS ((specifications->>'stock')::INTEGER) STORED
+    -- ✅ STORED : la valeur est matérialisée → indexable
+    marque TEXT     GENERATED ALWAYS AS (specifications->>'marque')           STORED,
+    prix   NUMERIC  GENERATED ALWAYS AS ((specifications->>'prix')::NUMERIC)  STORED,
+    stock  INTEGER  GENERATED ALWAYS AS ((specifications->>'stock')::INTEGER) STORED
 );
 
--- Index sur colonnes virtuelles (très performant)
+-- Index B-Tree (très performant pour égalité/comparaison)
 CREATE INDEX idx_produits_marque ON produits(marque);  
-CREATE INDEX idx_produits_prix ON produits(prix);  
+CREATE INDEX idx_produits_prix   ON produits(prix);  
 
--- Requête optimale
+-- Requête optimale (utilise les index B-Tree, pas de parsing JSONB)
 SELECT * FROM produits WHERE marque = 'Apple' AND prix < 1000;
--- Utilise les index sur les colonnes virtuelles, pas de parsing JSONB nécessaire
+```
+
+⚠️ **VIRTUAL vs STORED pour ce cas d'usage** : PostgreSQL 18 introduit les colonnes générées `VIRTUAL` (calculées à la volée, pas de stockage). Cependant, la doc précise que **les colonnes `VIRTUAL` ne peuvent pas avoir d'index B-Tree dessus**. Pour ce pattern (« colonne dérivée d'un champ JSONB, à indexer »), il faut donc **garder `STORED`**. `VIRTUAL` reste utile pour des dérivations simples qui n'ont pas besoin d'être indexées (cf. chapitre 11.6).
+
+**Alternative équivalente sans colonne générée** : un **index d'expression** sur le champ extrait :
+
+```sql
+-- Pas de colonne dédiée, mais un index sur l'expression
+CREATE INDEX idx_produits_marque_expr ON produits ((specifications->>'marque'));
+
+-- La requête ci-dessous utilisera cet index
+SELECT * FROM produits WHERE specifications->>'marque' = 'Apple';
 ```
 
 ---

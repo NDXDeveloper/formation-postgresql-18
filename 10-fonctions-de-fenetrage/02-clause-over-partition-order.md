@@ -241,10 +241,18 @@ Résultat :
 
 ### La Fenêtre Glissante (Running Window)
 
-Avec `ORDER BY`, la fenêtre devient **glissante** par défaut :
+Avec `ORDER BY` (et **sans clause de frame explicite**), PostgreSQL applique le frame par défaut du standard SQL :
 
-- Pour chaque ligne, PostgreSQL calcule l'agrégation depuis le **début de la partition** jusqu'à la **ligne courante**
+```sql
+RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+```
+
+Conséquence pratique :
+
+- Pour chaque ligne, l'agrégation porte sur la fenêtre allant du **début de la partition** jusqu'aux lignes ayant la **même valeur d'ORDER BY** que la ligne courante (mode `RANGE`, attention en cas d'ex-aequo : voir chapitre 10.3)
 - C'est ce qui crée l'effet de cumul
+
+⚠️ **Subtilité importante** : ce frame `RANGE` inclut **toutes les lignes ex-aequo** sur la clé d'ORDER BY. Si plusieurs ventes ont la même date, leurs cumuls seront identiques. Pour un cumul ligne-à-ligne strict, utilisez explicitement `ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW` (voir chapitre 10.3).
 
 **Visualisation** :
 
@@ -278,6 +286,38 @@ SUM(montant) OVER (PARTITION BY vendeur ORDER BY date_vente DESC)
 ```
 
 Cela calcule le cumul **depuis la date la plus récente**.
+
+### Gestion des NULL dans PARTITION BY et ORDER BY
+
+⚠️ **Comportement à connaître** :
+
+**Dans `PARTITION BY`** : les lignes avec `NULL` sur la colonne de partition sont **regroupées dans une partition unique** (comme si NULL = NULL pour le partitionnement). C'est cohérent avec le comportement de `GROUP BY`.
+
+```sql
+SELECT vendeur, montant,
+       COUNT(*) OVER (PARTITION BY vendeur) AS nb_ventes
+FROM ventes;
+-- Toutes les ventes avec vendeur = NULL sont dans la même partition
+```
+
+**Dans `ORDER BY`** : par défaut en PostgreSQL :
+- `ORDER BY x ASC` → équivalent à `ORDER BY x ASC NULLS LAST` (NULL à la fin)
+- `ORDER BY x DESC` → équivalent à `ORDER BY x DESC NULLS FIRST` (NULL au début)
+
+C'est **l'inverse de ce que beaucoup attendent**. Pour un comportement explicite et reproductible :
+
+```sql
+-- Forcer les NULL en premier (utile pour ne pas "voir" les NULL en début de cumul)
+ROW_NUMBER() OVER (ORDER BY date_vente ASC NULLS FIRST)
+
+-- Forcer les NULL à la fin
+ROW_NUMBER() OVER (ORDER BY date_vente ASC NULLS LAST)  -- défaut en ASC
+
+-- Avec DESC, les NULL viennent en premier par défaut — à inverser si nécessaire
+ROW_NUMBER() OVER (ORDER BY date_vente DESC NULLS LAST)
+```
+
+**Conséquence pratique** sur les cumuls : si la colonne ORDER BY contient des NULL, ils définiront le **début ou la fin** de la fenêtre de cumul. Préciser `NULLS FIRST/LAST` rend le comportement déterministe.
 
 ## Combinaisons Possibles
 
@@ -448,7 +488,7 @@ ORDER BY vendeur, date_vente;  -- Pour un affichage lisible
 
 ## Fonctions d'Agrégation Disponibles
 
-Toutes les fonctions d'agrégation classiques fonctionnent dans `OVER` :
+Toutes les fonctions d'agrégation classiques **general-purpose** et **statistical** fonctionnent dans `OVER` :
 
 | Fonction | Description | Exemple |
 |----------|-------------|---------|
@@ -457,15 +497,32 @@ Toutes les fonctions d'agrégation classiques fonctionnent dans `OVER` :
 | `COUNT()` | Comptage | `COUNT(*) OVER (...)` |
 | `MIN()` | Minimum | `MIN(montant) OVER (...)` |
 | `MAX()` | Maximum | `MAX(montant) OVER (...)` |
-| `STDDEV()` | Écart-type | `STDDEV(montant) OVER (...)` |
-| `VARIANCE()` | Variance | `VARIANCE(montant) OVER (...)` |
+| `STDDEV()`, `STDDEV_POP()`, `STDDEV_SAMP()` | Écart-type | `STDDEV(montant) OVER (...)` |
+| `VARIANCE()`, `VAR_POP()`, `VAR_SAMP()` | Variance | `VARIANCE(montant) OVER (...)` |
+| `CORR()`, `COVAR_POP()`, `COVAR_SAMP()` | Corrélation, covariance | `CORR(prix, ventes) OVER (...)` |
+| `REGR_*()` | Régression linéaire | `REGR_SLOPE(y, x) OVER (...)` |
+
+⚠️ **Exception** : les **ordered-set aggregates** (`PERCENTILE_CONT`, `PERCENTILE_DISC`, `MODE`) ne peuvent **pas** être utilisées comme window functions. La documentation PG 18 précise : *"Ordered-set and hypothetical-set aggregates cannot presently be used as window functions."* Voir chapitre 10.6 pour les alternatives.
+
+💡 **Bonus** : la clause `FILTER (WHERE ...)` est aussi supportée sur ces agrégations en mode window function, pour filtrer les lignes du frame avant l'agrégation :
+
+```sql
+COUNT(*) FILTER (WHERE statut = 'paye') OVER (PARTITION BY vendeur) AS nb_payees
+```
+
+Voir chapitre 10.6 pour le détail.
 
 ### Fonctions Spécifiques aux Window Functions
 
 Il existe aussi des fonctions qui **n'existent que** pour les window functions :
-- `ROW_NUMBER()`, `RANK()`, `DENSE_RANK()` : Classement (chapitre 10.4)  
-- `LAG()`, `LEAD()` : Accès aux lignes précédentes/suivantes (chapitre 10.5)  
-- `FIRST_VALUE()`, `LAST_VALUE()` : Première/dernière valeur d'une fenêtre (chapitre 10.5)
+
+- **Rang** (chapitre 10.4) :
+  - `ROW_NUMBER()`, `RANK()`, `DENSE_RANK()` : numérotation et classement
+  - `PERCENT_RANK()`, `CUME_DIST()` : rang relatif (entre 0 et 1)
+  - `NTILE(n)` : répartition en n groupes
+- **Valeur** (chapitre 10.5) :
+  - `LAG()`, `LEAD()` : accès aux lignes précédentes/suivantes
+  - `FIRST_VALUE()`, `LAST_VALUE()`, `NTH_VALUE()` : valeurs aux positions clés de la fenêtre
 
 Nous les verrons en détail dans les sections suivantes.
 
@@ -473,14 +530,23 @@ Nous les verrons en détail dans les sections suivantes.
 
 ### Ordre d'Évaluation
 
-Les window functions sont évaluées **après** :
+L'ordre logique d'exécution d'une requête SQL avec window functions est :
+
 1. `FROM` et `JOIN`  
 2. `WHERE`  
-3. `GROUP BY` et `HAVING`
+3. `GROUP BY` et `HAVING`  
+4. **Window functions** (calculées sur le résultat des agrégations GROUP BY si présentes)  
+5. `SELECT` (projection des colonnes)  
+6. `DISTINCT`  
+7. `ORDER BY` final  
+8. `LIMIT` et `OFFSET`
 
-Et **avant** :
-- `ORDER BY` final  
-- `LIMIT` et `OFFSET`
+⚠️ **Conséquences pratiques** :
+
+- Les window functions **ne sont pas autorisées** dans `WHERE`, `GROUP BY`, `HAVING` (évaluées avant)
+- Les window functions **sont autorisées** dans `ORDER BY` final (évalué après)
+- `DISTINCT` s'applique **après** les window functions : `SELECT DISTINCT col, ROW_NUMBER() OVER (...)` est généralement inutile, car le `ROW_NUMBER` rend chaque ligne unique
+- `LIMIT` ne réduit pas le coût des window functions : elles parcourent **toute** la partition avant que le LIMIT soit appliqué
 
 ### Utilisation des Index
 
@@ -540,7 +606,7 @@ WHERE total > 1000;
 ### 3. Confondre les Deux ORDER BY
 
 ```sql
--- Ceci calcule un cumul chronologique MAIS affiche dans un ordre aléatoire
+-- Ceci calcule un cumul chronologique MAIS l'ordre d'affichage n'est PAS garanti
 SELECT vendeur, date_vente, montant,
        SUM(montant) OVER (ORDER BY date_vente) AS cumul
 FROM ventes;
@@ -552,14 +618,19 @@ FROM ventes
 ORDER BY date_vente;  
 ```
 
+**Subtilité** : sans `ORDER BY` final, PostgreSQL est **libre** d'afficher les lignes dans l'ordre qui l'arrange (celui de la lecture physique, du plan choisi, etc.). Les cumuls **sont calculés** dans l'ordre chronologique, mais leur ordre d'**affichage** ne reflète pas forcément cette chronologie. Toujours ajouter un `ORDER BY` final quand l'ordre compte pour le lecteur.
+
 ## Points Clés à Retenir
 
 - ✅ **OVER ()** transforme une fonction d'agrégation en window function  
-- ✅ **PARTITION BY** divise les données en groupes sans éliminer les lignes  
+- ✅ **PARTITION BY** divise les données en groupes sans éliminer les lignes (les NULL forment une partition unique)  
 - ✅ **ORDER BY dans OVER** crée une fenêtre glissante (par défaut : du début à la ligne courante)  
+- ✅ **NULLS FIRST/LAST** : par défaut, NULL est à la fin en ASC et au début en DESC  
 - ✅ On peut combiner PARTITION BY et ORDER BY : `OVER (PARTITION BY x ORDER BY y)`  
 - ✅ ORDER BY dans OVER ≠ ORDER BY final de la requête  
 - ✅ Toutes les fonctions d'agrégation (SUM, AVG, COUNT...) fonctionnent dans OVER  
+- ✅ Les **ordered-set aggregates** (PERCENTILE_CONT, MODE) ne sont pas utilisables comme window functions  
+- ✅ **FILTER (WHERE ...)** disponible sur les agrégations fenêtrées (pas sur ROW_NUMBER, LAG, etc.)  
 - ✅ PostgreSQL optimise les calculs multiples sur la même partition
 
 ## Résumé Visuel

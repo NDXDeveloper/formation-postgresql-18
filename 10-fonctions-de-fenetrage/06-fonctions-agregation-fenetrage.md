@@ -237,7 +237,7 @@ ORDER BY date;
 
 **Usage** : Détection de tendances (quand la MM20 croise la MM50, c'est un signal).
 
-#### Moyenne Pondérée par le Temps
+#### Moyenne sur Fenêtre Temporelle (par jours calendaires)
 
 ```sql
 SELECT
@@ -245,12 +245,16 @@ SELECT
     temperature,
     AVG(temperature) OVER (
         ORDER BY date
-        RANGE BETWEEN INTERVAL '7 days' PRECEDING AND CURRENT ROW
+        RANGE BETWEEN INTERVAL '6 days' PRECEDING AND CURRENT ROW
     ) AS temp_moyenne_7j
 FROM meteo;
 ```
 
-Utilise `RANGE` pour une moyenne sur les 7 derniers jours **calendaires** (pas physiques).
+Utilise `RANGE` pour une moyenne sur les **7 jours calendaires** (le jour courant + les 6 jours précédents). Si certains jours ont plusieurs mesures et d'autres aucune, on agrège correctement par plage de dates.
+
+⚠️ **Attention au comptage** : `INTERVAL '6 days' PRECEDING AND CURRENT ROW` couvre **7 jours calendaires** (du jour `D-6` au jour `D` inclus). De même, `INTERVAL '7 days' PRECEDING` couvrirait **8 jours**. Toujours soustraire 1 pour obtenir le nombre de jours voulu.
+
+ℹ️ **Note** : il s'agit d'une moyenne **arithmétique** sur les valeurs de la fenêtre, **pas** d'une moyenne pondérée (où les valeurs récentes auraient un poids supérieur). Pour une vraie moyenne pondérée, voir la section WMA au chapitre 10.7.
 
 ### COUNT() : Comptages
 
@@ -340,6 +344,59 @@ SELECT
     ) AS nb_jours_actifs_30j
 FROM ventes_quotidiennes;
 ```
+
+#### Comptage Conditionnel avec FILTER
+
+PostgreSQL supporte la clause **`FILTER (WHERE ...)`** sur les agrégations en window function (mais **pas** sur les fonctions de rang comme ROW_NUMBER ou LAG). C'est une alternative **plus lisible et plus rapide** que `SUM(CASE WHEN ... THEN 1 ELSE 0 END)` :
+
+```sql
+-- ✅ Avec FILTER (élégant et performant)
+SELECT
+    vendeur,
+    date,
+    montant,
+    COUNT(*) FILTER (WHERE statut = 'paye')   OVER (PARTITION BY vendeur) AS nb_payees,
+    COUNT(*) FILTER (WHERE statut = 'annule') OVER (PARTITION BY vendeur) AS nb_annulees,
+    SUM(montant) FILTER (WHERE statut = 'paye') OVER (PARTITION BY vendeur) AS ca_paye
+FROM ventes;
+```
+
+**Équivalent classique** (plus verbeux) :
+
+```sql
+SELECT
+    vendeur,
+    date,
+    montant,
+    SUM(CASE WHEN statut = 'paye'   THEN 1 ELSE 0 END) OVER (PARTITION BY vendeur) AS nb_payees,
+    SUM(CASE WHEN statut = 'annule' THEN 1 ELSE 0 END) OVER (PARTITION BY vendeur) AS nb_annulees,
+    SUM(CASE WHEN statut = 'paye'   THEN montant ELSE 0 END) OVER (PARTITION BY vendeur) AS ca_paye
+FROM ventes;
+```
+
+⚠️ **Restriction** : la documentation PG 18 précise *"Only window functions that are aggregates accept a FILTER clause"*. Donc :
+
+- ✅ `SUM/AVG/COUNT/MIN/MAX/STDDEV ... FILTER (...) OVER (...)` : valide
+- ❌ `ROW_NUMBER() FILTER (...) OVER (...)` : interdit
+- ❌ `LAG(x) FILTER (...) OVER (...)` : interdit
+
+#### FILTER avec Frame Glissant
+
+`FILTER` se combine librement avec un frame personnalisé :
+
+```sql
+-- Nombre de jours avec ventes > 1000 dans les 7 derniers jours
+SELECT
+    date,
+    ventes,
+    COUNT(*) FILTER (WHERE ventes > 1000)
+        OVER (ORDER BY date ROWS BETWEEN 6 PRECEDING AND CURRENT ROW) AS nb_bons_jours_7j,
+    AVG(ventes) FILTER (WHERE ventes > 0)
+        OVER (ORDER BY date ROWS BETWEEN 6 PRECEDING AND CURRENT ROW) AS moyenne_jours_actifs_7j
+FROM ventes_quotidiennes;
+```
+
+ℹ️ **Note** : la condition `WHERE` du `FILTER` ne peut **pas** contenir une autre window function (même règle que pour WHERE classique). Pour comparer à une valeur d'une autre ligne, calculez-la d'abord dans une CTE puis appliquez `FILTER` dessus.
 
 ### MIN() et MAX() : Extremums
 
@@ -490,48 +547,106 @@ PostgreSQL propose des fonctions de corrélation statistique :
 
 #### CORR() : Coefficient de Corrélation
 
-Mesure la relation entre deux variables (-1 à +1) :
+Mesure la relation linéaire entre deux variables (-1 à +1).
+
+**Esprit window function** (chaque produit voit la corrélation de sa catégorie) :
 
 ```sql
 SELECT
-    DISTINCT categorie,
-    CORR(prix, ventes) OVER (PARTITION BY categorie) AS correlation_prix_ventes
+    categorie,
+    produit,
+    prix,
+    ventes,
+    CORR(prix, ventes) OVER (PARTITION BY categorie) AS correlation_categorie
 FROM produits;
 ```
 
-- **Corrélation positive** (+1) : Quand le prix augmente, les ventes augmentent  
-- **Corrélation négative** (-1) : Quand le prix augmente, les ventes diminuent  
-- **Pas de corrélation** (0) : Aucun lien
+**Esprit agrégation classique** (une ligne par catégorie) — souvent plus lisible si on n'a pas besoin du détail :
+
+```sql
+SELECT categorie, CORR(prix, ventes) AS correlation
+FROM produits
+GROUP BY categorie;
+```
+
+- **Corrélation positive** (proche de +1) : quand le prix augmente, les ventes augmentent
+- **Corrélation négative** (proche de -1) : quand le prix augmente, les ventes diminuent
+- **Pas de corrélation** (proche de 0) : aucun lien linéaire
 
 #### COVAR_POP() et COVAR_SAMP() : Covariance
 
 ```sql
 SELECT
-    DISTINCT mois,
-    COVAR_POP(temperature, ventes_glaces) OVER (PARTITION BY mois) AS covariance
+    mois,
+    temperature,
+    ventes_glaces,
+    COVAR_POP(temperature, ventes_glaces) OVER (PARTITION BY mois) AS covariance_mois
 FROM donnees_meteo_ventes;
 ```
 
+- `COVAR_POP` : covariance de la **population** (divise par N)
+- `COVAR_SAMP` : covariance de l'**échantillon** (divise par N-1, à utiliser sur des sous-ensembles statistiques)
+
 ### PERCENTILE_CONT() et PERCENTILE_DISC() : Percentiles
 
-Trouver la valeur au Nième percentile :
+Trouver la valeur au Nième percentile.
+
+⚠️ **Limitation importante de PostgreSQL** : `PERCENTILE_CONT` et `PERCENTILE_DISC` sont des **ordered-set aggregates** (avec clause `WITHIN GROUP`). La documentation officielle précise :
+
+> "Ordered-set and hypothetical-set aggregates cannot presently be used as window functions."
+
+Donc cette syntaxe est **rejetée** par PostgreSQL :
+
+```sql
+-- ❌ INTERDIT : ordered-set aggregate + OVER
+PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY prix) OVER (PARTITION BY categorie)
+```
+
+**✅ Solutions correctes** :
+
+**Approche 1 : GROUP BY classique** (calcul par catégorie, une ligne par catégorie) :
 
 ```sql
 SELECT
-    produit,
-    prix,
-    PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY prix)
-        OVER (PARTITION BY categorie) AS mediane_categorie,
-    PERCENTILE_CONT(0.25) WITHIN GROUP (ORDER BY prix)
-        OVER (PARTITION BY categorie) AS q1,
-    PERCENTILE_CONT(0.75) WITHIN GROUP (ORDER BY prix)
-        OVER (PARTITION BY categorie) AS q3
-FROM produits;
+    categorie,
+    PERCENTILE_CONT(0.5)  WITHIN GROUP (ORDER BY prix) AS mediane,
+    PERCENTILE_CONT(0.25) WITHIN GROUP (ORDER BY prix) AS q1,
+    PERCENTILE_CONT(0.75) WITHIN GROUP (ORDER BY prix) AS q3
+FROM produits
+GROUP BY categorie;
 ```
 
-**Différence** :
-- `PERCENTILE_CONT` : Interpolation (valeur continue)  
-- `PERCENTILE_DISC` : Valeur discrète (prend une valeur existante)
+**Approche 2 : JOIN avec un CTE agrégé** (si on veut conserver le détail par produit) :
+
+```sql
+WITH stats_categorie AS (
+    SELECT
+        categorie,
+        PERCENTILE_CONT(0.5)  WITHIN GROUP (ORDER BY prix) AS mediane,
+        PERCENTILE_CONT(0.25) WITHIN GROUP (ORDER BY prix) AS q1,
+        PERCENTILE_CONT(0.75) WITHIN GROUP (ORDER BY prix) AS q3
+    FROM produits
+    GROUP BY categorie
+)
+SELECT
+    p.produit,
+    p.prix,
+    s.mediane,
+    s.q1,
+    s.q3,
+    CASE
+        WHEN p.prix < s.q1 THEN 'Bas (<= Q1)'
+        WHEN p.prix < s.mediane THEN 'Moyen-bas'
+        WHEN p.prix < s.q3 THEN 'Moyen-haut'
+        ELSE 'Haut (>= Q3)'
+    END AS quartile_qualitatif
+FROM produits p
+JOIN stats_categorie s USING (categorie);
+```
+
+**Différence entre les deux fonctions** :
+- `PERCENTILE_CONT` : interpolation linéaire (valeur **continue**, peut ne pas exister dans la table)  
+- `PERCENTILE_DISC` : valeur **discrète** existante (renvoie une vraie ligne)
 
 ## Agrégations avec Frames Personnalisés
 
@@ -543,12 +658,12 @@ SELECT
     ventes,
     SUM(ventes) OVER (
         ORDER BY date
-        RANGE BETWEEN INTERVAL '30 days' PRECEDING AND CURRENT ROW
+        RANGE BETWEEN INTERVAL '29 days' PRECEDING AND CURRENT ROW
     ) AS ventes_30j
 FROM ventes_quotidiennes;
 ```
 
-Somme de toutes les ventes des **30 derniers jours calendaires**.
+Somme des ventes sur **30 jours calendaires** : le jour courant + les 29 jours précédents. Pour avoir exactement N jours, utiliser `INTERVAL 'N-1 days' PRECEDING`.
 
 ### Moyenne Centrée
 
@@ -568,17 +683,20 @@ Moyenne de 7 jours : 3 avant + jour courant + 3 après (lisse les variations).
 ### Maximum dans une Fenêtre Glissante
 
 ```sql
+-- Hypothèse : 1 ligne par semaine dans cours_bourse
 SELECT
     date,
     cours,
     MAX(cours) OVER (
         ORDER BY date
-        ROWS BETWEEN 51 PRECEDING AND 1 PRECEDING
+        ROWS BETWEEN 52 PRECEDING AND 1 PRECEDING
     ) AS plus_haut_52_semaines
 FROM cours_bourse;
 ```
 
-Compare le cours actuel au maximum des 52 dernières semaines (exclut la semaine courante).
+Compare le cours actuel au maximum des 52 semaines **précédentes** (exclut la semaine courante grâce à `1 PRECEDING` comme borne supérieure).
+
+💡 **Comptage du frame** : `BETWEEN N PRECEDING AND M PRECEDING` couvre `N - M + 1` lignes (ici `52 - 1 + 1 = 52`). Si vous voulez les 52 dernières semaines **y compris** la courante, utilisez `BETWEEN 51 PRECEDING AND CURRENT ROW`.
 
 ### Comptage Non-NULL
 
@@ -742,7 +860,13 @@ WINDOW w AS (ORDER BY date ROWS BETWEEN 19 PRECEDING AND CURRENT ROW)
 ORDER BY date;  
 ```
 
-### 7. Taux de Croissance Composé (CAGR)
+### 7. Taux de Croissance Composé (CAGR Annualisé)
+
+⚠️ **Deux pièges à éviter** :
+
+1. **Frame par défaut** : avec `ORDER BY date`, `COUNT(*) OVER (ORDER BY date)` donne un **cumul** (1, 2, 3...), pas le total. Pour le nombre total constant, il faut **omettre `ORDER BY`** ou utiliser `UNBOUNDED FOLLOWING`.
+
+2. **CAGR ≠ taux mensuel** : le CAGR (*Compound Annual Growth Rate*) est par définition **annuel**. Sur des données mensuelles, il faut **annualiser** en élevant le facteur de croissance à la puissance `12 / (nb_mois - 1)`. Sinon on obtient un taux mensuel composé, pas un CAGR.
 
 ```sql
 WITH donnees AS (
@@ -754,25 +878,30 @@ WITH donnees AS (
             ORDER BY date
             ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING
         ) AS ca_final,
-        COUNT(*) OVER (ORDER BY date) AS nb_mois
+        COUNT(*) OVER () AS nb_mois  -- Total sans ORDER BY (constant sur toutes les lignes)
     FROM ventes_mensuelles
 )
 SELECT
     date,
     ca_mensuel,
+    -- CAGR annualisé : on annualise en élevant à la puissance 12/(nb_mois-1)
     ROUND(
-        POWER(
+        (POWER(
             ca_final::numeric / NULLIF(ca_initial, 0),
-            1.0 / NULLIF(nb_mois - 1, 0)
-        ) - 1,
+            12.0 / NULLIF(nb_mois - 1, 0)  -- Annualisation
+        ) - 1) * 100,
         4
-    ) * 100 AS cagr_pct
+    ) AS cagr_annuel_pct
 FROM donnees;
 ```
+
+ℹ️ **Pour un taux mensuel composé** (croissance moyenne par mois) à la place, utiliser `1.0 / NULLIF(nb_mois - 1, 0)` (sans annualisation). Ces deux valeurs sont liées : `(1 + taux_mensuel)^12 - 1 = CAGR_annuel`.
 
 ## Cas d'Usage Pratiques Complets
 
 ### 1. Tableau de Bord Exécutif
+
+Cet exemple utilise `PARTITION BY EXTRACT(YEAR FROM mois)` pour les calculs "annuels" : le cumul et le pourcentage redémarrent à chaque année — robuste même sans le `WHERE` final.
 
 ```sql
 SELECT
@@ -781,25 +910,30 @@ SELECT
     -- Comparaisons temporelles
     LAG(ca_mensuel) OVER (ORDER BY mois) AS ca_mois_precedent,
     ca_mensuel - LAG(ca_mensuel) OVER (ORDER BY mois) AS var_mois,
-    -- Cumuls
-    SUM(ca_mensuel) OVER (ORDER BY mois) AS ca_cumule_annuel,
-    -- Moyennes
+    -- Cumul depuis le début de l'année (redémarre chaque 1er janvier)
+    SUM(ca_mensuel) OVER (
+        PARTITION BY EXTRACT(YEAR FROM mois)
+        ORDER BY mois
+    ) AS ca_cumule_annuel,
+    -- Moyenne mobile 3 mois
     AVG(ca_mensuel) OVER (
         ORDER BY mois
         ROWS BETWEEN 2 PRECEDING AND CURRENT ROW
     ) AS mm3,
-    -- Statistiques
-    AVG(ca_mensuel) OVER () AS moyenne_annuelle,
-    STDDEV(ca_mensuel) OVER () AS volatilite,
-    -- Extremums
-    MAX(ca_mensuel) OVER (ORDER BY mois) AS record_date,
-    -- Pourcentages
+    -- Statistiques sur l'année
+    AVG(ca_mensuel)    OVER (PARTITION BY EXTRACT(YEAR FROM mois)) AS moyenne_annuelle,
+    STDDEV(ca_mensuel) OVER (PARTITION BY EXTRACT(YEAR FROM mois)) AS volatilite_annuelle,
+    -- Record du CA jusqu'au mois courant (depuis le début, toutes années confondues)
+    MAX(ca_mensuel) OVER (ORDER BY mois) AS record_ca_jusqua_ce_mois,
+    -- Part de chaque mois dans le CA annuel
     ROUND(
-        ca_mensuel * 100.0 / SUM(ca_mensuel) OVER (),
+        ca_mensuel * 100.0 / NULLIF(
+            SUM(ca_mensuel) OVER (PARTITION BY EXTRACT(YEAR FROM mois)),
+            0
+        ),
         2
     ) AS pct_annuel
 FROM ventes_mensuelles  
-WHERE EXTRACT(YEAR FROM mois) = 2025  
 ORDER BY mois;  
 ```
 
@@ -896,7 +1030,16 @@ ORDER BY ca_annuel DESC;
 
 ### 5. Momentum et Tendances
 
+⚠️ **Règle importante** : PostgreSQL **interdit l'imbrication** d'une window function dans une autre window function (`ERROR: window function calls cannot be nested`). Pour calculer une moyenne mobile sur la variation `cours - LAG(cours)`, il faut passer par une CTE qui calcule d'abord la variation, puis applique l'agrégation fenêtrée dessus :
+
 ```sql
+WITH variations AS (
+    SELECT
+        date,
+        cours,
+        cours - LAG(cours) OVER (ORDER BY date) AS variation_j
+    FROM cours_bourse
+)
 SELECT
     date,
     cours,
@@ -905,11 +1048,11 @@ SELECT
     AVG(cours) OVER (ORDER BY date ROWS BETWEEN 49 PRECEDING AND CURRENT ROW) AS mm50,
     -- Momentum
     cours - LAG(cours, 10) OVER (ORDER BY date) AS momentum_10j,
-    -- RSI simplifié (variation moyenne sur 14 jours)
-    AVG(GREATEST(cours - LAG(cours) OVER (ORDER BY date), 0)) OVER (
+    -- RSI simplifié (gains/pertes moyens sur 14 jours)
+    AVG(GREATEST(variation_j, 0)) OVER (
         ORDER BY date ROWS BETWEEN 13 PRECEDING AND CURRENT ROW
     ) AS gains_moyens_14j,
-    AVG(GREATEST(LAG(cours) OVER (ORDER BY date) - cours, 0)) OVER (
+    AVG(GREATEST(-variation_j, 0)) OVER (
         ORDER BY date ROWS BETWEEN 13 PRECEDING AND CURRENT ROW
     ) AS pertes_moyennes_14j,
     -- Signal
@@ -919,7 +1062,7 @@ SELECT
         THEN 'Tendance haussière'
         ELSE 'Tendance baissière'
     END AS signal_tendance
-FROM cours_bourse  
+FROM variations  
 ORDER BY date;  
 ```
 
@@ -1004,22 +1147,40 @@ ventes / NULLIF(SUM(ventes) OVER (), 0)
 ### 2. Frames par Défaut avec ORDER BY
 
 ```sql
--- Attention : frame par défaut = RANGE UNBOUNDED PRECEDING TO CURRENT ROW
+-- Attention : frame par défaut = RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
 SUM(ventes) OVER (ORDER BY date)
 
 -- Soyez explicite si vous voulez toute la partition :
 SUM(ventes) OVER (ORDER BY date ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING)
 ```
 
+ℹ️ **Rappel** : le mode `RANGE` par défaut regroupe **les ex-aequo** sur la clé d'ORDER BY (cf. chapitre 10.3). Si plusieurs lignes ont la même date, leur cumul sera identique.
+
 ### 3. NULL dans les Calculs
 
+⚠️ **Important** : les fonctions d'agrégation SQL **ignorent automatiquement les NULL** (sauf `COUNT(*)`). Donc :
+
+- `SUM(prix)`, `AVG(prix)`, `MIN(prix)`, `MAX(prix)` : ignorent les NULL
+- `COUNT(prix)` : compte uniquement les valeurs non-NULL
+- `COUNT(*)` : compte **toutes** les lignes (NULL inclus)
+
+Le vrai piège est dans les **opérations arithmétiques** sur les NULL : `prix - AVG(prix)` retourne `NULL` si `prix` lui-même vaut `NULL` (et non si la moyenne est NULL).
+
 ```sql
--- Si une valeur est NULL, le résultat est NULL
+-- Cas 1 : prix = NULL pour cette ligne → resultat = NULL
 prix - AVG(prix) OVER ()
 
--- Utilisez COALESCE
-COALESCE(prix, 0) - COALESCE(AVG(prix) OVER (), 0)
+-- Solution 1 : utiliser COALESCE sur la colonne pour neutraliser les NULL
+COALESCE(prix, 0) - AVG(prix) OVER ()
+-- ⚠️ Mais attention : cela modifie aussi la "ligne courante" en 0
+
+-- Solution 2 : filtrer les NULL en amont
+SELECT prix - AVG(prix) OVER () AS ecart
+FROM produits
+WHERE prix IS NOT NULL;
 ```
+
+ℹ️ **Cas particulier** : `AVG(...)` ne retourne `NULL` que si **toutes** les valeurs sont NULL. Dans ce cas, `COALESCE(AVG(prix) OVER (), 0)` peut être utile.
 
 ### 4. Mélanger Agrégation et Window Functions
 
@@ -1052,10 +1213,13 @@ FROM totaux_cat;
 - ✅ **COUNT()** pour comptages et fréquences  
 - ✅ **MIN()/MAX()** pour records et extremums  
 - ✅ **STDDEV()/VARIANCE()** pour volatilité et dispersion  
+- ✅ **FILTER (WHERE ...)** pour comptages/sommes conditionnels élégants  
 - ✅ Utilisez **frames personnalisés** pour fenêtres glissantes  
 - ✅ Combinez plusieurs agrégations avec la clause **WINDOW**  
 - ✅ Protégez contre les **divisions par zéro** avec NULLIF  
-- ✅ Les index sur **PARTITION BY et ORDER BY** améliorent les performances
+- ✅ Les agrégations **ignorent les NULL** automatiquement (sauf `COUNT(*)`)  
+- ✅ Les index sur **PARTITION BY et ORDER BY** améliorent les performances  
+- ✅ Les **ordered-set aggregates** (PERCENTILE_CONT/DISC, MODE) ne fonctionnent pas en OVER
 
 ## Tableau de Choix Rapide
 
@@ -1064,9 +1228,10 @@ FROM totaux_cat;
 | Cumul chronologique | `SUM() OVER (ORDER BY date)` |
 | Moyenne mobile | `AVG() OVER (... ROWS BETWEEN N PRECEDING AND CURRENT ROW)` |
 | Total par groupe | `SUM() OVER (PARTITION BY groupe)` |
-| Pourcentage du total | `valeur / SUM(valeur) OVER ()` |
+| Pourcentage du total | `valeur / NULLIF(SUM(valeur) OVER (), 0)` |
 | Record historique | `MAX() OVER (ORDER BY date)` |
 | Volatilité | `STDDEV() OVER (...)` |
+| Comptage conditionnel | `COUNT(*) FILTER (WHERE condition) OVER (...)` |
 | Détection d'anomalies | Z-score avec AVG() et STDDEV() |
 | Analyse de tendance | Moyennes mobiles multiples |
 
@@ -1076,18 +1241,25 @@ FROM totaux_cat;
 -- Template général pour agrégations en fenêtrage
 SELECT
     colonnes,
-    FONCTION_AGREGATION(colonne) OVER (
-        [PARTITION BY groupe]     -- Groupes séparés (optionnel)
-        [ORDER BY ordre]          -- Ordre de calcul (optionnel)
-        [frame_specification]     -- Fenêtre précise (optionnel)
-    ) AS resultat
+    FONCTION_AGREGATION(colonne)
+        [FILTER (WHERE condition)]    -- Filtrage conditionnel (optionnel)
+        OVER (
+            [PARTITION BY groupe]     -- Groupes séparés (optionnel)
+            [ORDER BY ordre]          -- Ordre de calcul (optionnel)
+            [frame_specification]     -- Fenêtre précise (optionnel)
+        ) AS resultat
 FROM table;
 
--- Fonctions disponibles :
--- SUM, AVG, COUNT, MIN, MAX              -- Standards
--- STDDEV, VARIANCE                       -- Statistiques
--- CORR, COVAR_POP, COVAR_SAMP           -- Corrélation
--- PERCENTILE_CONT, PERCENTILE_DISC      -- Percentiles
+-- Utilisables en window function (OVER) :
+-- SUM, AVG, COUNT, MIN, MAX                     -- General-purpose
+-- STDDEV, VARIANCE, STDDEV_SAMP, VAR_SAMP       -- Statistical
+-- CORR, COVAR_POP, COVAR_SAMP, REGR_*           -- Statistical (multi-args)
+
+-- NON utilisables en OVER (ordered-set aggregates) :
+-- PERCENTILE_CONT, PERCENTILE_DISC, MODE        -- Utiliser GROUP BY à la place
+
+-- FILTER (WHERE ...) : valide UNIQUEMENT sur les agrégations en window function
+-- (pas sur ROW_NUMBER, RANK, LAG, LEAD, etc.)
 ```
 
 ---

@@ -161,7 +161,7 @@ Cela conserve le client le plus ancien pour chaque email.
 
 #### 3. Pagination Avancée
 
-Alternative à `OFFSET` (plus performante sur de grandes tables) :
+`ROW_NUMBER()` peut servir à découper un résultat en pages :
 
 ```sql
 SELECT * FROM (
@@ -172,6 +172,20 @@ SELECT * FROM (
 ) AS numbered
 WHERE rn BETWEEN 21 AND 30;  -- Page 3 (10 articles par page)
 ```
+
+⚠️ **Attention au mythe de la performance** : cette approche n'est **pas** plus rapide qu'`OFFSET 20 LIMIT 10`. PostgreSQL doit calculer le `ROW_NUMBER` sur **toutes** les lignes correspondantes avant de filtrer — c'est donc équivalent (souvent un peu plus lent) qu'`OFFSET`.
+
+✅ **Pour vraiment paginer efficacement** sur de grandes tables, utilisez la **keyset pagination** (« seek method »), qui exploite un index pour sauter directement à la page voulue :
+
+```sql
+-- Page suivante : on passe la dernière clé vue (au lieu d'un numéro de page)
+SELECT * FROM articles
+WHERE (date_creation, id) > ('2026-03-15 10:30:00', 1542)
+ORDER BY date_creation, id
+LIMIT 10;
+```
+
+`ROW_NUMBER` reste utile quand on a réellement besoin du **numéro de ligne** dans le résultat (affichage « ligne 1, 2, 3... »), pas pour la performance.
 
 ## RANK() : Classement avec Sauts
 
@@ -243,13 +257,23 @@ FROM ventes;
 
 #### Trouver les Ex-Aequo
 
+⚠️ **Attention** : on ne peut **pas** mettre `RANK() OVER (...)` directement dans un `WHERE` (les window functions sont calculées **après** `WHERE`). Il faut envelopper dans une CTE ou une sous-requête :
+
 ```sql
-SELECT
-    joueur,
-    score,
-    RANK() OVER (ORDER BY score DESC) AS classement
-FROM resultats  
-WHERE RANK() OVER (ORDER BY score DESC) = 1;  -- Tous les 1ers  
+-- ❌ ERREUR : "window functions are not allowed in WHERE"
+SELECT joueur, score
+FROM resultats
+WHERE RANK() OVER (ORDER BY score DESC) = 1;
+
+-- ✅ CORRECT : passer par une CTE
+WITH classement AS (
+    SELECT joueur, score,
+           RANK() OVER (ORDER BY score DESC) AS rang
+    FROM resultats
+)
+SELECT joueur, score
+FROM classement
+WHERE rang = 1;  -- Tous les premiers, ex-aequo inclus
 ```
 
 #### Top N avec Égalités Incluses
@@ -447,6 +471,35 @@ Si le nombre de lignes n'est pas divisible par n, les premiers groupes auront **
 - Groupe 3 : 2 lignes
 - Groupe 4 : 2 lignes
 
+### ⚠️ Piège : NTILE et les Ex-aequo
+
+Parmi les fonctions de rang, **`RANK`, `DENSE_RANK`, `PERCENT_RANK` et `CUME_DIST`** garantissent **le même résultat pour tous les peers** (lignes ex-aequo sur ORDER BY) — c'est ce que dit la doc PG 18 : *« The four ranking functions are defined so that they give the same answer for all rows of a peer group »*.
+
+À l'opposé, **`ROW_NUMBER`** attribue volontairement des numéros différents aux peers (c'est tout son intérêt). Et **`NTILE`** ne garantit **ni l'un ni l'autre** : la doc PG 18 dit simplement « dividing the partition as equally as possible » — sans assurer que les ex-aequo restent dans le même bucket.
+
+**Conséquence** : deux lignes avec la même valeur peuvent se retrouver dans des **quartiles différents** !
+
+**Exemple problématique** : 6 lignes, 4 quartiles, avec une égalité à la frontière
+
+```
+| valeur | NTILE(4) attendu intuitivement | NTILE(4) réel       |
+|--------|--------------------------------|---------------------|
+| 100    | 1                              | 1                   |
+| 80     | 1                              | 1                   |
+| 80     | 1 (cohérent avec ligne 2)      | 2 ← coupé du peer ! |
+| 60     | 2                              | 2                   |
+| 40     | 3                              | 3                   |
+| 20     | 4                              | 4                   |
+```
+
+**Comment gérer ce cas** :
+
+- **Tri secondaire déterministe** : ajouter une colonne unique pour rendre les ex-aequo distincts dans le tri, ce qui rend la répartition reproductible :
+  ```sql
+  NTILE(4) OVER (ORDER BY valeur DESC, id)
+  ```
+- **Si vous voulez garder les ex-aequo ensemble**, préférez `WIDTH_BUCKET()` (qui découpe par valeur, pas par rang) ou un `CASE WHEN` basé sur des seuils calculés via `PERCENTILE_CONT`.
+
 ### Cas d'Usage de NTILE
 
 #### 1. Segmentation Client (Déciles)
@@ -494,6 +547,76 @@ FROM taches;
 ```
 
 Attribue chaque tâche à un worker (1 à 5) en équilibrant la charge.
+
+## PERCENT_RANK() et CUME_DIST() : Rang Relatif
+
+PostgreSQL implémente deux fonctions du standard SQL qui expriment le rang **en pourcentage** plutôt qu'en numéro absolu.
+
+### PERCENT_RANK()
+
+Retourne le rang relatif normalisé entre **0 et 1** :
+
+```text
+PERCENT_RANK = (rang - 1) / (nombre_total_de_lignes - 1)
+```
+
+- La première ligne a toujours `0`
+- La dernière ligne a toujours `1`
+- En cas d'ex-aequo, toutes les lignes égales partagent la même valeur (basée sur le plus petit rang)
+
+### CUME_DIST() : Distribution Cumulative
+
+Retourne la proportion de lignes ayant une valeur **inférieure ou égale** à la ligne courante :
+
+```text
+CUME_DIST = (nb_lignes_avec_valeur_inferieure_ou_egale) / (nombre_total_de_lignes)
+```
+
+- Première ligne : `1/N` (au moins elle-même)
+- Dernière ligne : toujours `1.0`
+
+### Comportement en Cas d'Égalité (Peers)
+
+⚠️ **Règle importante** : la documentation PostgreSQL précise que **toutes les fonctions de rang donnent le même résultat pour toutes les lignes d'un groupe de peers** (lignes ayant la même valeur d'ORDER BY) :
+
+> *"The four ranking functions (including `cume_dist`) are defined so that they give the same answer for all rows of a peer group."*
+
+Donc en cas d'ex-aequo, `PERCENT_RANK` **et** `CUME_DIST` retournent la même valeur pour tous les ex-aequo (basée sur la position du dernier peer du groupe pour `CUME_DIST`, sur le premier rang pour `PERCENT_RANK`).
+
+### Exemple Comparatif
+
+```sql
+SELECT
+    vendeur,
+    ventes,
+    RANK()         OVER (ORDER BY ventes DESC) AS rang,
+    PERCENT_RANK() OVER (ORDER BY ventes DESC) AS pct_rank,
+    CUME_DIST()    OVER (ORDER BY ventes DESC) AS cume_dist
+FROM vendeurs;
+```
+
+**Données et résultat** (5 vendeurs) :
+
+```
+| vendeur | ventes | rang | pct_rank | cume_dist |
+|---------|--------|------|----------|-----------|
+| Alice   | 1000   | 1    | 0.00     | 0.20      | ← 1 ligne <= 1000 sur 5 = 1/5
+| Bob     | 800    | 2    | 0.25     | 0.40      | ← 2 lignes <= 800 sur 5 = 2/5
+| Carol   | 600    | 3    | 0.50     | 0.80      | ← 4 lignes <= 600 sur 5 = 4/5 (peers inclus)
+| David   | 600    | 3    | 0.50     | 0.80      | ← Même valeur que Carol (peer)
+| Eve     | 400    | 5    | 1.00     | 1.00      |
+```
+
+**Vérification des formules** :
+- `PERCENT_RANK = (rang - 1) / (N - 1) = (3 - 1) / (5 - 1) = 0.50` pour Carol et David (même rang)
+- `CUME_DIST = (preceding + peers) / N = (2 + 2) / 5 = 0.80` pour Carol et David
+
+**Quand les utiliser** :
+
+- `PERCENT_RANK()` : « Cette valeur est-elle dans le top 10% ? » (filtrer sur `PERCENT_RANK <= 0.1`)
+- `CUME_DIST()` : « Quel pourcentage de la population est en dessous ou égal à cette valeur ? »
+
+⚠️ **Différence avec NTILE** : ces fonctions retournent une **valeur continue** (numérique), pas un numéro de groupe discret. Elles sont plus précises pour des analyses statistiques fines.
 
 ## Comparaison Complète des Quatre Fonctions
 
@@ -614,17 +737,34 @@ FROM clients;
 
 ### 4. Médiane et Quartiles
 
-Bien que PostgreSQL ait des fonctions dédiées (`PERCENTILE_CONT`), vous pouvez approximer avec `NTILE()` :
+⚠️ **Avertissement important** : `NTILE()` **ne calcule pas une médiane**. Il découpe simplement les lignes en groupes équilibrés. Pour la médiane (la valeur du milieu), PostgreSQL fournit des fonctions dédiées :
 
 ```sql
--- Trouver la valeur médiane (approximative)
-SELECT AVG(ventes) AS mediane  
-FROM (  
-    SELECT ventes,
-           NTILE(2) OVER (ORDER BY ventes) AS moitie
-    FROM produits
-) AS sub
-WHERE moitie = 1;  -- Première moitié
+-- ✅ Médiane exacte (interpolée si nombre pair de valeurs)
+SELECT PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY ventes) AS mediane
+FROM produits;
+
+-- ✅ Médiane discrète (valeur existante la plus proche)
+SELECT PERCENTILE_DISC(0.5) WITHIN GROUP (ORDER BY ventes) AS mediane
+FROM produits;
+
+-- ✅ Tous les quartiles en une seule passe
+SELECT
+    PERCENTILE_CONT(0.25) WITHIN GROUP (ORDER BY ventes) AS q1,
+    PERCENTILE_CONT(0.50) WITHIN GROUP (ORDER BY ventes) AS mediane,
+    PERCENTILE_CONT(0.75) WITHIN GROUP (ORDER BY ventes) AS q3
+FROM produits;
+```
+
+`NTILE(4)` reste utile pour **classer chaque ligne dans son quartile**, mais pas pour calculer la **valeur** de séparation entre quartiles :
+
+```sql
+-- NTILE attribue à chaque ligne son quartile (utile pour segmentation)
+SELECT
+    produit,
+    ventes,
+    NTILE(4) OVER (ORDER BY ventes) AS quartile  -- 1, 2, 3 ou 4
+FROM produits;
 ```
 
 ### 5. Éliminer les Doublons Basés sur un Critère
@@ -783,7 +923,7 @@ WHERE rang <= 3
 ORDER BY categorie, rang;  
 ```
 
-### 2. Pagination Performante
+### 2. Pagination par Numéro de Page
 
 ```sql
 -- Page 5 (lignes 41-50)
@@ -796,7 +936,11 @@ SELECT * FROM (
 WHERE rn BETWEEN 41 AND 50;
 ```
 
+ℹ️ **Rappel** : pour une **vraie** pagination performante sur de grandes tables, préférez la **keyset pagination** (cf. plus haut) qui exploite un index pour ne lire que les lignes nécessaires. `ROW_NUMBER` reste utile quand le numéro de ligne est lui-même affiché à l'utilisateur.
+
 ### 3. Segmentation Client RFM Simplifiée
+
+⚠️ **Attention au sens de NTILE** : par convention RFM, **score 5 = meilleur client**. Avec `NTILE(5) OVER (ORDER BY x DESC)`, le **bucket 1** est attribué aux plus grandes valeurs, le **5** aux plus petites. Il faut donc adapter le sens du tri selon la dimension :
 
 ```sql
 SELECT
@@ -804,11 +948,16 @@ SELECT
     derniere_commande,
     nb_commandes,
     ca_total,
-    NTILE(5) OVER (ORDER BY derniere_commande DESC) AS recence_score,
-    NTILE(5) OVER (ORDER BY nb_commandes DESC) AS frequence_score,
-    NTILE(5) OVER (ORDER BY ca_total DESC) AS montant_score
+    -- Récence : tri ASC sur la date du dernier achat → bucket 5 = date la plus récente
+    NTILE(5) OVER (ORDER BY derniere_commande ASC) AS recence_score,
+    -- Fréquence : tri ASC sur nb_commandes → bucket 5 = le plus d'achats
+    NTILE(5) OVER (ORDER BY nb_commandes ASC) AS frequence_score,
+    -- Montant : tri ASC sur ca_total → bucket 5 = plus gros dépensier
+    NTILE(5) OVER (ORDER BY ca_total ASC) AS montant_score
 FROM clients;
 ```
+
+ℹ️ Voir l'exemple complet avec segmentation au chapitre 10.7 (« Analyse RFM »).
 
 ### 4. Déduplication avec Critère de Priorité
 
@@ -853,14 +1002,16 @@ ORDER BY quartile;
 
 ## Points Clés à Retenir
 
-- ✅ **ROW_NUMBER()** : Numérotation unique pour chaque ligne  
-- ✅ **RANK()** : Classement avec sauts en cas d'égalité (1, 1, 3, 4, 4, 6)  
-- ✅ **DENSE_RANK()** : Classement sans sauts (1, 1, 2, 3, 3, 4)  
-- ✅ **NTILE(n)** : Répartition en n groupes de taille approximativement égale  
+- ✅ **ROW_NUMBER()** : numérotation unique pour chaque ligne  
+- ✅ **RANK()** : classement avec sauts en cas d'égalité (1, 1, 3, 4, 4, 6)  
+- ✅ **DENSE_RANK()** : classement sans sauts (1, 1, 2, 3, 3, 4)  
+- ✅ **NTILE(n)** : répartition en n groupes de taille approximativement égale (⚠️ peut séparer les ex-aequo)  
+- ✅ **PERCENT_RANK() / CUME_DIST()** : rang relatif (entre 0 et 1) ; même valeur pour tous les peers  
 - ✅ Toutes nécessitent **ORDER BY** (sauf cas très rares)  
 - ✅ Combinez avec **PARTITION BY** pour des rangs par groupe  
-- ✅ Utilisez une **sous-requête ou CTE** pour filtrer sur les rangs  
-- ✅ Ajoutez un **tri secondaire unique** pour garantir le déterminisme
+- ✅ Utilisez une **sous-requête ou CTE** pour filtrer sur les rangs (interdit dans `WHERE`)  
+- ✅ Ajoutez un **tri secondaire unique** pour garantir le déterminisme  
+- ✅ **FILTER (WHERE ...)** n'est **pas** supporté sur les fonctions de rang (uniquement sur les agrégations)
 
 ## Tableau de Choix Rapide
 
@@ -870,21 +1021,25 @@ ORDER BY quartile;
 | Top N par catégorie | `ROW_NUMBER()` ou `RANK()` |
 | Podium sportif avec ex-aequo | `RANK()` |
 | Classement par niveaux (A, B, C) | `DENSE_RANK()` |
-| Segmentation en quantiles | `NTILE()` |
+| Rang en pourcentage (0–1) | `PERCENT_RANK()` |
+| Distribution cumulative | `CUME_DIST()` |
+| Segmentation en quantiles (rang) | `NTILE()` |
 | Éliminer les doublons | `ROW_NUMBER()` |
 | Distribution équitable | `NTILE()` |
 
 ## Résumé Visuel
 
 ```sql
--- Les quatre fonctions côte à côte
+-- Les six fonctions de rang côte à côte (6 lignes : 1000,1000,800,600,600,400)
 SELECT
     colonne,
     valeur,
-    ROW_NUMBER() OVER (ORDER BY valeur DESC) AS row_num,    -- 1,2,3,4,5,6
-    RANK()       OVER (ORDER BY valeur DESC) AS rank,       -- 1,1,3,4,4,6
-    DENSE_RANK() OVER (ORDER BY valeur DESC) AS dense_rank, -- 1,1,2,3,3,4
-    NTILE(3)     OVER (ORDER BY valeur DESC) AS tertile     -- 1,1,2,2,3,3
+    ROW_NUMBER()   OVER (ORDER BY valeur DESC) AS row_num,    -- 1, 2, 3, 4, 5, 6
+    RANK()         OVER (ORDER BY valeur DESC) AS rank,       -- 1, 1, 3, 4, 4, 6
+    DENSE_RANK()   OVER (ORDER BY valeur DESC) AS dense_rank, -- 1, 1, 2, 3, 3, 4
+    PERCENT_RANK() OVER (ORDER BY valeur DESC) AS pct_rank,   -- 0.0, 0.0, 0.4, 0.6, 0.6, 1.0
+    CUME_DIST()    OVER (ORDER BY valeur DESC) AS cume_dist,  -- 0.333, 0.333, 0.5, 0.833, 0.833, 1.0
+    NTILE(3)       OVER (ORDER BY valeur DESC) AS tertile     -- 1, 1, 2, 2, 3, 3
 FROM table;
 
 -- Avec partitionnement par groupe

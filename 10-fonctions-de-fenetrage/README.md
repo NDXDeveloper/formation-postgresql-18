@@ -228,10 +228,10 @@ Dans le premier cas, vous perdez le détail des produits. Dans le second, chaque
 
 Les window functions sont disponibles dans PostgreSQL depuis la **version 8.4** (2009). Toutes les fonctionnalités que nous allons voir sont disponibles dans PostgreSQL 9.x et supérieures.
 
-**PostgreSQL 18** (version couverte par ce cours) apporte des optimisations supplémentaires :
-- Amélioration du planificateur pour les window functions
-- Meilleure performance sur les grandes fenêtres
-- Optimisation des auto-éliminations (self-joins)
+**PostgreSQL 18** (version couverte par ce cours) apporte trois améliorations utiles dans ce contexte :
+- **Accélération du traitement des window aggregates** (commit Tom Lane / David Rowley) : améliore la vitesse d'exécution des agrégations fenêtrées (`SUM`, `AVG`, `COUNT` ... `OVER (...)`)  
+- **Détails des arguments de window functions dans `EXPLAIN`** : sortie plus lisible pour analyser les plans  
+- **Élimination automatique de certains self-joins inutiles** (GUC `enable_self_join_elimination`) : peut simplifier les plans des requêtes complexes mêlant CTE et window functions
 
 ## Conseils pour Apprendre
 

@@ -392,6 +392,7 @@ WITH employes_categorises AS (
             WHEN salaire > 50000 THEN 'Moyen'
             ELSE 'Bas'
         END AS categorie_salaire
+    FROM employes
 )
 SELECT
     nom,
@@ -737,28 +738,37 @@ WHERE pays IS NOT NULL;
 
 ### 7. Indicateurs de qualité des données
 
+> 💡 SQL n'autorise pas de réutiliser l'alias `score_completude` dans une autre expression du **même** `SELECT`. On encapsule donc le calcul dans une **CTE** (ou une sous-requête) et on classe ensuite le score.
+
 ```sql
--- Score de complétude d'un profil
+-- Score de complétude d'un profil + classification
+WITH scores AS (
+    SELECT
+        user_id,
+        nom,
+        (
+            CASE WHEN nom IS NOT NULL AND nom != ''         THEN 10 ELSE 0 END +
+            CASE WHEN prenom IS NOT NULL AND prenom != ''   THEN 10 ELSE 0 END +
+            CASE WHEN email IS NOT NULL AND email LIKE '%@%' THEN 20 ELSE 0 END +
+            CASE WHEN telephone IS NOT NULL                  THEN 15 ELSE 0 END +
+            CASE WHEN adresse IS NOT NULL                    THEN 15 ELSE 0 END +
+            CASE WHEN ville IS NOT NULL                      THEN 10 ELSE 0 END +
+            CASE WHEN code_postal IS NOT NULL                THEN 10 ELSE 0 END +
+            CASE WHEN date_naissance IS NOT NULL             THEN 10 ELSE 0 END
+        ) AS score_completude
+    FROM utilisateurs
+)
 SELECT
     user_id,
     nom,
-    (
-        CASE WHEN nom IS NOT NULL AND nom != '' THEN 10 ELSE 0 END +
-        CASE WHEN prenom IS NOT NULL AND prenom != '' THEN 10 ELSE 0 END +
-        CASE WHEN email IS NOT NULL AND email LIKE '%@%' THEN 20 ELSE 0 END +
-        CASE WHEN telephone IS NOT NULL THEN 15 ELSE 0 END +
-        CASE WHEN adresse IS NOT NULL THEN 15 ELSE 0 END +
-        CASE WHEN ville IS NOT NULL THEN 10 ELSE 0 END +
-        CASE WHEN code_postal IS NOT NULL THEN 10 ELSE 0 END +
-        CASE WHEN date_naissance IS NOT NULL THEN 10 ELSE 0 END
-    ) AS score_completude,
+    score_completude,
     CASE
-        WHEN (score calculé ci-dessus) >= 90 THEN 'Excellent'
-        WHEN (score calculé ci-dessus) >= 70 THEN 'Bon'
-        WHEN (score calculé ci-dessus) >= 50 THEN 'Moyen'
+        WHEN score_completude >= 90 THEN 'Excellent'
+        WHEN score_completude >= 70 THEN 'Bon'
+        WHEN score_completude >= 50 THEN 'Moyen'
         ELSE 'Faible'
     END AS qualite_profil
-FROM utilisateurs;
+FROM scores;
 ```
 
 ---
@@ -1060,8 +1070,12 @@ CROSS JOIN stats s;
 
 ### 2. État de machine à états
 
+> 💡 **Piège « nombre de jours »** : `DATE_PART('day', interval)` ne renvoie **que la composante `day`** de l'INTERVAL — pas le nombre total de jours. Si l'INTERVAL est normalisé en `1 mon 5 days` (cas typique avec `AGE()`), `DATE_PART('day', …)` renvoie `5`, pas `35`. Pour un **vrai nombre de jours**, deux méthodes robustes :  
+> - `CURRENT_DATE - date_col::date` → retourne un `integer` (différence de dates)  
+> - `EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - timestamp_col)) / 86400` → retourne un `double precision`
+
 ```sql
--- Workflow de commande
+-- Workflow de commande (utilise la soustraction de DATE pour avoir un nombre d'entiers de jours)
 SELECT
     commande_id,
     statut_actuel,
@@ -1074,7 +1088,7 @@ SELECT
         WHEN 'validee' THEN
             CASE
                 WHEN paiement_recu THEN 'en_preparation'
-                WHEN DATE_PART('day', CURRENT_TIMESTAMP - date_validation) > 7 THEN 'expiree'
+                WHEN CURRENT_DATE - date_validation::date > 7 THEN 'expiree'
                 ELSE 'en_attente_paiement'
             END
         WHEN 'en_preparation' THEN
@@ -1085,7 +1099,7 @@ SELECT
         WHEN 'expediee' THEN
             CASE
                 WHEN livraison_confirmee THEN 'livree'
-                WHEN DATE_PART('day', CURRENT_TIMESTAMP - expedition_date) > 14 THEN 'perdue'
+                WHEN CURRENT_DATE - expedition_date::date > 14 THEN 'perdue'
                 ELSE 'en_transit'
             END
         ELSE 'etat_inconnu'

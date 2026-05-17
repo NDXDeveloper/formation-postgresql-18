@@ -186,21 +186,24 @@ WHERE EXISTS (
 ##### Différence entre `IN` et `EXISTS`
 
 ```sql
--- Avec IN (charge tous les IDs en mémoire)
+-- Forme avec IN
 SELECT nom  
 FROM clients  
 WHERE id IN (SELECT client_id FROM commandes);  
 
--- Avec EXISTS (teste l'existence ligne par ligne, souvent plus performant)
+-- Forme équivalente avec EXISTS corrélé
 SELECT nom  
 FROM clients c  
 WHERE EXISTS (SELECT 1 FROM commandes WHERE client_id = c.id);  
 ```
 
-**Règle générale :**
-- `EXISTS` est souvent plus performant pour les grandes tables  
-- `IN` est plus lisible pour les petits ensembles  
-- `EXISTS` gère mieux les `NULL`
+> ⚠️ **Mythe à démythifier** : « `EXISTS` s'arrête au premier match, `IN` charge tout en mémoire ». **Faux depuis PostgreSQL 10**. Dans la majorité des cas, le planificateur transforme `WHERE x IN (sous-requête)` et `WHERE EXISTS (sous-requête corrélée)` en un **Semi Join** identique. Les deux formes produisent **le même plan d'exécution** et donc la même performance. Vérifiez avec `EXPLAIN` plutôt que de présumer.
+
+**Règle générale (PG 10+)** :
+- Pour un **test d'existence**, `IN` et `EXISTS` sont **équivalents en performance** ; choisissez la forme la plus lisible.
+- `IN` est plus naturel pour comparer à une **liste fournie** (`WHERE x IN (1,2,3)`).
+- `EXISTS` est plus naturel quand on a besoin d'une **condition complexe** dans la sous-requête (jointures, plusieurs prédicats).
+- **`NOT IN` gère mal les `NULL`** (cf. piège ci-après) — préférer `NOT EXISTS` ou `LEFT JOIN ... WHERE col IS NULL` pour les anti-jointures.
 
 ---
 
@@ -345,6 +348,39 @@ WHERE EXISTS (
 );
 ```
 
+#### Cas particulier : sous-requête corrélée dans `FROM` → utiliser `LATERAL`
+
+Par défaut, une sous-requête placée dans `FROM` **ne peut PAS** référencer les colonnes des tables qui la précèdent dans la même clause `FROM`. Pour autoriser cette corrélation, on doit ajouter le mot-clé **`LATERAL`** :
+
+```sql
+-- ❌ ERREUR : "missing FROM-clause entry for table c"
+-- (la sous-requête ne voit pas c.id)
+SELECT c.nom, derniere.date_commande
+FROM clients c
+LEFT JOIN (
+    SELECT * FROM commandes
+    WHERE client_id = c.id           -- ← référence invalide
+    ORDER BY date_commande DESC
+    LIMIT 1
+) AS derniere ON true;
+
+-- ✅ CORRECT : LATERAL autorise la corrélation
+SELECT c.nom, derniere.date_commande, derniere.montant
+FROM clients c
+LEFT JOIN LATERAL (
+    SELECT date_commande, montant
+    FROM commandes
+    WHERE client_id = c.id           -- ← OK grâce à LATERAL
+    ORDER BY date_commande DESC
+    LIMIT 1
+) AS derniere ON true;
+```
+
+`LATERAL` est particulièrement utile pour :
+- Récupérer **le top-N par groupe** (ex. les 3 dernières commandes de chaque client) — souvent plus simple que `ROW_NUMBER() OVER (PARTITION BY …)`.
+- Appliquer une **fonction set-returning** (`unnest`, `generate_series`, `jsonb_to_recordset`) ligne par ligne.
+- Réutiliser une expression calculée dans plusieurs colonnes de sortie sans la répéter (`CROSS JOIN LATERAL (SELECT a * b AS produit) p` puis utiliser `p.produit`).
+
 ---
 
 ## Performance des Sous-requêtes
@@ -355,11 +391,11 @@ WHERE EXISTS (
 
 | Type | Performance | Remarque |
 |------|-------------|----------|
-| Scalaire non-corrélée | ⭐⭐⭐⭐⭐ Excellente | Exécutée 1 fois |
-| Scalaire corrélée | ⭐⭐ Médiocre | Exécutée N fois |
-| Vectorielle (IN) | ⭐⭐⭐ Bonne | Optimisable en semi-join |
-| Vectorielle (EXISTS) | ⭐⭐⭐⭐ Très bonne | Souvent optimal |
-| Table (FROM) | ⭐⭐⭐⭐ Très bonne | Comme une CTE inline |
+| Scalaire non-corrélée | ⭐⭐⭐⭐⭐ Excellente | Exécutée 1 fois (InitPlan) |
+| Scalaire corrélée | ⭐⭐ Médiocre | Potentiellement exécutée N fois (SubPlan) |
+| Vectorielle (IN) | ⭐⭐⭐⭐ Très bonne | Transformée en Semi Join (PG 10+) |
+| Vectorielle (EXISTS) | ⭐⭐⭐⭐ Très bonne | Transformée en Semi Join (PG 10+) — identique à `IN` |
+| Table (FROM) | ⭐⭐⭐⭐ Très bonne | Souvent inlinée par l'optimiseur |
 
 #### 2. Corrélation
 
@@ -414,7 +450,7 @@ Souvent, une sous-requête peut être réécrite avec une jointure. Voici les co
 #### Quand préférer une sous-requête
 
 1. **Clarté du code :** Logique plus évidente  
-2. **Test d'existence :** `EXISTS` est explicite et optimisé  
+2. **Test d'existence :** `EXISTS` (ou `IN`, équivalent en perf) exprime explicitement l'intention « cette ligne existe-t-elle ? »  
 3. **Agrégation dans SELECT :** Calcul par ligne
 
 ```sql
@@ -498,13 +534,13 @@ WHERE EXISTS (
 
 ### ✅ À faire
 
-1. **Privilégier `EXISTS` pour les tests d'existence**
+1. **Choisir entre `IN` et `EXISTS` selon la lisibilité, pas la performance**
    ```sql
-   -- Préférer ceci
-   WHERE EXISTS (SELECT 1 FROM ...)
-   -- À cela
+   -- Les deux formes ci-dessous produisent le MÊME plan en PG 10+ (Semi Join)
+   WHERE EXISTS (SELECT 1 FROM ... WHERE ... = parent.col)
    WHERE id IN (SELECT id FROM ...)
    ```
+   En revanche, pour les **anti-jointures** (« qui n'existe pas »), préférer toujours `NOT EXISTS` à `NOT IN` car ce dernier renvoie 0 ligne dès qu'un `NULL` apparaît dans la sous-requête.
 
 2. **Éviter les sous-requêtes corrélées dans SELECT**
    ```sql
@@ -626,14 +662,14 @@ WHERE id IN (
 
 | Type | Retour | Utilisation | Performance |
 |------|--------|-------------|-------------|
-| **Scalaire** | 1 ligne, 1 colonne | WHERE, SELECT, HAVING | Excellente si non-corrélée |
-| **Vectorielle** | N lignes, 1 colonne | IN, ANY, ALL, EXISTS | Bonne (EXISTS optimal) |
-| **Table** | N lignes, M colonnes | FROM | Très bonne |
+| **Scalaire** | 1 ligne, 1 colonne | WHERE, SELECT, HAVING | Excellente si non-corrélée (InitPlan) |
+| **Vectorielle** | N lignes, 1 colonne | IN, ANY, ALL, EXISTS | Très bonne (IN/EXISTS → Semi Join identique en PG 10+) |
+| **Table** | N lignes, M colonnes | FROM | Très bonne (souvent inlinée ou avec LATERAL) |
 
 **Points clés à retenir :**
 
 1. Les sous-requêtes permettent de décomposer des problèmes complexes  
-2. `EXISTS` est généralement plus performant que `IN` pour les grandes tables  
+2. `IN` et `EXISTS` sont **équivalents en performance** depuis PG 10 (Semi Join) — choisir selon la lisibilité  
 3. Évitez les sous-requêtes corrélées dans `SELECT` si possible  
 4. Les index sur les colonnes de corrélation sont cruciaux  
 5. Utilisez `EXPLAIN ANALYZE` pour valider vos optimisations  

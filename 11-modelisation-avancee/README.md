@@ -137,7 +137,30 @@ JOIN produits p ON cd.produit_id = p.produit_id;
 SELECT * FROM commandes_denormalisees WHERE commande_id = 123;
 ```
 
-### 11.2. Héritage de Tables (Table Inheritance)
+### 11.2. Modélisation avec JSONB
+
+**Objectif :** Stocker et requêter des données semi-structurées efficacement.
+
+PostgreSQL combine le meilleur du relationnel et du NoSQL grâce au type `JSONB` (JSON binaire). Indexable, requêtable, et performant.
+
+**Ce que vous apprendrez :**
+- Différence entre `JSON` et `JSONB`
+- Opérateurs `->`, `->>`, `@>`, `?`, `#>`
+- Indexation GIN pour des requêtes rapides
+- Quand préférer JSONB à des colonnes classiques
+
+**Exemple concret :**
+```sql
+CREATE TABLE evenements (
+    id SERIAL PRIMARY KEY,
+    type TEXT,
+    payload JSONB
+);
+CREATE INDEX idx_payload ON evenements USING GIN (payload);
+SELECT * FROM evenements WHERE payload @> '{"user_id": 42}';
+```
+
+### 11.3. Héritage de Tables (Table Inheritance)
 
 **Objectif :** Modéliser des hiérarchies de types avec élégance.
 
@@ -147,7 +170,7 @@ PostgreSQL offre un mécanisme unique d'héritage de tables qui permet de créer
 - Syntaxe de l'héritage de tables
 - Patterns d'utilisation (polymorphisme)
 - Avantages et limitations
-- Alternatives modernes
+- Alternatives modernes (partitionnement déclaratif, JSONB)
 
 **Exemple concret :**
 ```sql
@@ -163,17 +186,22 @@ CREATE TABLE voitures (...) INHERITS (vehicules);
 CREATE TABLE motos (...) INHERITS (vehicules);  
 ```
 
-### 11.3. Partitionnement Avancé
+### 11.4. Partitionnement de Tables
 
 **Objectif :** Gérer des tables massives efficacement.
 
-Lorsque vos tables contiennent des millions ou milliards de lignes, le partitionnement devient essentiel pour maintenir des performances acceptables.
+Lorsque vos tables contiennent des millions ou milliards de lignes, le partitionnement devient essentiel pour maintenir des performances acceptables. Cette section est découpée en quatre parties :
+
+- **11.4** — Introduction au partitionnement
+- **11.4.1** — Stratégies de partitionnement (RANGE, LIST, HASH)
+- **11.4.2** — Partition pruning et partition-wise join
+- **11.4.3** — Détachement et attachement de partitions (maintenance en production)
 
 **Ce que vous apprendrez :**
 - Types de partitionnement (RANGE, LIST, HASH)
 - Stratégies de partitionnement
-- Maintenance des partitions
-- Requêtes sur tables partitionnées
+- Maintenance des partitions (ATTACH / DETACH CONCURRENTLY)
+- Requêtes sur tables partitionnées et optimisations associées
 
 **Exemple concret :**
 ```
@@ -188,31 +216,6 @@ logs_2024_03 (200M lignes)
 
 Requête sur janvier → Scan uniquement logs_2024_01  
 Performance : 100× plus rapide ! 🚀  
-```
-
-### 11.4. Types de Données Personnalisés et Domaines
-
-**Objectif :** Créer vos propres types de données pour plus de rigueur.
-
-PostgreSQL permet de définir des types personnalisés et des domaines pour encapsuler la logique métier directement dans le schéma.
-
-**Ce que vous apprendrez :**
-- Créer des types ENUM
-- Définir des domaines avec contraintes
-- Types composites
-- Quand utiliser des types personnalisés
-
-**Exemple concret :**
-```sql
--- Domaine pour email valide
-CREATE DOMAIN email AS VARCHAR(255)  
-CHECK (VALUE ~ '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$');  
-
--- Utilisation
-CREATE TABLE utilisateurs (
-    user_id SERIAL PRIMARY KEY,
-    email email  -- Validation automatique !
-);
 ```
 
 ### 11.5. Vues et Vues Matérialisées
@@ -299,10 +302,11 @@ Suivez l'ordre des sections pour une montée en compétence graduelle.
 
 #### Approche Ciblée (Intermédiaires)
 Sautez directement aux sections qui répondent à vos besoins immédiats :
-- Problème de performance ? → 11.3, 11.5
-- Modéliser une hiérarchie ? → 11.2
-- Import de données complexe ? → 11.7
-- Refactoring de schéma ? → 11.1, 11.6
+- Problème de performance ? → **11.4** (partitionnement), **11.5** (vues matérialisées)
+- Données semi-structurées (JSON) ? → **11.2** (JSONB)
+- Modéliser une hiérarchie ? → **11.3** (héritage)
+- Import de données complexe / dépendances circulaires ? → **11.7** (contraintes différées)
+- Refactoring / dénormalisation ciblée ? → **11.1**, **11.6** (colonnes générées)
 
 ### Prérequis
 
@@ -383,29 +387,32 @@ Chaque section inclut :
 ### Versions de PostgreSQL
 
 Ce chapitre couvre des fonctionnalités de différentes versions :
-- **PostgreSQL 12+** : Colonnes générées STORED, partitionnement natif amélioré  
-- **PostgreSQL 14+** : Améliorations du partitionnement  
-- **PostgreSQL 18** : Colonnes générées VIRTUAL (section 11.6)
+- **PostgreSQL 10+** : partitionnement déclaratif natif  
+- **PostgreSQL 12+** : colonnes générées STORED, améliorations du partitionnement  
+- **PostgreSQL 14+** : `DETACH PARTITION ... CONCURRENTLY`  
+- **PostgreSQL 18** : **colonnes générées VIRTUAL** (section 11.6), améliorations diverses
 
-**Note :** La majorité des concepts s'appliquent à PostgreSQL 12 et supérieur.
+**Note :** La majorité des concepts s'appliquent à PostgreSQL 12 et supérieur. Les fonctionnalités spécifiques à PG 18 sont signalées dans chaque section.
 
 ### Environnement de Test
 
-Pour suivre les exemples, nous recommandons :
+Pour suivre les exemples, nous recommandons **PostgreSQL 18** :
 
 ```bash
-# Installation locale (Ubuntu/Debian)
-sudo apt install postgresql-16
+# Installation locale (Ubuntu/Debian, dépôt PGDG)
+sudo apt install postgresql-18
 
 # Ou utilisation de Docker
 docker run --name postgres-avance \
     -e POSTGRES_PASSWORD=password \
     -p 5432:5432 \
-    -d postgres:16
+    -d postgres:18
 
 # Connexion
 psql -U postgres -d mydb
 ```
+
+⚠️ Les **colonnes générées VIRTUAL** (section 11.6) **requièrent PG 18**.
 
 ### Base de Données d'Exemple
 

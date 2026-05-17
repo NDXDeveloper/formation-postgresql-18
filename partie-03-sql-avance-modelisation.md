@@ -39,14 +39,15 @@ Dans le monde professionnel, la différence entre un développeur junior et un d
 - ✅ Maîtriser les **sous-requêtes avancées** et les **CTE** (y compris récursives) pour résoudre des problèmes hiérarchiques complexes  
 - ✅ Utiliser les **window functions** pour effectuer des calculs analytiques sophistiqués (classements, moyennes mobiles, comparaisons temporelles)  
 - ✅ Exploiter les **opérations d'ensembles** (UNION, INTERSECT, EXCEPT) pour des manipulations de données avancées  
-- ✅ Comprendre et appliquer les **optimisations PostgreSQL 18** (OR-clauses transformées en ANY, etc.)
+- ✅ Maîtriser les **expressions CASE** pour exprimer toute logique conditionnelle directement en SQL  
+- ✅ Comprendre et appliquer les **optimisations PostgreSQL 18** (transformation `OR → ANY` notamment)
 
 #### Sur le Plan Modélisation
 - ✅ Appliquer les principes de **normalisation** (1NF à 3NF/BCNF) tout en sachant quand **dénormaliser stratégiquement**  
 - ✅ Concevoir des schémas hybrides exploitant **JSONB** pour combiner les avantages du relationnel et du NoSQL  
 - ✅ Implémenter le **partitionnement de tables** pour gérer des volumes massifs de données  
 - ✅ Utiliser les **vues matérialisées** et les **colonnes générées virtuelles** (nouveauté PG 18) pour optimiser les performances  
-- ✅ Comprendre les **contraintes avancées** (différées, temporelles) pour garantir l'intégrité des données
+- ✅ Maîtriser les **contraintes différées** pour gérer les dépendances circulaires lors d'imports complexes (les *contraintes temporelles* introduites en PG 18, basées sur `WITHOUT OVERLAPS` et `PERIOD`, sont traitées dans le chapitre 7 — Partie 2)
 
 #### Sur le Plan Professionnel
 - ✅ Écrire du SQL **lisible et maintenable** qui sera compris par vos collègues dans 6 mois  
@@ -81,8 +82,9 @@ Le cœur de votre arsenal SQL moderne. Vous y découvrirez :
 - Les sous-requêtes et leur impact sur les performances
 - Les CTE (Common Table Expressions) et leur puissance pour structurer le code
 - Les CTE récursives pour naviguer dans des hiérarchies (organigrammes, catégories, threads)
-- Les opérations d'ensemble pour manipuler des résultats complexes
-- Les optimisations spécifiques à PostgreSQL 18
+- Les opérations d'ensemble (UNION, INTERSECT, EXCEPT) pour manipuler des résultats complexes
+- Les expressions CASE pour exprimer la logique conditionnelle directement en SQL
+- Les optimisations spécifiques à PostgreSQL 18 (transformation `OR → ANY`)
 
 **Cas d'usage :** Requêtes d'analyse complexes, rapports hiérarchiques, transformations de données sophistiquées.
 
@@ -99,10 +101,11 @@ L'une des fonctionnalités les plus puissantes et sous-utilisées de SQL. Vous a
 Au-delà de la simple création de tables. Vous maîtriserez :
 - Les principes de normalisation et quand les briser intelligemment
 - L'exploitation de JSONB pour des modèles semi-structurés
-- Le partitionnement de tables pour la scalabilité
-- Les vues matérialisées pour la performance
-- Les colonnes générées virtuelles (PostgreSQL 18)
-- Les contraintes avancées incluant les nouvelles contraintes temporelles (PG 18)
+- L'héritage de tables et ses cas d'usage spécifiques
+- Le partitionnement déclaratif (RANGE, LIST, HASH) pour la scalabilité, avec partition pruning, partition-wise join et détachement/attachement de partitions
+- Les vues simples et matérialisées pour la performance
+- Les colonnes générées **STORED** et **VIRTUAL** (VIRTUAL devient le défaut en PostgreSQL 18)
+- Les contraintes différées pour gérer les dépendances circulaires lors des imports
 
 **Cas d'usage :** Architecture de bases de données scalables, modèles hybrides relationnel/NoSQL, optimisation de requêtes analytiques.
 
@@ -167,11 +170,14 @@ Vous êtes sur le point de rejoindre le cercle des développeurs qui **pensent e
 
 ### Note sur PostgreSQL 18
 
-Tout au long de cette partie, vous remarquerez l'annotation **"Nouveauté PG 18"** qui signale les améliorations spécifiques à PostgreSQL 18 (septembre 2025). Ces nouveautés incluent :
+Tout au long de cette partie, vous remarquerez l'annotation **"Nouveauté PG 18"** qui signale les améliorations spécifiques à PostgreSQL 18 (sortie le 25 septembre 2025). Les nouveautés directement abordées dans cette Partie 3 sont :
 
-- **Optimisations du planificateur** : OR-clauses transformées en ANY, élimination automatique des self-joins  
-- **Colonnes générées virtuelles** : Calculs sans stockage physique  
-- **Contraintes temporelles** : Validation basée sur des périodes de temps
+- **Transformation `OR → ANY`** : le planificateur convertit automatiquement les longues listes de conditions `OR` portant sur la même colonne en un seul prédicat `ANY`, permettant l'usage des index et de meilleurs plans (chapitre 9)  
+- **Colonnes générées VIRTUAL** : calculées à la lecture, sans stockage physique. **VIRTUAL devient le mode par défaut** quand on omet `STORED`/`VIRTUAL` — rupture par rapport aux versions PG 12 à 17 où seul `STORED` était disponible (chapitre 11)
+
+D'autres optimisations PG 18 sont traitées dans d'autres parties de la formation :
+- L'**auto-élimination des self-joins**, le **réordonnancement de DISTINCT/GROUP BY** et les autres optimisations du planificateur sont étudiés en Partie 4 (chapitre 13)
+- Les **contraintes temporelles** (`PRIMARY KEY`/`UNIQUE … WITHOUT OVERLAPS` et `FOREIGN KEY … PERIOD`) sont traitées en Partie 2 (chapitre 7)
 
 Ces innovations rendent PostgreSQL encore plus performant et expressif. Même si vous utilisez une version antérieure, comprendre ces concepts vous préparera à les exploiter lors de votre migration.
 
