@@ -178,11 +178,17 @@ CREATE PROCEDURE archiver_anciennes_commandes()
 LANGUAGE plpgsql  
 AS $$  
 BEGIN  
-    INSERT INTO archive SELECT * FROM commandes WHERE date < NOW() - INTERVAL '1 year';
-    COMMIT;  -- ✅ Possible dans une procédure !
+    -- ✅ DELETE...RETURNING + INSERT atomique :
+    -- exactement les lignes supprimées sont archivées (pas de fenêtre
+    -- de race où une autre session insérerait une ligne entre les deux).
+    WITH supprimes AS (
+        DELETE FROM commandes
+        WHERE date < NOW() - INTERVAL '1 year'
+        RETURNING *
+    )
+    INSERT INTO archive SELECT * FROM supprimes;
 
-    DELETE FROM commandes WHERE date < NOW() - INTERVAL '1 year';
-    COMMIT;
+    COMMIT;  -- ✅ Possible dans une procédure !
 END;
 $$;
 
@@ -192,9 +198,11 @@ CALL archiver_anciennes_commandes();
 
 **Caractéristiques** :
 - ❌ Ne retourne pas de valeur (sauf paramètres OUT/INOUT)  
-- ❌ Ne peut pas être utilisée dans un SELECT  
-- ✅ Peut faire des COMMIT/ROLLBACK internes  
+- ❌ Ne peut pas être utilisée dans un SELECT (uniquement via `CALL`)  
+- ✅ Peut faire des `COMMIT`/`ROLLBACK` internes  
 - ✅ Idéale pour les traitements par lots
+
+⚠️ **Limite importante :** `COMMIT` et `ROLLBACK` sont **interdits** à l'intérieur d'un bloc `BEGIN...EXCEPTION...END`, car un tel bloc crée une sous-transaction implicite. Détails dans la section [15.3 Procédures stockées](/15-programmation-serveur/03-procedures-stockees.md).
 
 ### 3. **Triggers** (Déclencheurs)
 
@@ -227,15 +235,15 @@ FOR EACH ROW EXECUTE FUNCTION log_modifications();
 
 ### 4. **Event Triggers** (Déclencheurs d'événements)
 
-Un event trigger réagit aux modifications de **structure** (DDL) :
+Un event trigger réagit aux modifications de **structure** (DDL) ou à des événements de session :
 
 ```sql
 CREATE FUNCTION audit_ddl()  
-RETURNS EVENT_TRIGGER  
+RETURNS event_trigger  
 LANGUAGE plpgsql  
 AS $$  
 BEGIN  
-    INSERT INTO ddl_history (command, user, timestamp)
+    INSERT INTO ddl_history (command_tag, username, occurred_at)
     VALUES (TG_TAG, current_user, NOW());
 END;
 $$;
@@ -246,9 +254,12 @@ EXECUTE FUNCTION audit_ddl();
 ```
 
 **Caractéristiques** :
-- ✅ Surveille CREATE, ALTER, DROP, etc.  
+- ✅ Surveille `CREATE`, `ALTER`, `DROP`, etc.  
 - ✅ Audit de changements de schéma  
-- ✅ Protection contre suppressions accidentelles
+- ✅ Protection contre suppressions accidentelles  
+- ⭐ Événement `login` (depuis PostgreSQL 17) : déclenché à chaque ouverture de session — utile pour l'audit ou le contrôle des connexions  
+- ⚠️ Création réservée aux **superutilisateurs**  
+- ⚠️ Ne se déclenche **pas** pour `CREATE DATABASE`, `CREATE ROLE`, ni pour le DML
 
 ---
 
@@ -317,24 +328,33 @@ PostgreSQL ne se limite pas à PL/pgSQL. Plusieurs langages sont disponibles :
 
 ### 3. **PL/Python** (extension)
 - ✅ Puissance de Python  
-- ✅ Accès à des bibliothèques Python  
-- ⚠️ Moins performant que PL/pgSQL  
-- ⚠️ Risques de sécurité
+- ✅ Accès à des bibliothèques Python (NumPy, requests, hashlib, etc.)  
+- ⚠️ Moins performant que PL/pgSQL pour le SQL pur  
+- ⚠️ **Disponible uniquement en variante untrusted** (`plpython3u`) — création de fonctions réservée aux superutilisateurs. Pas de sandbox.
 
 ### 4. **PL/Perl** (extension)
 - ✅ Expressions régulières puissantes  
 - ✅ Manipulation de texte avancée  
+- ✅ Deux variantes : `plperl` (trusted) et `plperlu` (untrusted)  
 - ⚠️ Moins populaire aujourd'hui
 
-### 5. **PL/v8** (extension)
-- ✅ JavaScript côté serveur  
+### 5. **PL/v8** (extension tierce)
+- ✅ JavaScript moderne (ES6+) côté serveur, moteur V8 ultra-optimisé  
+- ✅ Manipulation JSON native et performante  
 - ✅ Familier pour les développeurs web  
-- ⚠️ Maintenance moins active
+- ⚠️ Extension tierce : disponibilité variable selon l'hébergeur  
+- ⚠️ Pas d'accès `require()` / npm natif (à contourner via `plv8.start_proc`)
 
-### 6. **C** (pour experts)
+### 6. **Autres langages procéduraux**
+- **PL/Tcl** : officiel, deux variantes trusted/untrusted  
+- **PL/R** : analyse statistique  
+- **PL/Java** : réutilisation de l'écosystème JVM  
+- **PL/Rust** (`plrust`, `pgrx`) : performance native, sécurité mémoire, en pleine ascension
+
+### 7. **C** (pour experts)
 - ✅ Performance maximale  
 - ✅ Accès bas niveau  
-- ❌ Complexe et dangereux
+- ❌ Complexe et dangereux (crash du backend possible)
 
 **Recommandation pour débutants** : Commencez avec **PL/pgSQL** (couvert dans ce chapitre) ou **SQL pur** pour les cas simples.
 
@@ -517,7 +537,7 @@ SELECT * FROM stats_client(42);
 ### 2. **pgAdmin** (interface graphique)
 
 - Éditeur de code avec coloration syntaxique
-- Débogueur intégré pour fonctions PL/pgSQL
+- Débogueur PL/pgSQL : **nécessite l'extension `pldbgapi`** installée côté serveur (`CREATE EXTENSION pldbgapi;`). Sans elle, le débogueur n'apparaît pas.
 - Navigation dans les objets
 
 ### 3. **DBeaver** (interface graphique)
@@ -528,8 +548,8 @@ SELECT * FROM stats_client(42);
 
 ### 4. **Extensions VS Code**
 
-- `PostgreSQL` pour la coloration syntaxique
-- Intégration avec PostgreSQL
+- `PostgreSQL` (Microsoft) pour la coloration syntaxique et l'auto-complétion
+- Extensions tierces comme `cweijan.dbclient-jdbc` pour la requête interactive
 
 ---
 

@@ -238,7 +238,7 @@ Pas de maintenance → Problèmes s'accumulent → CRISE → Maintenance d'urgen
 
 Autovacuum est un **système de processus d'arrière-plan** qui :
 
-1. **Se réveille périodiquement** (toutes les 1 minute par défaut, 10s dans PG 18)  
+1. **Se réveille périodiquement** (toutes les 1 minute par défaut — paramètre `autovacuum_naptime`)  
 2. **Inspecte vos tables** pour détecter l'activité (insertions, mises à jour, suppressions)  
 3. **Décide automatiquement** quelles tables nécessitent un VACUUM ou ANALYZE  
 4. **Lance les opérations** de maintenance sans intervention humaine
@@ -349,12 +349,13 @@ SELECT pg_reload_conf();
 
 ```sql
 -- Identifier les tables avec beaucoup de lignes mortes
+-- ⚠️ Dans pg_stat_user_tables, le nom de la table est `relname` (pas `tablename`).
 SELECT
-    schemaname || '.' || tablename AS table_name,
+    schemaname || '.' || relname AS table_name,
     n_live_tup AS live_tuples,
     n_dead_tup AS dead_tuples,
     ROUND(n_dead_tup * 100.0 / NULLIF(n_live_tup + n_dead_tup, 0), 2) AS dead_pct,
-    pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename)) AS size,
+    pg_size_pretty(pg_total_relation_size(relid)) AS size,
     last_autovacuum
 FROM pg_stat_user_tables  
 WHERE n_dead_tup > 1000  
@@ -373,7 +374,7 @@ LIMIT 20;
 ```sql
 -- Tables avec beaucoup de modifications non analysées
 SELECT
-    schemaname || '.' || tablename AS table_name,
+    schemaname || '.' || relname AS table_name,
     n_mod_since_analyze AS modifications,
     n_live_tup AS live_tuples,
     ROUND(n_mod_since_analyze * 100.0 / NULLIF(n_live_tup, 0), 2) AS mod_pct,
@@ -418,7 +419,7 @@ ORDER BY age(datfrozenxid) DESC;
 ```sql
 -- Vérifier l'activité autovacuum
 SELECT
-    schemaname || '.' || tablename AS table_name,
+    schemaname || '.' || relname AS table_name,
     last_vacuum,
     last_autovacuum,
     autovacuum_count,
@@ -612,9 +613,9 @@ WARNING: database "production" must be vacuumed within 10000000 transactions
 **Conséquence** : Arrêt automatique de PostgreSQL pour éviter la corruption !
 
 **Correctif** :
-```sql
--- ✅ Vacuum immédiat sur toute la base
-VACUUMDB --all --freeze
+```bash
+# ✅ Vacuum immédiat sur toute la base (outil ligne de commande)
+vacuumdb --all --freeze
 ```
 
 ### ❌ Erreur #4 : Ne pas surveiller le bloat

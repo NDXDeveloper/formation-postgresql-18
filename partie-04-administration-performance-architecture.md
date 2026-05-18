@@ -32,7 +32,7 @@ Dans le monde professionnel, la différence entre un système qui fonctionne "su
 
 #### Le Facteur Disponibilité
 - **Développement** : Vous pouvez redémarrer quand vous voulez  
-- **Production** : Le système doit tourner 24/7, avec un SLA de 99.95% (4h20 d'arrêt maximum par an)
+- **Production** : Le système doit tourner 24/7, avec un SLA de 99.95% (environ 4h23 d'arrêt maximum par an)
 
 #### Le Facteur Sécurité
 - **Développement** : Vous êtes l'administrateur avec tous les droits  
@@ -76,7 +76,7 @@ En maîtrisant les concepts de cette partie, vous serez capable de :
 - ✅ Exploiter les nouvelles capacités **I/O asynchrones de PostgreSQL 18**
 
 #### Optimiser les Performances
-- ✅ Concevoir une **stratégie d'indexation** optimale (B-Tree, GIN, GiST, BRIN)  
+- ✅ Concevoir une **stratégie d'indexation** optimale (B-Tree, Hash, GIN, GiST, SP-GiST, BRIN)  
 - ✅ Exploiter le **Skip Scan** de PostgreSQL 18 pour les index multi-colonnes  
 - ✅ Lire et interpréter un plan d'exécution (**EXPLAIN ANALYZE**)  
 - ✅ Identifier et corriger les requêtes problématiques  
@@ -189,7 +189,7 @@ Cette partie s'adresse à différents profils avec des besoins spécifiques :
 - L'optimisation de requêtes est essentielle pour des APIs performantes
 - Les triggers peuvent vous éviter beaucoup de code applicatif
 
-**Conseil :** Concentrez-vous sur les chapitres 12-13-15 dans un premier temps.
+**Conseil :** Concentrez-vous sur les chapitres 12, 13 et 15 en priorité, puis revenez au chapitre 14 lorsque les questions de performance émergent.
 
 #### 🔧 **DevOps / SRE / Platform Engineers**
 **Chapitres prioritaires :** 13, 14, 16, 17
@@ -229,7 +229,8 @@ Cette partie s'adresse à différents profils avec des besoins spécifiques :
 **Si vous manquez certains prérequis :**
 - Les concepts systèmes sont expliqués dans le contexte PostgreSQL
 - Les commandes shell sont détaillées dans l'Annexe G
-- N'hésitez pas à rechercher les concepts inconnus
+- Le vocabulaire technique est défini dans l'Annexe A (Glossaire)
+- N'hésitez pas à rechercher les concepts inconnus dans la [documentation officielle PostgreSQL 18](https://www.postgresql.org/docs/18/)
 
 **Important :** Cette partie est **dense et technique**. Prenez votre temps, expérimentez, et n'hésitez pas à relire certaines sections.
 
@@ -277,19 +278,21 @@ PostgreSQL 18 (septembre 2025) apporte des améliorations majeures pour la produ
 - ✨ Affichage automatique des buffers dans EXPLAIN
 
 #### **Sécurité**
-- ✨ **Authentification OAuth 2.0** native  
-- ✨ **Mode FIPS** et configuration TLS 1.3  
-- ✨ **SCRAM passthrough** pour postgres_fdw et dblink
+- ✨ **Authentification OAuth 2.0** native (`oauth_validator_libraries`)  
+- ✨ **Mode FIPS** et configuration TLS 1.3 (`ssl_tls13_ciphers`, `ssl_groups`)  
+- ✨ **TLS 1.2 minimum** par défaut côté client (TLS 1.0/1.1 désactivés)
 
 #### **Administration**
-- ✨ **Data Checksums** activés par défaut  
-- ✨ **pg_upgrade** avec préservation des statistiques et option --swap  
-- ✨ Vérifications parallèles (--jobs)  
+- ✨ **Data Checksums** activés par défaut (initdb)  
+- ✨ **pg_upgrade** avec préservation des statistiques et option `--swap`  
+- ✨ Étapes supplémentaires parallélisées dans `pg_upgrade --jobs`  
 - ✨ Autovacuum optimisé avec nouveaux paramètres
 
 Ces innovations seront signalées tout au long de la partie avec l'annotation **"Nouveauté PG 18"**.
 
 > 💡 D'autres nouveautés PG 18 (contraintes temporelles, OLD/NEW dans RETURNING, colonnes virtuelles) ont été couvertes dans les Parties 2 et 3.
+
+> 📔 Pour une vue d'ensemble structurée des nouveautés PG 18 (features majeures, impact sur la migration, recommandations d'adoption), consultez l'**[Annexe F — Nouveautés PostgreSQL 18](/annexes/nouveautes-pg18/README.md)**.
 
 ---
 

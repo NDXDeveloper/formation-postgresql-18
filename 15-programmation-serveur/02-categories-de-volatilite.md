@@ -115,18 +115,32 @@ SELECT * FROM produits WHERE prix < calculer_prix_ttc(100);
 
 ### 1.5. Règles strictes pour IMMUTABLE
 
-❌ **Interdit** : Accès à la base de données
+❌ **À éviter absolument** : Accès à la base de données
+
 ```sql
--- ❌ FAUX : Cette fonction ne devrait PAS être IMMUTABLE
-CREATE FUNCTION obtenir_nom_client(id INTEGER)  
+-- ❌ DANGEREUX : Cette fonction ne devrait PAS être IMMUTABLE
+-- (et l'argument est renommé pour éviter l'ambiguïté avec la colonne 'id')
+CREATE FUNCTION obtenir_nom_client(p_id INTEGER)  
 RETURNS TEXT  
 LANGUAGE SQL  
-IMMUTABLE  -- ERREUR ! Accède à une table  
+IMMUTABLE  -- ⚠️ PostgreSQL ACCEPTE la déclaration mais c'est faux !  
 AS $$  
-    SELECT nom FROM clients WHERE id = id;
+    SELECT nom FROM clients WHERE id = p_id;
 $$;
--- Si les données de la table changent, le résultat change !
+-- Problème : si les données de la table changent, PostgreSQL peut
+-- continuer à retourner l'ancienne valeur depuis le cache, et les
+-- index fonctionnels deviendraient incohérents.
+--
+-- ⚠️ Note secondaire : éviter de nommer un argument comme une colonne
+-- de la requête (ici 'id') — sinon PostgreSQL préfère la colonne et
+-- la condition devient toujours vraie (id = id ≡ TRUE).
 ```
+
+> ⚠️ **Subtilité importante** : PostgreSQL **n'empêche pas syntaxiquement** la création d'une fonction IMMUTABLE qui accède à des tables — c'est une **responsabilité du développeur** de respecter le contrat. Si vous mentez sur la volatilité, les conséquences sont graves :  
+> - Le planificateur peut mettre le résultat en cache et renvoyer des valeurs **périmées**  
+> - Les index fonctionnels créés avec cette fonction deviennent **incohérents** avec les données réelles, ce qui peut produire des résultats faux  
+>  
+> Règle : **ne déclarez IMMUTABLE que si la fonction est mathématiquement pure** (mêmes entrées → toujours mêmes sorties, indépendamment de tout état).
 
 ❌ **Interdit** : Dépendance à l'état externe
 ```sql
@@ -236,6 +250,16 @@ BEGIN;
     SELECT NOW();                    -- Encore 2025-01-15 14:30:00
 COMMIT;
 ```
+
+> 💡 **Variantes de timestamp et leur volatilité** : PostgreSQL propose plusieurs fonctions pour obtenir le temps, avec des comportements différents :  
+>  
+> | Fonction | Volatilité | Que retourne-t-elle ? |  
+> |----------|-----------|------------------------|  
+> | `now()` / `CURRENT_TIMESTAMP` / `transaction_timestamp()` | **STABLE** | Heure de **début de la transaction** (constante pendant toute la tx) |  
+> | `statement_timestamp()` | **STABLE** | Heure de début de la **déclaration en cours** (constante pendant la requête, mais change entre deux requêtes d'une même tx) |  
+> | `clock_timestamp()` | **VOLATILE** | Heure « réelle » actuelle (change à chaque appel, même dans une seule requête) |  
+>  
+> **Conséquence pratique** : si vous voulez mesurer le temps écoulé entre deux moments dans une même requête, utilisez `clock_timestamp()` (sinon vous obtiendriez la même valeur). Pour les autres cas, `now()` suffit et est plus efficace (mise en cache STABLE).
 
 ### 2.4. Avantages de STABLE
 
@@ -870,6 +894,103 @@ ON produits(prix_avec_tva_actuelle(prix));
 Un index doit être **déterministe** :
 - Si `f(x) = y` aujourd'hui, alors `f(x)` doit toujours égaler `y`
 - Sinon, l'index devient incohérent avec les données réelles
+
+---
+
+## Attributs connexes : PARALLEL et LEAKPROOF
+
+La volatilité n'est pas le seul attribut qui influence les optimisations possibles sur une fonction. Deux autres attributs sont à connaître :
+
+### Attribut PARALLEL (PG 9.6+)
+
+Contrôle si la fonction peut être exécutée par les **workers parallèles** d'une requête :
+
+| Valeur | Signification |
+|--------|---------------|
+| `PARALLEL UNSAFE` (défaut) | Ne peut PAS être exécutée en parallèle (la requête sera sérialisée si elle utilise cette fonction) |
+| `PARALLEL RESTRICTED` | Peut s'exécuter mais uniquement par le **leader** d'un plan parallèle (pas par les workers) |
+| `PARALLEL SAFE` | Peut s'exécuter sans restriction par les workers |
+
+```sql
+CREATE FUNCTION ma_fonction(x INTEGER) RETURNS INTEGER  
+LANGUAGE SQL  
+IMMUTABLE  
+PARALLEL SAFE        -- ⭐ Permet l'exécution en parallèle  
+AS $$ SELECT x * 2 $$;  
+```
+
+**Règles de pouce** :
+- Fonctions IMMUTABLE pures → presque toujours `PARALLEL SAFE`
+- Fonctions qui lisent des tables → généralement `PARALLEL SAFE` (la lecture parallèle est sûre)
+- Fonctions qui modifient des données → `PARALLEL UNSAFE` obligatoire
+- Fonctions qui appellent `SETSEED`, `nextval`, ou modifient des GUC → `PARALLEL RESTRICTED` minimum
+
+> ⚠️ **Défaut historique** : sans déclaration explicite, une fonction est `PARALLEL UNSAFE` ! C'est extrêmement restrictif et peut empêcher des plans parallèles efficaces. **Toujours déclarer `PARALLEL SAFE`** pour les fonctions IMMUTABLE/STABLE qui s'y prêtent.
+
+### Attribut LEAKPROOF
+
+Indique que la fonction ne « fuite » aucune information sur ses arguments par d'autres canaux que sa valeur de retour (pas de `RAISE NOTICE`, pas d'accès à des tables protégées par RLS…).
+
+```sql
+CREATE FUNCTION compare_secret(a INTEGER, b INTEGER) RETURNS BOOLEAN  
+LANGUAGE SQL  
+IMMUTABLE  
+LEAKPROOF           -- Fonction "sans fuite"  
+AS $$ SELECT a = b $$;  
+```
+
+**Quand c'est important** : avec la **Row-Level Security (RLS)**, PostgreSQL refuse d'appliquer un prédicat utilisateur sur les lignes filtrées par RLS, **sauf si la fonction est LEAKPROOF**. Sans cet attribut, une requête peut être très inefficace sur une table avec RLS.
+
+> ⚠️ Seul un **superuser** peut marquer une fonction LEAKPROOF (responsabilité de sécurité).
+
+### Attribut SECURITY DEFINER / SECURITY INVOKER
+
+Cet attribut contrôle **avec quels privilèges** s'exécute la fonction :
+
+| Mode | Identité d'exécution | Cas d'usage |
+|------|---------------------|-------------|
+| `SECURITY INVOKER` (défaut) | Rôle de l'appelant | La fonction respecte les droits de l'utilisateur qui l'appelle |
+| `SECURITY DEFINER` | Rôle du **créateur** de la fonction | Donne accès à des ressources privées à des appelants normaux |
+
+```sql
+-- Exemple : permettre aux utilisateurs de voir UNIQUEMENT leur propre solde
+-- sans leur donner accès direct à la table comptes
+CREATE FUNCTION mon_solde() RETURNS NUMERIC  
+LANGUAGE SQL  
+STABLE  
+SECURITY DEFINER                      -- s'exécute avec les droits du propriétaire  
+SET search_path = pg_catalog, public  -- ⚠️ critique pour la sécurité (voir ci-dessous)  
+AS $$  
+    SELECT solde FROM comptes WHERE id_utilisateur = current_user;
+$$;
+
+-- Le propriétaire de la fonction (typiquement un admin) a accès à la table.
+-- Les utilisateurs appelants n'ont pas besoin d'accès direct.
+GRANT EXECUTE ON FUNCTION mon_solde() TO PUBLIC;  
+REVOKE SELECT ON comptes FROM PUBLIC;  
+```
+
+⚠️ **Sécurité critique avec SECURITY DEFINER :**
+- **Toujours** définir explicitement `SET search_path = pg_catalog, public` (ou similaire) sur les fonctions `SECURITY DEFINER`. Sans cela, un utilisateur peut détourner la fonction en créant des objets dans un schéma `temp` placé en tête de son `search_path` (attaque par « path injection »).
+- Le propriétaire de la fonction doit lui-même avoir les droits sur les objets utilisés.
+- À utiliser avec parcimonie : c'est un mécanisme puissant d'élévation de privilège.
+
+### Cumul des attributs
+
+Les attributs sont indépendants et se combinent :
+
+```sql
+CREATE FUNCTION upper_safe(t TEXT) RETURNS TEXT  
+LANGUAGE SQL  
+IMMUTABLE           -- Volatilité  
+PARALLEL SAFE       -- Parallélisation  
+LEAKPROOF           -- Sécurité RLS  
+STRICT              -- Renvoie NULL si tout argument est NULL  
+SECURITY INVOKER    -- Droits de l'appelant (défaut)  
+AS $$ SELECT upper(t) $$;  
+```
+
+> 💡 La plupart des **fonctions built-in** PostgreSQL sont déjà correctement annotées (vous pouvez le vérifier via `pg_proc.provolatile`, `proparallel`, `proleakproof`, `prosecdef`). Pour vos fonctions, prenez l'habitude de déclarer **explicitement** les attributs pertinents — cela maximise les optimisations possibles par le planner et clarifie la sémantique pour les lecteurs du code.
 
 ---
 

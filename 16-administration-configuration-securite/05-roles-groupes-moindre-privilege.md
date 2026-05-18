@@ -204,6 +204,79 @@ REVOKE groupe_developpeurs FROM alice;
 
 ---
 
+## 🏛️ Les Rôles Prédéfinis (Predefined Roles)
+
+PostgreSQL fournit un ensemble de **rôles prédéfinis** (commençant par `pg_`) qui accordent des privilèges spécifiques sans nécessiter de SUPERUSER. C'est l'outil idéal pour appliquer le principe du moindre privilège sur des tâches d'administration ciblées.
+
+### Tableau des Rôles Prédéfinis Courants
+
+| Rôle | Apparu en | Rôle / Utilité |
+|------|-----------|----------------|
+| `pg_read_all_data` | PG 14 | Lecture (SELECT) sur **toutes** les tables, vues, séquences |
+| `pg_write_all_data` | PG 14 | INSERT/UPDATE/DELETE sur toutes les tables (sans superuser) |
+| `pg_read_all_settings` | PG 10 | Lire tous les paramètres `pg_settings`, y compris ceux réservés au superuser |
+| `pg_read_all_stats` | PG 10 | Lire toutes les vues `pg_stat_*` sans restriction |
+| `pg_stat_scan_tables` | PG 10 | Exécuter certaines fonctions de statistiques nécessitant un ACCESS SHARE |
+| `pg_monitor` | PG 10 | Combine `pg_read_all_settings` + `pg_read_all_stats` + `pg_stat_scan_tables` |
+| `pg_signal_backend` | PG 13 | Envoyer des signaux (`pg_cancel_backend`, `pg_terminate_backend`) à des backends non-superusers |
+| `pg_database_owner` | PG 14 | Pseudo-rôle représentant le propriétaire courant de la base (utile pour `public`) |
+| `pg_checkpoint` | PG 15 | Exécuter `CHECKPOINT` sans être superuser |
+| `pg_use_reserved_connections` | PG 16 | Utiliser des connexions réservées (`reserved_connections`) |
+| `pg_create_subscription` | PG 16 | Créer des subscriptions de réplication logique sans être superuser |
+| `pg_maintain` | PG 17 | Exécuter VACUUM, ANALYZE, CLUSTER, REFRESH MATERIALIZED VIEW, REINDEX, LOCK TABLE sur **toutes** les tables sans être propriétaire |
+| `pg_read_server_files` | PG 11 | Lire des fichiers du serveur via `COPY FROM '/chemin/fichier'`, `file_fdw`, `pg_ls_dir()`, etc. (⚠️ accès filesystem côté serveur) |
+| `pg_write_server_files` | PG 11 | Écrire des fichiers sur le serveur via `COPY ... TO '/chemin/fichier'` (⚠️ accès filesystem côté serveur) |
+| `pg_execute_server_program` | PG 11 | Exécuter un programme externe via `COPY ... TO PROGRAM 'commande'` (⚠️ équivalent à un shell sur le serveur — très puissant) |
+
+### Utilisation Pratique
+
+```sql
+-- Compte de monitoring : pas besoin de SUPERUSER
+CREATE ROLE monitoring_user LOGIN PASSWORD 'secure_pass';  
+GRANT pg_monitor TO monitoring_user;  
+-- monitoring_user peut maintenant accéder à toutes les statistiques
+
+-- Compte de sauvegarde : lecture seule globale
+CREATE ROLE backup_user LOGIN PASSWORD 'secure_pass';  
+GRANT pg_read_all_data TO backup_user;  
+-- backup_user peut faire pg_dump sans GRANT table par table
+
+-- Compte de maintenance (PG 17+)
+CREATE ROLE maintenance_user LOGIN PASSWORD 'secure_pass';  
+GRANT pg_maintain TO maintenance_user;  
+-- maintenance_user peut VACUUM/ANALYZE/CLUSTER toutes les tables
+-- sans être propriétaire ni superuser
+
+-- Compte support : peut tuer des sessions bloquantes
+CREATE ROLE support_user LOGIN PASSWORD 'secure_pass';  
+GRANT pg_signal_backend TO support_user;  
+-- support_user peut faire pg_terminate_backend() sur des backends non-superusers
+```
+
+### Pourquoi les Préférer à SUPERUSER ?
+
+✅ **Avantages** :
+- Permissions ciblées (pas le pouvoir DROP DATABASE)
+- Auditable (on sait pourquoi le compte existe)
+- Conformes au principe du moindre privilège
+- Pas de risque d'élévation accidentelle de privilège
+
+❌ **À éviter** : `ALTER USER backup_user WITH SUPERUSER` pour faire un dump !
+
+### Lister les Rôles Prédéfinis Disponibles
+
+```sql
+-- Voir tous les rôles prédéfinis sur votre version
+SELECT rolname, rolcanlogin, rolsuper, oid  
+FROM pg_roles  
+WHERE rolname LIKE 'pg\_%' ESCAPE '\'  
+ORDER BY rolname;  
+```
+
+> 💡 **Bonne pratique** : avant de donner SUPERUSER à un compte, vérifiez si un rôle prédéfini ne couvre pas déjà le besoin. C'est rarement le cas qu'un SUPERUSER soit vraiment nécessaire.
+
+---
+
 ## 🔄 Héritage des Permissions
 
 ### Le Concept d'Héritage

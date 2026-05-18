@@ -63,7 +63,7 @@ PostgreSQL propose deux types de réplication : **physique** et **logique**. Il 
 **Comment ça fonctionne :**
 - Réplication des **modifications logiques** (INSERT, UPDATE, DELETE) au niveau des lignes
 - Les modifications sont décodées des WAL et converties en opérations SQL
-- Le standby applique ces opérations comme des requêtes SQL normales
+- Le **subscriber** (terme spécifique à la réplication logique) applique ces opérations comme des requêtes SQL normales
 
 **Caractéristiques :**
 - ✅ **Réplication sélective** : Possibilité de répliquer uniquement certaines tables ou bases  
@@ -109,7 +109,9 @@ Avant de plonger dans la configuration, il est essentiel de comprendre les conce
 
 #### Primary (Serveur Principal)
 
-**Définition :** Le serveur primary est le serveur **maître** qui accepte les opérations d'écriture (INSERT, UPDATE, DELETE).
+**Définition :** Le serveur primary est le serveur **principal** qui accepte les opérations d'écriture (INSERT, UPDATE, DELETE).
+
+> 💡 **Terminologie** : la documentation officielle PostgreSQL utilise désormais **primary/standby** (et non master/slave). Les termes "principal" et "secondaire" sont leurs équivalents francophones.
 
 **Caractéristiques :**
 - ✅ Accepte les lectures (SELECT) et les écritures (INSERT, UPDATE, DELETE)  
@@ -124,7 +126,7 @@ Avant de plonger dans la configuration, il est essentiel de comprendre les conce
 
 #### Standby (Serveur Secondaire)
 
-**Définition :** Le serveur standby est un serveur **esclave** qui maintient une copie à jour de la base de données en rejouant les WAL reçus du primary.
+**Définition :** Le serveur standby est un serveur **secondaire** qui maintient une copie à jour de la base de données en rejouant les WAL reçus du primary.
 
 **Caractéristiques :**
 - ✅ Accepte les lectures (SELECT) en mode **Hot Standby**  
@@ -569,9 +571,9 @@ Avant de configurer la réplication physique, assurez-vous que votre infrastruct
 
 **Serveur Primary :**
 - CPU : Selon la charge applicative (4-16+ cores typiques)
-- RAM : 25-40% de la taille de la base de données (pour `shared_buffers`)
-- Disque : SSD recommandé, RAID 10 pour performance et résilience
-- Espace disque WAL : 50-100 GB dédiés à `pg_wal/`
+- RAM : dimensionnée pour permettre `shared_buffers ≈ 25% de la RAM` (idéalement, le "working set" tient en mémoire)
+- Disque : SSD/NVMe recommandé, RAID 10 pour performance et résilience
+- Espace disque WAL : 50-100 GB dédiés à `pg_wal/` (idéalement sur un volume séparé)
 
 **Serveur Standby :**
 - **Recommandation :** Configuration identique ou supérieure au primary
@@ -585,9 +587,10 @@ Avant de configurer la réplication physique, assurez-vous que votre infrastruct
 ### 3. Système d'Exploitation
 
 **Versions identiques recommandées :**
-- Même distribution Linux (ex: Ubuntu 24.04, CentOS 9, Debian 12)
-- Même architecture CPU (x86_64 ou ARM)
-- Même version de PostgreSQL (obligatoire pour la réplication physique)
+- Même distribution Linux (ex : Ubuntu 24.04, Debian 12, Rocky Linux 9, AlmaLinux 9, CentOS Stream 9)
+- Même architecture CPU (x86_64 ou ARM64)
+- **Même endianness** (toujours little-endian sur ces architectures, mais à vérifier pour des plateformes exotiques)
+- **Même version majeure** de PostgreSQL (obligatoire pour la réplication physique)
 
 **Packages requis :**
 - PostgreSQL 18 installé sur tous les serveurs
@@ -793,7 +796,7 @@ PostgreSQL 18 (sortie en septembre 2025) apporte plusieurs améliorations signif
 
 **Configuration :**
 ```ini
-io_method = 'worker'  # Défaut PG 18 : 'sync', 'worker' ou 'io_uring'
+io_method = 'worker'  # Valeurs possibles en PG 18 : 'sync', 'worker' (défaut) ou 'io_uring' (Linux uniquement)
 ```
 
 ### 2. Améliorations de COPY et Marqueur CSV
@@ -823,7 +826,12 @@ io_method = 'worker'  # Défaut PG 18 : 'sync', 'worker' ou 'io_uring'
 
 ### 5. Améliorations d'EXPLAIN avec Buffers Automatiques
 
-**Description :** `EXPLAIN` affiche maintenant automatiquement les statistiques de buffers sans nécessiter l'option explicite `BUFFERS`.
+**Description :** En PostgreSQL 18, `EXPLAIN (ANALYZE)` inclut désormais **automatiquement** les statistiques `BUFFERS` (auparavant il fallait écrire explicitement `EXPLAIN (ANALYZE, BUFFERS)`).
+
+```sql
+-- PG 18 : les buffers s'affichent automatiquement avec ANALYZE
+EXPLAIN (ANALYZE) SELECT * FROM ma_table WHERE id = 123;
+```
 
 **Avantages pour la réplication :**
 - Diagnostic plus facile des problèmes de performance sur les standbys
@@ -897,13 +905,15 @@ pg_upgrade --old-datadir=/old --new-datadir=/new --swap
 host replication replicator 192.168.1.20/32 oauth
 ```
 
-### 12. SCRAM Passthrough avec postgres_fdw et dblink
+### 12. SCRAM Passthrough avec postgres_fdw et dblink (rappel, PG 16+)
 
-**Description :** Transmission transparente de l'authentification SCRAM via Foreign Data Wrappers.
+**Description :** Transmission transparente de l'authentification SCRAM via Foreign Data Wrappers (option `scram_pass_through`, introduite en **PostgreSQL 16**, toujours disponible en PG 18).
 
-**Avantages pour la réplication :**
-- Authentification sécurisée pour les cascades complexes
+**Avantages :**
+- Authentification sécurisée pour les architectures fédérées (FDW vers d'autres bases)
 - Pas besoin de stocker les mots de passe en clair dans les FDW
+
+> ℹ️ Non strictement lié à la réplication physique, mais utile dans les architectures HA qui combinent FDW et réplication.
 
 ---
 
@@ -949,7 +959,7 @@ PostgreSQL et son écosystème fournissent plusieurs outils pour faciliter la ge
 **Patroni**
 - Orchestrateur HA automatique pour PostgreSQL
 - Gère automatiquement les failovers, élection de leader
-- Intégration avec etcd, Consul, Zookeeper
+- Intégration avec etcd, Consul, ZooKeeper
 
 **Repmgr**
 - Gestionnaire de réplication et failover
@@ -1015,10 +1025,11 @@ PostgreSQL et son écosystème fournissent plusieurs outils pour faciliter la ge
 
 ### Blogs et Sites Techniques
 
-- **2ndQuadrant Blog :** [https://www.2ndquadrant.com/en/blog/](https://www.2ndquadrant.com/en/blog/)  
-- **Percona Blog :** [https://www.percona.com/blog/](https://www.percona.com/blog/)  
-- **Crunchy Data Blog :** [https://www.crunchydata.com/blog](https://www.crunchydata.com/blog)  
-- **PostgreSQL Wiki :** [https://wiki.postgresql.org/](https://wiki.postgresql.org/)
+- **EDB Blog (ancien 2ndQuadrant)** : [https://www.enterprisedb.com/blog](https://www.enterprisedb.com/blog)
+- **Percona Blog** : [https://www.percona.com/blog/](https://www.percona.com/blog/)
+- **Crunchy Data Blog** : [https://www.crunchydata.com/blog](https://www.crunchydata.com/blog)
+- **PostgreSQL Wiki** : [https://wiki.postgresql.org/](https://wiki.postgresql.org/)
+- **Planet PostgreSQL** (agrégateur de blogs PG) : [https://planet.postgresql.org/](https://planet.postgresql.org/)
 
 ### Communautés
 

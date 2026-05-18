@@ -465,12 +465,20 @@ zfs mount tank/postgresql
 -- Activer l'extension
 CREATE EXTENSION pgcrypto;
 
+-- ⚠️ Important : `email_chiffre` doit être de type `bytea` (pas TEXT/VARCHAR)
+-- car pgp_sym_encrypt retourne du binaire.
+CREATE TABLE users (
+    id SERIAL PRIMARY KEY,
+    nom TEXT,
+    email_chiffre BYTEA
+);
+
 -- Chiffrer des données
 INSERT INTO users (nom, email_chiffre)  
 VALUES ('Alice', pgp_sym_encrypt('alice@example.com', 'cle_secrete'));  
 
--- Déchiffrer
-SELECT nom, pgp_sym_decrypt(email_chiffre, 'cle_secret') AS email  
+-- Déchiffrer (note : la clé doit être identique à celle utilisée au chiffrement)
+SELECT nom, pgp_sym_decrypt(email_chiffre, 'cle_secrete') AS email  
 FROM users;  
 ```
 

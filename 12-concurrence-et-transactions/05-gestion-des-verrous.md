@@ -64,15 +64,15 @@ Appliqués sur des lignes individuelles. Plus fins, permettent plus de concurren
 
 ### 3. Verrous de page (Page-level locks)
 
-Rarement utilisés directement, gérés en interne.
+Verrous de très courte durée, posés et relâchés par PostgreSQL en interne lors de la lecture/écriture d'une page de buffer partagé. **Non manipulables par l'utilisateur** — vous n'avez ni à les comprendre ni à les configurer.
 
 ### 4. Verrous transactionnels (Transaction-level)
 
-Verrous sur les identifiants de transaction pour MVCC.
+PostgreSQL pose un verrou exclusif **sur son propre XID** pendant toute la durée de la transaction. Ce verrou n'est jamais en conflit, mais il sert de **mécanisme d'attente** : quand T2 attend que T1 libère un verrou de ligne, T2 attend en réalité ce « verrou XID » de T1, qui sera libéré au COMMIT/ROLLBACK de T1. C'est pour cela qu'on voit `ShareLock on transaction NNN` dans les messages de deadlock.
 
 ### 5. Advisory Locks
 
-Verrous applicatifs personnalisés que vous pouvez créer.
+Verrous applicatifs personnalisés que vous pouvez créer. Ignorés par PostgreSQL au niveau intégrité des données : c'est à votre application de les respecter (voir chapitre 12.6).
 
 ---
 
@@ -309,7 +309,7 @@ LOCK TABLE ma_table IN SHARE UPDATE EXCLUSIVE MODE;
 LOCK TABLE ma_table IN SHARE MODE;  
 LOCK TABLE ma_table IN SHARE ROW EXCLUSIVE MODE;  
 LOCK TABLE ma_table IN EXCLUSIVE MODE;  
-LOCK TABLE TABLE ma_table IN ACCESS EXCLUSIVE MODE;  
+LOCK TABLE ma_table IN ACCESS EXCLUSIVE MODE;  
 ```
 
 **Quand utiliser LOCK TABLE** :
@@ -426,11 +426,13 @@ Transaction 2 : détient B, attend A
 
 ### Comment PostgreSQL détecte les deadlocks
 
-PostgreSQL a un **détecteur de deadlocks** qui s'exécute automatiquement :
+PostgreSQL n'a pas de tâche périodique qui scrute en permanence — la détection est **déclenchée à la demande** :
 
-1. **Timeout** : Par défaut, toutes les secondes (paramètre `deadlock_timeout`)  
-2. **Détection** : PostgreSQL analyse le graphe des attentes de verrous  
-3. **Résolution** : Si un cycle est détecté, PostgreSQL **annule** l'une des transactions
+1. **Une transaction attend un verrou** (par exemple, T2 attend que T1 libère une ligne).  
+2. Si l'attente dépasse `deadlock_timeout` (défaut : **1 seconde**), PostgreSQL **construit le graphe des attentes** dans le lock manager.  
+3. **Recherche d'un cycle** : la transaction qui attend depuis trop longtemps est-elle dans une attente circulaire ?  
+4. Si un cycle est trouvé → **DEADLOCK détecté**. La transaction qui a déclenché la détection (celle qui attendait depuis > `deadlock_timeout`) est généralement choisie comme **victime** : elle reçoit l'erreur `deadlock_detected` (SQLSTATE `40P01`) et doit faire `ROLLBACK`. Les autres transactions peuvent alors progresser.  
+5. Si aucun cycle → la transaction continue d'attendre normalement.
 
 **Message d'erreur** :
 
@@ -443,20 +445,28 @@ HINT: See server log for query details.
 
 La transaction annulée reçoit cette erreur et doit faire un **ROLLBACK**.
 
-### Configuration du détecteur
+### Configuration du détecteur et des timeouts associés
+
+Quatre paramètres jouent ensemble pour contrôler la concurrence et éviter les transactions zombies :
 
 ```sql
--- Dans postgresql.conf ou via SET
+-- Dans postgresql.conf ou via SET au niveau session/transaction
 
--- Temps d'attente avant de vérifier les deadlocks (défaut: 1 seconde)
+-- Temps d'attente avant de lancer la DÉTECTION de deadlock (défaut : 1s)
 deadlock_timeout = 1s
 
--- Temps maximum d'attente pour un verrou avant erreur (0 = infini)
-lock_timeout = 30s  -- Exemple: 30 secondes max
+-- Temps maximum d'attente pour OBTENIR un verrou avant erreur (0 = infini, défaut = 0)
+SET lock_timeout = '30s';
 
--- Temps maximum pour une instruction (0 = infini)
-statement_timeout = 60s  -- Exemple: 1 minute max
+-- Temps maximum d'EXÉCUTION d'une instruction (0 = infini, défaut = 0)
+SET statement_timeout = '60s';
+
+-- Tuer automatiquement les sessions "idle in transaction" trop longues
+-- (défaut = 0 = jamais). 5 minutes est une valeur saine en production.
+SET idle_in_transaction_session_timeout = '5min';
 ```
+
+> 💡 **`idle_in_transaction_session_timeout`** est un garde-fou crucial : une transaction qui reste ouverte sans rien faire (par exemple, un client qui a planté entre `BEGIN` et `COMMIT`) **continue de détenir ses verrous et bloque VACUUM** sur les versions mortes plus récentes. Le timeout coupe automatiquement la session et émet un `ROLLBACK`. Plus strict : `idle_session_timeout` (PG 14+) coupe aussi les sessions idle hors transaction.
 
 ---
 
@@ -636,51 +646,68 @@ INSERT INTO transactions ...;
 COMMIT;
 ```
 
-### 5. Utiliser SELECT ... FOR UPDATE NOWAIT
+### 5. Utiliser `FOR UPDATE NOWAIT` ou `SKIP LOCKED`
 
-Au lieu d'attendre indéfiniment, échouer immédiatement si le verrou n'est pas disponible :
+Au lieu d'attendre indéfiniment qu'un verrou se libère, deux options permettent de réagir immédiatement :
+
+#### `NOWAIT` — échec immédiat si la ligne est verrouillée
 
 ```sql
 BEGIN;
 
 SELECT * FROM produits WHERE id = 1 FOR UPDATE NOWAIT;
--- Si la ligne est déjà verrouillée → erreur immédiate
+-- Si la ligne est déjà verrouillée → erreur immédiate (SQLSTATE 55P03,
+-- nom symbolique : lock_not_available)
 -- Pas d'attente → pas de risque de deadlock
 
 COMMIT;
-
--- Gérer l'erreur dans l'application
-EXCEPTION WHEN lock_not_available THEN
-    -- Réessayer plus tard
 ```
 
-**Variante avec timeout** :
+La gestion de l'erreur doit être faite côté client (try/except, etc.) ou dans un bloc PL/pgSQL :
+
+```sql
+DO $$  
+BEGIN  
+    PERFORM 1 FROM produits WHERE id = 1 FOR UPDATE NOWAIT;
+    -- … traitement …
+EXCEPTION
+    WHEN lock_not_available THEN
+        RAISE NOTICE 'Ligne déjà verrouillée, on réessaiera plus tard';
+END $$;
+```
+
+#### `SKIP LOCKED` — sauter les lignes verrouillées plutôt qu'attendre
 
 ```sql
 BEGIN;
 
 SELECT * FROM produits WHERE id = 1 FOR UPDATE SKIP LOCKED;
--- Saute les lignes déjà verrouillées
--- Utile pour des queues de travail
+-- Renvoie 0 ligne si la ligne id=1 est verrouillée par une autre transaction
+-- Pas d'erreur, pas d'attente → idéal pour des queues de travail
+-- où chaque worker prend un job différent
 
 COMMIT;
 ```
 
+> 💡 **Différence clé** : `NOWAIT` lève une erreur si le verrou est indisponible ; `SKIP LOCKED` ignore silencieusement les lignes verrouillées et renvoie ce qu'il a pu verrouiller. Aucun des deux n'est un *timeout* à proprement parler — pour borner l'attente d'un verrou, utilisez plutôt le paramètre `lock_timeout`.
+
 ### 6. Réduire le nombre de verrous
 
 ```sql
--- ❌ MAUVAIS : Verrouiller ligne par ligne dans une boucle
-BEGIN;  
-FOR each_id IN (SELECT id FROM comptes WHERE ...) LOOP  
-    UPDATE comptes SET ... WHERE id = each_id;
-END LOOP;  
-COMMIT;  
+-- ❌ MAUVAIS : Verrouiller ligne par ligne depuis l'applicatif (pseudo-code)
+-- for each_id in select_ids:
+--     BEGIN; UPDATE comptes SET ... WHERE id = each_id; COMMIT;
+-- → N transactions, N rondes réseau, contention répétée
 
--- ✅ BON : Une seule opération SQL
+-- ✅ BON : Une seule opération SQL en lot
 BEGIN;  
-UPDATE comptes SET ... WHERE id IN (SELECT id FROM comptes WHERE ...);  
-COMMIT;  
+UPDATE comptes  
+   SET solde = solde * 1.01
+ WHERE statut = 'actif';
+COMMIT;
 ```
+
+Une seule instruction UPDATE prend ses verrous, les libère ensemble au COMMIT, et évite N allers-retours réseau.
 
 ### 7. Éviter les transactions interactives
 
@@ -777,14 +804,36 @@ JOIN pg_catalog.pg_stat_activity blocking_activity ON blocking_activity.pid = bl
 WHERE NOT blocked_locks.granted;  
 ```
 
-### Fonction PostgreSQL pour voir les blocages (simplifié)
+### Fonction PostgreSQL `pg_blocking_pids()` (forme moderne et concise)
+
+Disponible depuis PG 9.6, `pg_blocking_pids(pid)` retourne directement la liste des PID bloquants. Préférez-la systématiquement à la requête lourde sur `pg_locks` ci-dessus :
 
 ```sql
--- Identifier les PID qui bloquent d'autres transactions
+-- Quels PID bloquent une session spécifique ?
 SELECT pg_blocking_pids(12345);
--- Retourne un tableau des PID qui bloquent le processus 12345
--- Exemple : {12346, 12347}
+-- Résultat : un tableau d'entiers, p. ex. {12346, 12347}
 ```
+
+**Requête de diagnostic recommandée** — toutes les sessions actuellement bloquées et qui les bloque :
+
+```sql
+SELECT
+    a.pid          AS blocked_pid,
+    a.usename      AS blocked_user,
+    a.query        AS blocked_query,
+    b.pid          AS blocking_pid,
+    b.usename      AS blocking_user,
+    b.query        AS blocking_query,
+    a.wait_event_type,
+    a.wait_event,
+    age(now(), a.state_change) AS waited_for
+FROM pg_stat_activity a  
+JOIN pg_stat_activity b  
+  ON b.pid = ANY (pg_blocking_pids(a.pid))
+WHERE cardinality(pg_blocking_pids(a.pid)) > 0;
+```
+
+C'est l'équivalent moderne, lisible, et qui inclut aussi les **soft blocks** (sessions ahead in the wait queue) — ce que la requête manuelle sur `pg_locks` ne capture pas toujours bien.
 
 ### Tuer une transaction bloquante
 
@@ -836,13 +885,33 @@ SELECT pg_advisory_unlock(123);
 -- Essayer d'obtenir le verrou sans attendre
 SELECT pg_try_advisory_lock(123);
 -- Retourne : true (succès) ou false (déjà pris)
+```
 
-IF success THEN
-    -- Faire les opérations
-    SELECT pg_advisory_unlock(123);
-ELSE
-    -- Le verrou est déjà pris, abandonner ou réessayer
-END IF;
+Côté applicatif, on teste la valeur retournée pour décider d'enchaîner ou non :
+
+```python
+# Pseudo-code (psycopg / asyncpg, etc.)
+got_it = cur.execute("SELECT pg_try_advisory_lock(123)").fetchone()[0]  
+if got_it:  
+    # … opérations critiques …
+    cur.execute("SELECT pg_advisory_unlock(123)")
+else:
+    # Verrou déjà pris : abandon, retry plus tard, autre stratégie
+    ...
+```
+
+Ou en PL/pgSQL si vous voulez tout faire côté serveur :
+
+```sql
+DO $$  
+BEGIN  
+    IF pg_try_advisory_lock(123) THEN
+        -- … opérations critiques …
+        PERFORM pg_advisory_unlock(123);
+    ELSE
+        RAISE NOTICE 'Verrou déjà pris, on passe';
+    END IF;
+END $$;
 ```
 
 #### 2. Advisory locks transactionnels
@@ -1012,11 +1081,14 @@ WHERE state = 'idle in transaction'
 
 ```python
 import time  
+import random  
 import psycopg2  
 
 def execute_with_deadlock_retry(conn, operation, max_retries=3):
     """
-    Exécute une opération avec retry en cas de deadlock
+    Retry sur les erreurs transitoires de la classe SQLSTATE 40 :
+    serialization_failure (40001) ET deadlock_detected (40P01).
+    `operation(conn)` doit être idempotente.
     """
     for attempt in range(max_retries):
         try:
@@ -1025,24 +1097,27 @@ def execute_with_deadlock_retry(conn, operation, max_retries=3):
             return True
 
         except psycopg2.extensions.TransactionRollbackError as e:
-            # Deadlock détecté
             conn.rollback()
-
             if attempt == max_retries - 1:
-                raise Exception(f"Deadlock après {max_retries} tentatives") from e
+                raise Exception(
+                    f"Échec après {max_retries} tentatives ({e.pgcode})"
+                ) from e
 
-            # Attente avec backoff exponentiel
-            wait_time = 0.1 * (2 ** attempt)
+            # Backoff exponentiel + jitter, plafonné à 5 s
+            wait_time = min(
+                5.0,
+                (0.1 * (2 ** attempt)) * (1 + random.uniform(0, 0.3))
+            )
             time.sleep(wait_time)
 
-        except Exception as e:
+        except Exception:
             conn.rollback()
             raise
 
 # Utilisation
 def mon_transfert(conn):
     cur = conn.cursor()
-    # Accès dans un ordre cohérent (A puis B)
+    # Accès dans un ordre cohérent (A puis B) pour limiter les deadlocks
     cur.execute("UPDATE comptes SET solde = solde - 100 WHERE id = 'A'")
     cur.execute("UPDATE comptes SET solde = solde + 100 WHERE id = 'B'")
 
@@ -1057,28 +1132,47 @@ execute_with_deadlock_retry(conn, mon_transfert)
 
 **Problème** : Deux clients achètent le dernier article simultanément.
 
-**Solution avec verrous** :
+**Solution 1 — SQL pur** : un seul UPDATE conditionnel atomique. On vérifie côté application le nombre de lignes affectées.
 
 ```sql
 BEGIN;
 
--- Verrouiller la ligne pour vérifier et décrémenter atomiquement
-SELECT stock FROM produits WHERE id = 123 FOR UPDATE;
+UPDATE produits
+   SET stock = stock - 2   -- 2 = quantité demandée
+ WHERE id = 123
+   AND stock >= 2;
+-- Si l'UPDATE renvoie 0 ligne → stock insuffisant → ROLLBACK côté appli
 
--- Vérifier le stock
-IF stock >= quantite_demandee THEN
-    UPDATE produits
-    SET stock = stock - quantite_demandee
-    WHERE id = 123;
-
-    -- Créer la commande
-    INSERT INTO commandes ...;
-ELSE
-    RAISE EXCEPTION 'Stock insuffisant';
-END IF;
+INSERT INTO commandes (produit_id, quantite) VALUES (123, 2);
 
 COMMIT;
 ```
+
+**Solution 2 — PL/pgSQL** avec verrouillage explicite et exception serveur :
+
+```sql
+DO $$  
+DECLARE  
+    stock_actuel INT;
+    quantite_demandee INT := 2;
+BEGIN
+    -- Verrouiller la ligne pour vérifier et décrémenter sans interférence
+    SELECT stock INTO stock_actuel
+      FROM produits
+     WHERE id = 123
+       FOR UPDATE;
+
+    IF stock_actuel >= quantite_demandee THEN
+        UPDATE produits SET stock = stock - quantite_demandee WHERE id = 123;
+        INSERT INTO commandes (produit_id, quantite) VALUES (123, quantite_demandee);
+    ELSE
+        RAISE EXCEPTION 'Stock insuffisant (% disponibles, % demandés)',
+            stock_actuel, quantite_demandee;
+    END IF;
+END $$;
+```
+
+> 💡 La solution 1 est **plus performante** (un seul UPDATE) et suffit dans 95% des cas. La solution 2 illustre `FOR UPDATE` quand on a besoin d'une vraie logique de branchement côté serveur.
 
 ### Cas 2 : Compteur distribué
 
@@ -1113,31 +1207,32 @@ UPDATE stats SET compteur = compteur + 1 WHERE id = 1;
 
 **Problème** : Plusieurs workers doivent traiter des jobs sans conflit.
 
-**Solution avec SKIP LOCKED** :
+**Solution avec `SKIP LOCKED`** : chaque worker prend un job différent sans s'attendre.
 
 ```sql
--- Chaque worker exécute ceci
+-- Chaque worker exécute ceci, idéalement en une seule requête combinant
+-- la sélection et le marquage du job pour éviter une seconde requête
 BEGIN;
 
--- Prendre un job disponible en sautant les verrouillés
-SELECT * FROM jobs  
-WHERE status = 'En attente'  
-ORDER BY priority DESC, created_at ASC  
-LIMIT 1  
-FOR UPDATE SKIP LOCKED;  
-
--- Si un job est trouvé
-IF FOUND THEN
-    -- Le traiter
-    UPDATE jobs SET status = 'En cours' WHERE id = job_id;
-
-    -- [Traitement]
-
-    UPDATE jobs SET status = 'Terminé' WHERE id = job_id;
-END IF;
+UPDATE jobs
+   SET status = 'En cours', started_at = now()
+ WHERE id = (
+       SELECT id FROM jobs
+        WHERE status = 'En attente'
+        ORDER BY priority DESC, created_at ASC
+        LIMIT 1
+        FOR UPDATE SKIP LOCKED
+   )
+RETURNING id;
+-- Si rien n'est renvoyé → aucun job dispo, le worker peut dormir un peu
 
 COMMIT;
+
+-- Puis le worker traite le job, et au bout du traitement :
+UPDATE jobs SET status = 'Terminé', finished_at = now() WHERE id = :job_id;
 ```
+
+> 💡 Le pattern `UPDATE … WHERE id = (SELECT … FOR UPDATE SKIP LOCKED)` est l'idiome de référence pour une file de jobs PostgreSQL : pas de doublon, pas de contention entre workers, et tout tient en une seule requête.
 
 ---
 

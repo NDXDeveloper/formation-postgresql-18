@@ -118,16 +118,29 @@ PostgreSQL définit de nombreux types d'exceptions. Voici les plus courantes :
 
 | Nom de l'exception | Signification | Exemple |
 |-------------------|---------------|---------|
-| `no_data_found` | Aucune ligne retournée | SELECT INTO sans résultat |
-| `too_many_rows` | Trop de lignes retournées | SELECT INTO avec plusieurs résultats |
+| `no_data_found` | Aucune ligne retournée | `SELECT INTO STRICT` sans résultat |
+| `too_many_rows` | Trop de lignes retournées | `SELECT INTO STRICT` avec plusieurs résultats |
 | `undefined_table` | Table n'existe pas | SELECT sur table inexistante |
 | `undefined_column` | Colonne n'existe pas | SELECT colonne_inexistante |
+
+⚠️ **Important :** `no_data_found` et `too_many_rows` ne sont levées **que** par `SELECT INTO STRICT`. Un `SELECT INTO` classique (sans `STRICT`) :
+- ne lève **pas** d'exception si 0 ligne : la variable reçoit `NULL`
+- ne lève **pas** d'exception si plusieurs lignes : la variable reçoit la **première** (l'ordre dépend de la requête, non déterministe sans `ORDER BY`)
+
+C'est une source fréquente de bugs silencieux. Utilisez `STRICT` pour la sécurité, ou un `IF NOT FOUND THEN` après le SELECT.
 
 ### 2.4. Exception générique
 
 | Nom de l'exception | Signification |
 |-------------------|---------------|
 | `OTHERS` | Toutes les autres exceptions non spécifiées |
+
+⚠️ **Limites importantes de `WHEN OTHERS` :**
+- **Ne capture pas** `QUERY_CANCELED` (annulation par l'utilisateur ou `statement_timeout`).
+- **Ne capture pas** `ASSERT_FAILURE` (les assertions échouent quoi qu'il arrive).
+- Ne capture pas non plus les erreurs de niveau `FATAL` ou `PANIC` (qui terminent la connexion).
+
+Ces exclusions sont **voulues** : elles garantissent que l'utilisateur peut toujours interrompre une requête (Ctrl-C) et que les assertions ne sont pas masquées par un trigger trop tolérant. Si vous voulez capturer explicitement `query_canceled`, utilisez `WHEN query_canceled`.
 
 ---
 
@@ -416,13 +429,22 @@ $$;
 RAISE niveau 'message';
 ```
 
-**Niveaux disponibles** (du moins au plus grave) :
-- `DEBUG` : Information de debug (invisible par défaut)  
-- `LOG` : Log dans le fichier de logs  
-- `INFO` : Information  
-- `NOTICE` : Notification (visible par défaut)  
-- `WARNING` : Avertissement  
-- `EXCEPTION` : Erreur qui arrête l'exécution
+**Niveaux disponibles :**
+
+| Niveau | Destination | Filtré par | Comportement |
+|--------|-------------|------------|--------------|
+| `DEBUG` | Logs serveur | `log_min_messages` | Invisible par défaut |
+| `LOG` | Logs serveur | `log_min_messages` | Inscrit dans le journal serveur |
+| `INFO` | Client | **Toujours envoyé au client** | Non filtré par `client_min_messages` |
+| `NOTICE` | Client + logs | `client_min_messages` | Affiché par défaut |
+| `WARNING` | Client + logs | `client_min_messages` | Affiché en jaune dans psql |
+| `EXCEPTION` | Stoppe l'exécution | — | Arrête la transaction (ou la sous-transaction si capturée) |
+
+⚠️ **Subtilités importantes :**
+- `INFO` est **particulier** : il est **toujours** envoyé au client, même si `client_min_messages` est plus haut. Il ne passe pas dans les logs serveur.
+- `LOG` va dans les **logs serveur** mais pas (par défaut) au client.
+- `NOTICE` est filtré par `client_min_messages` (par défaut `NOTICE` → affiché).
+- L'ordre interne PostgreSQL (par sévérité croissante) est : `DEBUG5 < DEBUG4 < DEBUG3 < DEBUG2 < DEBUG1 < LOG < NOTICE < WARNING < ERROR (= EXCEPTION) < FATAL < PANIC`. `INFO` est en dehors de cette hiérarchie.
 
 ### 7.2. Exemples de RAISE
 
@@ -487,16 +509,25 @@ AS $$
 DECLARE  
     stock_actuel INTEGER;
 BEGIN
-    SELECT stock INTO stock_actuel FROM produits WHERE id = produit_id;
+    -- STRICT garantit qu'une exception est levée si le produit n'existe pas
+    SELECT stock INTO STRICT stock_actuel
+    FROM produits WHERE id = produit_id;
 
     IF stock_actuel < quantite THEN
-        RAISE EXCEPTION 'Stock insuffisant pour produit %: demandé %, disponible %'
-            USING ERRCODE = 'P0001',  -- Code personnalisé
+        RAISE EXCEPTION 'Stock insuffisant pour produit % : demandé %, disponible %',
+            produit_id, quantite, stock_actuel
+            USING ERRCODE = 'P0001',
                   HINT = 'Réduisez la quantité ou attendez un réapprovisionnement';
     END IF;
+EXCEPTION
+    WHEN no_data_found THEN
+        RAISE EXCEPTION 'Produit % introuvable', produit_id
+            USING HINT = 'Vérifiez l''ID du produit dans le catalogue';
 END;
 $$;
 ```
+
+⚠️ **Piège évité ici :** sans `STRICT`, `SELECT INTO` met `NULL` dans `stock_actuel` si le produit n'existe pas. Or `NULL < quantite` retourne **NULL** (pas TRUE ni FALSE), donc le `IF` ne se déclenche pas. La fonction retourne silencieusement sans lever d'erreur, ce qui est un bug subtil.
 
 ---
 
@@ -515,9 +546,17 @@ LANGUAGE plpgsql
 AS $$  
 DECLARE  
     solde_source NUMERIC;
+    nb_lignes INTEGER;
 BEGIN
-    -- Vérifier le solde
-    SELECT solde INTO solde_source FROM comptes WHERE id = compte_source;
+    -- ⚠️ Validation préalable : montant positif
+    IF montant <= 0 THEN
+        RAISE EXCEPTION 'Le montant doit être strictement positif (reçu : %)', montant;
+    END IF;
+
+    -- Vérifier le solde — STRICT garantit que le compte existe
+    SELECT solde INTO STRICT solde_source
+    FROM comptes WHERE id = compte_source
+    FOR UPDATE;  -- Verrou pour éviter les modifications concurrentes
 
     IF solde_source < montant THEN
         RAISE EXCEPTION 'Solde insuffisant : % disponible, % demandé',
@@ -527,8 +566,12 @@ BEGIN
     -- Débiter le compte source
     UPDATE comptes SET solde = solde - montant WHERE id = compte_source;
 
-    -- Créditer le compte destination
+    -- Créditer le compte destination, vérifier que la cible existe
     UPDATE comptes SET solde = solde + montant WHERE id = compte_dest;
+    GET DIAGNOSTICS nb_lignes = ROW_COUNT;
+    IF nb_lignes = 0 THEN
+        RAISE EXCEPTION 'Compte destination % introuvable', compte_dest;
+    END IF;
 
     -- Logger la transaction
     INSERT INTO historique_transferts (source, destination, montant, date)
@@ -538,56 +581,72 @@ BEGIN
                   montant, compte_source, compte_dest);
 
 EXCEPTION
-    WHEN OTHERS THEN
-        RAISE NOTICE 'Échec du transfert : %', SQLERRM;
-        -- La transaction est automatiquement annulée
-        RETURN 'Transfert échoué : ' || SQLERRM;
+    WHEN no_data_found THEN
+        RAISE EXCEPTION 'Compte source % introuvable', compte_source;
+    -- Les autres exceptions remontent naturellement et annulent la transaction.
 END;
 $$;
 ```
 
-### 8.2. Retry logic (réessayer en cas d'erreur)
+⚠️ **Trois améliorations clés par rapport à un transfert naïf :**
+- `SELECT ... FOR UPDATE` verrouille la ligne du compte source pour éviter une race condition (double débit).
+- `STRICT` garantit la détection du compte source inexistant.
+- `GET DIAGNOSTICS ROW_COUNT` vérifie que le compte destination a bien été crédité.
+- On laisse remonter les autres exceptions plutôt que de masquer l'erreur derrière un `RETURN 'Transfert échoué'` — l'appelant doit savoir que le transfert n'a pas eu lieu.
+
+### 8.2. Retry logic (réessayer en cas d'erreur transitoire)
+
+Le pattern « retry » est utile pour les **erreurs transitoires** : `deadlock_detected`, `serialization_failure`, ou erreurs de concurrence. Pour les erreurs métier (doublon, contrainte), un retry n'a en général pas de sens — il faut traiter le problème.
 
 ```sql
-CREATE OR REPLACE FUNCTION inserer_avec_retry(valeur TEXT)  
+-- Retry pour erreurs de sérialisation (transactions concurrentes)
+CREATE OR REPLACE FUNCTION operation_avec_retry()  
 RETURNS TEXT  
 LANGUAGE plpgsql  
 AS $$  
 DECLARE  
     tentatives INTEGER := 0;
     max_tentatives INTEGER := 3;
-    success BOOLEAN := FALSE;
 BEGIN
-    WHILE tentatives < max_tentatives AND NOT success LOOP
+    LOOP
+        tentatives := tentatives + 1;
         BEGIN
-            tentatives := tentatives + 1;
+            -- Opération qui peut entrer en conflit avec d'autres sessions
+            UPDATE compte SET solde = solde - 100 WHERE id = 1;
+            INSERT INTO journal (operation) VALUES ('debit');
 
-            -- Tenter l'insertion
-            INSERT INTO ma_table (data) VALUES (valeur);
-            success := TRUE;
-
-            RAISE NOTICE 'Insertion réussie à la tentative %', tentatives;
+            -- Si on arrive ici, c'est un succès
+            RETURN format('Succès à la tentative %s', tentatives);
 
         EXCEPTION
-            WHEN unique_violation THEN
-                RAISE NOTICE 'Tentative % échouée (doublon), réessai...', tentatives;
-                -- Modifier la valeur pour éviter le doublon
-                valeur := valeur || '_' || tentatives;
+            WHEN serialization_failure OR deadlock_detected THEN
+                IF tentatives >= max_tentatives THEN
+                    RAISE EXCEPTION 'Échec après % tentatives : %', tentatives, SQLERRM;
+                END IF;
 
-            WHEN OTHERS THEN
-                RAISE NOTICE 'Erreur inattendue : %', SQLERRM;
-                EXIT;  -- Sortir de la boucle
+                -- Backoff exponentiel : attendre 2^tentatives × 50ms
+                PERFORM pg_sleep(0.05 * (2 ^ tentatives));
+                RAISE NOTICE 'Conflit détecté (%), retry %/%',
+                  SQLERRM, tentatives, max_tentatives;
+                -- La boucle continue, la sous-transaction est rollbackée
         END;
     END LOOP;
-
-    IF success THEN
-        RETURN 'Succès après ' || tentatives || ' tentative(s)';
-    ELSE
-        RETURN 'Échec après ' || max_tentatives || ' tentatives';
-    END IF;
 END;
 $$;
 ```
+
+⚠️ **Limite importante :** ce pattern ne fonctionne que pour les **sous-transactions** (blocs `BEGIN...EXCEPTION...END` à l'intérieur d'une fonction). Pour un vrai retry de **transaction complète** (avec niveau d'isolation `SERIALIZABLE`), il faut le faire **côté application**, car PL/pgSQL ne peut pas relancer une transaction après son ROLLBACK.
+
+**Exemple anti-pattern (à ne pas suivre) : retry de doublon en modifiant la valeur**
+
+```sql
+-- ❌ Ce n'est pas un vrai retry : on change les données pour éviter l'erreur
+EXCEPTION
+    WHEN unique_violation THEN
+        valeur := valeur || '_' || tentatives;  -- Modification cachée des données
+```
+
+Cela transforme silencieusement les données et masque le problème métier. Si un doublon est détecté, la bonne réponse est généralement de **lever l'erreur** vers l'appelant pour qu'il décide.
 
 ### 8.3. Validation de données avec messages détaillés
 
@@ -650,14 +709,15 @@ BEGIN
 
     RETURN commande_id;
 
-EXCEPTION
-    WHEN OTHERS THEN
-        GET STACKED DIAGNOSTICS v_erreur = MESSAGE_TEXT;
-        RAISE NOTICE 'Échec création commande : %', v_erreur;
-        RETURN NULL;
+-- ⚠️ Pas de bloc EXCEPTION WHEN OTHERS RETURN NULL ici : on laisse remonter
+-- les erreurs métier (déjà levées proprement avec RAISE EXCEPTION ci-dessus)
+-- ainsi que toute erreur imprévue. L'application doit savoir si la commande
+-- a échoué — un RETURN NULL silencieux serait dangereux.
 END;
 $$;
 ```
+
+💡 **À propos du WHEN OTHERS final :** on pourrait ajouter un bloc `EXCEPTION WHEN OTHERS THEN ... RAISE;` pour logger toutes les erreurs (par exemple dans une table d'audit) **avant** de relancer. Ne JAMAIS faire `RETURN NULL` ou avaler silencieusement dans une fonction critique.
 
 ---
 
@@ -838,7 +898,17 @@ SELECT traiter_donnees(-5);
 -- ❌ ERREUR : La valeur doit être positive
 ```
 
-**Note** : `ASSERT` est désactivable avec `SET client_min_messages TO WARNING;` pour la production.
+**Note** : `ASSERT` est désactivable globalement via le paramètre GUC **`plpgsql.check_asserts`** (à `on` par défaut). Pour désactiver les assertions en production :
+
+```sql
+-- Au niveau session
+SET plpgsql.check_asserts = off;
+
+-- Ou de façon permanente dans postgresql.conf
+-- plpgsql.check_asserts = off
+```
+
+⚠️ `client_min_messages` n'affecte **pas** les ASSERT — il ne fait que filtrer l'affichage des messages côté client, pas l'exécution des assertions.
 
 ---
 
@@ -1059,7 +1129,23 @@ $$;
 
 ### 13.1. Créer ses propres codes d'erreur
 
-PostgreSQL réserve les codes commençant par `[0-9A-E]`. Vous pouvez utiliser `[F-Z]` :
+**Convention des codes SQLSTATE :** un code SQLSTATE fait 5 caractères (classe sur 2 + sous-classe sur 3).
+
+PostgreSQL et le standard SQL réservent de nombreuses classes :
+- `00` = succès
+- `01` = warning
+- `02` = no data
+- `03` à `0Z` = classes SQL standard et extensions
+- `20` à `9Z` = diverses classes d'erreurs PostgreSQL
+- `P0` = classe **PL/pgSQL Error** (codes `P0001` à `P0004` déjà définis par PG)
+- `XX` = erreur interne
+
+**Règle pratique pour les codes utilisateur :**
+- Le code `P0001` (`raise_exception`) est le code par défaut de `RAISE EXCEPTION` sans `ERRCODE`. Utilisable mais peu spécifique.
+- Pour des codes personnalisés stables, la documentation officielle recommande de choisir une classe non utilisée par PostgreSQL : on évite les classes commençant par un chiffre ou par les lettres `A` à `E` (et `H`, `I`, `K`, `M`, etc. déjà prises). Les classes commençant par `U`, `Y`, `Z` sont généralement libres.
+- En pratique, beaucoup d'applications utilisent simplement `P0001`, `P0002`... ou des codes personnalisés commençant par `U0` (exemple : `U0001` pour « montant négatif »).
+
+⚠️ Toujours **vérifier** la liste des codes réservés dans la doc officielle (`errcodes.txt` du code source PostgreSQL) avant de choisir une classe.
 
 ```sql
 CREATE OR REPLACE FUNCTION valider_commande(montant NUMERIC)  
@@ -1069,12 +1155,12 @@ AS $$
 BEGIN  
     IF montant < 0 THEN
         RAISE EXCEPTION 'Montant négatif interdit'
-            USING ERRCODE = 'P0001';  -- Code personnalisé
+            USING ERRCODE = 'P0001';  -- Code générique raise_exception
     END IF;
 
     IF montant > 100000 THEN
         RAISE EXCEPTION 'Montant trop élevé : limite de 100000'
-            USING ERRCODE = 'P0002',
+            USING ERRCODE = 'P0002',  -- Distinct pour permettre un WHEN spécifique
                   HINT = 'Divisez en plusieurs commandes';
     END IF;
 
@@ -1095,10 +1181,22 @@ EXCEPTION
     WHEN SQLSTATE 'P0002' THEN
         RETURN 'Montant trop élevé';
     WHEN OTHERS THEN
-        RETURN 'Erreur inattendue';
+        -- Toujours relancer ou logger les erreurs imprévues
+        RAISE NOTICE 'Erreur inattendue : % (%)', SQLERRM, SQLSTATE;
+        RAISE;
 END;
 $$;
 ```
+
+**Lien avec les WHEN nommés :** PostgreSQL associe certains noms d'exceptions à des codes SQLSTATE précis. On peut donc indifféremment écrire :
+
+```sql
+WHEN division_by_zero THEN ...
+-- ou bien
+WHEN SQLSTATE '22012' THEN ...
+```
+
+La forme nommée est plus lisible ; la forme `SQLSTATE` est obligatoire pour les codes personnalisés.
 
 ---
 

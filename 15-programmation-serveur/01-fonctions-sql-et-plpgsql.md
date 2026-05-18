@@ -98,7 +98,39 @@ SELECT * FROM clients_par_ville('Paris');
 - ✅ **Inline expansion** : PostgreSQL peut "intégrer" la fonction dans la requête parente  
 - ✅ **Sécurité** : Moins de risques d'erreurs logiques complexes
 
-### 1.8. Limites des fonctions SQL
+### 1.8. Syntaxe moderne `BEGIN ATOMIC` (PostgreSQL 14+)
+
+Depuis PostgreSQL 14, le standard SQL fournit une syntaxe alternative pour le corps des fonctions SQL : **`BEGIN ATOMIC ... END`** au lieu de la chaîne `AS $$ ... $$`.
+
+```sql
+-- ✅ Syntaxe moderne (PG 14+) : BEGIN ATOMIC
+CREATE FUNCTION calculer_prix_ttc(prix_ht NUMERIC, taux_tva NUMERIC)  
+RETURNS NUMERIC  
+LANGUAGE SQL  
+BEGIN ATOMIC  
+    SELECT prix_ht * (1 + taux_tva / 100);
+END;
+
+-- 🔄 Syntaxe historique (toujours valide)
+CREATE FUNCTION calculer_prix_ttc(prix_ht NUMERIC, taux_tva NUMERIC)  
+RETURNS NUMERIC  
+LANGUAGE SQL  
+AS $$  
+    SELECT prix_ht * (1 + taux_tva / 100);
+$$;
+```
+
+**Avantages de `BEGIN ATOMIC`** :
+- ✅ **Validation à la création** : le corps est analysé immédiatement (vs à la première exécution pour `AS $$ ... $$`). Une faute de frappe est détectée tout de suite.  
+- ✅ **Suivi des dépendances** : PostgreSQL connaît les objets référencés (tables, colonnes, fonctions). `DROP TABLE` sur une table utilisée par la fonction sera bloqué — sécurité renforcée.  
+- ✅ **Pas de chaîne** : le corps n'est plus une chaîne opaque, donc pas de problème d'échappement.
+
+**Limites** :
+- ⚠️ Disponible uniquement pour `LANGUAGE SQL` (pas PL/pgSQL).  
+- ⚠️ Le corps est figé à la création : si on `DROP` puis `RECREATE` une table référencée, il faut recréer la fonction.  
+- ⚠️ Pour les fonctions à plusieurs instructions, séparer par `;` (et non par requête multiple comme dans une chaîne).
+
+### 1.9. Limites des fonctions SQL
 
 - ❌ **Pas de logique conditionnelle** : Impossible d'utiliser IF, CASE complexes, LOOP, etc.  
 - ❌ **Pas de gestion d'erreurs** : Pas de bloc EXCEPTION pour capturer les erreurs  
@@ -330,25 +362,29 @@ DECLARE
     commande_id INTEGER;
     credit_client NUMERIC;
     montant_total NUMERIC := 0;
+    montant_ligne NUMERIC;
     i INTEGER;
 BEGIN
-    -- Vérification du client
-    SELECT credit_disponible INTO credit_client
+    -- Vérification du client : STRICT garantit l'erreur si introuvable
+    SELECT credit_disponible INTO STRICT credit_client
     FROM clients WHERE id = client_id;
 
-    IF credit_client IS NULL THEN
-        RAISE EXCEPTION 'Client inexistant';
-    END IF;
+    -- Calcul du montant total en une seule requête agrégée (plus efficace)
+    SELECT SUM(p.prix * q.quantite)
+      INTO montant_total
+      FROM unnest(produits, quantites) AS q(produit_id, quantite)
+      JOIN produits p ON p.id = q.produit_id;
 
-    -- Calcul du montant total
-    FOR i IN 1..array_length(produits, 1) LOOP
-        SELECT montant_total + (prix * quantites[i]) INTO montant_total
-        FROM produits WHERE id = produits[i];
-    END LOOP;
+    -- Si l'unnest des tableaux ne correspond pas à tous les produits, erreur
+    IF montant_total IS NULL THEN
+        RAISE EXCEPTION 'Au moins un produit du panier est introuvable';
+    END IF;
 
     -- Vérification du crédit
     IF montant_total > credit_client THEN
-        RAISE EXCEPTION 'Crédit insuffisant';
+        RAISE EXCEPTION 'Crédit insuffisant : montant % > crédit %',
+            montant_total, credit_client
+            USING ERRCODE = 'check_violation';
     END IF;
 
     -- Création de la commande
@@ -358,12 +394,18 @@ BEGIN
 
     RETURN commande_id;
 EXCEPTION
-    WHEN OTHERS THEN
-        RAISE NOTICE 'Erreur lors de la création : %', SQLERRM;
-        RETURN NULL;
+    WHEN no_data_found THEN
+        RAISE EXCEPTION 'Client % introuvable', client_id;
+    -- Les autres exceptions remontent naturellement (pas de WHEN OTHERS qui les masquerait)
 END;
 $$;
 ```
+
+**Améliorations par rapport à un naïf** :
+- `SELECT INTO STRICT` lève `no_data_found` si le client n'existe pas (vs `NULL` silencieux).
+- Capture explicite de `no_data_found` avec message clair.
+- Pas de `WHEN OTHERS RETURN NULL` qui masquerait les vraies erreurs (l'application doit savoir si la commande a échoué).
+- Une seule requête agrégée au lieu d'une boucle de N requêtes : plus rapide et atomique.
 
 ✅ **Gestion d'erreurs nécessaire** : Besoin de capturer et traiter les exceptions
 
@@ -610,17 +652,21 @@ CREATE FUNCTION f() RETURNS INTEGER LANGUAGE SQL AS $$
     SELECT 42;  -- ✅ Correct
 $$;
 
--- En PL/pgSQL : assignation avec :=
+-- En PL/pgSQL : assignation avec := (ou = qui est aussi accepté)
 CREATE FUNCTION f() RETURNS INTEGER LANGUAGE plpgsql AS $$  
 DECLARE  
     x INTEGER;
 BEGIN
-    x := 42;  -- ✅ Correct
-    x = 42;   -- ❌ Erreur : = est pour la comparaison !
+    x := 42;  -- ✅ Correct (syntaxe PL/SQL standard)
+    x = 42;   -- ✅ Aussi correct (PostgreSQL accepte = comme alias)
     RETURN x;
 END;
 $$;
 ```
+
+> ℹ️ **Précision** : la documentation PostgreSQL indique que **`=` peut être utilisé à la place de `:=`** pour l'assignation en PL/pgSQL. Néanmoins, on recommande **`:=`** par convention pour :  
+> - **Éviter toute ambiguïté** avec la comparaison `=` qu'on retrouve partout en SQL ;  
+> - **Respecter la convention PL/SQL standard** (compatible Oracle, plus lisible).
 
 ---
 

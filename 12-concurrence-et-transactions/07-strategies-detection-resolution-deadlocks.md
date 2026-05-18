@@ -53,7 +53,7 @@ Un deadlock nécessite **quatre conditions simultanées** (théorème de Coffman
 
 ### Comment PostgreSQL détecte les deadlocks
 
-PostgreSQL utilise un **détecteur de deadlocks** qui fonctionne périodiquement :
+PostgreSQL utilise un **détecteur de deadlocks** déclenché **à la demande** (et non pas par scrutation périodique) : la vérification n'a lieu **que** quand une transaction attend trop longtemps un verrou.
 
 #### 1. Le paramètre deadlock_timeout
 
@@ -64,13 +64,14 @@ SHOW deadlock_timeout;
 ```
 
 **Fonctionnement** :
-- Lorsqu'une transaction attend un verrou, PostgreSQL démarre un timer
-- Si le verrou n'est **pas obtenu** après `deadlock_timeout` millisecondes, PostgreSQL lance la détection
-- Le détecteur analyse le **graphe des dépendances** de verrous
+- Quand une transaction commence à **attendre un verrou**, PostgreSQL démarre un timer pour cette attente.
+- Si le verrou n'est toujours pas obtenu au bout de `deadlock_timeout` millisecondes, la transaction qui attend déclenche **elle-même** la procédure de détection.
+- La détection construit le **graphe des dépendances** des verrous et y cherche un cycle.
+- Si un cycle est trouvé, la transaction qui a déclenché la détection est généralement choisie comme **victime** (erreur `deadlock_detected`, SQLSTATE `40P01`).
 
 **Pourquoi attendre 1 seconde ?**
 
-La détection de deadlocks est **coûteuse** (analyse de graphe). PostgreSQL suppose que la plupart des attentes se résolvent rapidement. Attendre 1 seconde évite de vérifier inutilement.
+La construction du graphe et la recherche de cycle nécessitent de prendre un verrou exclusif sur le lock manager — c'est **coûteux**. PostgreSQL suppose que la majorité des attentes se résolvent en moins d'1 seconde et évite ainsi de vérifier à chaque toute petite contention.
 
 #### 2. Configuration du deadlock_timeout
 
@@ -210,22 +211,31 @@ COMMIT;
 -- Pas de deadlock ! Transaction B attend simplement son tour
 ```
 
-#### Pattern recommandé : Trier les IDs
+#### Pattern recommandé : Verrouiller dans un ordre trié
+
+> ⚠️ **Attention** : contrairement à MySQL, **PostgreSQL n'accepte pas `ORDER BY` directement dans un `UPDATE`**. L'ordre dans lequel les lignes sont modifiées par un seul `UPDATE` n'est pas garanti. Pour imposer un ordre d'acquisition des verrous, il faut **d'abord verrouiller** les lignes dans le bon ordre avec un `SELECT … FOR UPDATE ORDER BY`, puis émettre l'`UPDATE`.
 
 ```sql
--- ❌ MAUVAIS : Ordre imprévisible
-BEGIN;  
-UPDATE produits SET stock = stock - 1 WHERE id IN (42, 10, 35);  
-COMMIT;  
+-- ❌ MAUVAIS : ORDER BY dans UPDATE → erreur de syntaxe en PostgreSQL
+-- UPDATE produits SET stock = stock - 1 WHERE id IN (42, 10, 35) ORDER BY id;
 
--- ✅ BON : Trier les IDs avant de verrouiller
+-- ✅ BON : verrouiller dans un ordre trié, puis modifier
 BEGIN;
--- Trier par ID pour garantir un ordre cohérent
-UPDATE produits SET stock = stock - 1  
-WHERE id IN (42, 10, 35)  
-ORDER BY id;  -- Ordre : 10, 35, 42  
-COMMIT;  
+
+-- 1) Acquérir les verrous dans un ordre déterministe (ici : 10, 35, 42)
+SELECT id
+  FROM produits
+ WHERE id IN (42, 10, 35)
+ ORDER BY id
+   FOR UPDATE;
+
+-- 2) Une fois tous les verrous obtenus, on peut modifier en toute sécurité
+UPDATE produits SET stock = stock - 1 WHERE id IN (42, 10, 35);
+
+COMMIT;
 ```
+
+Toutes les transactions qui suivent ce schéma acquièrent les verrous dans le même ordre (ID croissant) → pas de cycle, pas de deadlock.
 
 #### Avec SELECT FOR UPDATE
 
@@ -437,28 +447,41 @@ COMMIT;
 
 #### Pattern recommandé : Optimistic Locking
 
+L'idée : on lit sans verrou (avec un numéro de version), l'utilisateur prend son temps, puis au moment de sauver on tente l'UPDATE avec la version comme « clé d'arbitrage ». Si quelqu'un a modifié entre-temps, le `WHERE` ne matche aucune ligne et **côté application** on détecte qu'il faut prévenir l'utilisateur du conflit.
+
 ```sql
--- 1. Lire sans verrouiller (avec numéro de version)
+-- 1. Lecture sans verrou (avec version)
 SELECT id, montant, version FROM commandes WHERE id = 123;
 -- Résultat : montant=100, version=5
 
--- [Utilisateur modifie dans l'interface pendant 5 minutes]
+-- [Utilisateur modifie dans l'interface pendant 5 minutes — pas de transaction]
 
--- 2. Au moment de sauvegarder, vérifier la version
+-- 2. Au moment de sauvegarder : UPDATE conditionnel sur la version
 BEGIN;
 
-UPDATE commandes  
-SET montant = 150, version = version + 1  
-WHERE id = 123 AND version = 5;  -- Vérifier que version n'a pas changé  
-
--- Si affected_rows = 0 → quelqu'un d'autre a modifié
-IF NOT FOUND THEN
-    ROLLBACK;
-    RAISE EXCEPTION 'La commande a été modifiée par quelqu''un d''autre';
-END IF;
+UPDATE commandes
+   SET montant = 150, version = version + 1
+ WHERE id = 123 AND version = 5;  -- version doit toujours être 5
 
 COMMIT;
 ```
+
+Côté application :
+
+```python
+# Pseudo-code (psycopg)
+rows_updated = cur.execute(
+    "UPDATE commandes SET montant = %s, version = version + 1 "
+    "WHERE id = %s AND version = %s",
+    (150, 123, 5)
+).rowcount
+
+if rows_updated == 0:
+    # Quelqu'un a modifié la commande pendant que l'utilisateur réfléchissait
+    raise StaleObjectError("La commande a été modifiée par quelqu'un d'autre")
+```
+
+Ou, si vous voulez tout faire côté serveur, encapsulez dans une fonction PL/pgSQL avec `GET DIAGNOSTICS row_count = ROW_COUNT;` puis `RAISE EXCEPTION` si besoin.
 
 ### 6. Réduire la granularité des verrous ⭐
 
@@ -494,46 +517,54 @@ COMMIT;
 ```sql
 BEGIN;
 
--- Essayer d'obtenir le verrou, échouer immédiatement si occupé
+-- Si la ligne id=1 est déjà verrouillée par une autre transaction,
+-- échec immédiat avec SQLSTATE 55P03 (lock_not_available) — pas d'attente.
 SELECT * FROM produits WHERE id = 1 FOR UPDATE NOWAIT;
--- Si la ligne est déjà verrouillée → ERROR immédiate (pas d'attente)
 
--- Traiter l'erreur dans l'application
-EXCEPTION
-    WHEN lock_not_available THEN
-        -- Réessayer plus tard ou abandonner
-        RAISE NOTICE 'Ressource occupée';
-        ROLLBACK;
+UPDATE produits SET stock = stock - 1 WHERE id = 1;
 
 COMMIT;
+```
+
+L'erreur `lock_not_available` doit être interceptée **côté application** (try/except, etc.) ou dans un bloc PL/pgSQL :
+
+```sql
+DO $$  
+BEGIN  
+    PERFORM 1 FROM produits WHERE id = 1 FOR UPDATE NOWAIT;
+    -- … traitement protégé par le verrou …
+EXCEPTION
+    WHEN lock_not_available THEN
+        RAISE NOTICE 'Ressource occupée — on réessaiera plus tard';
+END $$;
 ```
 
 **Avantage** : Pas de risque de deadlock (pas d'attente).
 
 #### FOR UPDATE SKIP LOCKED
 
+Pour des **queues de travail** où chaque worker doit prendre un job différent, l'idiome recommandé est de combiner le SELECT (avec SKIP LOCKED) et l'UPDATE en une seule requête :
+
 ```sql
--- Pour des queues de travail
 BEGIN;
 
--- Prendre la prochaine tâche disponible en sautant les verrouillées
-SELECT * FROM jobs  
-WHERE status = 'pending'  
-ORDER BY priority DESC, created_at ASC  
-LIMIT 1  
-FOR UPDATE SKIP LOCKED;  
-
--- Si aucune tâche disponible (toutes verrouillées) → résultat vide
-
-IF FOUND THEN
-    -- Traiter la tâche
-    UPDATE jobs SET status = 'processing' WHERE id = ...;
-END IF;
+UPDATE jobs
+   SET status = 'processing', started_at = now()
+ WHERE id = (
+       SELECT id FROM jobs
+        WHERE status = 'pending'
+        ORDER BY priority DESC, created_at ASC
+        LIMIT 1
+        FOR UPDATE SKIP LOCKED
+   )
+RETURNING id;
+-- Si la requête renvoie 0 ligne → aucun job disponible
+-- (toute la file est soit vide, soit prise par d'autres workers)
 
 COMMIT;
 ```
 
-**Cas d'usage parfait** : Workers multiples qui traitent des jobs en parallèle.
+**Cas d'usage parfait** : workers multiples qui se partagent une file de jobs en parallèle, sans qu'aucun worker ne soit jamais bloqué par un autre.
 
 ---
 
@@ -716,39 +747,42 @@ SELECT COUNT(*) AS waiting_locks FROM pg_locks WHERE NOT granted;
 
 ```python
 import time  
+import random  
 import psycopg2  
 from psycopg2.extensions import TransactionRollbackError  
 
-def execute_with_deadlock_retry(conn, operation, max_retries=5):
+def execute_with_retry(conn, operation, max_retries=5):
     """
-    Exécute une opération avec retry automatique en cas de deadlock
+    Exécute une opération avec retry automatique sur les erreurs transitoires
+    de concurrence : deadlock (SQLSTATE 40P01) ou serialization_failure (40001).
+    TransactionRollbackError est la classe parente qui couvre toute la classe 40.
     """
     for attempt in range(max_retries):
         try:
-            # Tenter l'opération
             cursor = conn.cursor()
             operation(cursor)
             conn.commit()
-            return True  # Succès
+            return True
 
         except TransactionRollbackError as e:
-            # Deadlock détecté
+            # Erreur de concurrence (40001 / 40P01) → on retente
             conn.rollback()
-
-            # Logger
-            print(f"Deadlock détecté (tentative {attempt + 1}/{max_retries})")
+            print(
+                f"Conflit {e.pgcode} (tentative {attempt + 1}/{max_retries})"
+            )
 
             if attempt == max_retries - 1:
-                # Dernière tentative échouée
                 raise Exception(f"Échec après {max_retries} tentatives") from e
 
-            # Backoff exponentiel avec jitter
-            wait_time = (0.1 * (2 ** attempt)) * (1 + random.uniform(0, 0.3))
-            print(f"Attente de {wait_time:.2f}s avant retry...")
+            # Backoff exponentiel avec jitter, plafonné à 5 s
+            wait_time = min(
+                5.0,
+                (0.1 * (2 ** attempt)) * (1 + random.uniform(0, 0.3))
+            )
             time.sleep(wait_time)
 
-        except Exception as e:
-            # Autre erreur (pas un deadlock)
+        except Exception:
+            # Autre erreur (pas de la classe 40) → on propage sans retry
             conn.rollback()
             raise
 
@@ -756,21 +790,22 @@ def execute_with_deadlock_retry(conn, operation, max_retries=5):
 
 # Utilisation
 def mon_transfert(cursor):
-    # Accès dans un ordre cohérent
+    # Accès dans un ordre cohérent (A puis B) pour minimiser les deadlocks
     cursor.execute("UPDATE comptes SET solde = solde - 100 WHERE id = 'A'")
     cursor.execute("UPDATE comptes SET solde = solde + 100 WHERE id = 'B'")
 
-execute_with_deadlock_retry(conn, mon_transfert)
+execute_with_retry(conn, mon_transfert)
 ```
 
 #### Java (JDBC)
 
 ```java
-public boolean executeWithDeadlockRetry(
+public boolean executeWithRetry(
     Connection conn,
     SqlOperation operation,
     int maxRetries
-) {
+) throws SQLException, InterruptedException {
+
     for (int attempt = 0; attempt < maxRetries; attempt++) {
         try {
             operation.execute(conn);
@@ -778,68 +813,74 @@ public boolean executeWithDeadlockRetry(
             return true;
 
         } catch (SQLException e) {
-            // Code d'erreur PostgreSQL pour deadlock : 40P01
-            if ("40P01".equals(e.getSQLState())) {
-                conn.rollback();
+            // Toujours rollback avant de relâcher la transaction côté serveur
+            try { conn.rollback(); } catch (SQLException ignored) { /* déjà KO */ }
 
-                if (attempt == maxRetries - 1) {
-                    throw new RuntimeException(
-                        "Échec après " + maxRetries + " tentatives", e
-                    );
-                }
+            // Classe d'erreur 40 = Transaction Rollback :
+            //   40001 = serialization_failure (RR/Serializable)
+            //   40P01 = deadlock_detected
+            // Les deux justifient un retry.
+            String state = e.getSQLState();
+            boolean retryable = state != null && state.startsWith("40");
 
-                // Backoff exponentiel
-                long waitMs = (long) (100 * Math.pow(2, attempt));
-                Thread.sleep(waitMs);
-
-            } else {
-                conn.rollback();
-                throw e;
+            if (!retryable || attempt == maxRetries - 1) {
+                throw e;   // Erreur définitive ou plus de tentatives
             }
+
+            // Backoff exponentiel avec jitter, plafonné à 5 s
+            long base = (long) (100 * Math.pow(2, attempt));
+            long jitter = (long) (Math.random() * base * 0.3);
+            Thread.sleep(Math.min(5_000, base + jitter));
         }
     }
     return false;
 }
 ```
 
+> 💡 **Pourquoi tester `startsWith("40")` plutôt que `equals("40P01")`** : le pattern de retry est exactement le même pour les deadlocks (`40P01`) et les serialization failures (`40001`) — toutes deux sont des erreurs **transitoires** liées à la concurrence. En traitant la classe 40 d'un bloc, votre code reste valable que vous tourniez en Read Committed, Repeatable Read ou Serializable.
+
 #### Node.js (node-postgres)
 
 ```javascript
-async function executeWithDeadlockRetry(client, operation, maxRetries = 5) {
+async function executeWithRetry(client, operation, maxRetries = 5) {
     for (let attempt = 0; attempt < maxRetries; attempt++) {
         try {
             await client.query('BEGIN');
             await operation(client);
             await client.query('COMMIT');
-            return true;  // Succès
+            return true;
 
         } catch (error) {
-            await client.query('ROLLBACK');
+            // ROLLBACK best-effort : si la connexion est cassée,
+            // on ignore l'erreur du rollback lui-même.
+            try { await client.query('ROLLBACK'); } catch (_) { /* ignore */ }
 
-            // Code d'erreur PostgreSQL pour deadlock : 40P01
-            if (error.code === '40P01') {
-                console.log(`Deadlock détecté (tentative ${attempt + 1}/${maxRetries})`);
+            // Classe 40 = Transaction Rollback : 40001 (sérialisation)
+            // ou 40P01 (deadlock) → retry justifié
+            const retryable = typeof error.code === 'string'
+                           && error.code.startsWith('40');
 
-                if (attempt === maxRetries - 1) {
-                    throw new Error(`Échec après ${maxRetries} tentatives`);
-                }
-
-                // Backoff exponentiel
-                const waitMs = 100 * Math.pow(2, attempt);
-                await new Promise(resolve => setTimeout(resolve, waitMs));
-
-            } else {
-                throw error;  // Autre erreur
+            if (!retryable || attempt === maxRetries - 1) {
+                throw error;
             }
+
+            console.log(
+                `Conflit ${error.code} (tentative ${attempt + 1}/${maxRetries})`
+            );
+
+            // Backoff exponentiel + jitter, plafonné à 5 s
+            const base = 100 * Math.pow(2, attempt);
+            const jitter = Math.random() * base * 0.3;
+            await new Promise(r => setTimeout(r, Math.min(5_000, base + jitter)));
         }
     }
     return false;
 }
 
 // Utilisation
-await executeWithDeadlockRetry(client, async (client) => {
-    await client.query("UPDATE comptes SET solde = solde - 100 WHERE id = 'A'");
-    await client.query("UPDATE comptes SET solde = solde + 100 WHERE id = 'B'");
+await executeWithRetry(client, async (c) => {
+    await c.query("UPDATE comptes SET solde = solde - 100 WHERE id = 'A'");
+    await c.query("UPDATE comptes SET solde = solde + 100 WHERE id = 'B'");
 });
 ```
 
@@ -1152,18 +1193,43 @@ UPDATE produits SET stock = stock - 1 WHERE id = 50;
 UPDATE produits SET stock = stock - 1 WHERE id = 100;  
 ```
 
-**Solution** :
+**Solution** : verrouiller les lignes dans un ordre déterministe **avant** l'UPDATE. L'ordre `ORDER BY` placé dans une CTE ou un sous-`SELECT` n'influence pas l'ordre d'acquisition des verrous d'un `UPDATE` simple ; il faut explicitement passer par `SELECT … FOR UPDATE`.
+
 ```sql
--- Trier les IDs dans le panier AVANT de mettre à jour
-WITH sorted_items AS (
-    SELECT unnest(ARRAY[100, 50]) AS product_id
-    ORDER BY product_id
-)
-UPDATE produits SET stock = stock - 1  
-WHERE id IN (SELECT product_id FROM sorted_items);  
+BEGIN;
+
+-- 1) Verrouiller les lignes du panier dans l'ordre croissant des IDs
+SELECT id
+  FROM produits
+ WHERE id IN (100, 50)
+ ORDER BY id              -- 50, puis 100 → ordre identique pour tous
+   FOR UPDATE;
+
+-- 2) Maintenant les verrous sont déjà acquis, l'UPDATE est sûr
+UPDATE produits
+   SET stock = stock - 1
+ WHERE id IN (100, 50);
+
+COMMIT;
 ```
 
-**Résultat** : Deadlocks réduits de 95%.
+> 💡 **Variante en une seule requête** (recommandée par la doc PostgreSQL pour ce cas) :  
+>  
+> ```sql  
+> WITH locked AS (  
+>   SELECT ctid FROM produits  
+>    WHERE id IN (100, 50)  
+>    ORDER BY id  
+>      FOR UPDATE  
+> )  
+> UPDATE produits SET stock = stock - 1  
+>   FROM locked  
+>  WHERE produits.ctid = locked.ctid;  
+> ```  
+>  
+> Ici le `FOR UPDATE` dans la CTE acquiert les verrous dans l'ordre du `ORDER BY`, puis l'UPDATE se contente de mettre à jour les `ctid` retournés.
+
+**Résultat typique** : deadlocks réduits de 90-99% sur ce type de scénario.
 
 ### Cas 2 : Plateforme de réservation
 
@@ -1291,15 +1357,15 @@ Les deadlocks sont **inévitables** dans un système concurrent, mais avec les b
 
 **Points clés à retenir :**
 
-- 🔑 PostgreSQL détecte et résout automatiquement les deadlocks  
-- 🔑 deadlock_timeout = 1s (défaut) déclenche la détection  
-- 🔑 Ordre cohérent d'accès = prévention #1  
-- 🔑 Transactions courtes = moins de risque  
-- 🔑 Implémenter TOUJOURS un retry avec backoff exponentiel  
-- 🔑 Code erreur 40P01 = deadlock dans votre application  
-- 🔑 Monitorer pg_stat_database.deadlocks  
-- 🔑 Utiliser lock_timeout et statement_timeout  
-- 🔑 NOWAIT / SKIP LOCKED pour éviter les attentes  
-- 🔑 Tester sous charge avant la mise en production
+- 🔑 PostgreSQL détecte les deadlocks **à la demande** (pas par scrutation), déclenché par `deadlock_timeout` (défaut **1s**)  
+- 🔑 La transaction victime reçoit `SQLSTATE 40P01` (`deadlock_detected`) — gérer comme une erreur **transitoire**  
+- 🔑 Le retry côté application doit gérer **toute la classe SQLSTATE 40** : `40P01` ET `40001` (serialization_failure)  
+- 🔑 Ordre cohérent d'accès aux ressources = prévention #1 ; tri des IDs avant `SELECT … FOR UPDATE`  
+- 🔑 Transactions courtes (< 100 ms idéalement) = moins de contention  
+- 🔑 Utiliser **`lock_timeout`**, **`statement_timeout`** et **`idle_in_transaction_session_timeout`** pour éviter les transactions zombies  
+- 🔑 `NOWAIT` (erreur immédiate) et `SKIP LOCKED` (ignorer les lignes verrouillées) évitent les attentes  
+- 🔑 Diagnostic moderne : `pg_blocking_pids(pid)` plutôt que la grosse jointure manuelle sur `pg_locks`  
+- 🔑 Monitorer `pg_stat_database.deadlocks` + analyse des logs avec `log_lock_waits = on`  
+- 🔑 PostgreSQL ne **résout pas** les deadlocks tout seul au sens de retry : c'est l'application qui doit rejouer
 
 ⏭️ [Indexation et Optimisation](/13-indexation-et-optimisation/README.md)

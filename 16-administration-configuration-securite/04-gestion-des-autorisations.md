@@ -370,8 +370,9 @@ REVOKE SELECT ON TABLE donnees_sensibles FROM PUBLIC;
 -- - PUBLIC a TEMP (créer des tables temporaires)
 
 -- Par défaut, sur le schéma public :
--- - PUBLIC a CREATE
 -- - PUBLIC a USAGE
+-- - PUBLIC a CREATE → ⚠️ SUPPRIMÉ depuis PostgreSQL 15 !
+--   (sur les nouvelles bases ; pour les bases pré-15 il faut le REVOKE manuellement)
 
 -- Par défaut, sur les nouvelles fonctions :
 -- - PUBLIC a EXECUTE

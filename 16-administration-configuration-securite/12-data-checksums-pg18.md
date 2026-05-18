@@ -96,12 +96,12 @@ Le checksum est comme la **photo de référence** : il permet de vérifier que l
 └──────────────┬───────────────────────────┘
                ↓
 ┌──────────────────────────────────────────┐
-│  2. Calcul du checksum de la page        │
-│     Algorithme: CRC-16 ou CRC-32         │
+│  2. Calcul du checksum 16 bits           │
+│     (algorithme FNV-like spécifique PG)  │
 └──────────────┬───────────────────────────┘
                ↓
 ┌──────────────────────────────────────────┐
-│  3. Stockage du checksum dans l'en-tête  │
+│  3. Stockage dans pd_checksum (en-tête)  │
 └──────────────┬───────────────────────────┘
                ↓
 ┌──────────────────────────────────────────┐
@@ -258,11 +258,14 @@ pg_controldata /var/lib/postgresql/18/main | grep checksum
 # Data page checksum version:           1
 ```
 
-**Méthode 3 : Requête système**
+**Méthode 3 : Via pg_settings**
 ```sql
--- Via la vue pg_control_checksum
-SELECT pg_control_checksum();
--- Résultat : 1 (activés) ou 0 (désactivés)
+-- Le moyen SQL canonique reste SHOW data_checksums;
+-- (Il n'existe pas de fonction `pg_control_checksum()`.
+-- Les fonctions pg_control_* exposent d'autres infos : pg_control_system(),
+-- pg_control_checkpoint(), pg_control_recovery(), pg_control_init().)
+SELECT name, setting FROM pg_settings WHERE name = 'data_checksums';
+-- Résultat : data_checksums | on (ou off)
 ```
 
 ### Activer les Checksums sur une Instance Existante
@@ -485,17 +488,22 @@ memtester 1024M 3
 #### Option 1 : Restauration depuis Sauvegarde (Recommandé)
 
 ```bash
-# Arrêter PostgreSQL
-sudo systemctl stop postgresql
+# 1. Renommer le data directory corrompu (PostgreSQL doit être arrêté)
+sudo systemctl stop postgresql  
+sudo mv /var/lib/postgresql/18/main /var/lib/postgresql/18/main.corrupted  
 
-# Restaurer depuis la sauvegarde la plus récente
-pg_restore -d production backup.dump
+# 2. Initialiser un nouveau cluster (ou utiliser un backup physique)
+sudo -u postgres /usr/lib/postgresql/18/bin/initdb -D /var/lib/postgresql/18/main
 
-# Redémarrer
+# 3. Redémarrer PostgreSQL (nécessaire pour pg_restore qui se connecte au serveur)
 sudo systemctl start postgresql
 
-# Vérifier l'intégrité
-SELECT COUNT(*) FROM orders;
+# 4. Restaurer depuis la sauvegarde logique
+sudo -u postgres createdb production  
+sudo -u postgres pg_restore -d production backup.dump  
+
+# 5. Vérifier l'intégrité
+psql -d production -c "SELECT COUNT(*) FROM orders;"
 ```
 
 #### Option 2 : Ignore Checksums (Temporaire - Dangereux)
@@ -503,18 +511,20 @@ SELECT COUNT(*) FROM orders;
 **⚠️ Uniquement pour récupérer les données accessibles**
 
 ```bash
-# Désactiver temporairement la vérification des checksums
-# (permet de lire les pages non corrompues)
-psql -c "SET ignore_checksum_failure = on;"
+# ⚠️ ignore_checksum_failure :
+# - nécessite d'être superuser
+# - ne s'applique qu'à la session courante
+# Pour l'utiliser avec pg_dump, on passe par PGOPTIONS qui est transmis
+# au backend ouvert par pg_dump :
 
-# Exporter les données récupérables
-pg_dump -t orders > orders_partial.sql
+PGOPTIONS='-c ignore_checksum_failure=on' \
+  pg_dump -U postgres -t orders production > orders_partial.sql
 
-# Analyser et nettoyer les données
-# Restaurer dans une nouvelle table
+# Analyser et nettoyer les données récupérées
+# Puis restaurer dans une nouvelle table sur une instance saine
 ```
 
-**Important :** Cette option ne **répare pas** la corruption, elle l'ignore juste.
+**Important :** Cette option ne **répare pas** la corruption, elle l'ignore juste. Les blocs corrompus retournent des données potentiellement incohérentes — à utiliser uniquement pour extraire ce qui est récupérable avant restauration complète.
 
 #### Option 3 : Réparation Manuelle (Expert)
 

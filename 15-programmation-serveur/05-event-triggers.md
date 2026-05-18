@@ -48,9 +48,9 @@ Un **Event Trigger** est une fonction qui s'exécute automatiquement lorsqu'un *
 
 ---
 
-## 2. Les Événements DDL Disponibles
+## 2. Les Événements Disponibles
 
-PostgreSQL propose quatre moments clés pour intercepter les commandes DDL :
+PostgreSQL propose cinq moments clés pour intercepter les commandes :
 
 ### 2.1. ddl_command_start
 
@@ -62,7 +62,8 @@ Se déclenche **avant** l'exécution d'une commande DDL.
 ├─────────────────────────────────────┤
 │ 1. Event Trigger (ddl_command_start)│  ← On peut ANNULER ici
 │ 2. Exécution de DROP TABLE          │
-│ 3. Event Trigger (ddl_command_end)  │
+│ 3. Event Trigger (sql_drop)         │  ← Pour les objets supprimés
+│ 4. Event Trigger (ddl_command_end)  │
 └─────────────────────────────────────┘
 ```
 
@@ -70,21 +71,49 @@ Se déclenche **avant** l'exécution d'une commande DDL.
 
 ### 2.2. ddl_command_end
 
-Se déclenche **après** l'exécution réussie d'une commande DDL.
+Se déclenche **après** l'exécution réussie d'une commande DDL, **et après** `sql_drop` pour les suppressions.
 
 **Utilisation typique** : Enregistrer l'événement dans un journal
 
 ### 2.3. table_rewrite
 
-Se déclenche quand une table doit être complètement réécrite (ALTER TABLE avec changement de type par exemple).
+Se déclenche quand une table doit être complètement réécrite (`ALTER TABLE ... ALTER COLUMN TYPE`, ajout de colonne avec valeur par défaut volatile, `SET TABLESPACE`, `SET ACCESS METHOD`).
 
 **Utilisation typique** : Alerter sur les opérations potentiellement longues
 
 ### 2.4. sql_drop
 
-Se déclenche **juste avant** qu'un objet soit supprimé.
+Se déclenche **juste après** qu'un objet soit supprimé, mais **avant** `ddl_command_end`. Permet d'accéder à `pg_event_trigger_dropped_objects()` qui liste tous les objets supprimés (y compris en cascade).
 
-**Utilisation typique** : Empêcher la suppression accidentelle d'objets critiques
+**Utilisation typique** : Auditer les suppressions, archiver des objets, empêcher la suppression d'objets critiques (via `RAISE EXCEPTION`).
+
+### 2.5. login (PostgreSQL 17+)
+
+⭐ **Nouveau depuis PostgreSQL 17 :** événement déclenché à la connexion d'une session. Permet d'auditer ou de contrôler les connexions.
+
+```sql
+CREATE OR REPLACE FUNCTION audit_login()  
+RETURNS event_trigger  
+LANGUAGE plpgsql  
+AS $$  
+BEGIN  
+    INSERT INTO login_audit (username, database, login_time, client_addr)
+    VALUES (session_user, current_database(), now(), inet_client_addr());
+END;
+$$;
+
+CREATE EVENT TRIGGER trigger_login_audit  
+ON login  
+EXECUTE FUNCTION audit_login();  
+```
+
+⚠️ **Précautions importantes pour `login` :**
+- Si l'event trigger échoue (RAISE EXCEPTION), **la connexion échoue** : risque de se retrouver verrouillé hors de sa propre base.
+- Pour se rattraper en cas de blocage : démarrer le serveur en mode mono-utilisateur (`postgres --single`) ou désactiver l'event trigger via une connexion superuser autorisée.
+- Bonne pratique : envelopper la logique dans un `BEGIN...EXCEPTION WHEN OTHERS` qui logge mais ne bloque pas la connexion.
+- L'event trigger `login` s'exécute hors transaction utilisateur visible — il ne peut pas accéder à `current_query()`.
+
+**Utilisation typique** : Audit de connexion, vérification d'autorisation, mise à jour de paramètres de session.
 
 ---
 
@@ -99,8 +128,8 @@ RETURNS event_trigger
 LANGUAGE plpgsql  
 AS $$  
 BEGIN  
-    -- Code à exécuter
-    RAISE NOTICE 'Un événement DDL s'est produit !';
+    -- Code à exécuter (attention à doubler les apostrophes dans une chaîne SQL)
+    RAISE NOTICE 'Un événement DDL s''est produit !';
 END;
 $$;
 
@@ -188,7 +217,8 @@ Le type d'événement qui a déclenché l'Event Trigger.
 - `ddl_command_start`  
 - `ddl_command_end`  
 - `sql_drop`  
-- `table_rewrite`
+- `table_rewrite`  
+- `login` (PostgreSQL 17+)
 
 ```sql
 CREATE OR REPLACE FUNCTION afficher_event_type()  
@@ -257,7 +287,9 @@ CREATE TABLE ma_table (id INTEGER);
 
 ### 4.4. pg_event_trigger_dropped_objects()
 
-Fonction qui retourne les objets qui vont être supprimés (disponible uniquement dans `sql_drop`).
+Fonction qui retourne les objets **qui viennent d'être supprimés** (disponible uniquement dans `sql_drop`).
+
+⚠️ **Précision importante :** l'événement `sql_drop` se déclenche **après** la suppression effective des objets (au sein de la transaction). Néanmoins, un `RAISE EXCEPTION` dans le handler **annule toute la transaction**, donc en pratique on peut bloquer une suppression « en cours » — le DROP est rollback avec le reste. Pour bloquer une suppression **avant** qu'elle ne commence, utiliser plutôt `ddl_command_start` (qui n'a cependant pas accès à la liste précise des objets affectés).
 
 ```sql
 CREATE OR REPLACE FUNCTION details_objets_supprimes()  
@@ -300,18 +332,21 @@ AS $$
 DECLARE  
     obj RECORD;
 BEGIN
-    -- Vérifier si on essaie de supprimer une table
-    IF TG_TAG = 'DROP TABLE' THEN
-        FOR obj IN SELECT * FROM pg_event_trigger_dropped_objects()
-        LOOP
-            -- Bloquer la suppression de certaines tables critiques
-            IF obj.object_identity LIKE '%clients%' OR
-               obj.object_identity LIKE '%commandes%' THEN
-                RAISE EXCEPTION 'Suppression de la table % interdite ! Table critique.',
-                               obj.object_identity;
-            END IF;
-        END LOOP;
-    END IF;
+    -- ⚠️ Ne PAS filtrer par TG_TAG = 'DROP TABLE' uniquement :
+    -- un DROP SCHEMA ... CASCADE supprime des tables sans TG_TAG = 'DROP TABLE'.
+    -- On filtre plutôt par object_type pour intercepter tous les cas.
+    FOR obj IN
+        SELECT * FROM pg_event_trigger_dropped_objects()
+        WHERE object_type = 'table'
+          AND NOT is_temporary  -- Laisser passer les tables temporaires
+    LOOP
+        -- Comparaison exacte plutôt que LIKE pour éviter les faux positifs
+        IF obj.object_identity IN ('public.clients', 'public.commandes') THEN
+            RAISE EXCEPTION
+              'Suppression de la table % interdite ! Table critique. (Déclenché par %)',
+              obj.object_identity, TG_TAG;
+        END IF;
+    END LOOP;
 END;
 $$;
 
@@ -319,6 +354,12 @@ CREATE EVENT TRIGGER no_critical_table_drop
 ON sql_drop  
 EXECUTE FUNCTION prevent_table_drop();  
 ```
+
+⚠️ **Subtilités importantes du contexte `sql_drop` :**
+- `pg_event_trigger_dropped_objects()` liste **tous les objets supprimés, y compris en cascade** : si on fait `DROP SCHEMA public CASCADE`, on verra apparaître tables, séquences, vues, fonctions, etc.
+- Le champ `obj.is_temporary` permet de distinguer les objets temporaires.
+- Le champ `obj.original` est `true` si l'objet faisait partie de la commande originale (pas une suppression en cascade).
+- Pour une protection encore plus forte, ajouter un event trigger `ddl_command_start` qui bloque `DROP SCHEMA` si certaines tables critiques s'y trouvent.
 
 **Test** :
 ```sql
@@ -364,7 +405,12 @@ DECLARE
 BEGIN
     -- Vérifier uniquement pour la création de tables
     IF TG_TAG = 'CREATE TABLE' THEN
-        FOR obj IN SELECT * FROM pg_event_trigger_ddl_commands()
+        -- ⚠️ pg_event_trigger_ddl_commands() retourne TOUS les objets affectés
+        -- par le DDL (table + séquences SERIAL + contraintes implicites).
+        -- Filtrer par object_type = 'table' pour ne valider que la table elle-même.
+        FOR obj IN
+            SELECT * FROM pg_event_trigger_ddl_commands()
+            WHERE object_type = 'table'
         LOOP
             -- Les tables doivent commencer par 'tbl_'
             IF obj.object_identity NOT LIKE 'public.tbl_%' THEN
@@ -749,9 +795,21 @@ CREATE EVENT TRIGGER test ON ddl_command_end EXECUTE FUNCTION f();
 -- ERREUR : permission denied to create event trigger "test"
 -- CONSEIL : Only superusers can create event triggers.
 
--- ✅ Superutilisateur
-ALTER USER mon_user WITH SUPERUSER;
--- Maintenant OK
+-- ✅ En tant que superutilisateur (typiquement le rôle 'postgres')
+-- Exécuter le CREATE EVENT TRIGGER avec un rôle déjà superuser
+```
+
+⚠️ **NE PAS** accorder le rôle SUPERUSER juste pour créer des Event Triggers : cela donne **tous les privilèges** sur le cluster (création/suppression de bases, accès à toutes les données, modification du système). Préférez :
+- Demander à un administrateur de créer l'Event Trigger lors d'une migration contrôlée.
+- Utiliser un rôle dédié `dba` (déjà superuser) pour les opérations sensibles.
+- En cloud managé (AWS RDS, Azure, etc.), il n'y a souvent **pas de superuser** disponible — vérifier si l'hébergeur expose un mécanisme alternatif.
+
+```sql
+-- ❌ ÉVITER : élève un utilisateur applicatif en superuser pour un besoin ponctuel
+ALTER USER mon_user_appli WITH SUPERUSER;
+
+-- ✅ Préférer : se connecter directement en tant que superuser existant
+psql -U postgres -d ma_base -c 'CREATE EVENT TRIGGER ...;'
 ```
 
 ### 9.2. Event Triggers et transactions
@@ -787,10 +845,32 @@ Les Event Triggers ajoutent un overhead à chaque commande DDL.
 
 ### 9.5. Commandes non interceptables
 
-Certaines commandes ne déclenchent **pas** d'Event Triggers :
-- Commandes de transaction (`BEGIN`, `COMMIT`, `ROLLBACK`)
-- Commandes sur les Event Triggers eux-mêmes
-- Certaines commandes système
+Plusieurs catégories de commandes **n'activent pas** les Event Triggers :
+
+**1. Commandes au niveau cluster** (hors d'une base) :
+- `CREATE DATABASE`, `ALTER DATABASE`, `DROP DATABASE`
+- `CREATE TABLESPACE`, `ALTER TABLESPACE`, `DROP TABLESPACE`
+- `CREATE ROLE`, `ALTER ROLE`, `DROP ROLE`
+- `CREATE GROUP`, `DROP GROUP`
+
+**Raison :** ces commandes affectent le cluster entier, pas une base particulière. Aucun event trigger ne peut donc s'y rattacher.
+
+**2. Commandes de transaction et de session :**
+- `BEGIN`, `COMMIT`, `ROLLBACK`, `SAVEPOINT`
+- `SET`, `RESET`, `SHOW`
+- `LISTEN`, `NOTIFY`, `UNLISTEN`
+- `PREPARE`, `EXECUTE`, `DEALLOCATE`
+
+**3. Commandes DML** (gérées par les triggers classiques, pas par les Event Triggers) :
+- `SELECT`, `INSERT`, `UPDATE`, `DELETE`, `MERGE`, `COPY`
+- Le `TRUNCATE` en revanche **est** un événement DDL et **déclenche** les Event Triggers.
+
+**4. Commandes sur les Event Triggers eux-mêmes** (pour éviter la récursion) :
+- `CREATE EVENT TRIGGER`, `ALTER EVENT TRIGGER`, `DROP EVENT TRIGGER`
+
+**5. Variantes spécifiques :**
+- `REINDEX` ne déclenche pas tous les types d'événements selon les versions.
+- Les commandes implicites internes de PostgreSQL (statistiques automatiques, autovacuum) ne sont pas interceptables.
 
 ---
 
@@ -828,9 +908,11 @@ Responsable : Équipe DBA';
 
 ```sql
 -- ✅ BON : Filtre pour éviter de traiter tous les événements
+-- ⚠️ Note : DROP DATABASE n'apparaîtra JAMAIS ici (cf. section 9.5 - commandes
+-- non interceptables). Idem pour CREATE/DROP ROLE, TABLESPACE, etc.
 CREATE EVENT TRIGGER audit_critical_operations  
 ON ddl_command_end  
-WHEN TAG IN ('DROP TABLE', 'DROP DATABASE', 'ALTER TABLE')  
+WHEN TAG IN ('DROP TABLE', 'DROP SCHEMA', 'ALTER TABLE')  
 EXECUTE FUNCTION audit_critical_ddl();  
 
 -- ❌ MOINS BON : Filtre dans la fonction (plus lent)
@@ -895,6 +977,8 @@ EXECUTE FUNCTION prevent_dangerous_ddl();
 
 ### 11.1. Générer automatiquement des index
 
+⚠️ **Note importante :** PostgreSQL crée déjà automatiquement un index sur `PRIMARY KEY` et `UNIQUE`. Cet exemple n'est utile que pour des colonnes sans contrainte (ex : colonnes `id` non-PK, ou `created_at`).
+
 ```sql
 CREATE OR REPLACE FUNCTION auto_create_indexes()  
 RETURNS event_trigger  
@@ -903,27 +987,35 @@ AS $$
 DECLARE  
     obj RECORD;
     has_id_column BOOLEAN;
+    nom_index TEXT;
 BEGIN
     -- Uniquement pour CREATE TABLE
     IF TG_TAG = 'CREATE TABLE' THEN
-        FOR obj IN SELECT * FROM pg_event_trigger_ddl_commands()
+        FOR obj IN
+            SELECT * FROM pg_event_trigger_ddl_commands()
+            WHERE object_type = 'table'  -- filtrer les autres types
         LOOP
-            -- Vérifier si la table a une colonne 'id'
+            -- Vérifier (avec le schéma) si la table a une colonne 'id' sans index
             SELECT EXISTS (
                 SELECT 1
-                FROM information_schema.columns
-                WHERE table_name = split_part(obj.object_identity, '.', 2)
-                  AND column_name = 'id'
+                FROM pg_attribute a
+                WHERE a.attrelid = obj.objid           -- OID exact
+                  AND a.attname = 'id'
+                  AND a.attnum > 0
+                  AND NOT a.attisdropped
             ) INTO has_id_column;
 
-            -- Créer automatiquement un index sur 'id' si elle existe
             IF has_id_column THEN
+                -- Nom d'index dérivé du nom local de la table (sans schéma)
+                nom_index := 'idx_' || split_part(obj.object_identity, '.', 2) || '_id';
+
+                -- Utilisation de %I pour échapper les identifiants
                 EXECUTE format(
-                    'CREATE INDEX IF NOT EXISTS idx_%s_id ON %s (id)',
-                    split_part(obj.object_identity, '.', 2),
-                    obj.object_identity
+                    'CREATE INDEX IF NOT EXISTS %I ON %s (id)',
+                    nom_index,
+                    obj.object_identity  -- déjà quoté correctement
                 );
-                RAISE NOTICE 'Index créé automatiquement sur %.id', obj.object_identity;
+                RAISE NOTICE 'Index % créé sur %', nom_index, obj.object_identity;
             END IF;
         END LOOP;
     END IF;
@@ -936,13 +1028,19 @@ WHEN TAG IN ('CREATE TABLE')
 EXECUTE FUNCTION auto_create_indexes();  
 ```
 
+⚠️ **Améliorations par rapport à un exemple naïf :**
+- Filtrage par `object_type = 'table'` pour ne pas traiter les autres types (vues, séquences, etc.).
+- Utilisation directe de `obj.objid` (OID) au lieu du parsing de chaîne `object_identity` — robuste face aux identifiants quotés.
+- `format('%I', ...)` pour le nom d'index : échappe correctement si le nom contient des caractères spéciaux.
+- `obj.object_identity` est déjà quoté correctement par PostgreSQL : safe pour `%s` (mais on pourrait aussi utiliser `obj.objid::regclass`).
+
 **Test** :
 ```sql
 CREATE TABLE commandes (
-    id INTEGER PRIMARY KEY,
+    id INTEGER,            -- pas PRIMARY KEY : pas d'index automatique
     montant NUMERIC
 );
--- NOTICE:  Index créé automatiquement sur public.commandes.id
+-- NOTICE:  Index idx_commandes_id créé sur public.commandes
 ```
 
 ### 11.2. Versioning automatique des fonctions
@@ -965,24 +1063,29 @@ DECLARE
     obj RECORD;
     func_def TEXT;
 BEGIN
-    IF TG_TAG IN ('CREATE FUNCTION', 'CREATE OR REPLACE FUNCTION') THEN
+    -- ⚠️ TG_TAG vaut 'CREATE FUNCTION' aussi pour 'CREATE OR REPLACE FUNCTION'.
+    -- Pour distinguer une création d'un remplacement, utiliser le champ
+    -- 'in_extension' ou comparer avec une table existante de versions.
+    IF TG_TAG = 'CREATE FUNCTION' THEN
         FOR obj IN SELECT * FROM pg_event_trigger_ddl_commands()
         LOOP
-            -- Récupérer la définition de la fonction
-            SELECT pg_get_functiondef(obj.objid) INTO func_def;
+            -- Filtrer uniquement les fonctions (pas les procédures, agrégats, etc.)
+            IF obj.object_type = 'function' THEN
+                -- Récupérer la définition complète
+                func_def := pg_get_functiondef(obj.objid);
 
-            -- Enregistrer la version
-            INSERT INTO function_versions (
-                function_name,
-                function_definition,
-                created_by
-            ) VALUES (
-                obj.object_identity,
-                func_def,
-                current_user
-            );
+                INSERT INTO function_versions (
+                    function_name,
+                    function_definition,
+                    created_by
+                ) VALUES (
+                    obj.object_identity,
+                    func_def,
+                    current_user
+                );
 
-            RAISE NOTICE 'Version de fonction enregistrée : %', obj.object_identity;
+                RAISE NOTICE 'Version de fonction enregistrée : %', obj.object_identity;
+            END IF;
         END LOOP;
     END IF;
 END;
@@ -990,11 +1093,19 @@ $$;
 
 CREATE EVENT TRIGGER track_function_versions  
 ON ddl_command_end  
-WHEN TAG IN ('CREATE FUNCTION', 'CREATE OR REPLACE FUNCTION')  
+WHEN TAG IN ('CREATE FUNCTION')  
 EXECUTE FUNCTION version_functions();  
 ```
 
+⚠️ **Précision importante sur les TG_TAG :** PostgreSQL n'a **pas** de tag distinct pour `CREATE OR REPLACE FUNCTION` vs `CREATE FUNCTION`. Les deux remontent `CREATE FUNCTION`. De même pour les autres objets : `CREATE OR REPLACE VIEW` est tagué `CREATE VIEW`. Pour distinguer création et remplacement, il faut comparer avec un état antérieur.
+
 ### 11.3. Alertes sur opérations longues
+
+⚠️ **Attention aux signatures :** dans l'événement `table_rewrite`, PostgreSQL fournit **deux fonctions scalaires** (pas des fonctions retournant un setof) :
+- `pg_event_trigger_table_rewrite_oid()` → OID de la table en cours de réécriture
+- `pg_event_trigger_table_rewrite_reason()` → entier indiquant la raison (1 = `ALTER COLUMN TYPE`, 2 = `ADD COLUMN avec valeur par défaut volatile`, 4 = `SET TABLESPACE`, 8 = `SET ACCESS METHOD`)
+
+Il ne faut donc **pas** boucler sur leur résultat. Utilisation correcte :
 
 ```sql
 CREATE OR REPLACE FUNCTION alert_table_rewrite()  
@@ -1002,14 +1113,26 @@ RETURNS event_trigger
 LANGUAGE plpgsql  
 AS $$  
 DECLARE  
-    obj RECORD;
+    table_oid OID;
+    raison INTEGER;
+    raison_texte TEXT;
 BEGIN
-    FOR obj IN SELECT * FROM pg_event_trigger_table_rewrite_oid()
-    LOOP
-        RAISE WARNING 'ATTENTION : La table % va être complètement réécrite.
-Cette opération peut être très longue et verrouiller la table !',
-                      obj.table_name;
-    END LOOP;
+    -- Récupérer l'OID de la table et la raison (valeurs scalaires)
+    table_oid := pg_event_trigger_table_rewrite_oid();
+    raison := pg_event_trigger_table_rewrite_reason();
+
+    -- Décoder la raison
+    raison_texte := CASE raison
+        WHEN 1 THEN 'changement de type de colonne (ALTER COLUMN TYPE)'
+        WHEN 2 THEN 'ajout de colonne avec valeur par défaut volatile'
+        WHEN 4 THEN 'changement de tablespace (SET TABLESPACE)'
+        WHEN 8 THEN 'changement de méthode d''accès (SET ACCESS METHOD)'
+        ELSE 'raison inconnue (code ' || raison || ')'
+    END;
+
+    RAISE WARNING
+      'ATTENTION : la table % va être complètement réécrite. Cause : %. Cette opération peut être longue et verrouiller la table en ACCESS EXCLUSIVE.',
+      table_oid::regclass, raison_texte;
 END;
 $$;
 
@@ -1026,7 +1149,8 @@ INSERT INTO test SELECT i, 'data' FROM generate_series(1, 1000) i;
 
 -- Changer le type de colonne (force une réécriture)
 ALTER TABLE test ALTER COLUMN id TYPE BIGINT;
--- WARNING:  ATTENTION : La table test va être complètement réécrite...
+-- WARNING:  ATTENTION : la table public.test va être complètement réécrite.
+-- Cause : changement de type de colonne (ALTER COLUMN TYPE)...
 ```
 
 ---
@@ -1056,58 +1180,98 @@ $$;
 
 ### 12.2. Gérer les erreurs dans les Event Triggers
 
+**Question essentielle :** voulez-vous que l'event trigger **bloque** la commande DDL en cas d'erreur de l'audit, ou qu'il **laisse passer** la commande ?
+
+**Cas 1 : bloquer la commande DDL si l'audit échoue** (recommandé pour la conformité)
+
 ```sql
-CREATE OR REPLACE FUNCTION safe_event_trigger()  
+-- Laisser remonter naturellement les erreurs : la commande DDL sera annulée
+CREATE OR REPLACE FUNCTION audit_strict()  
+RETURNS event_trigger  
+LANGUAGE plpgsql  
+AS $$  
+BEGIN  
+    INSERT INTO audit_log (event_type, command_tag, username, event_time)
+    VALUES (TG_EVENT, TG_TAG, current_user, now());
+    -- Si l'INSERT échoue, la commande DDL est annulée : c'est voulu
+END;
+$$;
+```
+
+**Cas 2 : laisser passer la commande même si l'audit échoue** (rare, à justifier)
+
+```sql
+-- ⚠️ Attention : avaler les erreurs masque les vrais problèmes
+CREATE OR REPLACE FUNCTION audit_tolerant()  
 RETURNS event_trigger  
 LANGUAGE plpgsql  
 AS $$  
 BEGIN  
     BEGIN
-        -- Logique principale
-        INSERT INTO audit_log ...;
+        INSERT INTO audit_log (event_type, command_tag, username, event_time)
+        VALUES (TG_EVENT, TG_TAG, current_user, now());
     EXCEPTION
         WHEN OTHERS THEN
-            -- Logger l'erreur mais ne pas bloquer la commande DDL
-            RAISE WARNING 'Erreur dans Event Trigger : %', SQLERRM;
-            -- Insérer dans une table d'erreurs
-            INSERT INTO event_trigger_errors (error_message, event_time)
-            VALUES (SQLERRM, NOW());
+            -- ⚠️ L'INSERT dans event_trigger_errors peut LUI AUSSI échouer
+            -- dans la même transaction (table verrouillée, contrainte, etc.)
+            -- Ne JAMAIS supposer que cette branche réussira toujours.
+            RAISE WARNING 'Erreur dans Event Trigger : % (%)',
+              SQLERRM, SQLSTATE;
     END;
 END;
 $$;
 ```
+
+⚠️ **Pièges à connaître :**
+- Si l'event trigger échoue dans `ddl_command_start`, la commande DDL n'est jamais exécutée.
+- Si l'event trigger échoue dans `ddl_command_end` ou `sql_drop`, **toute la transaction est annulée** (la commande DDL elle-même est rollback).
+- Une seule exception : `RAISE WARNING` ne déclenche pas d'annulation, contrairement à `RAISE EXCEPTION`.
+- **Pour les event triggers `login`** : une exception bloque la connexion. Il faut impérativement envelopper la logique dans un `BEGIN...EXCEPTION` qui logue mais ne propage pas.
+
+**Bonne pratique :** en production, préférer le Cas 1 (laisser remonter). Si l'audit échoue, c'est généralement signe d'un problème grave qu'il faut surveiller, pas masquer.
 
 ---
 
 ## 13. Résumé Visuel
 
 ```
-┌────────────────────────────────────────────────────────────┐
-│              EVENT TRIGGERS : VUE D'ENSEMBLE               │
-├────────────────────────────────────────────────────────────┤
-│                                                            │
-│  ÉVÉNEMENTS DISPONIBLES :                                  │
-│  ┌──────────────────────────────────────────────────┐      │
-│  │ ddl_command_start  → AVANT la commande DDL       │      │
-│  │ ddl_command_end    → APRÈS la commande DDL       │      │
-│  │ sql_drop           → AVANT suppression d'objet   │      │
-│  │ table_rewrite      → Réécriture de table         │      │
-│  └──────────────────────────────────────────────────┘      │
-│                                                            │
-│  VARIABLES SPÉCIALES :                                     │
-│  • TG_EVENT          → Type d'événement                    │
-│  • TG_TAG            → Commande SQL                        │
-│  • pg_event_trigger_ddl_commands()     → Objets créés      │
-│  • pg_event_trigger_dropped_objects()  → Objets supprimés  │
-│                                                            │
-│  CAS D'USAGE :                                             │
-│  ✅ Audit de changements de schéma                         │
-│  ✅ Protection contre suppressions accidentelles           │
-│  ✅ Application de standards de nommage                    │
-│  ✅ Notifications automatiques                             │
-│  ✅ Versionning de schéma                                  │
-│                                                            │
-└────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────┐
+│               EVENT TRIGGERS : VUE D'ENSEMBLE                    │
+├──────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  ÉVÉNEMENTS DISPONIBLES :                                        │
+│  ┌──────────────────────────────────────────────────────────┐    │
+│  │ ddl_command_start  → AVANT la commande DDL               │    │
+│  │ ddl_command_end    → APRÈS la commande DDL               │    │
+│  │ sql_drop           → APRÈS suppression (avant cmd_end)   │    │
+│  │ table_rewrite      → Réécriture de table                 │    │
+│  │ login (PG 17+)     → À chaque connexion de session       │    │
+│  └──────────────────────────────────────────────────────────┘    │
+│                                                                  │
+│  VARIABLES SPÉCIALES :                                           │
+│  • TG_EVENT          → Type d'événement                          │
+│  • TG_TAG            → Commande SQL (ex: 'CREATE TABLE')         │
+│                                                                  │
+│  FONCTIONS DE CONTEXTE :                                         │
+│  • pg_event_trigger_ddl_commands()         → Objets créés        │
+│  • pg_event_trigger_dropped_objects()      → Objets supprimés    │
+│  • pg_event_trigger_table_rewrite_oid()    → OID table réécrite  │
+│  • pg_event_trigger_table_rewrite_reason() → Raison réécriture   │
+│                                                                  │
+│  CAS D'USAGE :                                                   │
+│  ✅ Audit de changements de schéma                               │
+│  ✅ Protection contre suppressions accidentelles                 │
+│  ✅ Application de standards de nommage                          │
+│  ✅ Notifications automatiques                                   │
+│  ✅ Versionning de schéma                                        │
+│  ✅ Audit de connexions (login event)                            │
+│                                                                  │
+│  COMMANDES NON INTERCEPTABLES :                                  │
+│  ❌ CREATE/DROP DATABASE, ROLE, TABLESPACE                       │
+│  ❌ BEGIN, COMMIT, ROLLBACK, SET                                 │
+│  ❌ DML (INSERT, UPDATE, DELETE)                                 │
+│                                                                  │
+└──────────────────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -1140,11 +1304,13 @@ Les **Event Triggers** sont un outil puissant pour :
 
 **Points clés à retenir** :
 - ✅ Les Event Triggers surveillent les commandes DDL (structure), pas DML (données)  
-- ✅ Quatre événements : `ddl_command_start`, `ddl_command_end`, `sql_drop`, `table_rewrite`  
-- ✅ Variables spéciales : `TG_EVENT`, `TG_TAG`, `pg_event_trigger_*_objects()`  
+- ✅ Cinq événements : `ddl_command_start`, `ddl_command_end`, `sql_drop`, `table_rewrite`, `login` (PG 17+)  
+- ✅ Variables spéciales : `TG_EVENT`, `TG_TAG`, fonctions `pg_event_trigger_*()`  
 - ✅ Seuls les superutilisateurs peuvent créer des Event Triggers  
 - ✅ Utilisez la clause `WHEN` pour filtrer les événements  
-- ✅ Testez toujours en développement avant la production
+- ✅ Testez toujours en développement avant la production  
+- ⚠️ Les commandes cluster (`CREATE DATABASE`, `CREATE ROLE`, etc.) **ne sont pas** interceptables  
+- ⚠️ Pour `login`, prévoir un mécanisme de récupération en cas de blocage
 
 **Recommandation** :
 > Commencez simple avec un Event Trigger d'audit en lecture seule, puis ajoutez progressivement des protections selon vos besoins.

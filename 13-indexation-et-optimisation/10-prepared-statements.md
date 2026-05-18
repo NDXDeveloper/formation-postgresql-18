@@ -798,50 +798,60 @@ with pool.connection() as conn2:
 
 ### 8.2. Piège 2 : Mémoire des Prepared Statements
 
-Chaque prepared statement consomme de la mémoire :
+Chaque prepared statement consomme de la mémoire **dans la mémoire de la  
+session** (espace `MessageContext`/`CacheMemoryContext`).  
 
-```sql
--- Limite par défaut : 250 plans en cache par session
-SHOW max_prepared_transactions;
-```
+> ⚠️ **Ne pas confondre avec `max_prepared_transactions`** :  
+> ce GUC contrôle les **transactions préparées** (commande  
+> `PREPARE TRANSACTION`, two-phase commit) et n'a aucun rapport avec  
+> les prepared statements de `PREPARE` / `EXECUTE`. Sa valeur par défaut  
+> est `0` (2PC désactivé).
 
-**Problème** : Trop de prepared statements différents → Fuite mémoire
+PostgreSQL n'impose pas de limite stricte sur le nombre de prepared  
+statements par session : la seule borne est la mémoire de la session.  
+Certains poolers (PgBouncer en mode `transaction`/`statement`) ou drivers  
+imposent en revanche leurs propres limites.  
+
+**Problème** : trop de prepared statements différents → consommation
+mémoire excessive, voire « fuite » côté session.
 
 **Exemple** :
 ```python
 # ❌ Mauvais : Noms uniques à chaque fois
 for i in range(10000):
     cursor.execute(f"PREPARE stmt_{i} AS SELECT * FROM clients WHERE id = $1")
-    # 10,000 prepared statements en mémoire !
+    # 10 000 prepared statements en mémoire dans cette session !
 ```
 
-**Solution** : Réutiliser les mêmes noms ou laisser le driver gérer.
-
-### 8.3. Piège 3 : Plans Obsolètes après ANALYZE
-
-**Scénario** :
+**Solution** : réutiliser les mêmes noms, laisser le driver gérer,
+ou nettoyer périodiquement avec `DEALLOCATE` / `DEALLOCATE ALL`.
 
 ```sql
--- Préparation avec statistiques obsolètes
-PREPARE stmt AS SELECT * FROM clients WHERE ville = $1;  
-EXECUTE stmt('Paris');  -- Generic Plan créé basé sur anciennes stats  
+-- Lister les prepared statements actuels (par session)
+SELECT name, prepare_time, generic_plans, custom_plans  
+FROM pg_prepared_statements;  
 
--- Mise à jour des données (changement de distribution)
--- Maintenant 95% des clients sont à Paris
-
-ANALYZE clients;
-
-EXECUTE stmt('Paris');  -- Utilise encore l'ancien Generic Plan !
+-- Nettoyer tous les prepared statements de la session
+DEALLOCATE ALL;
 ```
 
-**Solution** : Re-préparer après ANALYZE significatif
+### 8.3. Piège 3 : Statistiques Obsolètes (pas le prepared statement lui-même)
+
+**Bonne nouvelle, contre-intuitive** : PostgreSQL **invalide automatiquement** les plans en cache d'un prepared statement quand l'un des objets utilisés subit un changement DDL **ou** quand ses statistiques sont mises à jour (notamment par `ANALYZE`). Au prochain `EXECUTE`, la requête sera re-planifiée avec les nouvelles statistiques. Vous n'avez **pas** besoin de `DEALLOCATE` + `PREPARE` après un `ANALYZE`.
 
 ```sql
-DEALLOCATE stmt;  
 PREPARE stmt AS SELECT * FROM clients WHERE ville = $1;  
+EXECUTE stmt('Paris');     -- Plan créé avec les stats actuelles  
+
+-- Insertions massives qui changent la distribution…
+ANALYZE clients;           -- Statistiques rafraîchies → cache de plan invalidé
+
+EXECUTE stmt('Paris');     -- ✅ Re-planifié automatiquement avec les nouvelles stats
 ```
 
-Ou simplement fermer/rouvrir la session (prepared statements sont liés à la session).
+**Le vrai piège** est donc l'inverse : si vous **oubliez** d'exécuter `ANALYZE` après un changement massif de données, les prepared statements (comme toutes les requêtes) utiliseront des statistiques obsolètes. La solution est de maintenir l'autovacuum/autoanalyze actif (cf. section 13.6).
+
+> 🛠️ Astuce de debug : pour forcer manuellement la suppression et la recréation du plan dans une session, vous pouvez faire `DEALLOCATE stmt;` suivi d'un nouveau `PREPARE stmt AS …;`. Mais en fonctionnement normal, ce n'est pas nécessaire.
 
 ### 8.4. Piège 4 : Transactions et Prepared Statements
 
@@ -920,22 +930,38 @@ Ou laisser le pool de connexions gérer (recommandé).
 
 ### 9.4. Monitorer les Prepared Statements
 
-**Requête de monitoring** :
+> ⚠️ **Important** : la vue `pg_prepared_statements` ne montre que les  
+> prepared statements de la **session courante** et n'expose pas de  
+> colonne `pid`. Il n'existe pas de vue système pour énumérer les  
+> prepared statements de toutes les sessions à la fois (les drivers et  
+> outils comme PgBouncer fournissent leurs propres compteurs).
+
+**Requête de monitoring (session courante)** :
 
 ```sql
--- Nombre de prepared statements par session
+-- Combien de prepared statements et quelle stratégie de plan ?
 SELECT
-    pid,
-    usename,
-    application_name,
-    COUNT(*) as nb_prepared
+    name,
+    prepare_time,
+    generic_plans,
+    custom_plans,
+    array_length(parameter_types, 1) AS nb_parametres
 FROM pg_prepared_statements  
-JOIN pg_stat_activity USING (pid)  
-GROUP BY pid, usename, application_name  
-ORDER BY nb_prepared DESC;  
+ORDER BY prepare_time;  
+
+-- Volume global pour la session
+SELECT COUNT(*) AS nb_prepared  
+FROM pg_prepared_statements;  
 ```
 
-**Alerte** : Si nb_prepared > 100 par session → Investiguer (possible fuite).
+**Pour surveiller toutes les sessions**, croisez plutôt :
+- `pg_stat_activity` (sessions actives)
+- les métriques exposées par le pooler ou par `pg_stat_statements`
+  (qui agrège l'usage côté serveur, indépendamment de la session)
+
+**Alerte** : si une session porte plus de quelques centaines de
+prepared statements, vérifier que l'application les réutilise au lieu  
+d'en créer de nouveaux avec des noms distincts.  
 
 ### 9.5. Tester les Performances
 
@@ -977,7 +1003,7 @@ print(f"Gain: {(1 - duration_with/duration_without) * 100:.1f}%")
 | Aspect | MySQL Query Cache | PG Prepared Statements |
 |--------|-------------------|------------------------|
 | **Cache** | Résultats | Plans d'exécution |
-| **Invalidation** | À chaque UPDATE | Persist jusqu'à DEALLOCATE |
+| **Invalidation** | À chaque UPDATE/INSERT/DELETE sur la table | Automatique sur changement DDL ou `ANALYZE` ; sinon réutilisé jusqu'au `DEALLOCATE` ou fin de session |
 | **Mémoire** | Partagée (global) | Par session |
 | **Paramètres** | Non (cache exact) | Oui (paramétrisable) |
 | **Scalabilité** | Problèmes (contention) | Excellente |
@@ -1004,7 +1030,7 @@ RETURNS TABLE(nom TEXT, email TEXT) AS $$
 BEGIN  
     RETURN QUERY SELECT nom, email FROM clients WHERE id = client_id;
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql STABLE;   -- lecture seule → STABLE pour permettre les optimisations
 
 -- Utilisation
 SELECT * FROM get_client(12345);
@@ -1025,51 +1051,47 @@ SELECT * FROM get_client(12345);
 
 ---
 
-## 11. PostgreSQL 18 : Améliorations des Prepared Statements
+## 11. Évolutions Récentes Autour des Prepared Statements
 
-### 11.1. Meilleure Heuristique Generic vs Custom
+### 11.1. Algorithme Generic vs Custom
 
-PostgreSQL 18 améliore l'algorithme de décision entre Generic et Custom plans :
+L'heuristique « 5 custom plans, puis comparaison `generic ≤ custom × 1.1` »  
+est en place depuis longtemps et reste celle utilisée par PostgreSQL 18.  
+Aucune modification de cette règle n'est annoncée dans les notes de version  
+PG 18 ; les améliorations PG 18 du planificateur portent plutôt sur les  
+nœuds de plan eux-mêmes (auto-élimination des self-joins, transformation  
+`IN (VALUES …)` → `ANY(ARRAY[…])`, Skip Scan B-Tree, etc., voir le
+chapitre 13.9).
 
-**Amélioration** : Prise en compte de la **variance** des coûts
+### 11.2. Visualiser la Stratégie Choisie (PG 17+)
 
-**Avant PG 18** :
-```
-Décision basée sur : Generic cost ≤ Average custom cost × 1.1
-```
-
-**Avec PG 18** :
-```
-Décision basée sur : Generic cost ≤ Average custom cost × 1.1
-                   ET Variance custom costs < seuil
-```
-
-**Impact** : Si les custom plans ont des coûts très variables (haute variance), PostgreSQL 18 préfère continuer avec Custom Plans plutôt que risquer un Generic Plan suboptimal.
-
-### 11.2. Statistiques Enrichies
+Depuis PostgreSQL 17, la vue `pg_prepared_statements` expose le compteur  
+des plans réellement utilisés. Ces colonnes restent disponibles en PG 18 :  
 
 ```sql
--- Nouvelle colonne dans pg_prepared_statements (PG 18)
 SELECT
     name,
-    generic_plans,    -- Nombre d'exécutions avec generic plan
-    custom_plans,     -- Nombre d'exécutions avec custom plan
-    last_plan_type    -- 'generic' ou 'custom'
+    prepare_time,
+    generic_plans,    -- nombre d'exécutions ayant utilisé un generic plan
+    custom_plans      -- nombre d'exécutions ayant utilisé un custom plan
 FROM pg_prepared_statements;
 ```
 
-**Utilité** : Monitoring précis de la stratégie choisie.
+> Note : il n'existe pas de colonne `last_plan_type`. Pour connaître le  
+> plan choisi pour une exécution donnée, utilisez plutôt `EXPLAIN EXECUTE`  
+> (les paramètres apparaissent comme `$1` pour un generic plan et comme  
+> valeurs littérales pour un custom plan).
 
-### 11.3. Optimisation des Paramètres Array
-
-PostgreSQL 18 améliore les prepared statements avec paramètres de type ARRAY :
+**Utilité** : repérer en production les prepared statements qui basculent
+en generic plan alors qu'un custom plan serait plus efficace (ou inversement).
 
 ```sql
-PREPARE search_cities (TEXT[]) AS
-    SELECT * FROM clients WHERE ville = ANY($1);
-
--- Meilleures estimations dans PG 18
-EXECUTE search_cities(ARRAY['Paris', 'Lyon', 'Marseille']);
+-- Détecter les statements bloqués en custom plan
+SELECT name, custom_plans, generic_plans,
+       round(100.0 * custom_plans / NULLIF(custom_plans + generic_plans, 0), 1)
+           AS pct_custom
+FROM pg_prepared_statements  
+ORDER BY custom_plans DESC;  
 ```
 
 ---
@@ -1098,7 +1120,7 @@ EXECUTE search_cities(ARRAY['Paris', 'Lyon', 'Marseille']);
 
 🔑 **Monitoring** : `pg_prepared_statements`, `pg_stat_statements`.
 
-🔑 **PostgreSQL 18** : Meilleure heuristique generic vs custom, statistiques enrichies.
+🔑 **PostgreSQL 17+** : `pg_prepared_statements` expose `generic_plans` et `custom_plans` pour suivre la stratégie réellement utilisée.
 
 ---
 

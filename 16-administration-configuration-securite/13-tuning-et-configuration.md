@@ -245,7 +245,8 @@ ORDER BY mean_exec_time DESC
 LIMIT 10;  
 
 -- 3. Tables les plus consultées
-SELECT schemaname, tablename, seq_scan, idx_scan  
+-- ⚠️ Dans pg_stat_user_tables, le nom de la table est `relname` (pas `tablename`)
+SELECT schemaname, relname AS tablename, seq_scan, idx_scan  
 FROM pg_stat_user_tables  
 ORDER BY seq_scan + idx_scan DESC  
 LIMIT 10;  
@@ -598,17 +599,28 @@ sudo cp /etc/postgresql/18/main/postgresql.conf \
 # 2. Éditer
 sudo nano /etc/postgresql/18/main/postgresql.conf
 
-# 3. Vérifier syntaxe
-sudo -u postgres /usr/lib/postgresql/18/bin/postgres \
-    -D /var/lib/postgresql/18/main \
-    -C config_file
-
-# 4. Recharger (si paramètre ne nécessite pas redémarrage)
+# 3. Recharger (si paramètre ne nécessite pas redémarrage)
 sudo systemctl reload postgresql
 
-# 5. Ou redémarrer (si nécessaire)
+# 4. Ou redémarrer (si nécessaire)
 sudo systemctl restart postgresql
 ```
+
+**Vérification de la syntaxe avant rechargement** :
+
+```sql
+-- Lister les entrées avec erreur dans postgresql.conf
+SELECT name, sourcefile, sourceline, error  
+FROM pg_file_settings  
+WHERE error IS NOT NULL;  
+
+-- Lister les erreurs dans pg_hba.conf
+SELECT line_number, error  
+FROM pg_hba_file_rules  
+WHERE error IS NOT NULL;  
+```
+
+> 💡 **Astuce** : exécutez ces deux requêtes **avant** `pg_reload_conf()` pour ne pas pousser un fichier cassé en production. Si tout est `NULL` côté `error`, la syntaxe est OK.
 
 #### Méthode 2 : ALTER SYSTEM (Recommandé)
 

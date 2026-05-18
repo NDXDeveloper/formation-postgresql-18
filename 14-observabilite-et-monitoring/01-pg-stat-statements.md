@@ -133,13 +133,13 @@ Toujours dans `postgresql.conf`, vous pouvez ajouter des paramètres optionnels 
 # Nombre maximum de requêtes distinctes à suivre (par défaut: 5000)
 pg_stat_statements.max = 10000
 
-# Suivre les requêtes imbriquées dans les fonctions (par défaut: off)
+# Niveau de suivi : 'top' (défaut), 'all' (inclut requêtes imbriquées), 'none'
 pg_stat_statements.track = all
 
-# Suivre les planifications de requêtes en plus des exécutions (par défaut: off)
+# Suivre aussi le temps de planification (par défaut: off — léger overhead)
 pg_stat_statements.track_planning = on
 
-# Enregistrer toutes les utilités (VACUUM, ANALYZE, etc.) (par défaut: off)
+# Suivre les commandes utilitaires (VACUUM, ANALYZE, etc.) — par défaut: on
 pg_stat_statements.track_utility = on
 
 # Sauvegarder les statistiques sur disque lors de l'arrêt (par défaut: on)
@@ -166,9 +166,9 @@ pg_stat_statements.save = on
 - Recommandation : `on` en production moderne (PostgreSQL 18)
 
 **pg_stat_statements.track_utility**
-- Suit les commandes utilitaires (VACUUM, ANALYZE, CREATE INDEX, etc.)
-- Utile pour comprendre l'activité de maintenance
-- Recommandation : `on` pour une visibilité complète
+- Suit les commandes utilitaires (toutes sauf SELECT/INSERT/UPDATE/DELETE/MERGE) : VACUUM, ANALYZE, CREATE INDEX, COPY, etc.
+- **Activé par défaut** (`on`) — rien à changer dans la plupart des cas
+- Si désactivé, vous ne verriez pas les commandes de maintenance dans les statistiques
 
 ### Étape 4 : Redémarrer PostgreSQL
 
@@ -232,14 +232,7 @@ Vous devriez voir `pg_stat_statements` dans la liste.
 
 ### Ajuster la taille mémoire allouée
 
-pg_stat_statements utilise de la mémoire partagée pour stocker les statistiques. Par défaut, PostgreSQL alloue automatiquement la mémoire nécessaire, mais vous pouvez l'ajuster si vous suivez un très grand nombre de requêtes.
-
-Cette configuration n'est généralement pas nécessaire avec PostgreSQL 18, mais pour information :
-
-```conf
-# Ancienne méthode (avant PG 9.4, maintenant obsolète)
-# shared_preload_libraries alloue automatiquement la mémoire
-```
+pg_stat_statements utilise de la mémoire partagée pour stocker les statistiques. La quantité allouée est proportionnelle à `pg_stat_statements.max` — chaque entrée occupe quelques centaines d'octets. Le calcul est fait automatiquement au démarrage du serveur (mémoire dimensionnée à partir de `pg_stat_statements.max`), aucune autre variable n'est à régler.
 
 ### Ajuster la granularité de la normalisation
 
@@ -249,6 +242,70 @@ Par défaut, pg_stat_statements normalise complètement les requêtes. Vous pouv
 # Niveau de suivi (par défaut: 'top')
 pg_stat_statements.track = 'all'  # Recommandé pour la plupart des cas
 ```
+
+---
+
+## Évolutions récentes des colonnes (PG 17 / PG 18)
+
+Au fil des versions, pg_stat_statements s'est enrichie de nouvelles colonnes utiles. Quelques points à connaître quand on lit une formation/script ancien :
+
+### Renommage important en PG 17
+
+Les colonnes de temps I/O ont été **scindées par type de bloc** : `blk_read_time` et `blk_write_time` n'existent plus telles quelles. Elles sont maintenant :
+
+| Type de bloc | Lecture | Écriture |
+|--------------|---------|----------|
+| **Partagés** (shared buffers) | `shared_blk_read_time` | `shared_blk_write_time` |
+| **Locaux** (temp tables session) | `local_blk_read_time` | `local_blk_write_time` |
+| **Temporaires** (tris, hash) | `temp_blk_read_time` | `temp_blk_write_time` |
+
+Toute requête qui utilisait `blk_read_time + blk_write_time` doit donc être adaptée.
+
+### Nouvelles colonnes PG 17
+
+- **`stats_since`** : timestamp de création/réinitialisation de l'entrée (utile pour calculer un taux : `calls / (now() - stats_since)`).
+- **`minmax_stats_since`** : timestamp du dernier reset des colonnes `min_*_time` / `max_*_time` (via `pg_stat_statements_reset(..., minmax_only := true)`).
+- Tracking I/O scindé par type de bloc (voir ci-dessus).
+
+### Nouvelles colonnes PG 18
+
+- **`parallel_workers_to_launch`** : nombre de workers parallèles que le planner a demandé pour cette requête (cumulé sur tous les appels).
+- **`parallel_workers_launched`** : nombre de workers parallèles réellement lancés. Si `launched < to_launch`, la requête a été bridée par `max_parallel_workers` ou `max_parallel_workers_per_gather`.
+- **`wal_buffers_full`** : nombre de fois où le buffer WAL a dû être vidé en cours d'exécution parce qu'il était plein (signal indicateur d'un `wal_buffers` sous-dimensionné).
+- **`jit_deform_count`** / **`jit_deform_time`** : statistiques JIT pour la désérialisation des tuples (compilation JIT du tuple deforming).
+
+**Exemple — détecter une requête bridée par le pool de workers :**
+
+```sql
+SELECT
+    LEFT(query, 60)                         AS query_preview,
+    calls,
+    parallel_workers_to_launch              AS demandes,
+    parallel_workers_launched               AS lances,
+    parallel_workers_to_launch
+        - parallel_workers_launched         AS manquants
+FROM pg_stat_statements  
+WHERE parallel_workers_to_launch > 0  
+ORDER BY manquants DESC  
+LIMIT 10;  
+```
+
+**Exemple — repérer un `wal_buffers` sous-dimensionné :**
+
+```sql
+SELECT
+    LEFT(query, 80) AS query_preview,
+    calls,
+    wal_records,
+    pg_size_pretty(wal_bytes) AS wal_size,
+    wal_buffers_full
+FROM pg_stat_statements  
+WHERE wal_buffers_full > 0  
+ORDER BY wal_buffers_full DESC  
+LIMIT 10;  
+```
+
+Un `wal_buffers_full` élevé sur des requêtes générant beaucoup de WAL suggère d'augmenter `wal_buffers` (souvent : passer du défaut `-1` à `64MB` ou plus).
 
 ---
 
@@ -376,6 +433,49 @@ Pour réinitialiser uniquement les statistiques d'une requête spécifique (Post
 ```sql
 SELECT pg_stat_statements_reset(userid, dbid, queryid);
 ```
+
+À partir de **PostgreSQL 15**, on peut aussi ne réinitialiser que les compteurs min/max (utile pour mesurer une période sans perdre l'historique complet) :
+
+```sql
+-- Reset SEULEMENT des min_*_time / max_*_time, garde le reste
+SELECT pg_stat_statements_reset(minmax_only := true);
+
+-- Équivalent en arguments positionnels
+SELECT pg_stat_statements_reset(0, 0, 0, true);
+```
+
+Le timestamp précédent du reset min/max est renvoyé par la fonction, et stocké aussi dans `minmax_stats_since` (PG 17+) de chaque entrée.
+
+### Surveiller l'état de l'extension : `pg_stat_statements_info`
+
+Une vue souvent oubliée mais critique : **`pg_stat_statements_info`** (PG 14+) qui décrit l'état de l'extension elle-même.
+
+```sql
+SELECT * FROM pg_stat_statements_info;
+```
+
+| Colonne | Signification |
+|---------|---------------|
+| `dealloc` | Nombre de fois où PostgreSQL a dû **supprimer des entrées** (LRU) parce que `pg_stat_statements.max` était atteint |
+| `stats_reset` | Date du dernier reset des statistiques |
+
+**Pourquoi c'est important ?** Si `dealloc` croît, cela signifie que **votre `pg_stat_statements.max` est trop petit** : des requêtes sont évincées avant que vous ayez le temps de les voir, et certaines statistiques sont incomplètes.
+
+```sql
+-- Alerter si dealloc commence à croître
+SELECT
+    dealloc,
+    stats_reset,
+    age(NOW(), stats_reset) AS depuis_reset,
+    CASE
+        WHEN dealloc = 0 THEN '🟢 OK — max suffisant'
+        WHEN dealloc < 100 THEN '🟡 Surveiller — quelques évictions'
+        ELSE '🔴 max trop petit, augmenter pg_stat_statements.max'
+    END AS statut
+FROM pg_stat_statements_info;
+```
+
+> 💡 **Diagnostic concret** : si `dealloc > 0` quelques minutes après un reset, c'est que `pg_stat_statements.max` (défaut 5000 en PG 18) est dépassé. Doubler la valeur (`max = 10000`) et redémarrer le serveur.
 
 ---
 

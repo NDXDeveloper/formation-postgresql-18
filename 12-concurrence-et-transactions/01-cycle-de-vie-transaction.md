@@ -18,15 +18,17 @@ Si la première étape réussit mais que la seconde échoue, l'argent disparaît
 
 Une transaction dans PostgreSQL passe par plusieurs états durant son cycle de vie :
 
-### 1. État initial (Mode autocommit)
+### 1. État initial (mode autocommit)
 
-Par défaut, PostgreSQL fonctionne en **mode autocommit** : chaque instruction SQL est automatiquement une transaction complète qui est immédiatement validée (committée).
+Côté serveur, **toute instruction SQL est exécutée dans une transaction**. Si vous n'avez pas ouvert de transaction explicite avec `BEGIN`, PostgreSQL en démarre une **implicite** autour de chaque instruction et la valide immédiatement à la fin. C'est ce qu'on appelle le **mode autocommit**, qui est le comportement par défaut des clients (`psql`, drivers JDBC/psycopg, etc.).
 
 ```sql
--- Cette instruction est automatiquement une transaction complète
+-- Aucun BEGIN explicite → transaction implicite, COMMIT automatique en fin d'instruction
 INSERT INTO utilisateurs (nom, email) VALUES ('Alice', 'alice@example.com');
 -- Elle est immédiatement enregistrée dans la base de données
 ```
+
+> 💡 **Précision** : « autocommit » n'est pas un paramètre du serveur PostgreSQL : c'est une convention du client. Dans `psql`, on peut le désactiver via `\set AUTOCOMMIT off` ; en JDBC via `connection.setAutoCommit(false)`. Une fois désactivé, chaque instruction démarre une transaction qui attend un `COMMIT` ou `ROLLBACK` explicite.
 
 ### 2. État actif (Transaction en cours)
 
@@ -166,7 +168,11 @@ ROLLBACK TO SAVEPOINT nom_du_point;
 ROLLBACK TO nom_du_point;  -- Forme courte
 ```
 
-**Important :** Après un `ROLLBACK TO SAVEPOINT`, le point de sauvegarde reste valide et vous pouvez y revenir à nouveau si nécessaire.
+**Important :** Après un `ROLLBACK TO SAVEPOINT nom_du_point` :
+
+- Le savepoint **nommé reste valide** : vous pouvez y revenir à nouveau plus tard si nécessaire.  
+- Tous les **savepoints établis après** ce point sont **détruits** automatiquement (ainsi que les modifications qui y étaient associées).  
+- Les verrous acquis depuis le savepoint sont conservés (PostgreSQL ne sait pas annuler sélectivement un verrou de ligne).
 
 #### RELEASE SAVEPOINT
 
@@ -314,9 +320,9 @@ COMMIT;  -- C'est ce COMMIT qui valide réellement
 
 **Solution :** Utilisez des `SAVEPOINT` pour obtenir un comportement similaire aux transactions imbriquées.
 
-### 2. Les erreurs annulent automatiquement la transaction en cours
+### 2. Une erreur place la transaction en état « abandonnée »
 
-Si une erreur SQL se produit dans une transaction, PostgreSQL entre en **état d'erreur** et refuse d'exécuter d'autres commandes jusqu'à ce que vous fassiez un `ROLLBACK`.
+Si une erreur SQL se produit dans une transaction, PostgreSQL **ne fait pas un ROLLBACK automatique** : il bascule la transaction en **état abandonné** (*aborted*) et refuse d'exécuter toute nouvelle commande tant que vous n'avez pas envoyé un `ROLLBACK` (ou un `ROLLBACK TO SAVEPOINT` — voir plus bas).
 
 ```sql
 BEGIN;
@@ -325,17 +331,39 @@ INSERT INTO produits (nom, prix) VALUES ('Livre', 15.00);
 
 -- Cette commande provoque une erreur (violation de contrainte)
 INSERT INTO produits (id, nom, prix) VALUES (1, 'Stylo', 2.00);
--- ERREUR: la valeur 1 existe déjà
+-- ERROR:  duplicate key value violates unique constraint "produits_pkey"
 
--- PostgreSQL est maintenant en "état d'erreur"
+-- La transaction est désormais en état abandonné
 UPDATE produits SET prix = 20.00 WHERE nom = 'Livre';
--- ERREUR: la transaction actuelle est abandonnée,
--- les commandes sont ignorées jusqu'à la fin du bloc de transaction
+-- ERROR:  current transaction is aborted, commands ignored until end of transaction block
+-- (SQLSTATE 25P02)
 
-ROLLBACK;  -- Obligatoire pour sortir de l'état d'erreur
+ROLLBACK;  -- Obligatoire pour sortir de l'état abandonné
 ```
 
-**Important :** Dans le code applicatif, vous devez **toujours** gérer les erreurs et faire un `ROLLBACK` explicite en cas de problème.
+**Important :** Dans le code applicatif, vous devez **toujours** gérer les erreurs et émettre un `ROLLBACK` explicite en cas de problème — la plupart des drivers (psycopg, JDBC…) le font automatiquement lors de la fermeture/du retour au pool de la connexion, mais c'est plus sûr de le faire vous-même.
+
+#### Astuce : `SAVEPOINT` pour absorber une erreur ponctuelle
+
+Si vous voulez tenter une opération qui peut échouer **sans abandonner toute la transaction**, encadrez-la d'un `SAVEPOINT`. En cas d'erreur, un `ROLLBACK TO SAVEPOINT` ramène la transaction à un état valide et vous pouvez continuer :
+
+```sql
+BEGIN;
+
+INSERT INTO produits (nom, prix) VALUES ('Livre', 15.00);
+
+SAVEPOINT essai_stylo;  
+INSERT INTO produits (id, nom, prix) VALUES (1, 'Stylo', 2.00);  
+-- ERROR: duplicate key…
+
+ROLLBACK TO SAVEPOINT essai_stylo;   -- On sort de l'état d'erreur
+-- La transaction est de nouveau utilisable, le INSERT du Livre est préservé
+
+INSERT INTO produits (nom, prix) VALUES ('Stylo bille', 2.00);  -- Fonctionne  
+COMMIT;  -- Le Livre et le Stylo bille sont insérés  
+```
+
+C'est précisément ce que font en interne les ORMs comme **SQLAlchemy** ou **Django** lorsqu'ils proposent des « transactions imbriquées » : un `SAVEPOINT` par bloc interne.
 
 ### 3. Durée des transactions
 
@@ -431,8 +459,10 @@ Dans le prochain chapitre (12.2), nous approfondirons le mécanisme **MVCC (Mult
 
 - ✅ Une transaction = une unité de travail atomique (tout ou rien)  
 - ✅ `BEGIN` démarre, `COMMIT` valide, `ROLLBACK` annule  
-- ✅ Les `SAVEPOINT` permettent des annulations partielles  
-- ✅ Gardez vos transactions courtes et gérez toujours les erreurs  
-- ✅ PostgreSQL entre en "état d'erreur" après une erreur SQL dans une transaction
+- ✅ Les `SAVEPOINT` permettent des annulations partielles ; `ROLLBACK TO SAVEPOINT` préserve le savepoint nommé mais détruit ceux établis après  
+- ✅ Gardez vos transactions courtes et gérez toujours les erreurs côté application  
+- ✅ Après une erreur SQL, la transaction passe en état **abandonné** (`SQLSTATE 25P02`) et tout est ignoré jusqu'au `ROLLBACK`  
+- ✅ Pour absorber une erreur ponctuelle sans tout perdre, encadrez-la d'un `SAVEPOINT` + `ROLLBACK TO SAVEPOINT`  
+- ✅ Mode autocommit = convention **côté client** (psql, drivers), pas côté serveur
 
 ⏭️ [MVCC (Multiversion Concurrency Control) : Le cœur de PostgreSQL](/12-concurrence-et-transactions/02-mvcc-multiversion-concurrency.md)

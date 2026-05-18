@@ -151,6 +151,10 @@ $$ LANGUAGE plperlu;
 ```sql
 CREATE OR REPLACE FUNCTION exemple_v8(data JSONB)  
 RETURNS JSONB AS $$  
+    // data est passé comme objet JavaScript (déserialisé depuis JSONB)
+    if (!Array.isArray(data)) {
+        plv8.elog(ERROR, 'data doit être un tableau');
+    }
     return data.map(item => ({
         ...item,
         prix_ttc: item.prix * 1.20
@@ -161,12 +165,12 @@ $$ LANGUAGE plv8 IMMUTABLE STRICT;
 **Caractéristiques** :
 - ✅ **Moderne** : JavaScript ES6+ (const, let, arrow functions, classes)  
 - ✅ **JSON** : Manipulation JSON native et triviale  
-- ✅ **Performance** : Moteur V8 ultra-optimisé  
-- ✅ **Populaire** : Langage le plus utilisé au monde  
+- ✅ **Performance** : Moteur V8 ultra-optimisé avec JIT  
+- ✅ **Populaire** : Langage très utilisé  
 - ✅ **Stack unifiée** : Même langage frontend/backend/database  
-- ⚠️ **Extension tierce** : Pas inclus par défaut  
-- ⚠️ **npm** : Pas d'accès natif aux modules npm  
-- ⚠️ **Disponibilité** : Variable selon l'hébergement
+- ⚠️ **Extension tierce** : Pas inclus par défaut (mais largement disponible chez les hébergeurs cloud — Supabase, Neon, etc.)  
+- ⚠️ **npm** : Pas d'accès natif aux modules npm (il faut « bundler » manuellement le code)  
+- ⚠️ **Disponibilité** : Vérifier auprès de l'hébergeur
 
 **Utilisé pour** :
 - Manipulation JSON/JSONB intensive
@@ -174,6 +178,28 @@ $$ LANGUAGE plv8 IMMUTABLE STRICT;
 - Logique métier moderne
 - Validation de données
 - Stack JavaScript complète
+
+---
+
+### Autres langages procéduraux disponibles
+
+L'écosystème PostgreSQL ne se limite pas à ces quatre langages. Voici d'autres options qui peuvent être pertinentes selon les besoins :
+
+| Langage | Module | Type | Cas d'usage typique |
+|---------|--------|------|---------------------|
+| **PL/Tcl** | `pltcl`, `pltclu` | Trusted/Untrusted | Scripts simples, intégration historique |
+| **PL/R** | `plr` (tierce) | Untrusted | Analyse statistique, graphiques R, modèles statistiques |
+| **PL/Java** | `pljava` (tierce) | Trusted | Réutilisation de code Java existant, écosystème JVM |
+| **PL/Lua** | `pllua` (tierce) | Trusted/Untrusted | Scripts légers, performances embarquées |
+| **PL/sh** | `plsh` (tierce) | Untrusted | Exécution de scripts shell (avec précaution) |
+| **PL/Rust** | `pgrx` / `plrust` (tierce) | Trusted | Performance native, sécurité mémoire, ML |
+
+⭐ **À noter sur PL/Rust** (en pleine ascension depuis 2023) :
+- L'extension `plrust` (Trusted Language Extensions) propose une variante sandboxée de Rust.
+- L'écosystème `pgrx` (anciennement `pgx`) permet d'écrire des **extensions PostgreSQL complètes en Rust**, pas seulement des fonctions stockées.
+- Particulièrement utile pour les fonctions à forte intensité CPU, le ML embarqué, et les types personnalisés.
+
+⚠️ **Disponibilité variable :** la plupart de ces langages sont des extensions tierces qui doivent être compilées et installées séparément. Vérifiez la disponibilité chez votre hébergeur avant de planifier leur utilisation.
 
 ---
 
@@ -269,9 +295,9 @@ BEGIN
     UPDATE produits SET stock = stock - quantite WHERE ...;
 
     RETURN commande_id;
-EXCEPTION
-    WHEN OTHERS THEN
-        RAISE EXCEPTION 'Erreur commande: %', SQLERRM;
+    -- Pas de WHEN OTHERS : on laisse remonter les exceptions PostgreSQL
+    -- (contrainte FK violée, NOT NULL, etc.) avec leur SQLSTATE original.
+    -- Un bloc EXCEPTION WHEN OTHERS perdrait cette information.
 END;
 $$ LANGUAGE plpgsql;
 ```
@@ -474,57 +500,88 @@ $$ LANGUAGE plv8;
 
 ### 1. Installation et Disponibilité
 
-| Langage | Installation | Disponibilité |
-|---------|-------------|---------------|
-| **PL/pgSQL** | ✅ Natif | Toujours disponible |
-| **PL/Python** | ⚠️ Extension | Généralement disponible |
-| **PL/Perl** | ⚠️ Extension | Généralement disponible |
-| **PL/v8** | ⚠️ Extension tierce | Variable (vérifier) |
+| Langage | Module | Statut | Disponibilité typique |
+|---------|--------|--------|----------------------|
+| **PL/pgSQL** | `plpgsql` | Natif, trusted | ✅ Toujours installé |
+| **PL/Python** | `plpython3u` | Officiel, untrusted seulement | ⚠️ Paquet séparé (`postgresql-plpython3-XX`) |
+| **PL/Perl** | `plperl` / `plperlu` | Officiel, trusted + untrusted | ⚠️ Paquet séparé (`postgresql-plperl-XX`) |
+| **PL/Tcl** | `pltcl` / `pltclu` | Officiel, trusted + untrusted | ⚠️ Paquet séparé (`postgresql-pltcl-XX`) |
+| **PL/v8** | `plv8` | Extension tierce | ⚠️ Compilation ou paquet tiers requis |
+| **PL/Rust** | `plrust`, `pgrx` | Extensions tierces | ⚠️ Compilation requise |
 
-**Recommandation** : Vérifiez toujours la disponibilité des extensions dans votre environnement de production (hébergement cloud, conteneurs, etc.).
+**Installation sur Debian/Ubuntu** (exemple pour PostgreSQL 18) :
+
+```bash
+# Langages officiels (depuis les dépôts PostgreSQL)
+sudo apt install postgresql-plperl-18 postgresql-plpython3-18 postgresql-pltcl-18
+
+# Puis dans la base :
+CREATE EXTENSION plperl;       -- trusted  
+CREATE EXTENSION plperlu;      -- untrusted  
+CREATE EXTENSION plpython3u;   -- untrusted (unique variante)  
+```
+
+**Recommandation** : Vérifiez toujours la disponibilité des extensions dans votre environnement de production (hébergement cloud, conteneurs Docker, etc.). Certains services managés (AWS RDS, Azure Database for PostgreSQL) restreignent fortement les langages untrusted, voire les interdisent complètement.
 
 ### 2. Sécurité : Trusted vs Untrusted
 
-Les langages procéduraux ont deux variantes :
+Les langages procéduraux ont, pour certains, deux variantes :
 
 **Trusted (sécurisé)** :
 - Sandbox limitant les opérations dangereuses
-- Pas d'accès au système de fichiers
+- Pas d'accès au système de fichiers depuis la fonction
 - Pas d'exécution de commandes système
-- Utilisateurs normaux peuvent créer des fonctions
+- **Création de fonctions** : tout rôle disposant du privilège `USAGE` sur le langage (par défaut accordé à `PUBLIC`)
 
 **Untrusted (non sécurisé)** :
-- Accès complet au système
-- Peut lire/écrire des fichiers
-- Peut exécuter des commandes système
-- **Nécessite les privilèges superutilisateur**
+- Accès complet au système d'exploitation, au système de fichiers et aux commandes externes
+- Possibilité de lire/écrire des fichiers, d'exécuter des programmes
+- **Création de fonctions** : **rôle superutilisateur uniquement**
 
 ```sql
--- Exemple de variantes
-CREATE EXTENSION plpython3u;  -- Untrusted (u suffix)  
+-- Variantes disponibles aujourd'hui
+CREATE EXTENSION plpgsql;     -- Trusted, installé par défaut  
 CREATE EXTENSION plperl;      -- Trusted  
-CREATE EXTENSION plperlu;     -- Untrusted (u suffix)  
+CREATE EXTENSION plperlu;     -- Untrusted (suffixe « u »)  
+CREATE EXTENSION plpython3u;  -- Untrusted (suffixe « u »)  
+CREATE EXTENSION plv8;        -- Trusted (extension tierce)  
 ```
 
-**Règle** : Utilisez toujours la version **untrusted** pour accéder aux bibliothèques externes (pip, CPAN), mais soyez conscient des implications de sécurité.
+⚠️ **Particularité de Python : pas de version trusted**
+
+PostgreSQL ne fournit **que** la variante `plpython3u` (untrusted). Il n'existe **pas** de `plpython3` trusted. La raison : Python ne dispose pas d'un sandbox robuste, et tenter d'en construire un avait créé des failles de sécurité. Cette spécificité a deux conséquences :
+- Toute fonction PL/Python nécessite que le créateur soit superutilisateur.
+- Une fois créée par un superutilisateur, la fonction peut être **exécutée** par des rôles normaux (selon les droits `EXECUTE`), mais avec les permissions de l'utilisateur PostgreSQL sur le système hôte (souvent `postgres`).
+
+**Rappel historique :** `plpython2u` (Python 2) ainsi que `plpython` et `plpythonu` (alias) ont été **retirés dans PostgreSQL 12** (octobre 2019), peu avant la fin de vie officielle de Python 2 (janvier 2020). PostgreSQL 12 et toutes les versions suivantes ne fournissent plus que la variante Python 3 (`plpython3u`). Tout code Python doit donc être Python 3 compatible.
+
+**Règle pratique** : si vous avez besoin d'accéder aux bibliothèques système (pip, CPAN, npm), utilisez la version untrusted en sachant que cela élargit considérablement la surface d'attaque. Pour une simple manipulation de texte ou de JSON sans dépendance externe, préférez la version trusted lorsqu'elle existe.
 
 ### 3. Performance et Overhead
 
-```
-Performance relative (100 = PL/pgSQL)
+⚠️ **Les chiffres de performance dépendent fortement du cas d'usage.** Voici des **tendances observées** plutôt que des mesures absolues :
 
-PL/pgSQL:  ████████████████████████ 100  
-PL/v8:     ████████████████████     80-90  
-PL/Perl:   ████████████████         70  
-PL/Python: ████████████             60  
+**Pour la logique SQL intensive (jointures, agrégats, parcours de tables) :**
+- **PL/pgSQL** est généralement le plus performant : pas de conversion de type entre PostgreSQL et un langage externe, pas de marshalling.
+- Les autres langages doivent **convertir** les valeurs PostgreSQL en types natifs (Python, Perl, JS) puis revenir, ce qui ajoute un coût par appel.
 
-(Pour logique SQL intensive)
-```
+**Pour les calculs purs (CPU intensive sans SQL) :**
+- **PL/v8** peut être très rapide grâce au JIT du moteur V8.
+- **PL/pgSQL** est mauvais pour les calculs numériques bruts (boucles arithmétiques).
+- **PL/Python** est moyen, mais peut devenir rapide avec NumPy (vectorisation).
+
+**Coût de démarrage :**
+- **PL/pgSQL** : démarrage négligeable (intégré au backend).
+- **PL/Python** : chargement de l'interpréteur Python à la première fonction de la session (centaines de ms).
+- **PL/Perl** : chargement de l'interpréteur Perl à la première fonction (similaire).
+- **PL/v8** : chargement du moteur V8 à la première fonction (similaire).
+
+Une fois chargé, l'interpréteur reste en mémoire pour toute la session : les appels suivants sont rapides.
 
 **Recommandations** :
-- Utilisez PL/pgSQL pour les chemins critiques
-- Les autres langages sont excellents pour la logique métier
-- Benchmarker en cas de doute
+- Utilisez PL/pgSQL pour les chemins SQL critiques (triggers fréquents, fonctions appelées par milliers).
+- Pour les calculs numériques lourds, comparez PL/v8 et PL/Python avec NumPy via un benchmark réel.
+- **Mesurez systématiquement** dans votre environnement avant de choisir.
 
 ### 4. Maintenance et Évolutivité
 

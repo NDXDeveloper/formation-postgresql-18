@@ -237,9 +237,9 @@ SELECT * FROM projets;
 - Méthode : Certificat SSL (pas de mot de passe à stocker)
 
 **Autorisation** :
-- Droits : `SELECT` sur toutes les tables
-- Droit : `pg_dump` (pour effectuer des sauvegardes)
-- Pas de droits en écriture (sécurité)
+- Membre du rôle prédéfini `pg_read_all_data` (PostgreSQL 14+) : droit `SELECT` sur toutes les tables sans avoir à GRANT table par table
+- Aucun droit d'écriture (sécurité)
+- `pg_dump` est un **programme** côté client : il ne nécessite pas de droit spécifique, mais il a besoin de pouvoir lire chaque table qu'il sauvegarde (d'où l'intérêt de `pg_read_all_data`)
 
 ---
 

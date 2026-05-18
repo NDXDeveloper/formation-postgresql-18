@@ -296,37 +296,36 @@ DECLARE
     nb_total INTEGER := 0;
     lot_size INTEGER := 1000;
 BEGIN
-    -- Compter le nombre total à traiter
+    -- Compter le nombre total à traiter (ordre de grandeur, peut évoluer)
     SELECT COUNT(*) INTO nb_total
     FROM commandes
     WHERE date_creation < NOW() - INTERVAL '2 years';
 
-    RAISE NOTICE 'Début archivage de % commandes', nb_total;
+    RAISE NOTICE 'Début archivage de % commandes (approx.)', nb_total;
 
     -- Boucle de traitement par lots
     LOOP
-        -- Archiver un lot
-        WITH lot AS (
-            SELECT id FROM commandes
-            WHERE date_creation < NOW() - INTERVAL '2 years'
-            LIMIT lot_size
+        -- ✅ Pattern atomique : DELETE ... RETURNING capture les lignes
+        -- supprimées, et INSERT les archive en une seule opération.
+        -- Pas de race condition possible entre les deux étapes.
+        WITH lot_supprime AS (
+            DELETE FROM commandes
+            WHERE id IN (
+                SELECT id FROM commandes
+                WHERE date_creation < NOW() - INTERVAL '2 years'
+                LIMIT lot_size
+                FOR UPDATE SKIP LOCKED  -- éviter les conflits avec autres sessions
+            )
+            RETURNING *
         )
         INSERT INTO commandes_archive
-        SELECT * FROM commandes WHERE id IN (SELECT id FROM lot);
+        SELECT * FROM lot_supprime;
 
         -- Compter le nombre de lignes archivées
         GET DIAGNOSTICS nb_traitees = ROW_COUNT;
 
         -- Si aucune ligne traitée, on a fini
         EXIT WHEN nb_traitees = 0;
-
-        -- Supprimer les commandes archivées
-        DELETE FROM commandes
-        WHERE id IN (
-            SELECT id FROM commandes
-            WHERE date_creation < NOW() - INTERVAL '2 years'
-            LIMIT lot_size
-        );
 
         -- ✅ COMMIT après chaque lot
         COMMIT;
@@ -362,86 +361,119 @@ CALL archiver_anciennes_commandes();
 
 ## 5. Gestion d'Erreurs avec COMMIT/ROLLBACK
 
-### 5.1. Bloc EXCEPTION dans les procédures
+### 5.1. ⚠️ Règle CRUCIALE : COMMIT/ROLLBACK interdits dans un bloc EXCEPTION
 
-Les procédures peuvent gérer les erreurs avec des blocs `EXCEPTION`, mais attention à l'interaction avec COMMIT/ROLLBACK :
+> 🛑 **Règle fondamentale à retenir** : il est **impossible** de faire `COMMIT` ou `ROLLBACK` à l'intérieur d'un bloc PL/pgSQL contenant un handler `EXCEPTION`.  
+>  
+> **Pourquoi ?** Un bloc avec gestionnaire d'exception crée automatiquement une **sous-transaction** (savepoint implicite). Or, les commandes de contrôle de transaction sont incompatibles avec les sous-transactions actives.  
+>  
+> **Erreur obtenue** :  
+> ```  
+> ERROR: invalid transaction termination  
+> CONTEXT: PL/pgSQL function ... line N at COMMIT  
+> ```
+
+**Bonne nouvelle** : un bloc avec `EXCEPTION` **fait déjà un ROLLBACK partiel automatique** vers le savepoint implicite. Vous n'avez donc pas besoin de `ROLLBACK` explicite.
+
+```sql
+-- ❌ INCORRECT : ne compile pas / lève une erreur à l'exécution
+CREATE PROCEDURE mauvaise_procedure()  
+LANGUAGE plpgsql AS $$  
+BEGIN  
+    BEGIN
+        INSERT INTO logs VALUES ('test');
+        COMMIT;  -- ❌ Erreur : COMMIT dans un bloc EXCEPTION
+    EXCEPTION
+        WHEN OTHERS THEN
+            ROLLBACK;  -- ❌ Erreur identique
+    END;
+END;
+$$;
+```
+
+### 5.2. Pattern correct : COMMIT à l'EXTÉRIEUR du bloc EXCEPTION
 
 ```sql
 CREATE PROCEDURE traiter_avec_gestion_erreurs()  
-LANGUAGE plpgsql  
-AS $$  
-BEGIN  
-    -- Bloc 1
+LANGUAGE plpgsql AS $$  
+DECLARE  
+    v_erreur TEXT;
+BEGIN
+    -- Bloc 1 : protéger l'INSERT par un sous-bloc EXCEPTION,
+    -- puis COMMIT en dehors
     BEGIN
         INSERT INTO logs VALUES ('Traitement 1');
-        COMMIT;
-        RAISE NOTICE 'Traitement 1 : OK';
+        -- Le bloc EXCEPTION va automatiquement faire un rollback partiel
+        -- si une erreur se produit ici
     EXCEPTION
         WHEN OTHERS THEN
-            RAISE NOTICE 'Erreur dans traitement 1 : %', SQLERRM;
-            ROLLBACK;  -- Annule ce qui n'était pas encore commité
+            GET STACKED DIAGNOSTICS v_erreur = MESSAGE_TEXT;
+            RAISE NOTICE 'Erreur traitement 1 : %', v_erreur;
+            -- PAS de ROLLBACK ici : le savepoint implicite gère le rollback partiel
     END;
+    COMMIT;  -- ✅ Ici, hors du bloc EXCEPTION : autorisé
 
-    -- Bloc 2 (s'exécute même si le bloc 1 a échoué)
+    -- Bloc 2 : démontrer la gestion d'une vraie erreur
     BEGIN
         INSERT INTO logs VALUES ('Traitement 2');
-        -- Simulation d'une erreur
         PERFORM 1/0;  -- Division par zéro !
-        COMMIT;
     EXCEPTION
         WHEN division_by_zero THEN
-            RAISE NOTICE 'Erreur division par zéro dans traitement 2';
-            ROLLBACK;  -- Annule l'INSERT du traitement 2
+            RAISE NOTICE 'Division par zéro dans traitement 2 — rollback automatique du sous-bloc';
+            -- L'INSERT 'Traitement 2' est automatiquement annulé,
+            -- mais le COMMIT du Bloc 1 reste effectif.
     END;
+    COMMIT;  -- ✅ Hors du bloc EXCEPTION
 
-    -- Bloc 3 (s'exécute quand même)
+    -- Bloc 3 : continuer
     INSERT INTO logs VALUES ('Traitement 3');
     COMMIT;
     RAISE NOTICE 'Traitement 3 : OK';
-
 END;
 $$;
 
 CALL traiter_avec_gestion_erreurs();
--- NOTICE:  Traitement 1 : OK
--- NOTICE:  Erreur division par zéro dans traitement 2
+-- NOTICE:  Division par zéro dans traitement 2 — rollback automatique du sous-bloc
 -- NOTICE:  Traitement 3 : OK
 
--- Résultat : Les logs 1 et 3 sont dans la table, mais pas le log 2
+-- Résultat : les logs 'Traitement 1' et 'Traitement 3' sont en base.
+-- 'Traitement 2' a été annulé par le savepoint implicite du sous-bloc.
 ```
 
 **Important** :
-- ✅ Chaque bloc EXCEPTION peut faire un ROLLBACK indépendant  
-- ✅ L'exécution continue après un ROLLBACK  
-- ✅ Seul le bloc en erreur est annulé, pas toute la procédure
+- ✅ Chaque bloc `BEGIN...EXCEPTION...END` est une **sous-transaction** (savepoint implicite) : si une erreur survient, **seul ce sous-bloc** est annulé.  
+- ✅ Vous pouvez `COMMIT` librement **après** la fin du bloc EXCEPTION.  
+- ✅ Pas besoin de `ROLLBACK` explicite — le rollback partiel est automatique.
 
-### 5.2. Gestion d'erreurs globale
+### 5.3. Logger une erreur dans une table
+
+Pour persister la trace d'une erreur, séparer la capture (dans le bloc EXCEPTION) de l'insertion + COMMIT (en dehors) :
 
 ```sql
 CREATE PROCEDURE traiter_avec_securite()  
-LANGUAGE plpgsql  
-AS $$  
+LANGUAGE plpgsql AS $$  
 DECLARE  
-    v_erreur TEXT;
+    v_erreur TEXT := NULL;
 BEGIN
-    -- Tentative de traitement
     BEGIN
         INSERT INTO commandes VALUES (1, 100);
         INSERT INTO commandes VALUES (2, 200);
         INSERT INTO commandes VALUES (3, 300);
-        COMMIT;
-
     EXCEPTION
         WHEN OTHERS THEN
             GET STACKED DIAGNOSTICS v_erreur = MESSAGE_TEXT;
-            RAISE NOTICE 'ERREUR : %', v_erreur;
-            ROLLBACK;
-
-            -- Insérer dans une table d'erreurs
-            INSERT INTO erreurs_traitement (message, timestamp)
-            VALUES (v_erreur, NOW());
-            COMMIT;  -- Valider l'enregistrement de l'erreur
+            -- Pas de COMMIT/ROLLBACK ici, juste mémoriser l'erreur
     END;
+
+    IF v_erreur IS NOT NULL THEN
+        -- Maintenant on est HORS du bloc EXCEPTION :
+        -- on peut tracer l'erreur dans la base et COMMITTER
+        RAISE NOTICE 'ERREUR : %', v_erreur;
+        INSERT INTO erreurs_traitement(message, timestamp) VALUES (v_erreur, NOW());
+        COMMIT;
+    ELSE
+        COMMIT;  -- Valider les 3 inserts du bloc protégé
+    END IF;
 END;
 $$;
 ```
@@ -633,19 +665,23 @@ BEGIN
     COMMIT;
     RAISE NOTICE 'Données chargées dans staging';
 
-    -- Insérer par lots
+    -- Insérer par lots (DELETE...RETURNING + INSERT en une seule opération)
     LOOP
+        -- ✅ Pattern atomique : on extrait un lot via DELETE...RETURNING
+        -- puis on l'insère dans la table finale. Pas de risque que le
+        -- LIMIT retourne des lignes différentes entre deux requêtes.
         WITH lot AS (
-            SELECT * FROM staging_import LIMIT lot_size
+            DELETE FROM staging_import
+            WHERE ctid IN (
+                SELECT ctid FROM staging_import LIMIT lot_size
+            )
+            RETURNING *
         )
         INSERT INTO table_finale
         SELECT * FROM lot;
 
         GET DIAGNOSTICS nb_importees = ROW_COUNT;
         EXIT WHEN nb_importees = 0;
-
-        DELETE FROM staging_import
-        WHERE ctid IN (SELECT ctid FROM staging_import LIMIT lot_size);
 
         COMMIT;
         RAISE NOTICE 'Lot de % lignes importé', nb_importees;
@@ -712,46 +748,61 @@ $$;
 
 ## 9. Limitations et Considérations
 
-### 9.1. Pas de COMMIT/ROLLBACK dans les blocs EXCEPTION
+### 9.1. Pas de COMMIT/ROLLBACK dans un bloc contenant EXCEPTION
 
-⚠️ **Important** : Vous ne pouvez pas faire de COMMIT dans un bloc EXCEPTION à cause de la gestion automatique des sous-transactions.
+⚠️ **Règle stricte** : `COMMIT` et `ROLLBACK` sont **interdits dans tout bloc PL/pgSQL qui contient un handler `EXCEPTION`**. La raison : un tel bloc est une sous-transaction implicite, et on ne peut pas terminer une transaction depuis une sous-transaction.
 
 ```sql
--- ❌ CECI NE FONCTIONNE PAS
-CREATE PROCEDURE exemple_incorrect()  
-LANGUAGE plpgsql  
-AS $$  
+-- ❌ CECI NE FONCTIONNE PAS — COMMIT/ROLLBACK dans le bloc EXCEPTION
+CREATE PROCEDURE exemple_incorrect_1()  
+LANGUAGE plpgsql AS $$  
 BEGIN  
     INSERT INTO test VALUES (1);
-
 EXCEPTION
     WHEN OTHERS THEN
-        COMMIT;  -- ❌ ERREUR : cannot commit in exception block
+        COMMIT;  -- ❌ ERREUR : invalid transaction termination
+END;
+$$;
+
+-- ❌ CECI NON PLUS — COMMIT à l'intérieur d'un sous-bloc avec EXCEPTION
+CREATE PROCEDURE exemple_incorrect_2()  
+LANGUAGE plpgsql AS $$  
+BEGIN  
+    BEGIN
+        INSERT INTO test VALUES (1);
+        COMMIT;  -- ❌ ERREUR : ce sous-bloc a un EXCEPTION → sous-tx
+    EXCEPTION
+        WHEN OTHERS THEN
+            ROLLBACK;  -- ❌ ERREUR identique
+    END;
 END;
 $$;
 ```
 
-**Solution** : Structurer avec des sous-blocs :
+**Solution correcte** : faire le `COMMIT` **après** la fin du sous-bloc EXCEPTION. Le sous-bloc se charge automatiquement du rollback partiel en cas d'erreur (via savepoint implicite).
 
 ```sql
 -- ✅ CECI FONCTIONNE
 CREATE PROCEDURE exemple_correct()  
-LANGUAGE plpgsql  
-AS $$  
+LANGUAGE plpgsql AS $$  
 BEGIN  
+    -- Sous-bloc protégé par EXCEPTION
     BEGIN
         INSERT INTO test VALUES (1);
-        COMMIT;
+        -- Pas de COMMIT ni ROLLBACK ici !
     EXCEPTION
         WHEN OTHERS THEN
-            RAISE NOTICE 'Erreur capturée';
-            ROLLBACK;
+            RAISE NOTICE 'Erreur capturée — l''INSERT a été annulé automatiquement';
+            -- Pas de ROLLBACK : le savepoint implicite a déjà annulé l'INSERT
     END;
 
-    -- Le COMMIT/ROLLBACK est dans le sous-bloc, pas dans le EXCEPTION
+    -- ✅ Le COMMIT est APRÈS le sous-bloc, donc dans la transaction principale
+    COMMIT;
 END;
 $$;
 ```
+
+**Mécanique du savepoint implicite** : quand un bloc `BEGIN…EXCEPTION…END` rencontre une erreur, PostgreSQL fait automatiquement un `ROLLBACK TO` vers le savepoint posé au début du bloc, puis exécute le handler. Le résultat équivaut à un rollback partiel, sans qu'on ait besoin de l'écrire.
 
 ### 9.2. Performance : Le coût des COMMIT
 
@@ -872,32 +923,36 @@ $$;
 
 ### ✅ Pratique #3 : Gérer les erreurs par bloc
 
+Comme rappelé en 9.1, **COMMIT/ROLLBACK sont interdits dans un bloc avec EXCEPTION**. Il faut donc placer le `COMMIT` **après** la fin du sous-bloc.
+
 ```sql
 CREATE PROCEDURE traitement_resilient()  
-LANGUAGE plpgsql  
-AS $$  
+LANGUAGE plpgsql AS $$  
 BEGIN  
-    -- Chaque étape dans son propre bloc avec gestion d'erreur
+    -- Étape 1 protégée par un sous-bloc EXCEPTION
     BEGIN
-        -- Étape 1
-        COMMIT;
+        -- Code de l'étape 1 (INSERT, UPDATE...)
+        INSERT INTO etape1 SELECT * FROM source1;
     EXCEPTION
         WHEN OTHERS THEN
-            ROLLBACK;
-            RAISE NOTICE 'Erreur étape 1';
+            RAISE NOTICE 'Erreur étape 1 : %', SQLERRM;
+            -- L'erreur ici provoque un rollback partiel automatique de l'étape 1
     END;
+    COMMIT;  -- ✅ Hors du sous-bloc EXCEPTION
 
+    -- Étape 2 (s'exécute même si l'étape 1 a échoué)
     BEGIN
-        -- Étape 2
-        COMMIT;
+        INSERT INTO etape2 SELECT * FROM source2;
     EXCEPTION
         WHEN OTHERS THEN
-            ROLLBACK;
-            RAISE NOTICE 'Erreur étape 2';
+            RAISE NOTICE 'Erreur étape 2 : %', SQLERRM;
     END;
+    COMMIT;  -- ✅ Hors du sous-bloc EXCEPTION
 END;
 $$;
 ```
+
+> 💡 **Pattern « try / continue »** : ce schéma est idéal pour des traitements batch où chaque étape doit être tentée indépendamment, et où l'échec d'une étape ne doit pas bloquer les suivantes.
 
 ### ✅ Pratique #4 : Documenter les transactions
 
@@ -964,39 +1019,38 @@ $$;
 ### ⚠️ Erreur #2 : Oublier la gestion d'erreurs
 
 ```sql
--- ❌ MAUVAIS : Pas de gestion d'erreur
+-- ⚠️ Sans gestion d'erreur : si l'INSERT table2 échoue,
+-- table1 est validée mais la procédure plante
 CREATE PROCEDURE sans_gestion_erreur()  
-LANGUAGE plpgsql  
-AS $$  
+LANGUAGE plpgsql AS $$  
 BEGIN  
-    -- Si une erreur survient, toute la procédure échoue
     INSERT INTO table1 VALUES (1);
     COMMIT;
-    INSERT INTO table2 VALUES (2);  -- Si erreur ici, table1 est quand même validée !
+    INSERT INTO table2 VALUES (2);  -- Si erreur ici, l'exception remonte
     COMMIT;
 END;
 $$;
 
--- ✅ CORRECT : Gérer les erreurs
+-- ✅ CORRECT : sous-bloc EXCEPTION + COMMIT à l'extérieur
 CREATE PROCEDURE avec_gestion_erreur()  
-LANGUAGE plpgsql  
-AS $$  
+LANGUAGE plpgsql AS $$  
 BEGIN  
+    -- Étape 1
     BEGIN
         INSERT INTO table1 VALUES (1);
-        COMMIT;
     EXCEPTION WHEN OTHERS THEN
-        ROLLBACK;
-        RAISE NOTICE 'Erreur table1';
+        RAISE NOTICE 'Erreur table1 : %', SQLERRM;
+        -- Le savepoint implicite a déjà annulé l'INSERT
     END;
+    COMMIT;  -- ✅ Hors du sous-bloc EXCEPTION
 
+    -- Étape 2 (exécutée même si étape 1 a échoué)
     BEGIN
         INSERT INTO table2 VALUES (2);
-        COMMIT;
     EXCEPTION WHEN OTHERS THEN
-        ROLLBACK;
-        RAISE NOTICE 'Erreur table2';
+        RAISE NOTICE 'Erreur table2 : %', SQLERRM;
     END;
+    COMMIT;  -- ✅ Hors du sous-bloc EXCEPTION
 END;
 $$;
 ```
@@ -1108,25 +1162,25 @@ BEGIN
     RAISE NOTICE 'Début migration année %', annee;
 
     LOOP
-        -- Copier un lot
+        -- ✅ DELETE...RETURNING + INSERT en une seule opération atomique.
+        -- Sans cela, les deux LIMIT séparés pourraient retourner des lignes
+        -- différentes, ce qui supprimerait des lignes non archivées
+        -- (perte de données !).
         WITH lot AS (
-            SELECT * FROM transactions
-            WHERE EXTRACT(YEAR FROM date_transaction) = annee
-            LIMIT lot_size
+            DELETE FROM transactions
+            WHERE id IN (
+                SELECT id FROM transactions
+                WHERE EXTRACT(YEAR FROM date_transaction) = annee
+                LIMIT lot_size
+                FOR UPDATE SKIP LOCKED  -- éviter les conflits concurrents
+            )
+            RETURNING *
         )
         INSERT INTO transactions_archive
         SELECT * FROM lot;
 
         GET DIAGNOSTICS nb_migrees = ROW_COUNT;
         EXIT WHEN nb_migrees = 0;
-
-        -- Supprimer les lignes migrées
-        DELETE FROM transactions
-        WHERE id IN (
-            SELECT id FROM transactions
-            WHERE EXTRACT(YEAR FROM date_transaction) = annee
-            LIMIT lot_size
-        );
 
         total_migrees := total_migrees + nb_migrees;
 

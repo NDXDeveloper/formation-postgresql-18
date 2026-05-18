@@ -32,16 +32,20 @@ PostgreSQL et les bases de données modernes reconnaissent aussi d'autres anomal
 
 ### Tableau de prévention selon les niveaux d'isolation
 
-| Anomalie | Read Uncommitted | Read Committed | Repeatable Read | Serializable |
-|----------|------------------|----------------|-----------------|--------------|
-| Dirty Read | ❌ Possible | ✅ Impossible | ✅ Impossible | ✅ Impossible |
+Le tableau ci-dessous reflète **le comportement réel de PostgreSQL** (qui dépasse le standard ANSI sur plusieurs points) :
+
+| Anomalie | Read Uncommitted* | Read Committed | Repeatable Read | Serializable |
+|----------|-------------------|----------------|-----------------|--------------|
+| Dirty Read | ✅ Impossible | ✅ Impossible | ✅ Impossible | ✅ Impossible |
 | Non-Repeatable Read | ❌ Possible | ❌ Possible | ✅ Impossible | ✅ Impossible |
-| Phantom Read | ❌ Possible | ❌ Possible | ✅ Impossible* | ✅ Impossible |
+| Phantom Read | ❌ Possible | ❌ Possible | ✅ Impossible | ✅ Impossible |
 | Lost Update | ❌ Possible | ⚠️ Parfois | ✅ Impossible | ✅ Impossible |
 | Write Skew | ❌ Possible | ❌ Possible | ❌ Possible | ✅ Impossible |
 | Read Skew | ❌ Possible | ❌ Possible | ✅ Impossible | ✅ Impossible |
 
-*PostgreSQL va au-delà du standard ANSI : même Repeatable Read empêche les Phantom Reads.
+\* PostgreSQL ne supporte pas réellement `READ UNCOMMITTED` : il est silencieusement promu en `READ COMMITTED`. Grâce à MVCC, **aucun dirty read n'est jamais possible**, quel que soit le niveau demandé.
+
+**Écart par rapport au standard ANSI** : la norme ANSI autorise les *phantom reads* en `REPEATABLE READ`. PostgreSQL est plus strict et les empêche également (ce qu'on appelle parfois *snapshot isolation*).
 
 ---
 
@@ -61,7 +65,9 @@ Deux utilisateurs travaillent sur un système bancaire :
 - **Alice** (Transaction A) : Consulte son solde  
 - **Bob** (Transaction B) : Effectue un retrait mais annule ensuite
 
-#### Scénario avec Dirty Read (niveau Read Uncommitted)
+#### Scénario théorique d'un Dirty Read (impossible en PostgreSQL)
+
+> ⚠️ **À titre pédagogique** : le scénario ci-dessous décrit ce qui **se passerait** dans un SGBD qui autorise vraiment `READ UNCOMMITTED`. **PostgreSQL ne le permet jamais** (voir la section suivante). Si vous tapiez cette séquence en PostgreSQL, Alice verrait `1000€` (l'ancienne valeur committée), pas `500€`.
 
 **État initial** :
 ```sql
@@ -86,18 +92,18 @@ UPDATE comptes SET solde = solde - 500 WHERE id = 1;
 T2 (10:00:05) - Transaction A (Alice) démarre
 ```
 ```sql
-BEGIN TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;  -- Transaction A
+BEGIN TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;
+-- Dans un SGBD qui le supporte vraiment, Alice pourrait lire les
+-- modifications non encore validées de Bob.
 
 SELECT solde FROM comptes WHERE id = 1;
--- Dirty Read ! Alice voit : 500€
--- Elle lit une donnée NON COMMITÉE de Transaction B
+-- (théorie) Dirty Read : Alice verrait 500€, donnée non commitée de B
 
--- Alice prend une décision basée sur ce solde
 SELECT CASE
     WHEN solde < 600 THEN 'Compte bientôt à découvert !'
     ELSE 'Solde OK'
 END FROM comptes WHERE id = 1;
--- Résultat : "Compte bientôt à découvert !"
+-- (théorie) Résultat : "Compte bientôt à découvert !"
 
 COMMIT;
 ```
@@ -913,44 +919,31 @@ B  | Bob          | 500.00
 
 #### Scénario avec Read Skew (Read Committed)
 
-**Transaction T (Transfert 300€ de A vers B)** :
+L'audit (Transaction R) intercale ses lectures **autour** d'un transfert atomique (Transaction T). Comme R est en Read Committed, chacun de ses `SELECT` prend un **nouveau snapshot** : le premier avant le COMMIT de T, le second après. Résultat : une vue impossible.
+
+**Transaction R (audit) — démarre la première** :
 
 ```
 T1 (15:00:00)
 ```
 ```sql
-BEGIN;
+BEGIN;  -- Read Committed (défaut)
 
-UPDATE comptes SET solde = solde - 300 WHERE id = 'A';
--- Compte A : 700€ (commité)
-
--- [Petit délai]
-```
-
-**Transaction R (Audit - calcul du total, EN PARALLÈLE)** :
-
-```
-T2 (15:00:05) - Entre les deux UPDATE du transfert
-```
-```sql
-BEGIN;  -- Read Committed
-
--- Lire le solde de A
+-- Lecture du solde de A : T n'a pas encore commencé
 SELECT solde FROM comptes WHERE id = 'A';
--- Résultat : 700€ (voit la modification de T !)
+-- Résultat : 1000€
 ```
 
-**Transaction T (suite)** :
+**Transaction T (transfert atomique de 300€ de A vers B) — entièrement entre les deux lectures de R** :
 
 ```
-T3 (15:00:07)
+T2 (15:00:05) → T3 (15:00:06) : atomique
 ```
 ```sql
--- Terminer le transfert
-UPDATE comptes SET solde = solde + 300 WHERE id = 'B';
--- Compte B : 800€
-
-COMMIT;  -- Transfert terminé
+BEGIN;  
+UPDATE comptes SET solde = solde - 300 WHERE id = 'A';   -- A devient 700€  
+UPDATE comptes SET solde = solde + 300 WHERE id = 'B';   -- B devient 800€  
+COMMIT;  -- Le transfert devient visible pour les autres transactions  
 ```
 
 **Transaction R (suite)** :
@@ -959,34 +952,26 @@ COMMIT;  -- Transfert terminé
 T4 (15:00:10)
 ```
 ```sql
--- Lire le solde de B
+-- Nouvelle lecture (nouveau snapshot en Read Committed)
+-- Le COMMIT de T est désormais visible
 SELECT solde FROM comptes WHERE id = 'B';
--- Résultat : 800€ (voit aussi la modification !)
+-- Résultat : 800€
 
--- Calculer le total
-SELECT SUM(solde) FROM comptes WHERE id IN ('A', 'B');
--- Résultat : 1500€... MAIS !
+-- Calcul du « total » audité
+SELECT 1000 + 800 AS total_audite;
+-- Résultat : 1800€ (!!) 🚨
 
 COMMIT;
 ```
 
 **Analyse** :
 
-Transaction R a vu :
-- Compte A après le débit : 700€ ✅
-- Compte B après le crédit : 800€ ✅
-- Total : 1500€ ✅
+Transaction R a observé une réalité **qui n'a jamais existé** :
+- Compte A vu **avant** le transfert : 1000€  
+- Compte B vu **après** le transfert : 800€  
+- Total calculé : 1800€  
 
-Mais si elle avait calculé le total **pendant** sa transaction :
-
-```sql
--- Transaction R au moment T2 (entre les deux UPDATE)
-SELECT SUM(solde) FROM comptes WHERE id IN ('A', 'B');
--- Aurait vu : 700€ + 500€ = 1200€ (!!)  🚨
--- Les 300€ auraient "disparu" temporairement !
-```
-
-C'est un **Read Skew** : une vue incohérente de l'état de la base.
+Or à aucun instant la somme A + B n'a valu 1800€ : c'était soit 1500€ avant le transfert, soit 1500€ après. Les 300€ apparaissent en double parce que R a vu A « pré-transfert » et B « post-transfert ». C'est un **Read Skew** : une vue **incohérente** assemblée à partir de snapshots successifs.
 
 ### Comment prévenir Read Skew
 
@@ -1052,17 +1037,36 @@ Niveau : Read Committed + UPDATE atomique
 ```
 
 ```sql
--- Bon pattern pour gérer le stock
-BEGIN;  
-UPDATE produits  
-SET stock = stock - quantite_achetee  
-WHERE id = produit_id AND stock >= quantite_achetee;  
+-- Bon pattern pour gérer le stock : on conditionne l'UPDATE par le stock
+-- suffisant, ce qui est atomique. Côté applicatif, on vérifie le nombre
+-- de lignes affectées pour savoir si la commande est passée.
 
-IF NOT FOUND THEN
-    RAISE EXCEPTION 'Stock insuffisant';
-END IF;  
-COMMIT;  
+BEGIN;
+
+UPDATE produits
+   SET stock = stock - 3        -- 3 = quantité achetée
+ WHERE id = 42                   -- 42 = identifiant produit
+   AND stock >= 3;
+-- Si UPDATE renvoie 0 ligne → stock insuffisant → ROLLBACK côté appli
+
+COMMIT;
 ```
+
+> 💡 **Variante en PL/pgSQL** si vous voulez la vérification côté serveur :  
+>  
+> ```sql  
+> DO $$  
+> BEGIN  
+>     UPDATE produits SET stock = stock - 3  
+>      WHERE id = 42 AND stock >= 3;  
+>  
+>     IF NOT FOUND THEN  
+>         RAISE EXCEPTION 'Stock insuffisant pour le produit %', 42;  
+>     END IF;  
+> END $$;  
+> ```  
+>  
+> L'exception émise dans le `DO` provoque automatiquement le `ROLLBACK` du bloc.
 
 ### Système bancaire
 
@@ -1197,14 +1201,17 @@ UNIQUE (place_id, date);
 
 ### 4. Implémenter une logique de retry
 
-Pour Repeatable Read et Serializable, implémentez **toujours** un mécanisme de retry :
+Pour Repeatable Read et Serializable, implémentez **toujours** un mécanisme de retry sur la classe d'erreur 40 (`serialization_failure` 40001 et `deadlock_detected` 40P01) :
 
 ```python
+# Pseudo-code : la version complète et idempotente
+# (avec jitter, plafonnement, gestion de e.pgcode) est donnée
+# en détail dans les chapitres 12.3, 12.5 et 12.7.
 def execute_with_retry(operation, max_retries=3):
     for attempt in range(max_retries):
         try:
             return operation()
-        except SerializationError:
+        except SerializationError:  # classe SQLSTATE 40
             if attempt == max_retries - 1:
                 raise
             time.sleep(0.1 * (2 ** attempt))
@@ -1213,20 +1220,28 @@ def execute_with_retry(operation, max_retries=3):
 ### 5. Surveiller les métriques
 
 ```sql
--- Taux de rollback (indicateur de conflits)
+-- Taux de rollback global + nombre de deadlocks
 SELECT
     datname,
     xact_commit,
     xact_rollback,
-    ROUND(100.0 * xact_rollback / NULLIF(xact_commit + xact_rollback, 0), 2) AS rollback_pct
+    ROUND(100.0 * xact_rollback / NULLIF(xact_commit + xact_rollback, 0), 2)
+        AS rollback_pct,
+    deadlocks
 FROM pg_stat_database  
 WHERE datname = current_database();  
 ```
 
-Un taux élevé peut indiquer :
-- Niveau d'isolation trop strict
+Un taux de rollback élevé peut indiquer :
+- Niveau d'isolation trop strict (beaucoup de `serialization_failure`)
 - Contentions sur les données
 - Transactions trop longues
+- … ou simplement beaucoup de ROLLBACK applicatifs **volontaires** (validation métier qui échoue)
+
+> ⚠️ **`xact_rollback` ne distingue pas** les rollbacks volontaires (votre appli choisit d'annuler) des rollbacks forcés par une erreur de sérialisation ou un deadlock. Pour mesurer spécifiquement la pression de concurrence :  
+>  
+> - `deadlocks` (colonne ci-dessus) compte uniquement les deadlocks détectés ;  
+> - Les **serialization failures** (`SQLSTATE 40001`) n'ont pas de compteur dédié — il faut activer `log_min_messages = error` et compter les occurrences dans les logs, ou poser un trigger applicatif côté driver pour incrémenter une métrique custom.
 
 ---
 

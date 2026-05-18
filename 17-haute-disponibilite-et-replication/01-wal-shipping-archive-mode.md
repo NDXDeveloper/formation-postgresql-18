@@ -163,7 +163,7 @@ Avec PITR :
 
 ### 4.1. Activation de l'archivage
 
-L'archivage WAL se configure principalement via trois paramètres dans `postgresql.conf` :
+L'archivage WAL se configure principalement via quatre paramètres dans `postgresql.conf` :
 
 #### Paramètre 1 : `wal_level`
 
@@ -186,18 +186,27 @@ wal_level = replica
 Active ou désactive l'archivage.
 
 **Valeurs possibles :**
-- `off` : Archivage désactivé (par défaut)  
-- `on` : Archivage activé  
-- `always` : Archivage même en standby (PostgreSQL 9.5+)
+- `off` : Archivage désactivé (par défaut)
+- `on` : Archivage activé **uniquement sur le primary** (le standby n'archive pas)
+- `always` : Archivage **sur le primary ET sur les standbys** (PostgreSQL 9.5+)
 
 **Configuration :**
 ```ini
 archive_mode = on
 ```
 
+**Quand utiliser `always` ?**
+- Si vous voulez **continuer à archiver même après un failover** (le nouveau primary, ancien standby, continuera à archiver)
+- Si vous voulez deux flux d'archive parallèles (un depuis le primary, un depuis le standby) — utile pour multiplier les destinations
+- ⚠️ Attention : si vos deux instances archivent vers le **même répertoire**, il faut absolument un mécanisme anti-collision (sinon deux processus peuvent écrire le même fichier)
+
 ⚠️ **Attention :** Modifier `wal_level` ou `archive_mode` nécessite un **redémarrage** de PostgreSQL.
 
-#### Paramètre 3 : `archive_command`
+#### Paramètre 3 : `archive_command` ou `archive_library` (PG 15+)
+
+PostgreSQL propose **deux mécanismes** pour archiver les WAL :
+
+**A. `archive_command`** — méthode historique (shell)
 
 La commande shell qui sera exécutée pour archiver chaque fichier WAL complété.
 
@@ -207,8 +216,49 @@ archive_command = 'command %p %f'
 ```
 
 **Variables disponibles :**
-- `%p` : Chemin complet du fichier WAL à archiver  
+- `%p` : Chemin complet du fichier WAL à archiver
 - `%f` : Nom du fichier WAL uniquement
+- `%%` : Le caractère `%` littéral
+
+**B. `archive_library`** — nouveauté PostgreSQL 15+
+
+Depuis PG 15, on peut utiliser un **module C** chargé en mémoire au lieu de forker un shell à chaque fichier WAL. C'est plus performant et plus sûr.
+
+```ini
+# postgresql.conf (PG 15+)
+archive_library = 'basic_archive'   # Module fourni en contrib
+# archive_command et archive_library sont mutuellement exclusifs
+```
+
+La configuration spécifique du module se fait alors via des paramètres dédiés (ex. `basic_archive.archive_directory`).
+
+> 💡 **Recommandation** :  
+> - Pour la plupart des cas, `archive_command` reste pratique et bien documenté.  
+> - Pour de hautes performances (gros débit WAL), envisagez `archive_library` ou un outil comme **pgBackRest** / **WAL-G** qui gèrent l'archivage de manière optimisée.
+
+#### Paramètre 4 : `archive_timeout` — borner le RPO
+
+Par défaut, un segment WAL n'est archivé **qu'une fois rempli** (16 Mo). Sur une base peu active, cela peut prendre des heures, ce qui dégrade le RPO (vous perdriez tout ce qui n'a pas encore basculé en segment archivé).
+
+`archive_timeout` force le bascule vers un nouveau segment WAL après le délai indiqué, même si le segment courant n'est pas plein :
+
+```ini
+# Force l'archivage d'un nouveau segment WAL au minimum toutes les 5 minutes
+archive_timeout = 5min
+```
+
+**Conséquence sur le RPO** : votre fenêtre de perte de données maximale ≈ `archive_timeout` + le temps de l'archivage lui-même.
+
+**Conséquence sur le volume** : sur une base peu active, vous générerez plus de fichiers WAL "petits" (chacun fait toujours 16 Mo sur disque même s'il est peu rempli). Compromis classique :
+
+| `archive_timeout` | RPO atteignable | Surcoût stockage |
+|-------------------|-----------------|------------------|
+| Non défini (défaut) | Indéterminé (peut être plusieurs heures sur base inactive) | Minimal |
+| `5min` | ~5 min | Modéré |
+| `1min` | ~1 min | Significatif si base peu active |
+| `30s` | ~30 s | Important |
+
+> 💡 La compression WAL (`wal_compression`, PG 14+) ne réduit **pas** la taille sur disque du segment archivé (qui reste 16 Mo), mais réduit la taille des **records WAL à l'intérieur** du segment. Depuis PG 15, plusieurs algorithmes sont disponibles : `pglz` (défaut historique), `lz4` (très rapide), `zstd` (ratio compression optimal). Exemple : `wal_compression = lz4`.
 
 ### 4.2. Exemples de commandes d'archivage
 
@@ -303,8 +353,9 @@ max_wal_size = 2GB
 # Intervalle maximum entre deux checkpoints (optionnel)
 checkpoint_timeout = 10min
 
-# Compression du WAL (PostgreSQL 14+) - optionnel
-wal_compression = on
+# Compression du WAL (PG 14+) — `on` utilise pglz par défaut
+# PG 15+ permet aussi : pglz, lz4 (rapide), zstd (meilleur ratio)
+wal_compression = lz4
 ```
 
 ---
@@ -380,10 +431,10 @@ FROM pg_stat_archiver;
 
 ```bash
 # Taille totale du répertoire WAL
-du -sh /var/lib/postgresql/14/main/pg_wal/
+du -sh /var/lib/postgresql/18/main/pg_wal/
 
 # Nombre de fichiers WAL
-ls -l /var/lib/postgresql/14/main/pg_wal/ | grep -v "archive_status" | wc -l
+ls -l /var/lib/postgresql/18/main/pg_wal/ | grep -v "archive_status" | wc -l
 ```
 
 **Alerte si :**
@@ -403,12 +454,15 @@ ls -l /var/lib/postgresql/14/main/pg_wal/ | grep -v "archive_status" | wc -l
 **Diagnostic :**
 ```bash
 # Vérifier les logs PostgreSQL
-tail -f /var/log/postgresql/postgresql-14-main.log | grep archive
+tail -f /var/log/postgresql/postgresql-18-main.log | grep archive
 
-# Tester manuellement la commande d'archivage
-su - postgres
-/path/to/archive_command /path/to/wal/file testfile
-echo $?  # Doit retourner 0
+# Tester manuellement la commande d'archivage en tant qu'utilisateur postgres
+# Exemple si archive_command = 'cp %p /mnt/archive/pg_wal/%f' :
+sudo -u postgres bash -c 'cp /var/lib/postgresql/18/main/pg_wal/000000010000000000000001 /mnt/archive/pg_wal/test_archive'  
+echo $?  # Doit retourner 0 si la commande fonctionne  
+
+# Vérifier également les permissions sur le répertoire cible
+ls -la /mnt/archive/pg_wal/
 ```
 
 #### Symptôme 2 : Archivage lent
@@ -484,19 +538,28 @@ Pour un système de production robuste, surveillez :
 **Implémentation avec un script personnalisé :**
 ```bash
 #!/bin/bash
-# archive_multi.sh
+# archive_multi.sh — archive vers DEUX destinations de manière SYNCHRONE
+# Toutes les copies doivent réussir pour que PostgreSQL considère l'archivage OK.
+
+set -euo pipefail
 
 WAL_PATH=$1  
 WAL_FILE=$2  
 
-# Copie locale rapide
-cp "$WAL_PATH" /mnt/local/archive/"$WAL_FILE" || exit 1
+# 1. Copie locale rapide (atomique : copier puis renommer)
+cp "$WAL_PATH" "/mnt/local/archive/${WAL_FILE}.tmp"  
+mv "/mnt/local/archive/${WAL_FILE}.tmp" "/mnt/local/archive/${WAL_FILE}"  
 
-# Copie distante asynchrone (en arrière-plan)
-rsync -a "$WAL_PATH" backup-server:/archive/"$WAL_FILE" &
+# 2. Copie distante synchrone (si elle échoue, on retourne un code != 0
+#    et PostgreSQL réessaiera plus tard sans avoir marqué le WAL comme archivé)
+rsync -a "$WAL_PATH" "backup-server:/archive/${WAL_FILE}"
 
 exit 0
 ```
+
+> ⚠️ **Anti-pattern à éviter** : lancer une copie distante en arrière-plan (`rsync ... &`) puis `exit 0`. Si la copie distante échoue, PostgreSQL pensera l'archivage réussi et le WAL pourra être recyclé localement, alors que votre archive distante est incomplète. **L'archivage doit être synchrone** : tant que toutes les copies indispensables n'ont pas réussi, retourner un code non-zéro.
+
+> 💡 **En production**, préférez **pgBackRest** (multi-repo natif) ou **WAL-G** : ils gèrent les échecs, le retry et la parallélisation correctement.
 
 ### 7.3. Architecture haute disponibilité
 
@@ -540,9 +603,13 @@ Ce sujet sera approfondi dans les chapitres 17.2 et 17.3.
 
 1. **Activez la compression WAL** (PostgreSQL 14+) :
    ```ini
-   wal_compression = on
+   # Défaut : off (pas de compression). Valeurs possibles si activé :
+   #   - on / pglz : algorithme historique (PG 14+)
+   #   - lz4       : rapide, bon ratio (PG 15+, recommandé)
+   #   - zstd      : meilleur ratio, légèrement plus coûteux en CPU (PG 15+)
+   wal_compression = lz4
    ```
-   Réduction typique : 40-60% de la taille du WAL
+   Réduction typique : 40-60% de la taille des full-page writes dans le WAL
 
 2. **Optimisez `max_wal_size`** selon votre charge :
    - OLTP léger : 1-2 GB
@@ -562,22 +629,24 @@ Les archives WAL peuvent rapidement consommer de l'espace disque. Planifiez une 
 - Archiver mensuellement vers un stockage froid (Glacier, Azure Archive)
 - Supprimer les archives > 30 jours
 
-**Script de nettoyage (cron) :**
+**⚠️ Ne JAMAIS purger les WAL par `find ... -mtime`**
+
+Supprimer aveuglément des fichiers WAL par âge est **dangereux** : vous pouvez supprimer des WAL encore nécessaires à une restauration PITR ou à un standby. Utilisez **`pg_archivecleanup`**, l'outil officiel qui respecte la position du dernier checkpoint :
+
 ```bash
-#!/bin/bash
-# cleanup_old_wal.sh
-
-ARCHIVE_DIR="/mnt/archive/pg_wal"  
-RETENTION_DAYS=7  
-
-# Supprimer les fichiers WAL plus vieux que RETENTION_DAYS
-find "$ARCHIVE_DIR" -name "0*" -type f -mtime +$RETENTION_DAYS -delete
-
-# Logger l'opération
-echo "$(date): Cleaned WAL archives older than $RETENTION_DAYS days" >> /var/log/pg_cleanup.log
+# Usage : pg_archivecleanup <archive_dir> <oldest_kept_walfile>
+# Supprime tous les WAL plus anciens que celui passé en argument
+pg_archivecleanup /mnt/archive/pg_wal/ 000000010000000000000042
 ```
 
-**⚠️ Important :** Ne supprimez JAMAIS des archives WAL nécessaires pour les standbys actifs !
+**Comment connaître le nom du plus ancien WAL à conserver ?**
+
+- Pour conserver les WAL nécessaires à votre dernier basebackup : utilisez le fichier `*.backup` créé par `pg_basebackup`
+- Pour un standby : récupérez `restart_lsn` depuis `pg_replication_slots` et calculez le nom du WAL correspondant via `pg_walfile_name()`
+
+**Intégration avec pgBackRest / WAL-G** : ces outils gèrent automatiquement la rétention selon les politiques que vous définissez (jours, nombre de basebackups, etc.). C'est l'approche recommandée en production.
+
+**⚠️ Important :** Ne supprimez JAMAIS manuellement des archives WAL nécessaires pour les standbys actifs ni pour une éventuelle PITR !
 
 ### 8.4. Tests réguliers
 
@@ -623,19 +692,19 @@ PANIC: could not write to file "pg_wal/xlogtemp.12345": No space left on device
 **Solution d'urgence :**
 ```bash
 # 1. Vérifier l'espace disque
-df -h /var/lib/postgresql/14/main/pg_wal/
+df -h /var/lib/postgresql/18/main/pg_wal/
 
 # 2. Identifier le problème d'archivage
-tail -100 /var/log/postgresql/postgresql-14-main.log | grep -i archive
+tail -100 /var/log/postgresql/postgresql-18-main.log | grep -i archive
 
-# 3. Si nécessaire, archiver manuellement et temporairement
-su - postgres  
-cd /var/lib/postgresql/14/main/pg_wal/  
-for f in 0*; do  
-  if [ -f "$f" ]; then
-    cp "$f" /mnt/backup/emergency/ && rm "$f"
-  fi
-done
+# 3. ⚠️ ATTENTION : Ne JAMAIS supprimer manuellement des fichiers WAL
+#    de pg_wal/ — vous risqueriez de corrompre le cluster !
+#    Solutions correctes :
+#    a) Augmenter l'espace disque (ajout d'un volume, déplacement de pg_wal)
+#    b) Corriger la cause racine (archive_command, permissions, réseau)
+#    c) En dernier recours et SI les standbys/PITR sont OK,
+#       utiliser pg_archivecleanup pour supprimer SEULEMENT les WAL
+#       déjà archivés ET inutiles à la réplication
 
 # 4. Corriger la cause racine (commande d'archivage, espace disque, etc.)
 ```
@@ -660,10 +729,10 @@ SELECT * FROM pg_stat_archiver;
 Si `last_archived_time` est ancien malgré une activité élevée :
 
 **Solutions :**
-1. Utiliser un archivage local + copie asynchrone  
-2. Augmenter `max_wal_size` pour espacer les checkpoints  
-3. Optimiser le réseau ou le stockage de destination  
-4. Utiliser pgBackRest ou WAL-G (archivage parallèle)
+1. **Utiliser un outil dédié** : pgBackRest ou WAL-G gèrent l'archivage **parallèle** (plusieurs WAL en parallèle), la compression à la volée et la résilience aux échecs réseau.
+2. **Archive en deux étapes** : copier le WAL vers un stockage local rapide (SSD) **de manière synchrone**, puis laisser un processus séparé pousser vers le stockage long terme. ⚠️ La copie depuis le local vers le stockage long terme doit être faite par un démon dédié, PAS dans `archive_command` en arrière-plan (anti-pattern, cf. section 7.2).
+3. **Augmenter `max_wal_size`** pour espacer les checkpoints (moins de WAL générés pendant les pics).
+4. **Optimiser le réseau ou le stockage de destination** (lien dédié, SSD côté NAS, etc.).
 
 ---
 
@@ -754,7 +823,7 @@ Maintenant que vous comprenez l'archivage WAL, vous êtes prêt à explorer :
 
 ### Lectures avancées
 - "PostgreSQL: Up and Running" (O'Reilly) - Chapitre sur la réplication
-- Blog 2ndQuadrant : Articles sur WAL internals
+- Blog EDB (ex-2ndQuadrant) : Articles sur WAL internals
 - Percona Blog : Cas d'usage d'archivage WAL en production
 
 ---

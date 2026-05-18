@@ -74,13 +74,28 @@ Une **Rainbow Table** est une base de données précalculée contenant des milli
 
 Un **salt** est une valeur aléatoire ajoutée au mot de passe avant le hachage pour rendre chaque hash unique.
 
-**Sans salt (MD5 dans PostgreSQL) :**
+**MD5 PostgreSQL : un peu mieux qu'un MD5 nu, mais insuffisant**
+
+PostgreSQL ne fait pas un simple `md5(password)`. Il calcule en réalité :
 ```
-Utilisateur A : "password" ➡️ Hash : "5f4dcc3b5..."  
-Utilisateur B : "password" ➡️ Hash : "5f4dcc3b5..." (identique !)  
+hash_stocké = "md5" || md5(password || username)
 ```
 
-Si un attaquant casse un hash, il casse tous les utilisateurs avec le même mot de passe.
+Le **username** sert de salt implicite. Donc :
+```
+Alice + "password" ➡️ hash unique pour Alice  
+Bob   + "password" ➡️ hash différent (car salt = username)  
+```
+
+⚠️ Cependant, ce mécanisme reste **faible** :
+- Le « salt » est connu (= le nom d'utilisateur).
+- L'algorithme MD5 est cryptographiquement cassé.
+- Une seule itération : un GPU teste des milliards de mots de passe par seconde.
+
+**SCRAM-SHA-256 fait beaucoup mieux** :
+- Salt **aléatoire** (16 octets, différent à chaque création de mot de passe).
+- **4096 itérations** par défaut (key stretching).
+- Algorithme SHA-256 (toujours considéré sûr).
 
 **Avec salt (SCRAM-SHA-256) :**
 ```
@@ -287,11 +302,25 @@ Tous les clients PostgreSQL ne supportent pas SCRAM-SHA-256 :
 - Migrer les utilisateurs progressivement
 - Désactiver MD5 une fois tous les utilisateurs migrés
 
-**Configuration `pg_hba.conf` en mode mixte :**
+⚠️ **Important sur la syntaxe pg_hba.conf** : il n'existe **pas** de syntaxe `scram-sha-256,md5` (liste séparée par virgule). Chaque ligne contient **une seule** méthode.
+
+**La bonne approche en transition** : utiliser la méthode `md5` qui, depuis PostgreSQL 10+, **accepte aussi SCRAM-SHA-256** côté serveur — la méthode effectivement utilisée dépend du type de hash stocké pour chaque utilisateur :
+
 ```
-# Autoriser MD5 et SCRAM temporairement
-host    all    all    0.0.0.0/0    scram-sha-256,md5
+# Configuration de transition : conserver md5 dans pg_hba.conf
+# (le serveur acceptera SCRAM pour les utilisateurs déjà migrés)
+host    all    all    0.0.0.0/0    md5
 ```
+
+**Comportement** :
+- Utilisateur avec hash `md5...` → le serveur dialogue en MD5.
+- Utilisateur avec hash `SCRAM-SHA-256$...` → le serveur dialogue en SCRAM-SHA-256.
+
+Une fois tous les utilisateurs migrés à SCRAM, basculer explicitement :
+```
+host    all    all    0.0.0.0/0    scram-sha-256
+```
+À ce moment seul SCRAM est accepté, ce qui rejette tout utilisateur encore en MD5.
 
 **Avantages :**
 - ✅ Pas d'interruption de service  
@@ -368,15 +397,16 @@ host    all    all    0.0.0.0/0    scram-sha-256,md5
 
 2. **Modifier `pg_hba.conf` (mode transition)**
    ```
-   # Avant (MD5 uniquement)
+   # Avant et pendant la transition : la méthode 'md5' accepte
+   # automatiquement aussi SCRAM si l'utilisateur a un hash SCRAM.
    host    all    all    0.0.0.0/0    md5
 
-   # Pendant transition (MD5 + SCRAM)
-   host    all    all    0.0.0.0/0    scram-sha-256,md5
-
-   # Après migration (SCRAM uniquement)
+   # Après migration de TOUS les utilisateurs vers SCRAM,
+   # passer à scram-sha-256 (rejette désormais tout hash MD5)
    host    all    all    0.0.0.0/0    scram-sha-256
    ```
+
+   > 💡 **Note importante** : `scram-sha-256` dans pg_hba.conf **refuse** les utilisateurs ayant encore un hash MD5. Faire ce changement uniquement après avoir vérifié qu'aucun utilisateur n'a un hash `md5*` dans `pg_authid.rolpassword`.
 
 3. **Recharger la configuration**
    ```
@@ -471,13 +501,29 @@ WHERE rolname = 'alice';
 
 ### 2. **Augmenter le Nombre d'Itérations (Pour Experts)**
 
-Par défaut, PostgreSQL utilise 4096 itérations. Vous pouvez augmenter ce nombre pour plus de sécurité (au prix de performances CPU légèrement réduites).
+Par défaut, PostgreSQL utilise 4096 itérations. Depuis **PostgreSQL 16**, le paramètre `scram_iterations` permet d'augmenter ce nombre pour plus de sécurité (au prix de performances CPU légèrement réduites lors de la connexion).
+
+```conf
+# postgresql.conf (PG 16+)
+scram_iterations = 8192   # Doubler le défaut
+# scram_iterations = 16384 # Données sensibles
+# scram_iterations = 32768 # Maximum recommandé
+```
+
+```sql
+-- Vérifier la valeur courante (PG 16+)
+SHOW scram_iterations;
+
+-- Le changement ne s'applique qu'aux NOUVEAUX mots de passe
+-- (créés ou réinitialisés après la modification du paramètre)
+ALTER USER alice PASSWORD 'NouveauMotDePasse';  -- Stocké avec les nouvelles itérations
+```
 
 **Contexte :**
 - Serveurs puissants : 8192 ou 16384 itérations
 - Données ultra-sensibles : jusqu'à 32768 itérations
 
-⚠️ **Attention** : Plus d'itérations = plus de CPU utilisé lors des connexions
+⚠️ **Attention** : Plus d'itérations = plus de CPU utilisé lors des connexions. Avec un pool de connexions (PgBouncer), l'impact est amorti car les connexions sont réutilisées.
 
 ### 3. **Imposer des Mots de Passe Forts**
 
@@ -589,7 +635,10 @@ host  all  all  0.0.0.0/0  md5  # Mais seules les connexions MD5 sont autorisée
 **Correction :**
 ```
 # pg_hba.conf
-host  all  all  0.0.0.0/0  scram-sha-256,md5  # Autoriser les deux
+# La méthode 'md5' accepte AUSSI SCRAM côté serveur, selon le hash stocké
+host  all  all  0.0.0.0/0  md5
+# Une fois tous les utilisateurs migrés en SCRAM, passer à :
+# host  all  all  0.0.0.0/0  scram-sha-256
 ```
 
 ---
@@ -706,9 +755,11 @@ SHOW password_encryption;
 Dans les sections suivantes du tutoriel :
 
 - **16.2** : Configuration détaillée de `pg_hba.conf`  
+- **16.2.2** : Nouveauté PostgreSQL 18 — Authentification OAuth 2.0  
+- **16.2.3** : Nouveauté PostgreSQL 18 — SCRAM passthrough avec postgres_fdw et dblink  
 - **16.4** : Gestion des autorisations (`GRANT`/`REVOKE`)  
 - **16.7** : SSL/TLS et chiffrement des connexions  
-- **16.8** : Nouveautés PostgreSQL 18 - OAuth 2.0 et TLS 1.3
+- **16.8** : Nouveauté PostgreSQL 18 — Mode FIPS et TLS 1.3
 
 ### Ressources Externes
 

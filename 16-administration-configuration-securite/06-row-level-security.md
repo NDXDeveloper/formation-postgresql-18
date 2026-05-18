@@ -463,13 +463,18 @@ import psycopg
 # Connexion à PostgreSQL
 conn = psycopg.connect("dbname=myapp user=app_user password=secret")
 
-# Définir le tenant actuel pour cette session
-conn.execute("SET app.current_tenant_id = %s", [current_tenant_id])
+# ⚠️ La commande SQL SET n'accepte PAS de paramètres préparés.
+# On utilise donc set_config() qui les accepte.
+# Le 3e argument à false = paramètre de session (pas seulement local à la TX)
+conn.execute("SELECT set_config('app.current_tenant_id', %s, false)",
+             [str(current_tenant_id)])
 
 # Maintenant toutes les requêtes sont automatiquement filtrées
 cursor = conn.execute("SELECT * FROM documents")
 # Ne voit que les documents du tenant actuel
 ```
+
+> **Note** : Les paramètres de session personnalisés doivent **obligatoirement** contenir un point (`.`), par exemple `app.current_tenant_id`. Sans point, PostgreSQL refuse le paramètre (`SET unknown_param = ...` → erreur).
 
 **Avantages :**
 - ✅ Scalable (un seul utilisateur PostgreSQL pour l'application)  
@@ -746,17 +751,38 @@ WHERE tablename = 'documents';
 
 ### Modifier une Politique
 
+PostgreSQL **supporte** `ALTER POLICY` (depuis PG 9.5). On peut modifier directement :
+- Le nom de la politique
+- La liste des rôles concernés (`TO ...`)
+- L'expression `USING (...)`
+- L'expression `WITH CHECK (...)`
+
 ```sql
--- PostgreSQL ne supporte pas ALTER POLICY directement
--- Il faut supprimer et recréer
+-- Changer la condition USING
+ALTER POLICY tenant_isolation ON documents
+  USING (tenant_id = current_setting('app.tenant_id')::INT
+         AND deleted_at IS NULL);
 
--- 1. Supprimer l'ancienne politique
-DROP POLICY old_policy ON documents;
+-- Changer les rôles cibles
+ALTER POLICY user_access ON documents
+  TO app_user, app_admin;
 
--- 2. Créer la nouvelle
-CREATE POLICY new_policy
+-- Renommer la politique
+ALTER POLICY old_name ON documents RENAME TO new_name;
+```
+
+⚠️ **Ce qu'`ALTER POLICY` ne peut pas changer** :
+- La commande (`FOR SELECT/INSERT/UPDATE/DELETE/ALL`)
+- Le type (`PERMISSIVE` ↔ `RESTRICTIVE`)
+
+Pour ces changements, il faut effectivement supprimer et recréer la politique :
+
+```sql
+-- Cas où DROP + CREATE est nécessaire (ex: changer FOR SELECT → FOR ALL)
+DROP POLICY old_policy ON documents;  
+CREATE POLICY new_policy  
   ON documents
-  FOR SELECT
+  FOR ALL
   USING (nouvelle_condition);
 ```
 

@@ -2,12 +2,27 @@
 
 # 16.8. Nouveautés PostgreSQL 18 : Mode FIPS et Configuration TLS 1.3
 
+## ⚠️ AVERTISSEMENT IMPORTANT — Paramètres `ssl_fips` et `ssl_tls13_ciphers`
+
+> **Ce chapitre présente des paramètres qui n'existent PAS dans PostgreSQL 18 :**  
+>  
+> - **`ssl_fips`** : ce paramètre **n'existe pas** dans PostgreSQL. Le mode FIPS est activé au niveau du **système d'exploitation** (via OpenSSL FIPS), pas via un paramètre PostgreSQL. Voir le fichier `02.1-methodes-authentification.md` et la section 07 corrigée pour la méthode d'activation correcte.  
+> - **`ssl_tls13_ciphers`** : ce paramètre **n'existe pas** dans PostgreSQL 18 ni dans aucune version. Le paramètre `ssl_ciphers` existant **ne s'applique qu'à TLS 1.2 et antérieur** — pour TLS 1.3, les ciphers sont gérés directement par OpenSSL avec ses 3 cipher suites standards (`TLS_AES_256_GCM_SHA384`, `TLS_AES_128_GCM_SHA256`, `TLS_CHACHA20_POLY1305_SHA256`) et **ne sont pas configurables via PostgreSQL**.  
+>  
+> **Les concepts présentés (FIPS, TLS 1.3, performance, sécurité) restent valides** ; seuls les exemples de code utilisant ces deux paramètres sont incorrects. Considérez ce chapitre comme une introduction conceptuelle, en remplaçant :  
+> - `ssl_fips = on` → activation au niveau OS (cf. section 07)  
+> - `ssl_tls13_ciphers = '...'` → configuration au niveau OpenSSL/OS (non configurable via PostgreSQL)  
+>  
+> **Vraies nouveautés sécurité PostgreSQL 18** : authentification OAuth 2.0 native (section 02.2), SCRAM passthrough avec `use_scram_passthrough` (section 02.3), `log_connections` avec catégories.
+
+---
+
 ## Introduction
 
-PostgreSQL 18, publié en septembre 2025, apporte des améliorations majeures en matière de sécurité des connexions. Deux nouveautés se distinguent particulièrement :
+PostgreSQL 18, publié en septembre 2025, apporte des améliorations en matière de sécurité des connexions. Ce chapitre couvre :
 
-1. **Le mode FIPS** : Support complet des standards cryptographiques du gouvernement américain  
-2. **Configuration avancée TLS 1.3** : Contrôle fin des algorithmes de chiffrement modernes
+1. **Le mode FIPS** : Comprendre les standards cryptographiques du gouvernement américain et leur intégration avec PostgreSQL  
+2. **TLS 1.3** : Tirer parti du protocole TLS moderne pour des connexions plus rapides et plus sûres
 
 Ces fonctionnalités répondent aux besoins croissants de **conformité réglementaire** et de **sécurité renforcée** dans les environnements sensibles : gouvernement, défense, santé, finance, et secteurs hautement régulés.
 
@@ -640,7 +655,9 @@ val conn = config.connection
 | **Sécurité** | Bonne (si bien configuré) | Excellente (par défaut) |
 | **Performance** | Standard | Meilleure |
 | **Support** | Universel | Très bon (2018+) |
-| **PostgreSQL** | Toutes versions | PostgreSQL 18+ |
+| **PostgreSQL** | Toutes versions | PG 12+ (si OpenSSL ≥ 1.1.1) |
+
+> 📝 **Précision** : TLS 1.3 n'est **pas une nouveauté de PG 18** — PostgreSQL utilise simplement la version de TLS supportée par OpenSSL du système. TLS 1.3 fonctionne dès PostgreSQL 12 si OpenSSL 1.1.1+ est installé. Sur PG 18, c'est l'écosystème (paramètres de configuration, monitoring, documentation) qui est mieux outillé pour TLS 1.3.
 
 ### Mesures de Performance
 

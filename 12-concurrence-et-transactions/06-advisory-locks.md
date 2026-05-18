@@ -86,20 +86,35 @@ PostgreSQL propose deux catégories d'Advisory Locks :
 
 ### Vue d'ensemble des fonctions
 
-PostgreSQL fournit plusieurs fonctions pour gérer les Advisory Locks :
+PostgreSQL fournit un jeu complet de fonctions pour gérer les Advisory Locks. Toutes existent en **deux signatures** : `(bigint)` ou `(integer, integer)` — choisissez l'une **ou** l'autre, jamais les deux pour la même clé logique (les deux espaces de noms sont distincts).
 
-| Fonction | Type | Comportement | Retour |
-|----------|------|--------------|--------|
-| `pg_advisory_lock(key)` | Session | Bloquant (attend) | void |
+**Verrous exclusifs** (un seul détenteur à la fois) :
+
+| Fonction | Portée | Comportement | Retour |
+|----------|--------|--------------|--------|
+| `pg_advisory_lock(key)` | Session | Bloquant — attend si déjà pris | void |
 | `pg_try_advisory_lock(key)` | Session | Non-bloquant | boolean |
-| `pg_advisory_unlock(key)` | Session | Libère | boolean |
 | `pg_advisory_xact_lock(key)` | Transaction | Bloquant | void |
 | `pg_try_advisory_xact_lock(key)` | Transaction | Non-bloquant | boolean |
-| `pg_advisory_lock_shared(key)` | Session | Bloquant partagé | void |
-| `pg_try_advisory_lock_shared(key)` | Session | Non-bloquant partagé | boolean |
-| `pg_advisory_xact_lock_shared(key)` | Transaction | Bloquant partagé | void |
 
-**Note** : Toutes ces fonctions existent aussi en version à deux paramètres : `pg_advisory_lock(key1, key2)` pour utiliser deux entiers au lieu d'un seul bigint.
+**Verrous partagés** (plusieurs détenteurs simultanés, mais incompatibles avec les verrous exclusifs) :
+
+| Fonction | Portée | Comportement | Retour |
+|----------|--------|--------------|--------|
+| `pg_advisory_lock_shared(key)` | Session | Bloquant | void |
+| `pg_try_advisory_lock_shared(key)` | Session | Non-bloquant | boolean |
+| `pg_advisory_xact_lock_shared(key)` | Transaction | Bloquant | void |
+| `pg_try_advisory_xact_lock_shared(key)` | Transaction | Non-bloquant | boolean |
+
+**Libération** (pour les verrous de session uniquement — les verrous transactionnels se libèrent automatiquement) :
+
+| Fonction | Effet | Retour |
+|----------|-------|--------|
+| `pg_advisory_unlock(key)` | Libère un verrou exclusif détenu par la session | boolean (true si succès) |
+| `pg_advisory_unlock_shared(key)` | Libère un verrou partagé détenu par la session | boolean (true si succès) |
+| `pg_advisory_unlock_all()` | Libère **tous** les verrous de session de la connexion (utile en fin de batch ou avant de remettre la connexion au pool) | void |
+
+> ⚠️ **Comptage de références** : si vous appelez `pg_advisory_lock(K)` deux fois dans la même session, vous devez appeler `pg_advisory_unlock(K)` **deux fois** pour relâcher complètement le verrou. Le pendant `pg_advisory_unlock_all()` court-circuite ce comptage et libère tout d'un coup.
 
 ---
 
@@ -273,17 +288,34 @@ ROLLBACK;
 
 ### 2. pg_try_advisory_xact_lock() : Version non-bloquante
 
-```sql
-BEGIN;
+Côté application (pseudo-code) :
 
-IF pg_try_advisory_xact_lock(42) THEN
-    -- Traiter le job
-    UPDATE jobs SET status = 'Traité' WHERE id = 42;
-    COMMIT;
-ELSE
-    -- Un autre worker traite déjà ce job
-    ROLLBACK;
-END IF;
+```python
+# Tente d'obtenir le verrou sans attendre
+cur.execute("BEGIN")  
+cur.execute("SELECT pg_try_advisory_xact_lock(42)")  
+got_lock = cur.fetchone()[0]  
+
+if got_lock:
+    cur.execute("UPDATE jobs SET status = 'Traité' WHERE id = 42")
+    cur.execute("COMMIT")  # verrou xact libéré automatiquement
+else:
+    cur.execute("ROLLBACK")  # un autre worker traite déjà ce job
+```
+
+Ou intégralement côté serveur dans un bloc PL/pgSQL :
+
+```sql
+DO $$  
+BEGIN  
+    IF pg_try_advisory_xact_lock(42) THEN
+        UPDATE jobs SET status = 'Traité' WHERE id = 42;
+    ELSE
+        RAISE NOTICE 'Job déjà pris par un autre worker';
+    END IF;
+END $$;
+-- À la fin du bloc DO, la transaction implicite est validée
+-- et le verrou xact est libéré automatiquement.
 ```
 
 ### Pourquoi préférer les verrous transactionnels ?
@@ -329,18 +361,20 @@ SELECT pg_advisory_xact_lock(5, 790);
 
 ### Conversion depuis une chaîne de caractères
 
-Si votre ID est une chaîne, vous pouvez la convertir en entier :
+`pg_advisory_lock` et ses variantes attendent des entiers (`bigint` ou deux `int4`). Pour verrouiller à partir d'une **chaîne** ou d'un **UUID**, il faut d'abord obtenir une représentation entière déterministe via une fonction de hachage built-in :
 
 ```sql
--- Utiliser un hash de la chaîne
+-- Pour une chaîne : hashtext renvoie un int4 (32 bits)
 SELECT pg_advisory_xact_lock(hashtext('mon-job-unique'));
 
--- Ou pour UUID
+-- Pour un UUID : hashtextextended renvoie un int8 (64 bits)
+-- → adapté à la signature à 1 argument bigint de pg_advisory_xact_lock
 SELECT pg_advisory_xact_lock(
-    ('x' || substr(uuid_column::text, 1, 8))::bit(32)::int,
-    ('x' || substr(uuid_column::text, 10, 8))::bit(32)::int
+    hashtextextended(uuid_column::text, 0)
 );
 ```
+
+> ⚠️ **Attention** : un hash entraîne par construction un **risque de collision** (deux chaînes différentes produisant la même clé). Pour des verrous critiques, accompagnez le hash d'une vérification métier (par exemple un `WHERE id = …` sur la ligne réellement protégée) ou réservez des plages de clés disjointes par type de ressource (`hash modulo 2³¹ | type_prefix`).
 
 ---
 
@@ -395,91 +429,91 @@ END $$;
 
 **Avantage** : Aucun job n'est traité deux fois, même avec 100 workers en parallèle.
 
+> 💡 **Comparaison avec `FOR UPDATE SKIP LOCKED`** : pour une vraie file de jobs, le pattern `UPDATE … WHERE id = (SELECT … FOR UPDATE SKIP LOCKED)` (présenté dans le chapitre 12.5) est généralement **plus efficace** : les workers tombent toujours sur des jobs différents, sans gaspiller un cycle à découvrir « job déjà pris ». L'advisory lock reste pertinent quand vous voulez protéger une ressource métier qui n'a pas de représentation directe en ligne de table (un nom de fichier, un identifiant externe, un rapport mensuel…).
+
 ### Cas 2 : Génération de rapport unique
 
-**Problème** : Un rapport mensuel doit être généré une seule fois, même si plusieurs processus essaient de le lancer.
+**Problème** : Un rapport mensuel doit être généré une seule fois, même si plusieurs processus essaient de le lancer en même temps.
 
-**Solution avec Advisory Lock de session** :
+**Solution avec Advisory Lock transactionnel** : on utilise `pg_try_advisory_xact_lock` qui libère le verrou automatiquement à la fin du bloc DO (succès ou exception). Plus sûr que la version session, qui exigerait un `pg_advisory_unlock` explicite et risquerait de fuir le verrou en cas d'exception non rattrapée.
 
 ```sql
 -- Script de génération de rapport
 DO $$  
 DECLARE  
     report_id INTEGER := 202401;  -- Janvier 2024
+    rapport_existe BOOLEAN;
 BEGIN
-    -- Essayer d'obtenir le verrou
-    IF pg_try_advisory_lock(report_id) THEN
-        BEGIN
-            RAISE NOTICE 'Génération du rapport % en cours...', report_id;
-
-            -- [GÉNÉRATION DU RAPPORT]
-            INSERT INTO reports (month, data) VALUES (report_id, ...);
-
-            RAISE NOTICE 'Rapport % terminé', report_id;
-        EXCEPTION
-            WHEN OTHERS THEN
-                RAISE NOTICE 'Erreur lors de la génération: %', SQLERRM;
-        END;
-
-        -- Libérer le verrou
-        PERFORM pg_advisory_unlock(report_id);
-    ELSE
+    -- Verrou transactionnel non bloquant
+    IF NOT pg_try_advisory_xact_lock(report_id) THEN
         RAISE NOTICE 'Le rapport % est déjà en cours de génération', report_id;
+        RETURN;
     END IF;
+
+    -- Idempotence : si le rapport existe déjà, on sort
+    SELECT EXISTS (SELECT 1 FROM reports WHERE month = report_id)
+      INTO rapport_existe;
+
+    IF rapport_existe THEN
+        RAISE NOTICE 'Rapport % déjà généré précédemment', report_id;
+        RETURN;  -- Verrou libéré automatiquement au COMMIT du bloc DO
+    END IF;
+
+    RAISE NOTICE 'Génération du rapport % en cours...', report_id;
+    -- [GÉNÉRATION DU RAPPORT — INSERT INTO reports …]
+    INSERT INTO reports (month, data) VALUES (report_id, '{}'::jsonb);
+    RAISE NOTICE 'Rapport % terminé', report_id;
+
+    -- Pas de pg_advisory_unlock : libération automatique à la fin du bloc
 END $$;
 ```
 
-**Résultat** : Si 10 processus lancent ce script simultanément, un seul génère le rapport, les autres sortent immédiatement.
+**Résultat** : Si 10 processus lancent ce script simultanément, un seul génère le rapport ; les neuf autres voient `Le rapport est déjà en cours` et sortent immédiatement sans bloquer.
 
 ### Cas 3 : Migration de données one-shot
 
 **Problème** : Une migration de données doit s'exécuter une seule fois dans un cluster avec plusieurs instances de l'application.
 
-**Solution** :
+**Solution** : on utilise un verrou **transactionnel** (`pg_advisory_xact_lock`). Sa libération est garantie au COMMIT ou au ROLLBACK, ce qui évite les verrous orphelins en cas d'erreur — un risque réel avec `pg_advisory_lock` de session si l'exception survient avant le `pg_advisory_unlock`.
 
 ```sql
--- Fonction de migration avec protection
 CREATE OR REPLACE FUNCTION run_migration_v2() RETURNS void AS $$  
 DECLARE  
     migration_id BIGINT := 20240115001;  -- ID unique de la migration
 BEGIN
-    -- Essayer d'obtenir le verrou (non-bloquant)
-    IF NOT pg_try_advisory_lock(migration_id) THEN
-        RAISE NOTICE 'Migration déjà exécutée ou en cours';
+    -- Verrou transactionnel non bloquant : si un autre worker a déjà pris
+    -- le verrou (migration en cours), on sort immédiatement.
+    IF NOT pg_try_advisory_xact_lock(migration_id) THEN
+        RAISE NOTICE 'Migration % déjà en cours dans une autre session', migration_id;
         RETURN;
     END IF;
 
-    BEGIN
-        -- Vérifier si déjà exécutée
-        IF EXISTS (SELECT 1 FROM migrations WHERE id = migration_id) THEN
-            RAISE NOTICE 'Migration déjà exécutée';
-            PERFORM pg_advisory_unlock(migration_id);
-            RETURN;
-        END IF;
+    -- Vérifier si la migration a déjà été appliquée (cas d'un redémarrage)
+    IF EXISTS (SELECT 1 FROM migrations WHERE id = migration_id) THEN
+        RAISE NOTICE 'Migration % déjà appliquée précédemment', migration_id;
+        RETURN;  -- Le verrou xact sera libéré au COMMIT
+    END IF;
 
-        -- Exécuter la migration
-        RAISE NOTICE 'Début de la migration %', migration_id;
+    RAISE NOTICE 'Début de la migration %', migration_id;
 
-        -- [CODE DE MIGRATION ICI]
-        ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR(20);
+    -- [CODE DE MIGRATION ICI]
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR(20);
 
-        -- Enregistrer
-        INSERT INTO migrations (id, executed_at) VALUES (migration_id, NOW());
+    -- Trace persistante de l'exécution
+    INSERT INTO migrations (id, executed_at) VALUES (migration_id, NOW());
 
-        RAISE NOTICE 'Migration % terminée', migration_id;
-    EXCEPTION
-        WHEN OTHERS THEN
-            RAISE EXCEPTION 'Erreur migration: %', SQLERRM;
-    END;
+    RAISE NOTICE 'Migration % terminée', migration_id;
 
-    -- Libérer le verrou
-    PERFORM pg_advisory_unlock(migration_id);
+    -- Pas besoin de pg_advisory_unlock : libéré automatiquement
+    -- au COMMIT (ou ROLLBACK si une exception remonte plus haut)
 END;
 $$ LANGUAGE plpgsql;
 
--- Exécuter
+-- Exécuter dans une transaction de l'application
 SELECT run_migration_v2();
 ```
+
+> ⚠️ **Subtilité** : si vous gardez un verrou de **session** (`pg_advisory_lock`) et qu'une exception non gérée s'échappe de la fonction, le rollback de la transaction **ne libère pas** le verrou de session. C'est pourquoi `pg_advisory_xact_lock` est presque toujours préférable pour ce type de scénario.
 
 ### Cas 4 : Rate limiting distribué
 
@@ -488,83 +522,86 @@ SELECT run_migration_v2();
 **Solution** :
 
 ```sql
-CREATE OR REPLACE FUNCTION check_rate_limit(user_id INTEGER, max_requests INTEGER)  
+CREATE OR REPLACE FUNCTION check_rate_limit(p_user_id INTEGER, p_max_requests INTEGER)  
 RETURNS boolean AS $$  
 DECLARE  
     lock_key BIGINT;
     current_count INTEGER;
 BEGIN
-    -- Créer une clé unique : user_id + minute actuelle
-    lock_key := user_id::BIGINT * 100000000 + EXTRACT(EPOCH FROM date_trunc('minute', NOW()))::BIGINT;
+    -- Clé unique combinant user et minute courante.
+    -- pg_advisory_xact_lock garantit la libération automatique au COMMIT
+    -- ou ROLLBACK, même en cas d'exception, donc pas de verrou orphelin.
+    lock_key := p_user_id::BIGINT * 100000000
+             + EXTRACT(EPOCH FROM date_trunc('minute', NOW()))::BIGINT;
 
-    -- Obtenir le verrou
-    PERFORM pg_advisory_lock(lock_key);
+    PERFORM pg_advisory_xact_lock(lock_key);
 
-    BEGIN
-        -- Compter les requêtes dans cette minute
-        SELECT COUNT(*) INTO current_count
-        FROM api_requests
-        WHERE user_id = user_id
-          AND created_at >= date_trunc('minute', NOW());
+    -- Compter les requêtes dans cette minute pour CET utilisateur
+    SELECT COUNT(*) INTO current_count
+      FROM api_requests
+     WHERE user_id    = p_user_id                        -- ← préfixe p_ pour éviter l'ambiguïté
+       AND created_at >= date_trunc('minute', NOW());
 
-        IF current_count >= max_requests THEN
-            -- Limite atteinte
-            PERFORM pg_advisory_unlock(lock_key);
-            RETURN false;
-        ELSE
-            -- Enregistrer cette requête
-            INSERT INTO api_requests (user_id, created_at) VALUES (user_id, NOW());
-            PERFORM pg_advisory_unlock(lock_key);
-            RETURN true;
-        END IF;
-    EXCEPTION
-        WHEN OTHERS THEN
-            PERFORM pg_advisory_unlock(lock_key);
-            RAISE;
-    END;
+    IF current_count >= p_max_requests THEN
+        RETURN false;   -- Limite atteinte
+    END IF;
+
+    INSERT INTO api_requests (user_id, created_at) VALUES (p_user_id, NOW());
+    RETURN true;
 END;
 $$ LANGUAGE plpgsql;
 
--- Utilisation
+-- Utilisation : à appeler dans une transaction de l'application
 SELECT check_rate_limit(42, 10);  -- true ou false
 ```
 
+> ⚠️ **Piège classique** : nommer le paramètre `user_id` alors que la table contient une colonne `user_id` rend la clause `WHERE user_id = user_id` ambiguë — PostgreSQL résout en faveur de la colonne, donc la condition devient `colonne = colonne` (toujours vraie) et **compte toutes les lignes de la table**. C'est pourquoi on préfixe ici les paramètres par `p_`. Une alternative est d'utiliser `#variable_conflict use_variable` en tête de fonction.
+
 ### Cas 5 : Leader election (élection de leader)
 
-**Problème** : Dans un cluster de workers, un seul doit être le "leader" à un moment donné.
+**Problème** : Dans un cluster de workers, un seul doit être le « leader » à un moment donné.
 
-**Solution** :
+**Solution** : on utilise un verrou de **session** (pas transactionnel) — c'est précisément le cas où l'on **veut** que le verrou persiste tant que la session reste ouverte, et ne pas être libéré au COMMIT de chaque petite transaction.
 
 ```sql
 CREATE OR REPLACE FUNCTION try_become_leader(worker_id INTEGER)  
 RETURNS boolean AS $$  
 DECLARE  
-    leader_lock_key BIGINT := 999999;  -- ID fixe pour le rôle de leader
+    leader_lock_key BIGINT := 999999;  -- Clé fixe pour le rôle de leader
 BEGIN
     IF pg_try_advisory_lock(leader_lock_key) THEN
-        -- Ce worker est maintenant le leader
         RAISE NOTICE 'Worker % est devenu le leader', worker_id;
         RETURN true;
     ELSE
-        -- Un autre worker est déjà leader
         RAISE NOTICE 'Worker % n''est pas le leader', worker_id;
         RETURN false;
     END IF;
 END;
 $$ LANGUAGE plpgsql;
 
--- Worker 1
-SELECT try_become_leader(1);  -- true (devient leader)
+-- Worker 1 (session #1)
+SELECT try_become_leader(1);  -- true → devient leader
 
--- Worker 2 (en parallèle)
-SELECT try_become_leader(2);  -- false (pas leader)
+-- Worker 2 (session #2, en parallèle)
+SELECT try_become_leader(2);  -- false → un autre leader existe déjà
 
--- Worker 1 libère (démission ou crash de connexion)
+-- Libération possible de deux façons :
+
+-- (a) Démission explicite, à exécuter DANS LA MÊME SESSION que l'acquisition :
 SELECT pg_advisory_unlock(999999);
 
--- Worker 2 peut maintenant devenir leader
+-- (b) Fermeture de la connexion (déconnexion volontaire ou crash) :
+-- → PostgreSQL libère AUTOMATIQUEMENT tous les advisory locks de session
+--   tenus par la connexion qui se ferme. Pas d'action côté worker requise.
+
+-- Worker 2 peut maintenant devenir leader (au prochain essai)
 SELECT try_become_leader(2);  -- true
 ```
+
+> ⚠️ **Pièges importants pour ce pattern** :  
+>  
+> - **Pool de connexions** : si vos workers utilisent un pool (PgBouncer, HikariCP…) en mode *transaction pooling* ou *statement pooling*, **n'utilisez pas de verrou de session** : la session côté serveur change à chaque transaction et votre verrou disparaît ou se retrouve associé à la mauvaise connexion. Utilisez plutôt un patron *heartbeat* basé sur une table avec timestamp.  
+> - **Crash silencieux du worker** : si le worker meurt sans fermer proprement la connexion (kill -9, perte réseau), le serveur ne s'en rend compte qu'au prochain `tcp_keepalive` ou à l'expiration de `tcp_user_timeout`. Pendant ce temps, **aucun autre worker ne peut prendre le rôle**. Configurez ces paramètres TCP sur le serveur PostgreSQL si vous voulez une bascule rapide.
 
 ---
 
@@ -859,6 +896,8 @@ END;
 $$ LANGUAGE plpgsql;
 ```
 
+> ⚠️ **Limite importante de ce pattern** : `pg_advisory_lock` lui-même n'a **pas de notion de TTL**. Le `DELETE` ci-dessus nettoie l'enregistrement applicatif dans `lock_registry`, mais **ne libère pas** le verrou PostgreSQL — celui-ci ne sera relâché que par `pg_advisory_unlock` dans la même session, ou par la fermeture de la connexion. Conséquence : si un worker prend le verrou puis disparaît sans le libérer (sans crash réseau), aucun autre worker ne pourra l'acquérir, et nettoyer la table `lock_registry` ne changera rien. Pour un vrai TTL, il faut soit lier la session du worker à un heartbeat surveillé par un superviseur, soit abandonner les advisory locks au profit d'une approche tout-applicative (table + timestamp + scheduler de nettoyage qui *tue* les workers expirés via `pg_terminate_backend`).
+
 ### Pattern 2 : Compteur de sémaphore (limiter à N concurrents)
 
 Permettre jusqu'à N workers simultanés :
@@ -1135,7 +1174,7 @@ Les **Advisory Locks** sont un outil puissant pour implémenter une **coordinati
 4. Suivez les **bonnes pratiques** (ordre, timeouts, monitoring)  
 5. C'est idéal pour coordonner des **workers PostgreSQL**, moins pour l'inter-service
 
-Dans les prochaines sections du chapitre 12, nous continuerons à explorer la concurrence dans PostgreSQL, en abordant des sujets comme les stratégies de résolution de conflits et les patterns de haute concurrence.
+Dans la prochaine section (12.7), nous concluons le chapitre avec les **stratégies de détection et résolution des deadlocks** : comment PostgreSQL les détecte automatiquement, comment les prévenir par la conception, et quels patterns de retry mettre en place côté application.
 
 ---
 

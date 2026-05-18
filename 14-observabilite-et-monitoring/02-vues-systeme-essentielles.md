@@ -58,13 +58,19 @@ Ces vues collectent et exposent des statistiques sur l'activité de la base de d
 - `pg_stat_user_tables` : Statistiques par table utilisateur  
 - `pg_stat_user_indexes` : Statistiques par index utilisateur
 
-### Vues de statistiques I/O (`pg_statio_*`)
+### Vues de statistiques I/O (`pg_statio_*` et `pg_stat_io`)
 
 Ces vues se concentrent spécifiquement sur les opérations d'entrée/sortie (lectures/écritures disque vs cache).
 
-**Exemples :**
-- `pg_statio_user_tables` : Stats I/O par table  
-- `pg_statio_user_indexes` : Stats I/O par index
+**Vues `pg_statio_*` (historiques) — granularité par table/index :**
+- `pg_statio_user_tables` : stats I/O par table
+- `pg_statio_user_indexes` : stats I/O par index
+
+**Vue `pg_stat_io` (PG 16+) — granularité par type de backend et contexte :**
+- 1 ligne par combinaison (`backend_type`, `object`, `context`)
+- Permet de répondre à : « qui consomme l'I/O ? un autovacuum, un client, un walwriter ? Pour quel type d'opération (lecture normale, bulkread, vacuum) ? »
+- Enrichie en PG 18 avec colonnes en octets (`read_bytes`, `write_bytes`, `extend_bytes`) et lignes WAL (`object = 'wal'`)
+- Étudiée en détail dans la section [14.4](./04-statistiques-io-wal-backend-pg18.md)
 
 ### Vues de verrous (`pg_locks`)
 
@@ -225,14 +231,29 @@ Les vues système ont des règles de visibilité :
 - `pg_locks` : Voient uniquement leurs propres verrous  
 - `pg_catalog` : Voient uniquement les objets qu'ils possèdent ou auxquels ils ont accès
 
-**Rôle pg_read_all_stats :**
+**Rôles prédéfinis pour l'observabilité (PG 10+)** :
 
-PostgreSQL 10+ a introduit un rôle spécial qui permet à un utilisateur non-superutilisateur de voir toutes les statistiques :
+PostgreSQL fournit plusieurs **rôles prédéfinis** (sans mot de passe, qu'on grant à un utilisateur) qui donnent les bons droits sans exposer les données métier :
+
+| Rôle prédéfini | Donne le droit de… | Cas d'usage typique |
+|----------------|--------------------|--------------------|
+| `pg_monitor` (PG 10+) | Tout ce qu'il faut pour faire du monitoring : stats, settings sensibles, scan de tables système. **Inclut les 3 rôles ci-dessous** | Utilisateur unique d'un exporter (postgres_exporter, Datadog…) |
+| `pg_read_all_stats` (PG 10+) | Voir toutes les vues `pg_stat_*` (toutes sessions, toutes bases) | Inclus dans `pg_monitor` |
+| `pg_read_all_settings` (PG 10+) | Voir tous les `pg_settings`, y compris ceux marqués « superuser-only » (ex. `data_directory`) | Inclus dans `pg_monitor` |
+| `pg_stat_scan_tables` (PG 10+) | Appeler des fonctions de monitoring qui posent un verrou court sur les tables système | Inclus dans `pg_monitor` |
+| `pg_signal_backend` (PG 13+) | Appeler `pg_cancel_backend()` et `pg_terminate_backend()` sur les sessions d'autres rôles non-superuser | Outil d'administration sans superuser |
+| `pg_read_all_data` (PG 14+) | Lire toutes les données de toutes les tables — **équivalent superuser en lecture** | À éviter pour le monitoring (trop large) |
 
 ```sql
--- Donner accès complet aux statistiques
-GRANT pg_read_all_stats TO mon_utilisateur;
+-- Pour un utilisateur de monitoring (recommandé)
+CREATE USER monitoring WITH PASSWORD '...';  
+GRANT pg_monitor TO monitoring;  
+
+-- Pour un outil d'admin sans superuser (PG 13+)
+GRANT pg_monitor, pg_signal_backend TO ops_user;
 ```
+
+> 💡 **Règle d'or sécurité** : `pg_monitor` suffit dans 99 % des cas pour un exporter ou un script de monitoring. Évitez de donner `SELECT` global sur `public` ou de promouvoir l'utilisateur en superuser — ce sont des fuites d'information évitables.
 
 ### Configuration requise
 
@@ -243,17 +264,35 @@ Certaines statistiques nécessitent une configuration spécifique dans `postgres
 track_activities = on  
 track_counts = on  
 
-# Suivi des temps I/O (à activer pour pg_stat_database)
+# Suivi des temps I/O (à activer pour pg_stat_database et pg_stat_io)
 track_io_timing = on
 
-# Suivi des fonctions (optionnel)
-track_functions = all
+# Suivi des temps I/O sur le WAL (PG 18+, peuple pg_stat_io ligne WAL)
+track_wal_io_timing = on
+
+# Suivi des fonctions : 'none' (défaut), 'pl' (PL/pgSQL), 'all'
+track_functions = pl
 ```
 
 Après modification du fichier de configuration :
 ```sql
 SELECT pg_reload_conf();  -- Recharge sans redémarrage
 ```
+
+> 💡 **À propos de `track_functions`** : trois valeurs possibles. `pl` est suffisant dans la plupart des cas (suit les fonctions PL/pgSQL définies par l'utilisateur sans pister les fonctions C internes). Une fois activé, la vue **`pg_stat_user_functions`** expose pour chaque fonction utilisateur :  
+>  
+> - `calls` : nombre d'appels  
+> - `total_time` : temps total cumulé en ms  
+> - `self_time` : temps propre (hors appels imbriqués) en ms  
+>  
+> ```sql  
+> SELECT schemaname, funcname, calls, total_time, self_time  
+> FROM pg_stat_user_functions  
+> ORDER BY total_time DESC  
+> LIMIT 20;  
+> ```  
+>  
+> Particulièrement utile dans les bases avec beaucoup de logique métier dans des **procédures stockées** ou **triggers**.
 
 ## Concepts de base à comprendre
 
@@ -286,9 +325,43 @@ SELECT pg_stat_reset_single_function_counters(func_oid);
 ### 3. Fréquence de rafraîchissement
 
 Les vues sont mises à jour en temps réel (ou presque) :
-- `pg_stat_activity` : Mise à jour instantanée  
-- `pg_locks` : Mise à jour instantanée  
+- `pg_stat_activity` : Mise à jour instantanée
+- `pg_locks` : Mise à jour instantanée
 - `pg_stat_database`, `pg_stat_user_tables` : Mise à jour toutes les quelques secondes
+
+### 3 bis. `stats_fetch_consistency` (PG 15+)
+
+Un paramètre subtil mais important pour les outils de monitoring : par défaut, dans une **même transaction**, les vues `pg_stat_*` cachent leurs valeurs au premier accès — toute lecture ultérieure pendant la transaction renvoie la même valeur (cohérence transactionnelle). Cela peut surprendre quand on fait du polling dans une boucle :
+
+```sql
+-- Dans une SEULE transaction (par exemple un script qui ouvre une connexion longue)
+BEGIN;  
+SELECT count(*) FROM pg_stat_activity;  -- met en cache  
+-- … on attend …
+SELECT count(*) FROM pg_stat_activity;  -- renvoie la MÊME valeur que la 1ère  
+COMMIT;  
+```
+
+Trois modes possibles :
+
+| Valeur | Effet | Quand utiliser |
+|--------|-------|---------------|
+| `cache` (défaut) | Met en cache au premier accès, jusqu'à fin de la transaction | Usage interactif (cohérence des auto-jointures) |
+| `none` | Récupère la valeur fraîche à chaque accès | **Outils de monitoring** (Datadog, exporters…) |
+| `snapshot` | Met en cache **toutes** les stats au premier accès | Inspection complète à un instant T |
+
+```sql
+-- Dans un script de monitoring, configurer la session
+SET stats_fetch_consistency = none;
+```
+
+Sinon, on peut forcer un rafraîchissement explicite avec :
+
+```sql
+SELECT pg_stat_clear_snapshot();
+```
+
+> 💡 **Outils de monitoring** : si vous écrivez un agent qui poll les statistiques en boucle (sans ouvrir/fermer la connexion à chaque fois), pensez à mettre `stats_fetch_consistency = none` ou à appeler `pg_stat_clear_snapshot()` entre les itérations — sinon vos métriques peuvent paraître figées.
 
 ### 4. Impact sur les performances
 
@@ -305,8 +378,11 @@ Interroger les vues système a un coût, mais il est généralement négligeable
 De nombreux outils d'administration PostgreSQL reposent sur ces vues système :
 
 ### 1. Outils en ligne de commande
-- **psql** : Commandes méta (\\d, \\dt, \\di) interrogent `pg_catalog`  
-- **pg_top** : Monitore `pg_stat_activity` en temps réel
+- **psql** : commandes méta (`\d`, `\dt`, `\di`) interrogent `pg_catalog`
+- **pg_activity** : moniteur temps réel à la `htop`, basé sur `pg_stat_activity` (maintenu par Dalibo, recommandé)
+- **pgcenter** : alternative TUI complète avec stats par seconde
+
+> ℹ️ L'ancien `pg_top` n'est plus maintenu depuis longtemps (dernière release ~2007). Utilisez `pg_activity` à la place — installation typique : `pip install pg_activity` ou paquet `pg-activity` sur Debian/Ubuntu.
 
 ### 2. Interfaces graphiques
 - **pgAdmin** : Dashboards basés sur `pg_stat_*`  

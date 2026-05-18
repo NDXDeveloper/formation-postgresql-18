@@ -437,29 +437,37 @@ Les gains dépendent de plusieurs facteurs :
 
 ### Paramètres par Défaut
 
-Par défaut dans PostgreSQL 18, toutes ces optimisations sont **activées** :
+Par défaut dans PostgreSQL 18, ces optimisations sont **activées**. Voici les **vrais noms** des GUC vérifiés sur la doc officielle :
 
 ```sql
--- Vérifier les paramètres (exemples, noms réels peuvent varier)
-SHOW enable_self_join_removal;     -- on  
-SHOW enable_distinct_reorder;      -- on  
-SHOW enable_values_to_any;         -- on  
+-- Auto-élimination des self-joins (nouveau en PG 18)
+SHOW enable_self_join_elimination;     -- on
+
+-- Réorganisation des clés DISTINCT (nouveau en PG 18)
+SHOW enable_distinct_reordering;       -- on
+
+-- Réorganisation des clés GROUP BY (existait depuis PG 17, conservé en PG 18)
+SHOW enable_group_by_reordering;       -- on
 ```
+
+> 📌 **Note importante** : il n'existe **pas** de GUC dédié pour la transformation `IN (VALUES …) → = ANY(ARRAY[…])` ni pour la transformation `OR-clauses → ANY` en PG 18. Ces deux transformations sont **toujours actives** quand le planificateur les juge bénéfiques (intégrées dans la phase de réécriture, sans option on/off propre).
 
 ### Désactivation Sélective (Débogage)
 
-Pour diagnostiquer ou comparer, vous pouvez désactiver temporairement :
+Pour diagnostiquer ou comparer, vous pouvez désactiver temporairement les optimisations qui exposent un GUC :
 
 ```sql
--- Désactiver UNE optimisation pour une session
-SET enable_self_join_removal = off;
+-- Désactiver l'auto-élimination des self-joins
+SET enable_self_join_elimination = off;
 
--- Exécuter votre requête
-SELECT ...;
+-- Exécuter votre requête (pour voir le plan « avant »)
+EXPLAIN ANALYZE SELECT ...;
 
 -- Réactiver
-SET enable_self_join_removal = on;
+RESET enable_self_join_elimination;
 ```
+
+Pour les transformations `IN (VALUES) → ANY` et `OR → ANY`, qui n'ont pas de GUC, la seule façon de comparer est de **réécrire la requête à la main** en utilisant la forme alternative et de comparer les plans.
 
 **⚠️ En production, gardez toutes les optimisations activées !**
 
@@ -469,7 +477,7 @@ Pour désactiver globalement (non recommandé) :
 
 ```sql
 -- Dans postgresql.conf ou via ALTER SYSTEM
-ALTER SYSTEM SET enable_self_join_removal = off;
+ALTER SYSTEM SET enable_self_join_elimination = off;
 
 -- Puis recharger la configuration
 SELECT pg_reload_conf();

@@ -299,15 +299,16 @@ Certaines méthodes acceptent des options supplémentaires.
 
 **Exemples :**
 ```conf
-# LDAP avec options
+# LDAP avec options (côté serveur, dans pg_hba.conf)
 host all all 0.0.0.0/0 ldap ldapserver=ad.company.com ldapport=636 ldaptls=1
 
-# SCRAM avec channel binding
-hostssl all all 0.0.0.0/0 scram-sha-256 scram_channel_binding=require
-
-# OAuth avec options
-host all all 0.0.0.0/0 oauth oauth_issuer_url="https://auth.company.com"
+# OAuth avec options NATIVES (PG 18) : issuer, scope, map, delegate_ident_mapping
+hostssl all all 0.0.0.0/0 oauth issuer="https://auth.company.com" scope="postgres"
 ```
+
+> ⚠️ **À ne pas confondre — paramètres serveur vs client** :  
+> - `scram_channel_binding` est un paramètre **côté client** (libpq), pas une option de pg_hba.conf. Il se définit dans la chaîne de connexion (`scram_channel_binding=require`) ou via la variable d'environnement `PGSCRAMCHANNELBINDING`. Côté serveur, PostgreSQL **propose** le mécanisme SCRAM-SHA-256-PLUS (channel binding) quand SSL est actif, mais c'est le **client** qui décide de l'utiliser ou non via cette option. Pour imposer le channel binding, il faut donc `scram_channel_binding=require` côté client.  
+> - Pour OAuth, seules les options listées dans la documentation PostgreSQL 18 sont valides côté pg_hba.conf : `issuer`, `scope`, `map`, `delegate_ident_mapping`, `trust_validator_authz`. La validation effective du token est déléguée à une bibliothèque externe via `oauth_validator_libraries` (postgresql.conf).
 
 ---
 
@@ -492,17 +493,25 @@ sudo nano /var/lib/postgresql/data/pg_hba.conf
 sudo vim /var/lib/postgresql/data/pg_hba.conf
 ```
 
-### Vérifier la Syntaxe (PostgreSQL 18)
+### Vérifier la Syntaxe
 
-PostgreSQL 18 offre un outil pour valider pg_hba.conf avant de l'activer :
+PostgreSQL fournit une **vue système** `pg_hba_file_rules` (depuis PostgreSQL 10) qui parse `pg_hba.conf` et permet de détecter les erreurs de syntaxe **avant** le rechargement :
 
-```bash
-# Vérifier la syntaxe (ne modifie rien)
-sudo -u postgres pg_ctl -D /var/lib/postgresql/data check
+```sql
+-- Lister toutes les règles avec leur statut
+SELECT line_number, type, database, user_name, address, auth_method, error
+  FROM pg_hba_file_rules
+  ORDER BY line_number;
 
-# Ou utiliser l'outil dédié
-sudo -u postgres pg_hba_file_rules /var/lib/postgresql/data/pg_hba.conf
+-- Détecter uniquement les lignes erronées
+SELECT line_number, error
+  FROM pg_hba_file_rules
+  WHERE error IS NOT NULL;
 ```
+
+Si la colonne `error` est `NULL` pour toutes les lignes, la syntaxe est valide. Sinon, le message indique précisément l'erreur (ligne X : option inconnue, méthode inconnue, etc.).
+
+> 💡 **Bonne pratique** : exécuter cette requête **avant** `pg_reload_conf()` pour ne pas casser le service en production.
 
 ### Recharger la Configuration
 
@@ -783,19 +792,28 @@ host    all   all   ::/0        reject
 ```conf
 # postgresql.conf
 
-# Logger toutes les tentatives de connexion
-log_connections = on  
-log_disconnections = on  
+# PostgreSQL 17 et antérieur : boolean (on/off)
+# log_connections = on
+# log_disconnections = on
 
-# Logger les échecs d'authentification
-log_failed_connections = on  # PostgreSQL 18+
+# ⭐ PostgreSQL 18 : log_connections accepte plusieurs catégories d'événements
+log_connections = 'authentication, authorization, connection, disconnection'
+# Valeurs possibles (PG 18) :
+#   - 'all'              : toutes les catégories
+#   - 'authentication'   : tentatives d'authentification (succès + échecs)
+#   - 'authorization'    : décisions d'autorisation
+#   - 'connection'       : nouvelles connexions
+#   - 'disconnection'    : déconnexions
+#   - 'setup_durations'  : durées de mise en place
 
-# Détail des messages
+# Détail des messages (préfixe de chaque ligne de log)
 log_line_prefix = '%t [%p] %u@%d from %h '
 
 # Niveau de log
 log_min_messages = info
 ```
+
+> ⭐ **Nouveauté PostgreSQL 18** : `log_connections` était un booléen `on/off` jusqu'en PG 17. En PG 18, il accepte une liste de catégories, ce qui permet de logger très précisément les **échecs** d'authentification sans inonder les journaux de logs de connexions réussies.
 
 ### Analyser les Logs
 
@@ -820,7 +838,7 @@ log_min_messages = info
 
 ### Identifier les Règles Appliquées
 
-PostgreSQL 18 introduit une vue système pour voir les règles pg_hba.conf :
+PostgreSQL fournit (depuis PostgreSQL 10) la vue système `pg_hba_file_rules` pour voir les règles pg_hba.conf telles qu'elles sont parsées :
 
 ```sql
 -- Voir toutes les règles pg_hba.conf
@@ -947,7 +965,7 @@ echo "=== Fin de l'audit ==="
 ### Outils
 
 - **pgAdmin** : Interface graphique avec éditeur pg_hba.conf intégré  
-- **pg_hba_file_rules** : Vue système (PG 18+) pour inspecter les règles  
+- **pg_hba_file_rules** : Vue système (PG 10+) pour inspecter les règles et détecter les erreurs de syntaxe  
 - **pg_hba.conf generator** : Outils en ligne pour générer des configurations
 
 ### Exemples de Configurations

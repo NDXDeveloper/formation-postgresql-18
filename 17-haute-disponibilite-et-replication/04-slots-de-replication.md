@@ -183,19 +183,23 @@ SELECT pg_create_physical_replication_slot('replica1_slot');
 
 ```bash
 # Lors de la création initiale du standby
-pg_basebackup -h primary_host -D /var/lib/postgresql/14/standby \
+# -C / --create-slot : crée le slot (sinon il doit exister au préalable)
+# -S / --slot       : nom du slot à créer ou utiliser
+pg_basebackup -h primary_host -D /var/lib/postgresql/18/standby \
   -U replication_user -v -P --wal-method=stream \
-  --slot=replica1_slot
+  -C --slot=replica1_slot
 ```
 
 **Avantages de cette méthode :**
-- Crée automatiquement le slot
+- Crée automatiquement le slot (grâce à `-C`)
 - Garantit la cohérence entre basebackup et slot
 - Une seule commande pour tout configurer
 
+> ⚠️ Sans l'option `-C` / `--create-slot`, `pg_basebackup` s'attend à ce que le slot existe déjà (sinon erreur `replication slot does not exist`).
+
 ### 3.3. Configuration du standby pour utiliser le slot
 
-Dans `postgresql.auto.conf` ou `recovery.conf` (versions anciennes) du standby :
+Dans `postgresql.conf` (ou plus généralement `postgresql.auto.conf` modifié par `ALTER SYSTEM`) du standby. À noter : `recovery.conf` a été **supprimé en PostgreSQL 12** — les paramètres de standby sont depuis intégrés dans la configuration standard.
 
 ```ini
 # Connexion au primary
@@ -205,10 +209,16 @@ primary_conninfo = 'host=primary_host port=5432 user=replication_user password=s
 primary_slot_name = 'replica1_slot'
 ```
 
-**Redémarrage du standby :**
+**Rechargement de la configuration (reload, sans redémarrage) :**
+
+`primary_conninfo` et `primary_slot_name` sont des paramètres de type `sighup` depuis PostgreSQL 12 : un simple reload suffit, le walreceiver se reconnecte automatiquement avec la nouvelle configuration.
+
 ```bash
-sudo systemctl restart postgresql
+sudo systemctl reload postgresql
+# ou via SQL :  SELECT pg_reload_conf();
 ```
+
+> ℹ️ Un redémarrage complet n'est nécessaire que si vous changez aussi un paramètre de type `postmaster` (ex. `hot_standby`, `wal_level`, `max_wal_senders`).
 
 ### 3.4. Vérification et monitoring
 
@@ -339,10 +349,14 @@ Les slots logiques décodent le WAL binaire en **changements logiques** compréh
 ┌────────────────────────────────────────┐
 │   Serveur SUBSCRIBER                   │
 │                                        │
-│  Applique les changements SQL :        │
-│  - Peut transformer les données        │
-│  - Peut filtrer (certaines tables)     │
-│  - Peut mapper vers schéma différent   │
+│  Applique les changements logiques :   │
+│  - Tables cibles identifiées par leur  │
+│    nom (schéma.table identique au      │
+│    publisher)                          │
+│  - Transformations possibles via       │
+│    triggers ENABLE ALWAYS / REPLICA    │
+│  - Le filtrage par table/ligne/colonne │
+│    est défini côté PUBLISHER (pas ici) │
 └────────────────────────────────────────┘
 ```
 
@@ -580,8 +594,10 @@ FROM pg_replication_slots
 JOIN pg_stat_replication ON pg_replication_slots.active_pid = pg_stat_replication.pid  
 WHERE slot_name = 'slot_name';  
 
--- 2. Terminer la connexion du client
-SELECT pg_terminate_backend(active_pid);
+-- 2. Terminer la connexion du client (tout-en-un : sous-requête pour récupérer le PID)
+SELECT pg_terminate_backend(active_pid)  
+FROM pg_replication_slots  
+WHERE slot_name = 'slot_name' AND active_pid IS NOT NULL;  
 
 -- 3. Supprimer le slot
 SELECT pg_drop_replication_slot('slot_name');
@@ -618,17 +634,25 @@ SELECT pg_replication_slot_advance('logical_slot', 'target_lsn');
 - Récupération d'urgence quand un slot bloque le système
 - Migration planifiée où les données manquantes seront resynchronisées autrement
 
-### 5.3. Changer les paramètres d'un slot logique (PostgreSQL 13+)
+### 5.3. Modifier un slot logique
+
+**Côté slot lui-même** : la fonction `pg_alter_replication_slot()` est introduite en **PostgreSQL 17** et permet uniquement de modifier l'option `failover` d'un slot logique :
 
 ```sql
--- Modifier le plugin d'un slot logique
-SELECT pg_alter_replication_slot('slot_name', ARRAY['option', 'value']);
+-- PostgreSQL 17+ : activer la synchronisation failover du slot
+SELECT pg_alter_replication_slot('slot_name', failover := true);
 ```
 
-**Exemple :**
+Il **n'existe pas** de fonction native pour changer le **plugin de décodage** d'un slot existant — pour cela il faut supprimer puis recréer le slot.
+
+**Côté subscription** : utiliser `ALTER SUBSCRIPTION` pour modifier les options du côté consommateur :
+
 ```sql
--- Activer l'envoi des valeurs binaires (plus compact)
+-- Activer l'envoi des valeurs binaires (plus compact, moins de conversions)
 ALTER SUBSCRIPTION my_subscription SET (binary = true);
+
+-- Activer le streaming en cours de transaction
+ALTER SUBSCRIPTION my_subscription SET (streaming = on);
 ```
 
 ### 5.4. Copier un slot (PostgreSQL 14+)
@@ -805,15 +829,27 @@ Primary (Production)
 
 **Configuration :**
 ```sql
--- Sur le Primary
+-- ===== Sur le Primary =====
 CREATE ROLE replication_physical WITH REPLICATION LOGIN PASSWORD 'pass1';  
 CREATE ROLE replication_logical WITH REPLICATION LOGIN PASSWORD 'pass2';  
 
--- Slot physique pour le standby HA
+-- Slot physique pour le standby HA (créé explicitement)
 SELECT pg_create_physical_replication_slot('ha_standby_slot');
 
--- Slot logique pour l'analytics
+-- Publication pour l'analytics (le SLOT logique sera créé par la subscription
+-- côté analytics DB, voir ci-dessous)
 CREATE PUBLICATION analytics_pub FOR TABLE sales, customers, products;
+
+-- ===== Sur l'Analytics DB =====
+-- Cette commande crée automatiquement le slot logique côté primary
+CREATE SUBSCRIPTION analytics_sub
+    CONNECTION 'host=primary user=replication_logical password=pass2 dbname=production'
+    PUBLICATION analytics_pub;
+
+-- Vérification sur le Primary : on doit voir les DEUX slots
+SELECT slot_name, slot_type, active FROM pg_replication_slots;
+-- ha_standby_slot   | physical | t/f
+-- analytics_sub     | logical  | t
 ```
 
 ### 7.2. Cascading Replication avec Slots
@@ -842,8 +878,12 @@ primary_slot_name = 'standby1'
 
 **Activer le mode cascade sur Standby 1 :**
 ```sql
--- Permettre à Standby 1 de créer ses propres slots
-ALTER SYSTEM SET max_replication_slots = 5;
+-- Permettre à Standby 1 d'accueillir d'autres standbys en cascade
+ALTER SYSTEM SET max_replication_slots = 5;  
+ALTER SYSTEM SET max_wal_senders = 5;  
+-- ⚠️ Ces deux paramètres sont de type 'postmaster' : un REDÉMARRAGE
+-- de PostgreSQL est obligatoire après modification (pas de reload).
+-- sudo systemctl restart postgresql
 ```
 
 **Configuration Standby 2 :**
@@ -992,8 +1032,10 @@ ERROR:  replication slot "slot_name" is active for PID 12345
 -- 1. Identifier le PID utilisant le slot
 SELECT active_pid FROM pg_replication_slots WHERE slot_name = 'slot_name';
 
--- 2. Terminer le processus
-SELECT pg_terminate_backend(active_pid);
+-- 2. Terminer le processus (sous-requête pour récupérer le PID en une étape)
+SELECT pg_terminate_backend(active_pid)  
+FROM pg_replication_slots  
+WHERE slot_name = 'slot_name' AND active_pid IS NOT NULL;  
 
 -- 3. Supprimer le slot
 SELECT pg_drop_replication_slot('slot_name');
@@ -1002,62 +1044,96 @@ SELECT pg_drop_replication_slot('slot_name');
 ### 8.4. Problème 4 : "Slot disappeared after primary failover"
 
 **Symptôme :**
-Après un failover, les slots de réplication n'existent plus sur le nouveau primary.
+Après un failover, les slots de réplication n'existent plus sur le nouveau primary (les subscribers logiques ne peuvent plus reprendre, les standbys cascadés sont coupés…).
 
 **Cause :**
-Par défaut, les slots physiques ne sont **pas répliqués** vers les standbys.
+Historiquement, les slots physiques et logiques **ne sont pas répliqués** vers les standbys. Au failover, le nouveau primary n'a aucune trace des slots qui existaient sur l'ancien.
 
-**Solution (PostgreSQL 11+) :**
-Activer `hot_standby_feedback` et créer les slots sur tous les nœuds, ou utiliser les **failover slots** (PostgreSQL 17+).
+**Solutions :**
 
-**Configuration pour préserver les slots :**
-```ini
-# Sur le standby
-hot_standby_feedback = on
-```
+**Avant PG 17 — recréation manuelle** :
+Créer les slots à l'identique sur le futur primary (anciennement standby) **avant** la promotion, et configurer les outils côté subscribers pour pouvoir les recréer si nécessaire.
 
-**Créer des slots identiques sur le standby :**
 ```sql
--- Sur le STANDBY (avant promotion)
-SELECT pg_create_physical_replication_slot('replica1_slot');
+-- Sur le STANDBY destiné à devenir primary, avant la promotion :
+SELECT pg_create_physical_replication_slot('replica1_slot');  
+SELECT pg_create_logical_replication_slot('mon_slot_logique', 'pgoutput');  
 ```
+
+> ⚠️ Le contenu (position de réplication) des slots ainsi créés ne sera **pas** identique à celui de l'ancien primary — les subscribers devront refaire un sync initial ou repartir d'un LSN connu.
+
+**Depuis PG 17 — failover slots (recommandé)** :
+PostgreSQL 17 introduit la **synchronisation automatique des slots logiques** entre le primary et ses standbys, à la condition que :
+1. Le slot ait été créé avec `failover = true`
+2. Le paramètre `sync_replication_slots = on` soit activé sur les standbys
+
+Le slot existera alors automatiquement sur le nouveau primary après failover, à une position cohérente.
+
+```sql
+-- Sur le primary (PG 17+)
+SELECT pg_create_logical_replication_slot(
+    'mon_slot', 'pgoutput',
+    false,   -- temporary
+    false,   -- twophase
+    true     -- failover
+);
+```
+
+```ini
+# Sur chaque standby (PG 17+, postgresql.conf)
+sync_replication_slots = on
+```
+
+> ℹ️ `hot_standby_feedback` (paramètre du standby) sert à éviter les conflits de requêtes en informant le primary des transactions actives sur le standby — il **ne participe pas** à la préservation des slots après failover. Les deux mécanismes sont indépendants.
 
 ---
 
 ## 9. Nouveautés PostgreSQL 18
 
-### 9.1. Statistiques I/O améliorées
+### 9.1. Observabilité enrichie du décodage
 
-PostgreSQL 18 ajoute des métriques détaillées sur les slots de réplication dans `pg_stat_replication_slots`.
+PostgreSQL 18 enrichit l'observabilité globale (vue `pg_stat_io` étendue, statistiques d'I/O par backend) qui bénéficie indirectement au décodage logique. La vue `pg_stat_replication_slots` reste l'élément central :
 
-**Nouvelles colonnes (exemple hypothétique PG 18) :**
 ```sql
 SELECT
     slot_name,
-    total_bytes,      -- Total d'octets décodés
-    spill_bytes,      -- Octets écrits sur disque (spillage)
-    io_time,          -- Temps passé en I/O
-    decode_time       -- Temps passé à décoder le WAL
+    spill_txns,       -- Transactions débordées sur disque
+    spill_count,      -- Nombre d'écritures de débordement
+    spill_bytes,      -- Octets écrits lors des débordements
+    stream_txns,      -- Transactions streamées (PG 14+)
+    stream_count,
+    stream_bytes,
+    total_txns,       -- Total de transactions décodées
+    total_bytes       -- Total d'octets décodés
 FROM pg_stat_replication_slots;
 ```
 
-### 9.2. max_slot_wal_keep_size par défaut plus intelligent
+Pour suivre les I/O des processus `walsender` :
 
-PostgreSQL 18 améliore la gestion automatique de `max_slot_wal_keep_size` pour éviter les saturations.
+```sql
+SELECT backend_type, object, context, reads, writes  
+FROM pg_stat_io  
+WHERE backend_type IN ('walsender', 'walreceiver');  
+```
 
-**Comportement :**
-- Détection automatique de l'espace disque disponible
-- Limite adaptative basée sur l'espace libre
-- Logging préventif quand la limite est approchée
+### 9.2. Failover slots (rappel)
 
-### 9.3. Slots logiques et colonnes virtuelles
+Les **failover slots** (slots logiques synchronisables vers les standbys, introduits en **PostgreSQL 17**) restent disponibles en PG 18. Ils permettent qu'après un failover physique, le subscriber logique puisse reprendre depuis le nouveau primary sans perte de WAL.
 
-Avec l'introduction des colonnes générées virtuelles (Virtual Generated Columns) en PG 18, les slots logiques doivent gérer ces nouvelles colonnes.
+```sql
+-- Créer un slot logique synchronisable (PG 17+)
+SELECT pg_create_logical_replication_slot(
+    'my_slot', 'pgoutput', false, false, true /* failover */
+);
+```
 
-**Impact :**
-- Les colonnes virtuelles ne sont **pas stockées** physiquement
-- Elles sont **recalculées** lors du décodage logique sur le subscriber
-- Peut impacter les performances du décodage
+### 9.3. Slots logiques et colonnes générées virtuelles (PG 18)
+
+PostgreSQL 18 introduit les **Virtual Generated Columns** (colonnes générées virtuelles, calculées à la volée à la lecture). Comme elles ne sont **pas stockées** sur disque, elles n'apparaissent pas dans le WAL :
+
+- Les colonnes virtuelles ne sont **pas transmises** par le décodage logique
+- Sur le subscriber, si la même colonne virtuelle est définie sur la table cible, elle sera calculée localement à la lecture (comportement transparent)
+- Si vous avez besoin que la valeur soit répliquée, utilisez plutôt une **STORED generated column**
 
 ---
 
@@ -1138,21 +1214,33 @@ CREATE PUBLICATION my_pub FOR TABLE users, orders, products;
 
 ```bash
 #!/bin/bash
-# cleanup_inactive_slots.sh
+# cleanup_inactive_slots.sh — supprime UNIQUEMENT les slots logiques orphelins
+# (non référencés par une subscription) ET inactifs depuis assez longtemps.
+#
+# ⚠️ La supervision de "depuis combien de temps un slot est inactif" demande
+# d'instrumenter manuellement (PostgreSQL n'a pas de colonne "inactive_since"
+# avant PG 17). En PG 17+, on peut utiliser `inactive_since` de pg_replication_slots.
 
-INACTIVE_THRESHOLD_HOURS=24
+set -euo pipefail
 
-# Supprimer les slots inactifs depuis > 24h
-psql -c "
-  SELECT pg_drop_replication_slot(slot_name)
+# Liste les slots candidats à la suppression et demande confirmation manuelle
+# AVANT toute suppression destructive.
+psql -X -A -t -c "
+  SELECT slot_name, slot_type, active,
+         pg_size_pretty(pg_wal_lsn_diff(pg_current_wal_lsn(), restart_lsn)) AS retained_wal
   FROM pg_replication_slots
   WHERE active = false
     AND slot_type = 'logical'
     AND NOT EXISTS (
-      SELECT 1 FROM pg_subscription WHERE subslotname = slot_name
+        SELECT 1 FROM pg_subscription WHERE subslotname = slot_name
     );
 "
+
+# Si vous voulez automatiser, n'effectuez la suppression qu'après validation
+# (par exemple, examen manuel du résultat ci-dessus, puis exécution explicite).
 ```
+
+> ⚠️ **Ne PAS automatiser aveuglément la suppression des slots inactifs** : un slot inactif peut correspondre à un subscriber temporairement arrêté (maintenance, crash récupérable). Supprimer son slot l'empêchera de reprendre, forçant une resynchronisation complète. Préférez l'alerting + intervention humaine.
 
 #### 2. Dashboard de monitoring
 
@@ -1205,8 +1293,8 @@ Pour chaque slot créé, documentez :
 ```
 
 **Slots automatiques :**
-- Patroni crée et gère automatiquement les slots physiques
-- Lors d'un failover, le nouveau primary hérite des slots
+- Patroni crée et gère automatiquement les slots physiques pour les standbys du cluster
+- Après un failover, Patroni recrée les slots **définis dans la configuration `slots:`** sur le nouveau primary (mais leur position de réplication recommence à zéro côté slot — les subscribers logiques peuvent devoir refaire un sync initial sauf si vous utilisez les **failover slots PG 17+**)
 - Configuration :
 
 ```yaml
@@ -1217,7 +1305,13 @@ postgresql:
   slots:
     standby_slot:
       type: physical
+    cdc_slot:
+      type: logical
+      database: production
+      plugin: pgoutput
 ```
+
+> 💡 Depuis Patroni 3.x avec PostgreSQL 17+, les slots logiques peuvent être marqués `failover: true` pour bénéficier de la synchronisation native via `sync_replication_slots`.
 
 ### 11.2. Change Data Capture (CDC) vers Kafka
 
@@ -1263,51 +1357,66 @@ CREATE PUBLICATION debezium_pub FOR TABLE users, orders, products;
 
 ### 11.3. Migration en ligne vers une nouvelle version
 
-**Scénario :** Migrer de PostgreSQL 13 vers PostgreSQL 15 sans downtime.
+**Scénario :** Migrer de PostgreSQL 15 (ancien) vers PostgreSQL 18 (nouveau) sans downtime.
 
 **Étapes avec réplication logique :**
 
-1. **Préparer la nouvelle instance (PG 15)**
+1. **Préparer la nouvelle instance (PG 18)**
 ```bash
-# Nouvelle instance PG 15
-initdb -D /var/lib/postgresql/15/main
+# Nouvelle instance PG 18 (les data-checksums sont activés par défaut en PG 18)
+initdb -D /var/lib/postgresql/18/main
 ```
 
-2. **Créer la publication sur l'ancienne instance (PG 13)**
+2. **Créer la publication sur l'ancienne instance (PG 15)**
 ```sql
--- Sur PG 13
+-- Sur PG 15
 CREATE PUBLICATION migration_pub FOR ALL TABLES;
 ```
 
-3. **Créer la souscription sur la nouvelle instance (PG 15)**
+3. **Créer la souscription sur la nouvelle instance (PG 18)**
 ```sql
--- Sur PG 15
+-- Sur PG 18
 CREATE SUBSCRIPTION migration_sub
-  CONNECTION 'host=pg13-host dbname=mydb user=replication_user'
+  CONNECTION 'host=pg15-host dbname=mydb user=replication_user'
   PUBLICATION migration_pub
-  WITH (copy_data = true, create_slot = true, slot_name = 'migration_slot');
+  WITH (copy_data = true, create_slot = true, slot_name = 'migration_slot',
+        streaming = 'parallel', binary = true);
 ```
 
 4. **Attendre la synchronisation complète**
 ```sql
--- Sur PG 15
-SELECT * FROM pg_stat_subscription;
+-- Sur PG 18
+SELECT * FROM pg_stat_subscription;  
+SELECT srsubstate FROM pg_subscription_rel;  -- attendre 'r' (ready) pour toutes les tables  
 ```
 
-5. **Basculer l'application vers PG 15**
+5. **Synchroniser les séquences manuellement** (non répliquées par décodage logique)
+```sql
+-- Sur l'ancien primary (PG 15) : générer un script SQL avec la valeur courante de chaque séquence
+SELECT 'SELECT setval(' || quote_literal(schemaname || '.' || sequencename)
+       || ', ' || last_value || ');'
+FROM pg_sequences  
+WHERE schemaname NOT IN ('pg_catalog', 'information_schema');  
+
+-- Sauvegarder le résultat dans un fichier, puis l'exécuter sur PG 18 juste avant la bascule.
+```
+
+6. **Basculer l'application vers PG 18**
 ```bash
 # Changer la connexion de l'application
-APPLICATION_DB_HOST=pg15-host
+APPLICATION_DB_HOST=pg18-host
 ```
 
-6. **Nettoyer**
+7. **Nettoyer**
 ```sql
--- Sur PG 15
+-- Sur PG 18
 DROP SUBSCRIPTION migration_sub;
 
--- Sur PG 13
+-- Sur PG 15
 SELECT pg_drop_replication_slot('migration_slot');
 ```
+
+> 💡 **Alternative PG 17+** : pour des bases volumineuses, l'outil `pg_createsubscriber` permet de transformer un standby physique en subscriber logique sans recopier les données. Voir section 17.3.2.
 
 ---
 
@@ -1389,13 +1498,14 @@ Maintenant que vous maîtrisez les slots de réplication :
 - **Repmgr** : Gestion de réplication simplifiée
 
 ### Articles et Blogs Techniques
-- 2ndQuadrant: "Understanding Replication Slots"
-- Percona: "Logical Replication in PostgreSQL"
-- Cybertec: "Monitoring Replication Slots"
+- **EDB Blog** (ex-2ndQuadrant) : articles sur le décodage logique et les slots
+- **Percona Blog** : "Logical Replication in PostgreSQL"
+- **Cybertec PostgreSQL** : "Monitoring Replication Slots"
+- **Crunchy Data Blog** : cas d'usage CDC et slots
 
 ### Livres Recommandés
-- "PostgreSQL: Up and Running" - Chapitre Replication  
-- "Mastering PostgreSQL 13" - Advanced Replication Topics
+- "PostgreSQL: Up and Running" - Chapitre Réplication
+- "Mastering PostgreSQL" - éditions successives suivant les versions PG
 
 ---
 

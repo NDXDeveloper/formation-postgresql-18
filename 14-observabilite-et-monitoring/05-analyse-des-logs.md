@@ -70,24 +70,72 @@ SHOW log_filename;
 
 ### Types de destination des logs
 
-PostgreSQL peut envoyer les logs vers différentes destinations :
+PostgreSQL peut envoyer les logs vers différentes destinations (combinables) :
 
-1. **stderr** : Sortie d'erreur standard (capture par systemd/journald sur Linux)  
-2. **csvlog** : Format CSV structuré (plus facile à analyser)  
-3. **jsonlog** : Format JSON (PostgreSQL 15+, idéal pour Elasticsearch/Splunk)  
-4. **syslog** : Système de logs Unix/Linux centralisé  
-5. **eventlog** : Journal d'événements Windows
+1. **stderr** : sortie d'erreur standard (capturée par systemd/journald sur Linux)
+2. **csvlog** : format CSV structuré (1 ligne = 1 événement, colonnes fixes)
+3. **jsonlog** *(PG 15+)* : format JSON (1 objet par ligne), idéal pour ELK/Splunk/Loki
+4. **syslog** : système de logs Unix/Linux centralisé
+5. **eventlog** : journal d'événements Windows
+
+`log_destination` accepte une **liste séparée par des virgules**, par exemple :
+
+```conf
+log_destination = 'stderr,csvlog,jsonlog'   # les trois en parallèle
+```
+
+> ⚠️ **`csvlog` et `jsonlog` exigent `logging_collector = on`** (contrairement à `stderr` qui fonctionne sans). Sans le collector, ces destinations sont silencieusement ignorées.
+
+#### Le format CSV/JSON : 1 ligne = 1 événement parsable
+
+**Avantage majeur** : pas besoin de parser `log_line_prefix` à coup de regex. Toutes les métadonnées sont déjà des colonnes/champs nommés.
+
+Le **CSV** comporte en PG 18 **26 colonnes fixes** dans l'ordre suivant : `log_time`, `user_name`, `database_name`, `pid`, `connection_from`, `session_id`, `session_line_num`, `command_tag`, `session_start_time`, `virtual_transaction_id`, `transaction_id`, `error_severity`, `sql_state_code`, `message`, `detail`, `hint`, `internal_query`, `internal_query_pos`, `context`, `query`, `query_pos`, `location`, `application_name`, `backend_type`, `leader_pid`, `query_id`.
+
+Le **JSON** (PG 15+) contient les mêmes informations sous forme d'objets clé/valeur :
+
+```json
+{
+  "timestamp": "2026-05-17 14:32:45.123 CET",
+  "user": "webapp",
+  "dbname": "production",
+  "pid": 12345,
+  "remote_host": "127.0.0.1",
+  "session_id": "66e3d4f2.1234",
+  "line_num": 1,
+  "ps": "SELECT",
+  "session_start": "2026-05-17 14:32:45 CET",
+  "vxid": "3/1234",
+  "txid": 0,
+  "error_severity": "LOG",
+  "state_code": "00000",
+  "message": "duration: 1234.567 ms",
+  "statement": "SELECT * FROM users",
+  "application_name": "MyApp",
+  "backend_type": "client backend",
+  "query_id": 123456789
+}
+```
+
+Les champs notables `query_id` (PG 14+), `backend_type` (PG 13+) et `leader_pid` (PG 16+) permettent un **croisement direct** avec `pg_stat_statements` et le suivi des parallel workers.
+
+> 📖 Référence complète des colonnes : `\h CREATE FOREIGN TABLE` montre un schéma d'import CSV dans la doc officielle PostgreSQL — utile pour charger les logs dans une table via `COPY` ou un foreign-data-wrapper.
 
 **Configuration recommandée** :
 ```conf
 # Dans postgresql.conf
-logging_collector = on            # Active la collecte de logs  
-log_destination = 'stderr'        # Ou 'csvlog' pour analyse automatisée  
+logging_collector = on            # Active la collecte de logs (requis pour csv/jsonlog)  
+log_destination = 'stderr'        # ou 'stderr,jsonlog' pour ELK/Splunk  
 log_directory = 'log'             # Répertoire relatif à PGDATA  
-log_filename = 'postgresql-%Y-%m-%d_%H%M%S.log'  # Un fichier par démarrage  
-log_rotation_age = 1d             # Rotation quotidienne  
-log_rotation_size = 100MB         # Rotation si > 100 MB  
+log_filename = 'postgresql-%Y-%m-%d_%H%M%S.log'  # un fichier par démarrage  
+log_rotation_age = 1d             # rotation quotidienne  
+log_rotation_size = 100MB         # rotation si > 100 MB  
 ```
+
+> 💡 **Choisir entre les formats** :  
+> - **`stderr`** : pour `journalctl` / pgBadger / lecture humaine en local.  
+> - **`jsonlog`** (PG 15+) : pour Loki, Elasticsearch, Splunk, Datadog Logs — pas besoin de parser.  
+> - **`csvlog`** : alternative à `jsonlog` pour des outils plus anciens, ou pour charger dans une table PostgreSQL (`COPY foreign_log FROM PROGRAM …`).
 
 ---
 
@@ -155,14 +203,46 @@ log_min_duration_statement = -1
 ```
 
 **Recommandation** :
-- **Développement** : 100-500 ms  
-- **Production** : 1000-5000 ms (1-5 secondes)  
+- **Développement** : 100-500 ms
+- **Production** : 1000-5000 ms (1-5 secondes)
 - **Analyse ponctuelle** : 0 (toutes les requêtes)
 
 **Exemple de log généré** :
 ```
 2025-11-21 14:32:45 CET [12345]: LOG:  duration: 1234.567 ms  statement: SELECT * FROM orders WHERE created_at > '2025-01-01'
 ```
+
+##### Échantillonnage : `log_min_duration_sample` + `log_statement_sample_rate` (PG 13+)
+
+En production avec **beaucoup** de requêtes au-dessus du seuil, logger 100 % d'entre elles peut générer un volume de logs énorme. PG 13 a introduit un **mécanisme d'échantillonnage** : logger systématiquement les requêtes très lentes, mais seulement un **pourcentage** des requêtes « modérément lentes ».
+
+```conf
+# postgresql.conf — exemple : production OLTP chargée
+
+# Logger systématiquement les requêtes > 10 secondes
+log_min_duration_statement = 10000
+
+# Échantillonner 10% des requêtes > 100 ms (mais < 10 s)
+log_min_duration_sample = 100  
+log_statement_sample_rate = 0.1  
+```
+
+**Effet** :
+- Une requête à 12 000 ms → loggée à 100 % (au-delà de `log_min_duration_statement`).
+- Une requête à 500 ms → loggée avec 10 % de chance (entre les deux seuils).
+- Une requête à 50 ms → jamais loggée.
+
+> 💡 **Cas d'usage typique** : un serveur traite 5 000 req/s avec un p95 à 200 ms. Logger toutes les requêtes > 100 ms générerait des Go de logs/heure. Avec l'échantillonnage à 10 %, on garde une **vision statistique fiable** (sur des milliers d'échantillons par minute) tout en restant à un volume gérable, et on conserve la trace **exhaustive** des vraies requêtes lentes.
+
+##### `log_transaction_sample_rate` (PG 12+)
+
+Échantillonne au niveau **transaction entière** (toutes les requêtes d'une transaction sélectionnée sont loggées, ou aucune) :
+
+```conf
+log_transaction_sample_rate = 0.01    # 1% des transactions intégralement loggées
+```
+
+Utile pour reproduire la séquence exacte des commandes d'une session lente.
 
 #### 3. log_connections et log_disconnections
 
@@ -266,6 +346,88 @@ log_temp_files = 10240  # En kB
 
 **Utilité** : Détecter les requêtes qui nécessitent trop de mémoire (à optimiser ou augmenter `work_mem`).
 
+#### 8. log_lock_failures (PG 18+)
+
+PostgreSQL 18 introduit **`log_lock_failures`**, un nouveau paramètre booléen qui logue les **échecs d'acquisition de verrou** non bloquants — typiquement les requêtes `SELECT … FOR UPDATE NOWAIT` ou `LOCK TABLE … NOWAIT` qui échouent immédiatement parce que le verrou est déjà tenu.
+
+```conf
+# postgresql.conf (PG 18+)
+log_lock_failures = on   # défaut : off
+```
+
+**Exemple de log** :
+```
+ERROR:  could not obtain lock on row in relation "orders"  
+STATEMENT:  SELECT * FROM orders WHERE id = 42 FOR UPDATE NOWAIT  
+```
+
+**Utilité** : tracer les conflits de verrous courts qui, sans `log_lock_waits`, passaient sous le radar (puisque `log_lock_waits` ne se déclenche qu'après `deadlock_timeout`).
+
+#### 9. log_connections enrichi (PG 18+)
+
+À partir de PG 18, `log_connections` n'est plus un simple booléen `on/off` : c'est une **liste d'options** permettant de choisir quelles étapes de la connexion logger, avec en bonus le **timing de chaque étape**.
+
+```conf
+# PG 17 (et antérieur) : booléen
+log_connections = on
+
+# PG 18+ : liste d'options
+log_connections = 'receipt,authentication,authorization,setup_durations'
+
+# Ou raccourci équivalent
+log_connections = 'all'
+
+# Compatibilité : 'on' = 'receipt,authentication,authorization'
+log_connections = 'on'
+```
+
+| Option | Ce qui est loggé |
+|--------|------------------|
+| `receipt` | Réception initiale de la demande de connexion |
+| `authentication` | Identité utilisée lors de l'authentification (avant tout mapping) |
+| `authorization` | Succès complet de l'autorisation |
+| `setup_durations` | **Temps passé** dans le fork + l'authentification (nouveau PG 18) |
+| `all` | Toutes les options ci-dessus |
+
+**Utilité de `setup_durations`** : isoler les goulots dans la phase de connexion (typiquement `fork()` lent sur un serveur saturé, ou authentification LDAP qui prend du temps).
+
+#### 10. log_autovacuum_min_duration
+
+Logue les opérations d'autovacuum qui dépassent une durée donnée. Indispensable pour diagnostiquer pourquoi un autovacuum prend trop de temps ou pour valider que l'autovacuum tourne sur les bonnes tables.
+
+```conf
+# postgresql.conf
+
+# Tout logger (utile en investigation)
+log_autovacuum_min_duration = 0
+
+# Production : ne logger que les VACUUM > 1 minute
+log_autovacuum_min_duration = 60s
+
+# Désactivé (défaut historique avant PG 16 ; en PG 16+ le défaut est 10min)
+log_autovacuum_min_duration = -1
+```
+
+> ⚠️ **Évolution PG 16+** : le défaut est passé de `-1` (désactivé) à **`10min`**. Donc en PG 18, vous avez déjà les autovacuum « longs » dans les logs sans configuration spécifique. C'est un gros progrès pour la visibilité par défaut.
+
+**Exemple de log** :
+```
+2026-05-17 03:22:41 CET LOG:  automatic vacuum of table "myapp.public.orders":
+  index scans: 2
+  pages: 0 removed, 245680 remain, 245680 scanned (100.00% of total)
+  tuples: 234500 removed, 12500000 remain, 0 are dead but not yet removable
+  removable cutoff: 123456789, which was 123 XIDs old when operation ended
+  new relfrozenxid: 123456000, which is 1234567 XIDs ahead of previous value
+  buffer usage: 562345 hits, 12345 reads, 8901 dirtied
+  WAL usage: 5234 records, 123 full page images, 234567 bytes
+  system usage: CPU: user: 23.45 s, system: 2.34 s, elapsed: 35.78 s
+```
+
+**Informations utiles** :
+- `tuples: ... removed, ... remain, ... are dead but not yet removable` : si **dead but not yet removable** est élevé, une transaction longue empêche le nettoyage
+- `WAL usage` : combien de WAL généré par cet autovacuum
+- `system usage: CPU/elapsed` : ratio CPU/temps écoulé — si CPU << elapsed, l'autovacuum a beaucoup dormi (cost-delay)
+
 ---
 
 ## Partie 3 : log_line_prefix - Personnaliser le Format des Logs
@@ -299,7 +461,10 @@ Voici les principaux codes (« placeholders ») utilisables dans `log_line_prefi
 | `%d` | Nom de la base de données | `production` |
 | `%r` | Nom d'hôte/port du client | `192.168.1.50:54321` |
 | `%h` | Nom d'hôte du client uniquement | `192.168.1.50` |
+| `%L` | **(PG 18+)** Adresse IP locale (côté serveur) sur laquelle le client s'est connecté | `10.0.0.1` |
 | `%p` | Process ID (PID) | `12345` |
+| `%P` | (PG 16+) PID du leader d'un parallel worker, sinon vide | `12345` |
+| `%b` | (PG 13+) `backend_type` du processus | `client backend`, `autovacuum worker` |
 | `%t` | Timestamp (sans millisecondes) | `2025-11-21 14:32:45 CET` |
 | `%m` | Timestamp (avec millisecondes) | `2025-11-21 14:32:45.123 CET` |
 | `%n` | Timestamp (Unix epoch) | `1732195965.123` |
@@ -310,8 +475,13 @@ Voici les principaux codes (« placeholders ») utilisables dans `log_line_prefi
 | `%s` | Timestamp de début de session | `2025-11-21 14:30:00 CET` |
 | `%v` | Virtual transaction ID | `3/1234` |
 | `%x` | Transaction ID (XID) | `123456` |
+| `%Q` | (PG 14+) Query ID (compatible avec `pg_stat_statements`) | `-1234567890` |
 | `%q` | Pas de sortie (utilisé pour des conditions) | - |
 | `%%` | Caractère `%` littéral | `%` |
+
+> 💡 **Astuce PG 18** : `%L` est très utile sur les serveurs multi-réseaux (plusieurs interfaces réseau) pour savoir **par quelle IP** le client est arrivé — distinct de `%h` qui donne l'IP du **client**. Pratique pour distinguer le trafic interne (VPC) du trafic externe par exemple.  
+>  
+> 💡 **Astuce PG 14+** : `%Q` permet de **corréler** une ligne de log avec une entrée de `pg_stat_statements` (même `queryid`). Idéal pour passer du log à l'analyse statistique en un seul saut.
 
 ### Configuration recommandée pour la production
 
@@ -433,20 +603,26 @@ auto_explain.log_min_duration = 1000  # Logger les requêtes > 1 seconde (en ms)
 
 # Niveau de détail du plan d'exécution
 auto_explain.log_analyze = on         # Inclure les statistiques d'exécution réelles  
-auto_explain.log_buffers = on         # Inclure les statistiques de buffers  
+auto_explain.log_buffers = on         # Inclure les statistiques de buffers (BUFFERS auto en PG 18)  
 auto_explain.log_timing = on          # Inclure le timing détaillé par nœud  
 auto_explain.log_triggers = on        # Inclure les triggers  
 auto_explain.log_verbose = off        # Mode verbose (très verbeux)  
+auto_explain.log_wal = on             # (PG 13+) Stats WAL : records, bytes, full page images  
+auto_explain.log_settings = on        # (PG 12+) GUC non-défaut qui ont influencé le plan  
 
 # Format du plan
 auto_explain.log_format = 'text'      # Options: 'text', 'xml', 'json', 'yaml'
 
-# Inclure les requêtes imbriquées (dans les fonctions)
+# Inclure les requêtes imbriquées (dans les fonctions PL/pgSQL)
 auto_explain.log_nested_statements = on
 
 # Échantillonnage (pour réduire l'overhead)
 auto_explain.sample_rate = 1.0        # 1.0 = 100% des requêtes, 0.1 = 10%
 ```
+
+> 💡 **Paramètres méconnus mais très utiles** :  
+> - **`auto_explain.log_settings = on`** (PG 12+) : ajoute dans le log une section « Settings » listant les GUC modifiés pour cette requête. Indispensable pour debug un plan « bizarre » causé par un `SET enable_seqscan = off` oublié dans une session, ou un `work_mem` boosté par un middleware.  
+> - **`auto_explain.log_wal = on`** (PG 13+) : ajoute la section `WAL: records=… fpi=… bytes=…` au plan. Permet de voir d'un coup d'œil si une requête modifiant peu de lignes génère anormalement beaucoup de WAL (souvent : trop d'index ou full-page-images après un checkpoint récent).
 
 #### Étape 3 : Recharger la configuration
 

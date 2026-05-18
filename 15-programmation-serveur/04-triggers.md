@@ -523,6 +523,53 @@ CREATE TRIGGER trigger_prix_eleves
 #### EXECUTE FUNCTION nom_fonction()
 La fonction à exécuter (sans paramètres explicites).
 
+> ℹ️ **`EXECUTE PROCEDURE` vs `EXECUTE FUNCTION`** : la syntaxe historique `EXECUTE PROCEDURE` est toujours acceptée mais **dépréciée depuis PG 11** — utilisez `EXECUTE FUNCTION` pour le code moderne (même si une fonction trigger ressemble plus à une procédure qu'à une fonction). C'est purement cosmétique : les deux font la même chose.
+
+#### CONSTRAINT TRIGGER (cas avancé)
+
+Un `CREATE CONSTRAINT TRIGGER` crée un **trigger contrainte** qui peut être différé (`DEFERRABLE`) jusqu'au COMMIT, comme une contrainte de clé étrangère. Très spécifique, principalement utilisé pour les contraintes inter-tables complexes.
+
+```sql
+CREATE CONSTRAINT TRIGGER verifier_coherence
+    AFTER INSERT OR UPDATE ON ma_table
+    DEFERRABLE INITIALLY DEFERRED   -- Repousser jusqu'au COMMIT
+    FOR EACH ROW
+    EXECUTE FUNCTION ma_verification();
+```
+
+Restrictions : doit être `AFTER`, `FOR EACH ROW`, et défini sur une table (pas une vue).
+
+#### REFERENCING ... TABLE : Tables de transition (PG 10+)
+
+Pour les triggers `AFTER ... FOR EACH STATEMENT`, on peut **référencer l'ensemble des lignes** modifiées via des « tables de transition » nommées :
+
+```sql
+CREATE TRIGGER trace_changements
+    AFTER INSERT OR UPDATE OR DELETE ON commandes
+    REFERENCING OLD TABLE AS lignes_avant
+                NEW TABLE AS lignes_apres
+    FOR EACH STATEMENT
+    EXECUTE FUNCTION journaliser_lot();
+```
+
+À l'intérieur de la fonction, `lignes_avant` et `lignes_apres` se comportent comme des **tables temporaires** SQL qu'on peut interroger normalement :
+
+```sql
+CREATE FUNCTION journaliser_lot() RETURNS TRIGGER AS $$  
+BEGIN  
+    INSERT INTO journal_commandes(operation, n_lignes, total_avant, total_apres)
+    SELECT
+        TG_OP,
+        (SELECT count(*) FROM lignes_apres),
+        (SELECT coalesce(sum(montant), 0) FROM lignes_avant),
+        (SELECT coalesce(sum(montant), 0) FROM lignes_apres);
+    RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
+```
+
+**Cas d'usage typique** : audit en lot beaucoup plus performant que via un trigger `FOR EACH ROW`, surtout pour les UPDATE/DELETE massifs.
+
 ---
 
 ## Exemples pratiques complets
@@ -652,17 +699,21 @@ BEGIN
     WHERE id = OLD.client_id;
 
   ELSIF TG_OP = 'UPDATE' THEN
-    -- Si le client a changé
-    IF OLD.client_id != NEW.client_id THEN
-      -- Décrémenter l'ancien client
-      UPDATE clients
-      SET nb_commandes = nb_commandes - 1
-      WHERE id = OLD.client_id;
+    -- Si le client a changé (IS DISTINCT FROM est null-safe)
+    IF OLD.client_id IS DISTINCT FROM NEW.client_id THEN
+      -- Décrémenter l'ancien client (si défini)
+      IF OLD.client_id IS NOT NULL THEN
+        UPDATE clients
+        SET nb_commandes = nb_commandes - 1
+        WHERE id = OLD.client_id;
+      END IF;
 
-      -- Incrémenter le nouveau client
-      UPDATE clients
-      SET nb_commandes = nb_commandes + 1
-      WHERE id = NEW.client_id;
+      -- Incrémenter le nouveau client (si défini)
+      IF NEW.client_id IS NOT NULL THEN
+        UPDATE clients
+        SET nb_commandes = nb_commandes + 1
+        WHERE id = NEW.client_id;
+      END IF;
     END IF;
   END IF;
 
@@ -1052,20 +1103,46 @@ CREATE TRIGGER trigger_b
   AFTER UPDATE ON table_b
   FOR EACH ROW
   EXECUTE FUNCTION update_table_a();
+-- trigger_a modifie table_b → trigger_b se déclenche → modifie table_a
+-- → trigger_a se redéclenche → ... → stack overflow !
+```
 
--- ✅ Solution : Utiliser des conditions
+**Solutions** :
+
+**Option 1 — `pg_trigger_depth()`** : retourne la profondeur de récursion des triggers (1 au 1ᵉʳ niveau, 2 si appelé par un autre trigger, etc.) :
+
+```sql
 CREATE OR REPLACE FUNCTION update_avec_protection()  
 RETURNS TRIGGER AS $$  
 BEGIN  
-  -- Éviter la récursion avec une condition
-  IF NOT (NEW.updated_by_trigger) THEN
-    NEW.updated_by_trigger := TRUE;
-    -- Faire la mise à jour
+  -- N'agir qu'au premier niveau de déclenchement
+  IF pg_trigger_depth() = 1 THEN
+    UPDATE table_b SET col = NEW.col WHERE id = NEW.id;
   END IF;
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 ```
+
+**Option 2 — Tester si la valeur a réellement changé** : très utile pour les triggers `BEFORE UPDATE` qui pourraient déclencher d'autres updates :
+
+```sql
+CREATE OR REPLACE FUNCTION update_si_modifie()  
+RETURNS TRIGGER AS $$  
+BEGIN  
+  -- Sortir sans rien faire si la colonne pertinente n'a pas changé
+  IF NEW.col IS NOT DISTINCT FROM OLD.col THEN
+    RETURN NEW;
+  END IF;
+
+  -- Sinon, propager la modification
+  UPDATE table_liee SET col = NEW.col WHERE id = NEW.id;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+```
+
+> 💡 La fonction **`pg_trigger_depth()`** est la solution la plus propre pour empêcher la récursion entre triggers. Elle retourne `0` en dehors de tout trigger, `1` au premier appel, `2` au second niveau, etc.
 
 ---
 

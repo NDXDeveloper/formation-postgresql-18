@@ -202,12 +202,12 @@ Une architecture PostgreSQL hautement disponible se compose de plusieurs briques
 Si deux serveurs croient tous les deux être le Primary → corruption de données !
 
 **Solutions :**
-- **Algorithmes de consensus** : Raft, Paxos (utilisés par etcd, Consul, Zookeeper)  
-- **Quorum** : Décisions prises par majorité  
+- **Algorithmes de consensus** : Raft (etcd, Consul), Zab (ZooKeeper, dérivé de Paxos)
+- **Quorum** : Décisions prises par majorité
 - **Fencing** : Isolation forcée du serveur défaillant
 
 **Outils pour PostgreSQL :**
-- **Patroni** + etcd/Consul/Zookeeper  
+- **Patroni** + etcd/Consul/ZooKeeper
 - **Repmgr** + repmgrd  
 - **Pacemaker** + Corosync
 

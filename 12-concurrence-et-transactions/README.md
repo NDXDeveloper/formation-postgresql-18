@@ -297,7 +297,7 @@ COMMIT;
 
 Ce chapitre est structuré en **7 sections** qui vous guideront progressivement de débutant à expert :
 
-### 12.1. Cycle de vie d'une transaction (BEGIN, SAVEPOINT, COMMIT, ROLLBACK)
+### 12.1. Cycle de vie d'une transaction (BEGIN, COMMIT, ROLLBACK, SAVEPOINT)
 Vous apprendrez à :
 - Démarrer, valider et annuler des transactions
 - Utiliser les savepoints pour des rollbacks partiels
@@ -611,7 +611,7 @@ Vous êtes maintenant prêt à explorer l'un des aspects les plus puissants et f
 
 📍 **Vous êtes ici** : Introduction au chapitre 12
 
-➡️ **Suivant** : 12.1. Cycle de vie d'une transaction (BEGIN, SAVEPOINT, COMMIT, ROLLBACK)
+➡️ **Suivant** : 12.1. Cycle de vie d'une transaction (BEGIN, COMMIT, ROLLBACK, SAVEPOINT)
 
 ---
 
@@ -626,4 +626,4 @@ Vous êtes maintenant prêt à explorer l'un des aspects les plus puissants et f
 - 🔑 Deadlocks = attentes circulaires, détectés automatiquement  
 - 🔑 Ce chapitre est essentiel pour tout développeur/DevOps sérieux
 
-⏭️ [Cycle de vie d'une transaction (BEGIN, SAVEPOINT, COMMIT, ROLLBACK)](/12-concurrence-et-transactions/01-cycle-de-vie-transaction.md)
+⏭️ [Cycle de vie d'une transaction (BEGIN, COMMIT, ROLLBACK, SAVEPOINT)](/12-concurrence-et-transactions/01-cycle-de-vie-transaction.md)

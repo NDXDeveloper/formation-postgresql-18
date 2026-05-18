@@ -157,11 +157,24 @@ SELECT * FROM pgstatindex('idx_produits_prix');
 
 **Calcul du bloat** :
 ```sql
+-- Bloat d'un index donné (depuis avg_leaf_density)
 SELECT
-    indexrelname,
-    round(100 * (1 - avg_leaf_density / 100), 1) AS bloat_pct
-FROM pgstatindex('idx_produits_prix')  
-JOIN pg_stat_user_indexes ON indexrelid = indexrelid;  
+    'idx_produits_prix' AS index_name,
+    round(100 * (1 - avg_leaf_density / 100)::numeric, 1) AS bloat_pct
+FROM pgstatindex('idx_produits_prix');
+
+-- Variante : bloat de tous les index B-Tree du schéma public
+SELECT
+    i.indexrelname,
+    pg_size_pretty(pg_relation_size(i.indexrelid)) AS taille,
+    round(100 * (1 - (s.avg_leaf_density)::numeric / 100), 1) AS bloat_pct
+FROM pg_stat_user_indexes i  
+JOIN pg_index ix ON ix.indexrelid = i.indexrelid  
+JOIN pg_am am ON am.oid = (SELECT relam FROM pg_class WHERE oid = i.indexrelid)  
+CROSS JOIN LATERAL pgstatindex(i.indexrelid::regclass) s  
+WHERE i.schemaname = 'public'  
+  AND am.amname = 'btree'      -- pgstatindex ne supporte que les B-Tree
+ORDER BY bloat_pct DESC NULLS LAST;
 ```
 
 **Seuil d'alerte** :
@@ -209,9 +222,10 @@ ORDER BY pg_relation_size(indexrelid) DESC;
 REINDEX INDEX idx_produits_prix;
 ```
 
-**⚠️ Attention** : Pose un **verrou exclusif** (EXCLUSIVE LOCK) sur la table !
-- Les SELECT continuent
-- Les INSERT/UPDATE/DELETE sont **bloqués**
+**⚠️ Attention aux verrous** :
+- Verrou `ACCESS EXCLUSIVE` sur l'**index** (l'index n'est plus utilisable pendant la reconstruction)
+- Verrou `SHARE` sur la **table** : les `SELECT` continuent, mais les `INSERT` / `UPDATE` / `DELETE` sont **bloqués** (incompatibles avec `SHARE`).
+- Conséquence pratique : la table reste lisible, mais inscriptible uniquement après la fin du REINDEX.
 
 **Durée** : Proportionnelle à la taille de l'index (ex: 10 GB = 5-15 minutes).
 
@@ -287,11 +301,12 @@ REINDEX INDEX CONCURRENTLY idx_produits_prix;
 
 | Critère | REINDEX | REINDEX CONCURRENTLY |
 |---------|---------|----------------------|
-| **Blocage écritures** | Oui (EXCLUSIVE LOCK) | Non (< 1s) |
+| **Verrou sur la table** | `SHARE` (bloque les écritures) | `SHARE UPDATE EXCLUSIVE` (compatible lectures + écritures) |
+| **Blocage écritures** | Oui pendant toute la durée | Non (sauf une fenêtre très brève en fin de bascule) |
 | **Durée** | Rapide | 2-3× plus lent |
 | **Espace disque** | 1× index | 2× index (temporaire) |
-| **Transaction** | Oui | Non |
-| **Échec** | Rollback auto | Index INVALID reste |
+| **Utilisable dans une transaction** | Oui (sauf REINDEX SYSTEM/DATABASE/SCHEMA) | Non |
+| **Échec** | Rollback automatique | L'index INVALID reste à supprimer manuellement |
 
 ### 2.4. Exemple Complet
 
@@ -323,13 +338,22 @@ SELECT * FROM pgstatindex('idx_orders_date');
 REINDEX INDEX CONCURRENTLY idx_orders_date;
 -- Durée : ~20 minutes (mais application reste disponible)
 
--- En cas d'échec (rare), l'index reste INVALID
--- Vérifier :
-SELECT indexname, indexdef  
-FROM pg_indexes  
-WHERE indexname LIKE '%_ccnew';  
+-- En cas d'échec (rare), un index INVALID peut subsister.
+-- La requête fiable pour les détecter croise pg_index (qui porte la colonne indisvalid) :
+SELECT
+    n.nspname AS schema,
+    c.relname AS index_name,
+    t.relname AS table_name
+FROM pg_index i  
+JOIN pg_class c ON c.oid = i.indexrelid  
+JOIN pg_class t ON t.oid = i.indrelid  
+JOIN pg_namespace n ON n.oid = c.relnamespace  
+WHERE NOT i.indisvalid  
+  AND n.nspname NOT IN ('pg_catalog', 'information_schema');
 
--- Nettoyer si nécessaire
+-- Les index temporaires créés par REINDEX CONCURRENTLY portent un
+-- suffixe `_ccnew` (nouvel index) ou `_ccold` (ancien). On peut les
+-- supprimer après vérification :
 DROP INDEX CONCURRENTLY idx_orders_date_ccnew;
 ```
 
@@ -383,9 +407,9 @@ Index : 100 MB (60 MB actifs, 40 MB réutilisables)
 ### 3.2. VACUUM FULL : Nettoyage Complet
 
 **Fonctionnement** :
-- Réécrit **complètement** la table ET les index
-- Libère l'espace disque au système d'exploitation
-- Pose un **verrou exclusif** (EXCLUSIVE LOCK)
+- Réécrit **complètement** la table ET les index dans un nouveau fichier
+- Libère réellement l'espace disque au système d'exploitation
+- Pose un verrou **`ACCESS EXCLUSIVE`** sur la table (bloque même les `SELECT`)
 
 ```sql
 VACUUM FULL produits;
@@ -407,10 +431,10 @@ Index : 60 MB (60 MB actifs, 0 MB morts)    ← Taille réduite !
 - ✅ Table et index compacts (comme neufs)
 
 **Inconvénients** :
-- ❌ Verrou exclusif (bloque tout)  
-- ❌ Très lent (réécrit tout)  
-- ❌ Nécessite 2× l'espace disque temporairement  
-- ❌ Ne peut pas être interrompu (CTRL+C ne fonctionne pas)
+- ❌ `ACCESS EXCLUSIVE` sur la table : bloque **lectures et écritures** pendant toute la durée  
+- ❌ Très lent (réécrit physiquement toute la table)  
+- ❌ Nécessite **2× la taille de la table** en espace disque (l'ancienne version reste jusqu'à la fin)  
+- ⚠️ Interruptible (`CTRL+C` dans psql, `pg_cancel_backend()`) mais le travail effectué est perdu : tout devra être refait lors du prochain VACUUM FULL.
 
 ### 3.3. Comparaison
 
@@ -418,7 +442,8 @@ Index : 60 MB (60 MB actifs, 0 MB morts)    ← Taille réduite !
 |---------|--------|-------------|---------|
 | **Cible** | Table + Index | Table + Index | Index seul |
 | **Espace libéré** | Marqué réutilisable | Rendu au système | Rendu au système |
-| **Verrou** | Partagé (non bloquant) | Exclusif (bloque tout) | Exclusif (ou CONCURRENTLY) |
+| **Verrou sur la table** | `SHARE UPDATE EXCLUSIVE` (n'empêche pas lectures/écritures) | `ACCESS EXCLUSIVE` (bloque tout) | `SHARE` (lectures OK, écritures bloquées) |
+| **Verrou avec `CONCURRENTLY`** | n/a | n/a | `SHARE UPDATE EXCLUSIVE` (lectures + écritures OK) |
 | **Durée** | Rapide | Très lent | Moyen |
 | **Utilisation** | Maintenance courante | Urgence (espace disque) | Bloat index important |
 
@@ -451,18 +476,26 @@ VACUUM FULL logs;
 
 ### 3.5. Alternative : pg_repack
 
-**Extension** : Réorganise tables et index **sans verrou exclusif**.
+**Extension externe** (pas livrée avec PostgreSQL contrib) : réorganise tables et index **sans verrou ACCESS EXCLUSIVE**.
 
-**Installation** :
+**Installation côté OS** (le paquet n'est PAS dans `postgresql-contrib`) :
+
 ```bash
-# Debian/Ubuntu
-sudo apt install postgresql-contrib
+# Debian/Ubuntu (paquet versionné selon la majeure PostgreSQL)
+sudo apt install postgresql-18-repack
 
-# Activer dans PostgreSQL
+# RHEL/Fedora (via le repo PGDG)
+sudo dnf install pg_repack_18
+```
+
+**Activation côté base de données** (dans psql) :
+
+```sql
 CREATE EXTENSION pg_repack;
 ```
 
-**Utilisation** :
+**Utilisation côté shell** (utilitaire en ligne de commande, séparé de psql) :
+
 ```bash
 # Réorganiser une table spécifique
 pg_repack -d mabase -t produits
@@ -514,36 +547,58 @@ Autovacuum se déclenche après 20,050 INSERT/UPDATE/DELETE.
 
 ### 4.2. Nouveauté PostgreSQL 18 : Autovacuum Amélioré
 
-**Nouveauté 1 : autovacuum_vacuum_max_threshold**
+**Nouveauté 1 : `autovacuum_vacuum_max_threshold`**
 
 ```ini
 # Nouveau paramètre PG 18
-autovacuum_vacuum_max_threshold = 100000000   # 100 millions (défaut: infini)
+# Défaut : 100_000_000 (100 millions de tuples morts/modifiés)
+# Mettre à -1 pour DÉSACTIVER ce plafond (et retomber sur l'ancien comportement
+# purement basé sur threshold + scale_factor × nb_lignes)
+autovacuum_vacuum_max_threshold = 100000000
 ```
 
-**Problème résolu** : Sur très grandes tables (> 1 milliard de lignes), le seuil calculé peut être énorme.
+**Problème résolu** : Sur très grandes tables (plusieurs centaines de millions ou milliards de lignes), le seuil calculé via `autovacuum_vacuum_scale_factor` (20 % par défaut) peut représenter des **centaines de millions de tuples avant que VACUUM ne se déclenche**, ce qui crée du bloat massif.
 
 **Exemple** :
 ```
-Table : 10 milliards de lignes  
-Seuil PG ≤ 17 : 50 + (0.2 × 10,000,000,000) = 2,000,000,050 (2 milliards !)  
-Seuil PG 18  : min(2,000,000,050, 100,000,000) = 100,000,000 (100 millions)  
+Table : 10 milliards de lignes
+
+Seuil PG ≤ 17 : 50 + (0.2 × 10_000_000_000) = 2_000_000_050 tuples
+                → VACUUM ne se déclenche qu'après 2 milliards de modifications !
+
+Seuil PG 18 (défaut) : min(2_000_000_050, 100_000_000) = 100_000_000 tuples
+                → VACUUM se déclenche après 100 millions seulement
 ```
 
-→ Autovacuum se déclenche plus fréquemment sur grandes tables.
+→ Sur très grandes tables, autovacuum se déclenche **bien plus fréquemment**, sans nécessiter de tuning manuel par table.
 
-**Nouveauté 2 : Ajustement Dynamique des Workers**
+**Nouveauté 2 : Ajustement à chaud du nombre de Workers**
 
-PostgreSQL 18 ajuste dynamiquement le nombre de workers autovacuum selon la charge :
+PostgreSQL 18 introduit le paramètre `autovacuum_worker_slots` qui **complète** (et ne remplace pas) `autovacuum_max_workers` :
 
 ```ini
-autovacuum_worker_slots = 10   # Nouveauté PG 18 (au lieu de autovacuum_max_workers)
+# postgresql.conf
+
+# Nouveauté PG 18 : nombre maximum de slots réservés (nécessite un redémarrage)
+autovacuum_worker_slots = 16
+
+# Existait avant, mais peut désormais être ajusté À CHAUD (sans redémarrage)
+# jusqu'à autovacuum_worker_slots
+autovacuum_max_workers = 3
 ```
 
 **Fonctionnement** :
-- Charge faible → 2-3 workers actifs
-- Charge élevée → Jusqu'à 10 workers
-- Auto-régulation selon CPU et I/O disponibles
+- `autovacuum_worker_slots` fixe le **plafond** (nécessite un restart pour le changer)
+- `autovacuum_max_workers` indique le nombre de workers réellement utilisables, et peut être **changé à chaud via `ALTER SYSTEM` + `pg_reload_conf()`**, à condition de rester ≤ `autovacuum_worker_slots`
+- Vous pouvez donc augmenter la capacité autovacuum pendant un pic de charge sans redémarrer PostgreSQL
+
+```sql
+-- Avant PG 18 : modifier autovacuum_max_workers exigeait un restart
+-- Avec PG 18 : modification à chaud possible
+ALTER SYSTEM SET autovacuum_max_workers = 8;  
+SELECT pg_reload_conf();  
+-- Effet immédiat, jusqu'à autovacuum_worker_slots (16 dans l'exemple)
+```
 
 ### 4.3. Surveiller l'Autovacuum
 
@@ -739,19 +794,24 @@ df -h
 
 **Requête** :
 ```sql
--- Avec extension pgstattuple
+-- Avec extension pgstattuple (B-Tree uniquement)
 SELECT
-    schemaname,
-    tablename,
-    indexrelname,
-    round(100 * (1 - avg_leaf_density / 100), 1) AS bloat_pct,
-    pg_size_pretty(pg_relation_size(indexrelid)) AS index_size
-FROM pg_stat_user_indexes  
-CROSS JOIN LATERAL pgstatindex(indexrelid)  
-WHERE schemaname = 'public'  
-  AND (1 - avg_leaf_density / 100) > 0.3  -- Bloat > 30%
+    i.schemaname,
+    i.relname        AS tablename,
+    i.indexrelname,
+    round(100 * (1 - s.avg_leaf_density::numeric / 100), 1) AS bloat_pct,
+    pg_size_pretty(pg_relation_size(i.indexrelid))          AS index_size
+FROM pg_stat_user_indexes i  
+JOIN pg_class c ON c.oid = i.indexrelid  
+JOIN pg_am am ON am.oid = c.relam  
+CROSS JOIN LATERAL pgstatindex(i.indexrelid::regclass) AS s  
+WHERE i.schemaname = 'public'  
+  AND am.amname = 'btree'                            -- pgstatindex: B-Tree only
+  AND (1 - s.avg_leaf_density / 100) > 0.3           -- Bloat > 30%
 ORDER BY bloat_pct DESC;
 ```
+
+> ⚠️ `pgstatindex` ne supporte que les index B-Tree. Sans le filtre `am.amname = 'btree'`, la requête tombera sur la première occurrence d'un index GIN/GiST/BRIN avec une erreur du type `ERROR: relation "..." is not a btree index`.
 
 **Alerte** : Si bloat > 40% sur index fréquemment utilisé.
 
@@ -820,18 +880,21 @@ import psycopg2
 conn = psycopg2.connect("dbname=mabase")  
 cur = conn.cursor()  
 
-# Vérifier le bloat
+# Vérifier le bloat (B-Tree uniquement : pgstatindex ne fonctionne que sur B-Tree)
 cur.execute("""
-    SELECT indexrelname,
-           round(100 * (1 - avg_leaf_density / 100), 1) AS bloat_pct
-    FROM pg_stat_user_indexes
-    CROSS JOIN LATERAL pgstatindex(indexrelid)
-    WHERE schemaname = 'public'
+    SELECT i.indexrelname,
+           round(100 * (1 - s.avg_leaf_density::numeric / 100), 1) AS bloat_pct
+    FROM pg_stat_user_indexes i
+    JOIN pg_class c   ON c.oid = i.indexrelid
+    JOIN pg_am am     ON am.oid = c.relam
+    CROSS JOIN LATERAL pgstatindex(i.indexrelid::regclass) s
+    WHERE i.schemaname = 'public'
+      AND am.amname = 'btree'
 """)
 
-for index, bloat in cur.fetchall():
-    if bloat > 40:
-        print(f"⚠️ ALERTE : Index {index} a {bloat}% de bloat !")
+for index_name, bloat in cur.fetchall():
+    if bloat is not None and bloat > 40:
+        print(f"⚠️ ALERTE : Index {index_name} a {bloat}% de bloat !")
         # Envoyer notification (email, Slack, PagerDuty, etc.)
 ```
 

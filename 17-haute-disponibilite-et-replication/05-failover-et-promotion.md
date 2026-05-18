@@ -612,9 +612,11 @@ Historique tracé dans l'historique des timelines
 
 ### LSN (Log Sequence Number)
 
-Le **LSN** est la position dans les fichiers WAL.
+Le **LSN** est une position absolue dans le flux WAL (un entier 64 bits monotone).
 
-**Format** : `0/3000000` (segment/offset)
+**Format d'affichage** : `X/Y` où `X` représente les 32 bits hauts et `Y` les 32 bits bas (notation hexadécimale). Exemple : `1A2B/3C4D5E60`. Le LSN s'écoule continuellement à mesure que le primary génère du WAL.
+
+**Comparaison** : Pour calculer la différence entre deux LSN, utilisez `pg_wal_lsn_diff(lsn1, lsn2)` qui renvoie un nombre d'octets.
 
 **Utilité** :
 - Mesurer le retard de réplication
@@ -644,11 +646,11 @@ Avant de mettre en place un système de failover, assurez-vous que :
 
 ### Infrastructure
 
-- [ ] Au moins 1 Primary + 1 Standby configurés et testés  
-- [ ] Réplication en streaming fonctionnelle  
-- [ ] pg_rewind activé (`wal_log_hints = on` ou checksums)  
-- [ ] Réseau stable entre les nœuds  
-- [ ] Latence réseau acceptable (< 10ms pour synchro)
+- [ ] Au moins 1 Primary + 1 Standby configurés et testés
+- [ ] Réplication en streaming fonctionnelle
+- [ ] **pg_rewind utilisable** : instance initialisée avec `--data-checksums` (défaut en PG 18) OU `wal_log_hints = on` dans `postgresql.conf`
+- [ ] Réseau stable entre les nœuds
+- [ ] Latence réseau acceptable (< 10ms pour la réplication synchrone)
 
 ### Sécurité
 
@@ -807,7 +809,7 @@ Jour 5+ : Optimisation continue
 
 ### Blogs Techniques Recommandés
 
-- **2ndQuadrant** : https://www.2ndquadrant.com/en/blog/  
+- **EDB** (ex-2ndQuadrant) : https://www.enterprisedb.com/blog/  
 - **Percona** : https://www.percona.com/blog/  
 - **CrunchyData** : https://www.crunchydata.com/blog  
 - **Zalando** : https://engineering.zalando.com/tags/postgresql.html

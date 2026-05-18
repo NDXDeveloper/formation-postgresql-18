@@ -319,14 +319,14 @@ CREATE INDEX idx_orders_date ON orders(created_at);  -- Index supplémentaire !
 Index Scan using idx_orders_status_date on orders
   (cost=0.56..15234.00 rows=50000 width=100)
   Index Cond: (created_at > (now() - '7 days'::interval))
-  Skip Scan: status
-  Loops: 4
 ```
 
+> 📌 **Note** : EXPLAIN n'affiche **pas** d'étiquette explicite « Skip Scan » dans son plan textuel. Le Skip Scan est une optimisation interne au moteur B-Tree : on voit simplement un `Index Scan using …` là où, en PG ≤ 17, on aurait vu un `Seq Scan`. C'est en comparant le coût estimé (très inférieur) et le nombre de buffers lus (bien moindre) qu'on identifie l'utilisation effective du Skip Scan.
+
 **Analyse** :
-- Skip Scan sur 4 valeurs de `status`
-- Accès direct via l'index
-- Temps : ~200 ms (SSD)
+- L'Index Scan visite l'index par paquets correspondant aux valeurs distinctes de `status` (4 valeurs ici)
+- Accès indirect mais sélectif via l'index, sans relire toute la table
+- Temps : ~200 ms (SSD) au lieu de ~2 s sans index utilisable
 
 → **Gain de 10-40× en performance** ! 🚀
 
@@ -345,42 +345,44 @@ Index Scan using idx_orders_status_date on orders
 
 ## 6. Configuration et Contrôle
 
-### 6.1. Activation par Défaut
+### 6.1. Activation Automatique
 
-Le Skip Scan est **activé par défaut** dans PostgreSQL 18.
+Le Skip Scan est **intégré au planificateur** de PostgreSQL 18 et **toujours actif** : il n'y a **pas de GUC dédié** pour l'activer ou le désactiver. Le planificateur décide automatiquement de l'appliquer en fonction de :
 
-Vérification :
-```sql
-SHOW enable_indexskipscan;
--- Résultat : on
-```
+- La cardinalité estimée des colonnes principales de l'index
+- La sélectivité des conditions WHERE sur les colonnes postérieures
+- Le coût comparé aux autres stratégies (Seq Scan, Bitmap Scan)
 
-### 6.2. Désactivation (Test/Debug)
+### 6.2. Désactivation indirecte (Test/Debug)
 
-Pour forcer un Seq Scan (comparaison de performances) :
+Pour comparer les performances **avec** vs **sans** index scan (et donc forcer un Seq Scan ou un Bitmap Scan), désactivez `enable_indexscan` :
 
 ```sql
--- Désactiver temporairement
-SET enable_indexskipscan = off;
+-- Désactive TOUS les Index Scan (y compris Skip Scan)
+SET enable_indexscan = off;  
+SET enable_indexonlyscan = off;  
 
 EXPLAIN ANALYZE  
 SELECT * FROM orders WHERE created_at > NOW() - INTERVAL '7 days';  
 
--- Réactiver
-SET enable_indexskipscan = on;
+-- Réactiver à la fin de la session
+RESET enable_indexscan;  
+RESET enable_indexonlyscan;  
 ```
 
-### 6.3. Forcer le Skip Scan (Rarement Nécessaire)
+> ⚠️ **Attention** : ces paramètres désactivent **tous** les Index Scan, pas seulement le Skip Scan. Il n'existe pas de mécanisme dans PG 18 pour désactiver uniquement le Skip Scan.
 
-Si PostgreSQL ne choisit pas le Skip Scan alors qu'il devrait :
+### 6.3. Influencer le Choix du Planificateur
+
+Si PostgreSQL ne choisit pas un Index Scan (Skip Scan compris) alors qu'il devrait :
 
 ```sql
--- Vérifier les statistiques
+-- 1. Mettre à jour les statistiques (souvent suffisant)
 ANALYZE orders;
 
--- Ajuster le coût du Seq Scan (rendre le Skip Scan plus attractif)
-SET seq_page_cost = 1.5;  -- Valeur par défaut : 1.0  
-SET random_page_cost = 3.0;  -- Valeur par défaut : 4.0  
+-- 2. Si la table est en RAM, rendre le random I/O moins cher
+SET random_page_cost = 1.5;  -- Valeur par défaut : 4.0
+-- (à appliquer globalement dans postgresql.conf si toute la base est sur SSD)
 ```
 
 ---
@@ -544,27 +546,30 @@ WHERE created_at > NOW() - INTERVAL '7 days';
 Index Scan using idx_orders_status_date on orders
   (cost=0.56..15234.00 rows=50000 width=100) (actual time=0.123..195.456 rows=50123 loops=1)
   Index Cond: (created_at > (now() - '7 days'::interval))
-  Skip Scan: status
-  Loops: 4
   Buffers: shared hit=1234
 Planning Time: 0.234 ms  
 Execution Time: 197.891 ms  
 ```
 
-**Indicateurs** :
-- `Skip Scan: status` → Confirmation du Skip Scan  
-- `Loops: 4` → 4 valeurs distinctes de `status` parcourues  
-- `Buffers: shared hit` → Lecture depuis le cache (performant)
+**Indicateurs qui suggèrent un Skip Scan effectif** :
+- L'index est utilisé alors que la première colonne (`status`) **n'est pas** dans `Index Cond`
+- Le coût estimé et le nombre de buffers lus sont bien inférieurs à un Seq Scan équivalent
+- L'`Index Cond` ne mentionne que la colonne postérieure (`created_at`) ; les colonnes principales sautées n'apparaissent pas comme filtre explicite
 
 #### Comparaison avec Seq Scan
 
 ```sql
 -- Forcer Seq Scan pour comparaison
-SET enable_indexskipscan = off;
+SET enable_indexscan = off;  
+SET enable_indexonlyscan = off;  
 
 EXPLAIN (ANALYZE, BUFFERS)  
 SELECT * FROM orders  
 WHERE created_at > NOW() - INTERVAL '7 days';  
+
+-- Réactiver à la fin
+RESET enable_indexscan;  
+RESET enable_indexonlyscan;  
 ```
 
 **Plan sans Skip Scan** :
@@ -686,30 +691,31 @@ ORDER BY tablename, indexname;
 
 ### 11.2. Tests de Performance
 
-**Avant suppression** :
+**Avant suppression** : il faut comparer les plans avec et sans l'index candidat à la suppression. L'approche **propre** est d'utiliser une transaction qui est ensuite rollbackée :
 
 ```sql
--- 1. Activer timing
 \timing on
 
--- 2. Tester avec index actuel
-EXPLAIN ANALYZE SELECT * FROM orders WHERE created_at > '2024-11-01';
+-- 1. Tester avec l'index actuel
+EXPLAIN (ANALYZE, BUFFERS)  
+SELECT * FROM orders WHERE created_at > '2024-11-01';  
 
--- 3. Simuler la suppression (désactiver temporairement)
-UPDATE pg_index  
-SET indisvalid = false  
-WHERE indexrelid = 'idx_orders_date'::regclass;  
+-- 2. Tester sans l'index, dans une transaction qu'on annule
+BEGIN;
 
--- 4. Re-tester
-EXPLAIN ANALYZE SELECT * FROM orders WHERE created_at > '2024-11-01';
+DROP INDEX idx_orders_date;
 
--- 5. Réactiver si nécessaire
-UPDATE pg_index  
-SET indisvalid = true  
-WHERE indexrelid = 'idx_orders_date'::regclass;  
+EXPLAIN (ANALYZE, BUFFERS)  
+SELECT * FROM orders WHERE created_at > '2024-11-01';  
+
+ROLLBACK;  -- L'index est restauré : il n'a jamais réellement été supprimé
 ```
 
-**Si performances équivalentes ou meilleures** → Supprimez l'index redondant !
+> 💡 **Pourquoi cette approche** : un `DROP INDEX` à l'intérieur d'une transaction est annulable par `ROLLBACK`. C'est le moyen **sûr** de simuler l'absence d'un index, sans toucher aux catalogues système (modifier `pg_index` à la main via UPDATE est **fortement déconseillé** car le catalogue peut devenir incohérent).
+
+> ⚠️ **Verrou pendant le test** : le `DROP INDEX` prend un verrou `ACCESS EXCLUSIVE` sur la table le temps de la transaction. Pour des tests sur une base de production, préférez tester sur un dump restauré dans un environnement séparé.
+
+**Si performances équivalentes ou meilleures** → planifiez la suppression définitive avec `DROP INDEX CONCURRENTLY idx_orders_date;` (hors transaction, sans verrou bloquant).
 
 ### 11.3. Plan de Migration
 
@@ -821,7 +827,7 @@ WHERE sensor_type = 'temperature'
 
 🔑 **Activation automatique** : Skip Scan activé par défaut, PostgreSQL choisit intelligemment.
 
-🔑 **Monitoring** : Vérifier avec `EXPLAIN` et surveiller `Loops` pour voir le nombre de "sauts".
+🔑 **Monitoring** : Vérifier avec `EXPLAIN (ANALYZE, BUFFERS)` qu'un `Index Scan` est utilisé alors que la première colonne de l'index n'apparaît pas dans la condition WHERE — c'est la signature du Skip Scan (PG 18 n'ajoute pas d'étiquette dédiée dans le plan textuel).
 
 🔑 **Limitation** : Inefficace si cardinalité de la première colonne > quelques milliers.
 

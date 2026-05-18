@@ -201,7 +201,7 @@ Pour l'instant, le comportement est :
 
 ### 4.1. Buffers de Planification
 
-PostgreSQL 18 affiche également les buffers utilisés pendant la **phase de planification** :
+La section `Planning: Buffers: …` (buffers consommés par la phase de planification) **existe depuis PostgreSQL 13**. Ce qui change en PG 18, c'est qu'elle s'affiche désormais automatiquement avec un simple `EXPLAIN ANALYZE` — il fallait auparavant écrire `EXPLAIN (ANALYZE, BUFFERS)` pour la voir.
 
 ```sql
 EXPLAIN ANALYZE SELECT * FROM clients WHERE ville = 'Paris';
@@ -317,31 +317,20 @@ Planning Time: 5.234 ms
 
 `auto_explain` est une extension qui log automatiquement les plans des requêtes lentes.
 
-#### Configuration PostgreSQL ≤ 17
+> ⚠️ **Attention** : la nouveauté PG 18 (« `BUFFERS` automatique avec `EXPLAIN ANALYZE` ») s'applique à la commande SQL `EXPLAIN`, **pas** à l'extension `auto_explain`. Le paramètre `auto_explain.log_buffers` reste **off** par défaut en PG 17 et en PG 18 — il faut toujours l'activer explicitement si l'on veut voir les statistiques de buffers dans les logs.
+
+#### Configuration auto_explain (PG 17 et PG 18 — identique)
 
 ```ini
 # postgresql.conf
 shared_preload_libraries = 'auto_explain'  
-auto_explain.log_min_duration = 1000  # Log si > 1s  
+auto_explain.log_min_duration = 1000   # Log si > 1s  
 auto_explain.log_analyze = on  
-auto_explain.log_buffers = on          # ← Nécessaire !  
+auto_explain.log_buffers = on          # ← Toujours nécessaire pour voir les I/O  
 auto_explain.log_timing = on  
 ```
 
-**Problème** : Si vous oubliez `auto_explain.log_buffers = on`, les logs ne contiennent pas les I/O.
-
-#### Configuration PostgreSQL 18
-
-```ini
-# postgresql.conf
-shared_preload_libraries = 'auto_explain'  
-auto_explain.log_min_duration = 1000  
-auto_explain.log_analyze = on  
-auto_explain.log_timing = on  
-# auto_explain.log_buffers → Inutile, inclus par défaut !
-```
-
-**Avantage** : Configuration simplifiée, moins d'oublis.
+**À retenir** : en interactif (`EXPLAIN ANALYZE`), PG 18 affiche les buffers automatiquement. Mais pour qu'`auto_explain` les écrive dans les logs, `auto_explain.log_buffers = on` reste obligatoire.
 
 ### 5.3. Impact sur les Outils de Monitoring
 
@@ -355,69 +344,51 @@ Les outils qui analysent les plans d'exécution (Datadog, New Relic, pganalyze, 
 
 ## 6. Autres Améliorations d'EXPLAIN dans PostgreSQL 18
 
-### 6.1. Affichage des Statistiques I/O par Backend
+D'après les release notes officielles de PostgreSQL 18, voici les vraies évolutions d'EXPLAIN (en plus des buffers automatiques) :
 
-PostgreSQL 18 enrichit les vues système avec des statistiques I/O **par processus backend**.
+### 6.1. Nombre de Lookups d'Index par Nœud Index Scan
 
-#### Nouvelle Vue : pg_stat_io
+`EXPLAIN ANALYZE` rapporte désormais le **nombre de lookups dans l'index** par nœud Index Scan. C'est particulièrement utile pour identifier le nombre réel d'opérations sur l'index dans le contexte du nouveau Skip Scan (cf. section 13.3) — un Skip Scan se traduit par plusieurs lookups là où un Index Scan classique n'en ferait qu'un seul.
+
+### 6.2. Compteurs WAL dans `EXPLAIN (WAL)`
+
+L'option `WAL` d'EXPLAIN affiche désormais aussi les **compteurs de buffers WAL** utilisés (en plus des bytes WAL et FPW). Utile pour comprendre l'empreinte WAL d'une requête de mutation.
 
 ```sql
-SELECT * FROM pg_stat_io WHERE backend_type = 'client backend';
+EXPLAIN (ANALYZE, WAL) INSERT INTO logs (data) SELECT … FROM source;
 ```
 
-**Colonnes** :
-- `backend_type` : Type de processus (client backend, autovacuum, etc.)  
-- `object` : Type d'objet (table, index, toast, etc.)  
-- `context` : Contexte (normal, vacuum, bulkwrite)  
-- `reads` : Nombre de lectures  
-- `writes` : Nombre d'écritures  
-- `extends` : Nombre d'extensions de fichiers  
-- `op_bytes` : Octets lus/écrits  
-- `evictions` : Évictions du cache  
-- `reuses` : Réutilisations de blocs  
-- `fsyncs` : Nombre de fsyncs
+### 6.3. Taux de Lignes Fractionnaires
 
-**Utilité** : Corrélation entre les plans EXPLAIN et les statistiques système.
+Les estimations de nombre de lignes (`rows=…`) peuvent désormais être **fractionnaires** dans certains cas, ce qui améliore la précision de l'affichage pour des sous-plans qui produisent moins d'une ligne en moyenne par invocation.
 
-### 6.2. Amélioration de l'Affichage des Coûts
+### 6.4. Détails Mémoire et Disque pour Material / Window / CTE
 
-PostgreSQL 18 améliore la précision de l'affichage des coûts dans certains cas complexes :
+Les nœuds `Materialize`, `WindowAgg` et `CTE Scan` exposent maintenant des informations détaillées sur leur **consommation mémoire** et le **débordement éventuel sur disque** (similaire à ce que `Sort` exposait déjà).
 
-#### Exemple : Jointures Complexes
+### 6.5. Marqueurs de Nœuds Désactivés
 
-**Avant PG 18** :
-```
-Hash Join  (cost=15000.00..50000.00 rows=100000 width=50)
-```
+Quand un GUC `enable_*` (par ex. `enable_seqscan = off`) force le planificateur à éviter un nœud, EXPLAIN affiche désormais un **marqueur explicite** sur les nœuds dont le coût a été artificiellement gonflé pour les rendre indésirables. Cela aide à comprendre pourquoi un plan « tordu » a été choisi pendant le debug.
 
-**Avec PG 18** :
-```
-Hash Join  (cost=15000.00..50000.00 rows=100000 width=50)
-  Hash Cond: (o.client_id = c.id)
-  Join Filter: (o.amount > c.credit_limit)   ← Distinction claire
-  Rows Removed by Join Filter: 5000
-```
+### 6.6. Évolution de `pg_stat_io`
 
-**Amélioration** : Distinction explicite entre `Hash Cond` (condition de jointure) et `Join Filter` (filtre post-jointure).
-
-### 6.3. Meilleure Lisibilité des Index Partiels
-
-**Avant PG 18** :
-```
-Index Scan using idx_partial on orders
-  Index Cond: (status = 'pending')
-  Filter: (created_at > '2024-01-01')
-```
-
-**Avec PG 18** :
-```
-Index Scan using idx_partial on orders
-  Index Cond: (status = 'pending')
-  Index Filter: (created_at > '2024-01-01')   ← "Index Filter" au lieu de "Filter"
-  Index Partial: WHERE status = 'pending'      ← Condition de l'index partiel affichée
-```
-
-**Amélioration** : Distinction entre filtre appliqué dans l'index (`Index Filter`) et condition de l'index partiel (`Index Partial`).
+> 📌 **Précision** : la vue `pg_stat_io` **existe depuis PostgreSQL 16**, pas depuis PG 18. PG 18 lui apporte cependant deux changements :  
+>  
+> - **Ajout** de colonnes en octets : `read_bytes`, `write_bytes`, `extend_bytes`  
+> - **Retrait** de la colonne `op_bytes` (devenue redondante)  
+>  
+> Exemple PG 18 :  
+>  
+> ```sql  
+> SELECT backend_type, object, context,  
+>        reads, read_bytes,  
+>        writes, write_bytes,  
+>        extends, extend_bytes  
+>   FROM pg_stat_io  
+>  WHERE backend_type = 'client backend';  
+> ```  
+>  
+> Cela facilite la corrélation directe entre nombre de buffers (compteurs) et volume réel d'I/O (en bytes), sans avoir à multiplier par la taille de page.
 
 ---
 
@@ -672,10 +643,10 @@ shared_preload_libraries = 'auto_explain'
 auto_explain.log_min_duration = 1000        # Log si > 1s  
 auto_explain.log_analyze = on               # Exécuter pour stats réelles  
 auto_explain.log_timing = on                # Timings détaillés  
+auto_explain.log_buffers = on               # ⚠️ Toujours nécessaire (auto_explain ignore le défaut de EXPLAIN)  
 auto_explain.log_verbose = off              # Off par défaut (trop verbeux)  
 auto_explain.log_format = 'json'            # JSON pour parsing facile  
 auto_explain.log_nested_statements = on     # Inclure sous-requêtes  
-# Note : auto_explain.log_buffers n'est plus nécessaire !
 ```
 
 ### 10.3. Monitoring Proactif
@@ -785,7 +756,7 @@ L'affichage automatique des buffers encourage :
 
 🔑 **Workflow simplifié** : Une seule commande (`EXPLAIN ANALYZE`) au lieu de deux.
 
-🔑 **Buffers de planification** : Nouveauté PG 18, affiche les I/O pendant la phase de planning.
+🔑 **Buffers de planification** : Section `Planning: Buffers: …` disponible depuis PG 13, désormais affichée automatiquement en PG 18 avec `EXPLAIN ANALYZE`.
 
 🔑 **Overhead négligeable** : < 0.1% du temps d'exécution, bénéfice énorme pour le diagnostic.
 

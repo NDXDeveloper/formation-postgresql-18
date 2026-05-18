@@ -10,7 +10,7 @@ La **réplication logique** est l'une des fonctionnalités les plus puissantes e
 
 Avant de plonger dans la réplication logique, commençons par définir ce qu'est la réplication en général.
 
-**La réplication de base de données** est le processus de copie et de synchronisation des données d'une base de données source (appelée **master** ou **primary**) vers une ou plusieurs bases de données destination (appelées **replica** ou **standby**).
+**La réplication de base de données** est le processus de copie et de synchronisation des données d'une base de données source (appelée **primary** — le terme historique *master* est aujourd'hui déprécié dans la documentation PostgreSQL) vers une ou plusieurs bases de données destination (appelées **standby** ou **replica**). Dans le cadre spécifique de la réplication logique, on parle plutôt de **publisher** (source) et de **subscriber** (destination).
 
 #### Pourquoi Répliquer ?
 
@@ -357,7 +357,7 @@ Un **slot de réplication** est un mécanisme qui garantit qu'aucun changement n
 ┌─────────────────────────────────────────────────┐
 │  WAL du Publisher                               │
 │                                                 │
-│  [===Déjà lu===][===Slot保持===][===Nouveau===]  │
+│  [===Déjà lu===][===Slot rétention===][==Nouveau==] │
 │                 ▲                               │
 │                 │                               │
 │            Position du slot                     │
@@ -560,11 +560,18 @@ max_slot_wal_keep_size = 50GB
 #### 2. Authentification (`pg_hba.conf`)
 
 ```
-# Autoriser la connexion pour la réplication
-# depuis les serveurs subscribers
-host    replication    replicateur    10.0.0.0/8    scram-sha-256  
-host    production     replicateur    10.0.0.0/8    scram-sha-256  
+# TYPE  DATABASE       USER          ADDRESS        METHOD
+
+# Réplication LOGIQUE : le subscriber se connecte à la BASE qui contient
+# la publication (PAS à la pseudo-base "replication" !)
+host    production     replicateur    10.0.0.0/8    scram-sha-256
+
+# (Optionnel) Si vous souhaitez aussi autoriser pg_basebackup ou de la
+# réplication PHYSIQUE depuis le même utilisateur, ajoutez la pseudo-base "replication" :
+# host  replication    replicateur    10.0.0.0/8    scram-sha-256
 ```
+
+> ⚠️ **Point important souvent confondu** : la pseudo-base `replication` dans `pg_hba.conf` est utilisée **uniquement pour la réplication physique** (streaming WAL bas niveau). En réplication **logique**, le subscriber se connecte à la base réelle qui contient la publication (ici `production`), en utilisant son nom de base normal.
 
 #### 3. Utilisateur de Réplication
 
@@ -595,9 +602,9 @@ max_parallel_apply_workers_per_subscription = 2
 #### 2. Structure de Base
 
 Les **tables doivent exister** sur le subscriber avant de créer la subscription, avec :
-- Même nom de table
-- Mêmes colonnes (ou un sous-ensemble si filtrage)
-- **Clés primaires obligatoires** sur les tables répliquées
+- **Même nom de table et même schéma** que côté publisher (pas de renommage natif possible — la réplication logique mappe strictement par `schéma.table`)
+- Mêmes colonnes que celles publiées (le subscriber peut avoir des colonnes supplémentaires, qui prendront leur valeur DEFAULT)
+- **Une identité de réplica** définie : soit une clé primaire (recommandé), soit un index `UNIQUE NOT NULL`, soit `REPLICA IDENTITY FULL`. Sans cela, **seuls les INSERT sont répliqués** ; les UPDATE/DELETE échouent.
 
 ```sql
 -- Exemple : Créer la même structure
@@ -613,11 +620,11 @@ CREATE TABLE commandes (
 
 ## Architecture de Référence
 
-### Architecture Simple : Master-Replica
+### Architecture Simple : Publisher–Subscriber
 
 ```
 ┌──────────────────────────────────────────────┐
-│         Serveur MASTER (Publisher)           │
+│         Serveur SOURCE (Publisher)           │
 │                                              │
 │  • Écritures : ✅ Autorisées                 │
 │  • Lectures  : ✅ Autorisées                 │
@@ -629,7 +636,7 @@ CREATE TABLE commandes (
                     │ (Unidirectionnelle)
                     ▼
 ┌──────────────────────────────────────────────┐
-│         Serveur REPLICA (Subscriber)         │
+│         Serveur DESTINATION (Subscriber)     │
 │                                              │
 │  • Écritures : ❌ Interdites (sur tables     │
 │                   répliquées)                │
@@ -814,26 +821,33 @@ Ces limitations seront détaillées dans la section suivante.
 
 ---
 
-## Nouveautés PostgreSQL 18 pour la Réplication Logique
+## Nouveautés autour de la Réplication Logique (PG 15 → 18)
 
-PostgreSQL 18 (septembre 2025) apporte des améliorations significatives :
+L'écosystème de la réplication logique a beaucoup évolué ces dernières années. Plutôt que d'attribuer indistinctement à PG 18, voici l'historique réel :
 
-### 1. Performances Améliorées
+### PostgreSQL 15 (2022)
+- **Filtres par lignes** (clause `WHERE` dans `CREATE PUBLICATION`)
+- **Filtres par colonnes** (sélection des colonnes répliquées)
+- **`FOR TABLES IN SCHEMA`** : publier toutes les tables d'un schéma
+- **`pg_stat_subscription_stats`** : nouvelle vue avec compteurs d'erreurs (`apply_error_count`, `sync_error_count`)
 
-- **Décodage logique optimisé** : Réduction de l'overhead CPU  
-- **Parallélisation étendue** : Meilleure utilisation des workers  
-- **Compression améliorée** : Réduction de la bande passante réseau
+### PostgreSQL 16 (2023)
+- **Rôle prédéfini `pg_create_subscription`** : non-superuser peut créer des subscriptions
+- **`streaming = 'parallel'`** : application parallèle des grosses transactions
+- **Réplication logique depuis un standby** (le publisher peut être un standby physique)
 
-### 2. Nouvelles Fonctionnalités
+### PostgreSQL 17 (2024)
+- **Failover slots logiques** (`failover = true`) : survie au failover physique du publisher
+- **`pg_createsubscriber`** : transforme un standby physique en subscriber logique
+- **`ALTER SUBSCRIPTION ... DISABLE_ON_ERROR`** plus mature
 
-- **Authentification OAuth 2.0** : Intégration moderne des identités  
-- **Statistiques étendues** : Nouvelles métriques dans `pg_stat_subscription`  
-- **Gestion améliorée des conflits** : Nouvelles options de résolution
+### PostgreSQL 18 (2025)
+- **Sous-système I/O asynchrone (AIO)** : améliore indirectement le débit de réplication
+- **Observabilité enrichie** via `pg_stat_io` étendu (suivi `walsender` / `walreceiver`)
+- **Authentification OAuth 2.0** : utilisable pour les connexions de réplication
+- **Data checksums activés par défaut** lors d'`initdb`
 
-### 3. Fiabilité
-
-- **Data Checksums par défaut** : Détection de corruption automatique  
-- **Améliorations du décodage WAL** : Moins d'erreurs en cas de charge élevée
+> ⚠️ **Ce qui n'a PAS changé** en PG 18 : la réplication logique **ne réplique toujours pas le DDL** automatiquement, ni les séquences, ni les Large Objects. Ces limitations restent valables.
 
 ---
 

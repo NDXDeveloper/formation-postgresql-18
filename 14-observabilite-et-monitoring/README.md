@@ -198,9 +198,14 @@ PostgreSQL expose plus de **30 vues système** qui fournissent des statistiques 
 | `pg_stat_user_tables` | Statistiques par table | Quelle table est la plus sollicitée ? |
 | `pg_stat_user_indexes` | Statistiques par index | Quels index sont (in)utilisés ? |
 | `pg_stat_statements` | Statistiques par requête (extension) | Quelles requêtes sont lentes ? |
-| `pg_stat_bgwriter` | Activité du background writer | Performance d'écriture |
-| `pg_stat_wal` | Statistiques WAL | Génération de WAL |
+| `pg_stat_io` (PG 16+) | I/O par type de backend, contexte, cible | D'où vient l'I/O ? Cache hit par contexte |
+| `pg_stat_bgwriter` | Activité du background writer | Performance du flush en arrière-plan |
+| `pg_stat_checkpointer` (PG 17+) | Statistiques de checkpoints | Checkpoints planifiés vs forcés |
+| `pg_stat_wal` | Statistiques WAL globales | Génération de WAL |
+| `pg_stat_replication` | État des standbys connectés | Lag de réplication |
+| `pg_replication_slots` | Slots de réplication | WAL retenu par les consommateurs |
 | `pg_locks` | Verrous en cours | Qui bloque qui ? |
+| `pg_stat_progress_vacuum` | Avancement d'un VACUUM en cours | Où en est mon VACUUM ? |
 
 **Analogie** : Ces vues sont comme les capteurs d'une voiture moderne : température, pression, régime moteur, etc.
 
@@ -211,6 +216,9 @@ PostgreSQL expose plus de **30 vues système** qui fournissent des statistiques 
 | `pg_stat_statements` | Historique et statistiques des requêtes | ⭐⭐⭐⭐⭐ Essentiel |
 | `auto_explain` | Capture automatique des plans de requêtes lentes | ⭐⭐⭐⭐ Très utile |
 | `pg_stat_kcache` | Métriques système (CPU, I/O) par requête | ⭐⭐⭐ Utile |
+| `pg_buffercache` | Contenu actuel des shared_buffers | ⭐⭐⭐ Utile (diag cache) |
+| `pgstattuple` | Mesure exacte du bloat tables/index | ⭐⭐⭐ Utile (diag bloat) |
+| `pg_prewarm` | Pré-charger des tables en cache | ⭐⭐ Utile (démarrage à chaud) |
 | `pg_qualstats` | Statistiques sur les prédicats WHERE | ⭐⭐ Avancé |
 
 #### 3. Système de Logging
@@ -463,6 +471,24 @@ SELECT * FROM pg_locks WHERE NOT granted;  -- Locks en attente
 - **Warning** : > 80% utilisé  
 - **Critical** : > 90% utilisé
 
+### 11. Transaction ID Wraparound 🚨
+
+**Pourquoi c'est crucial** : si l'âge d'XID dépasse ~2,15 milliards, PostgreSQL **refuse toute écriture** pour protéger les données (mode read-only). C'est l'un des seuls scénarios pouvant rendre la base **totalement indisponible**.
+
+**Comment le mesurer** :
+```sql
+SELECT datname, age(datfrozenxid) AS xid_age  
+FROM pg_database  
+ORDER BY xid_age DESC;  
+```
+
+**Seuils d'alerte** :
+- **Notice** : `age > 1 milliard`
+- **Warning** : `age > 1,5 milliard`
+- **Critical** : `age > 1,9 milliard` (proche du mode read-only)
+
+> Voir section [14.3](./03-statistiques-vacuum-analyze-pg18.md#surveillance-du-transaction-id-wraparound) pour la procédure d'urgence détaillée.
+
 ---
 
 ## Dashboard Minimal Recommandé
@@ -558,7 +584,7 @@ Voici une checklist pour démarrer l'observabilité de votre PostgreSQL :
 
 ### Phase 2 : Monitoring de Base (Semaine 1)
 - [ ] Installer un outil de monitoring (Grafana ou équivalent)  
-- [ ] Créer un dashboard avec les 10 métriques clés  
+- [ ] Créer un dashboard avec les 11 métriques clés (dont le wraparound)  
 - [ ] Configurer des alertes sur les métriques critiques  
 - [ ] Tester les alertes
 
@@ -613,10 +639,11 @@ Configuration et interprétation des logs PostgreSQL. Vous maîtriserez :
 
 ### 14.6. Métriques Vitales
 Les indicateurs clés de santé de votre base. Vous comprendrez :
-- Cache Hit Ratio : Optimiser l'utilisation de la mémoire
-- Table et Index Bloat : Détecter le gaspillage d'espace
-- Checkpoints et WAL : Surveiller l'activité d'écriture
-- Connexions et pools : Éviter la saturation
+- Cache Hit Ratio : Optimiser l'utilisation de la mémoire (avec `pg_buffercache`)
+- Table et Index Bloat : Détecter le gaspillage d'espace (avec `pgstattuple`)
+- I/O Wait et Disk Latency : Mesurer le temps perdu sur les disques
+- Connexions et pools : Éviter la saturation (PgBouncer 1.21+ et prepared statements)
+- Checkpoints et WAL : Surveiller l'activité d'écriture (avec `pg_stat_checkpointer` PG 17+)
 
 ### 14.7. Outils de Monitoring
 L'écosystème d'outils externes. Vous découvrirez :

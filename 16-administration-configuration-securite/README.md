@@ -54,18 +54,7 @@ Vous apprendrez à :
 **Pourquoi c'est important ?**
 Une base de données non maintenue se dégrade progressivement : performances réduites, espace disque gaspillé, risque de perte de données. Ces sections vous enseignent les tâches d'administration essentielles pour maintenir PostgreSQL en état optimal.
 
-### 3. Architecture Avancée et Production (Section 16.17)
-
-**Comment garantir la disponibilité et la résilience en production ?**
-
-Vous apprendrez à :
-
-- **Mettre en place la haute disponibilité** : Réplication physique et logique  
-- **Gérer le failover** : Promotion automatique en cas de panne  
-- **Architectures HA** : Patroni, Repmgr, synchrone vs asynchrone
-
-**Pourquoi c'est important ?**
-En production, l'interruption d'une base de données peut coûter des milliers d'euros par minute. Ces sections vous enseignent à concevoir des architectures résilientes qui restent disponibles même en cas de panne.
+> 💡 **Note :** la haute disponibilité (réplication, failover, Patroni, etc.) est traitée dans un chapitre dédié ultérieurement et n'est pas couverte ici.
 
 ---
 
@@ -85,8 +74,9 @@ L'authentification est le processus de **vérification de l'identité** d'un uti
 - Mot de passe (SCRAM-SHA-256, recommandé)
 - Certificats SSL/TLS
 - OAuth 2.0 (nouveauté PostgreSQL 18)
-- LDAP (intégration entreprise)
-- Kerberos (environnements Windows)
+- LDAP (intégration entreprise, ex. Active Directory)
+- GSSAPI / Kerberos (Single Sign-On, multiplateforme — pas réservé à Windows)
+- Peer / Ident (connexions locales basées sur l'utilisateur système)
 
 **Fichier de configuration :** `pg_hba.conf` (contrôle QUI peut se connecter et COMMENT)
 
@@ -202,13 +192,14 @@ La sécurité d'une base de données repose sur le principe de **défense en pro
 
 **Vous apprendrez à :**
 - Configurer PostgreSQL pour la production
-- Mettre en place la haute disponibilité
 - Automatiser la maintenance (VACUUM, sauvegardes)
 - Monitorer la sécurité et les performances
+- Préparer le pooling de connexions (PgBouncer)
+
+> 💡 La **haute disponibilité** (réplication, failover, Patroni) est couverte dans un chapitre dédié — pas ici.
 
 **Sections particulièrement utiles :**
 - 16.10 à 16.13 (Maintenance et configuration)
-- 16.17 (Haute disponibilité)
 
 ### Administrateurs de Bases de Données (DBA)
 
@@ -217,7 +208,6 @@ La sécurité d'une base de données repose sur le principe de **défense en pro
 - Configurer les méthodes d'authentification
 - Optimiser les paramètres PostgreSQL
 - Gérer les sauvegardes et la récupération
-- Mettre en place la réplication
 
 **Sections particulièrement utiles :**
 - L'intégralité du chapitre (c'est votre métier !)
@@ -359,10 +349,6 @@ Ce chapitre est organisé de manière progressive, du simple vers le complexe :
 - **16.12** : Data Checksums (nouveauté PostgreSQL 18)  
 - **16.13** : Tuning et configuration
 
-### Partie 4 : Haute Disponibilité (Avancé)
-
-- **16.17** : Réplication et haute disponibilité
-
 ---
 
 ## 🎯 Objectifs d'Apprentissage
@@ -376,7 +362,6 @@ Ce chapitre est organisé de manière progressive, du simple vers le complexe :
 - ✅ **Maintenir** PostgreSQL avec VACUUM, ANALYZE et Autovacuum  
 - ✅ **Sauvegarder** et restaurer les données de manière fiable  
 - ✅ **Optimiser** la configuration pour la production  
-- ✅ **Mettre en place** la haute disponibilité avec réplication  
 - ✅ **Éviter** les erreurs de sécurité courantes  
 - ✅ **Comprendre** les nouveautés PostgreSQL 18 (checksums, FIPS, TLS 1.3)
 
@@ -410,7 +395,7 @@ Avant de commencer ce chapitre, assurez-vous d'avoir :
 **Recommandé pour :** Débutants, DBA juniors, ceux qui veulent une compréhension exhaustive
 
 **Approche :**
-1. Lisez les sections dans l'ordre (16.1 → 16.17)  
+1. Lisez les sections dans l'ordre (16.1 → 16.13)  
 2. Prenez des notes sur les concepts clés  
 3. Consultez les exemples et les bonnes pratiques  
 4. Révisez les checklists de configuration
@@ -469,21 +454,27 @@ Ce chapitre couvre en détail les **nouveautés majeures** de PostgreSQL 18 en m
 
 ### 🆕 Mode FIPS (Section 16.8)
 
-**Nouveau :** Support complet des standards cryptographiques gouvernementaux
+**À noter :** FIPS s'active au niveau **OpenSSL/OS**, pas via un paramètre PostgreSQL (il n'existe pas de paramètre `ssl_fips`). Une fois OpenSSL en mode FIPS, PostgreSQL n'autorise que les algorithmes certifiés FIPS.
 
 **Impact :** Conformité pour secteurs régulés (gouvernement, défense, santé)
 
-### 🆕 Configuration TLS 1.3 (Section 16.8)
+### 🆕 TLS 1.3 (Section 16.8)
 
-**Nouveau :** Paramètre `ssl_tls13_ciphers` pour contrôle fin des algorithmes
+**À noter :** TLS 1.3 fonctionne nativement avec PostgreSQL via OpenSSL. Les ciphers TLS 1.3 ne sont **pas configurables côté PostgreSQL** (le paramètre `ssl_ciphers` ne s'applique qu'à TLS 1.2 et antérieur — OpenSSL gère les 3 cipher suites TLS 1.3 automatiquement).
 
 **Impact :** Sécurité et performance améliorées (handshake 50% plus rapide)
 
-### 🆕 Authentification OAuth 2.0 (Section 16.8)
+### 🆕 Authentification OAuth 2.0 (Section 16.2.2)
 
-**Nouveau :** Support natif de l'authentification moderne via OAuth 2.0
+**Nouveau :** Support natif de l'authentification moderne via OAuth 2.0 (méthode `oauth` dans pg_hba.conf, avec validation déléguée à des bibliothèques externes via `oauth_validator_libraries`)
 
 **Impact :** Intégration avec Google, Microsoft, systèmes SSO d'entreprise
+
+### 🆕 SCRAM Passthrough (Section 16.2.3)
+
+**Nouveau :** Option `use_scram_passthrough` sur postgres_fdw pour propager l'authentification SCRAM aux serveurs distants sans stocker de mot de passe en clair
+
+**Impact :** Sécurité renforcée pour les architectures fédérées / sharding
 
 ### 🆕 Améliorations Autovacuum (Section 16.10)
 
@@ -599,7 +590,7 @@ shared_buffers = 256MB
 
 ---
 
-**Prochaine section :** [16.1 Authentification vs Autorisation : Concepts Fondamentaux](16.1-authentification-vs-autorisation.md)
+**Prochaine section :** [16.1 Authentification vs Autorisation : Concepts Fondamentaux](01-authentification-vs-autorisation.md)
 
 Bonne lecture et bienvenue dans le monde de l'administration PostgreSQL ! 🐘🔒
 

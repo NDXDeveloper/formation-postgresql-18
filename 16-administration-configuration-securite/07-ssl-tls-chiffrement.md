@@ -402,12 +402,11 @@ ssl_key_file = 'server.key'
 
 # Versions TLS autorisées (sécurité renforcée)
 ssl_min_protocol_version = 'TLSv1.2'  # Minimum TLS 1.2  
-ssl_max_protocol_version = 'TLSv1.3'  # Maximum TLS 1.3 (PostgreSQL 18+)  
+ssl_max_protocol_version = 'TLSv1.3'  # Maximum TLS 1.3 (supporté en PG 12+)  
 
-# Nouveauté PostgreSQL 18 : Configuration TLS 1.3
-ssl_tls13_ciphers = 'TLS_AES_256_GCM_SHA384:TLS_AES_128_GCM_SHA256'
-
-# Algorithmes de chiffrement autorisés (TLS 1.2)
+# Algorithmes de chiffrement autorisés (s'applique uniquement à TLS 1.2 et antérieur)
+# Pour TLS 1.3, les ciphers sont gérés par OpenSSL et NE sont PAS configurables
+# via PostgreSQL (le paramètre `ssl_tls13_ciphers` n'existe pas).
 ssl_ciphers = 'HIGH:!aNULL:!MD5'
 
 # Préférer les algorithmes du serveur
@@ -474,9 +473,13 @@ psql "host=database.example.com port=5432 dbname=mydb user=alice sslmode=require
 export PGSSLMODE=require  
 psql -h database.example.com -U alice -d mydb  
 
-# Vérifier que la connexion utilise SSL
-psql -h database.example.com -U alice -d mydb -c "SELECT ssl_is_used();"
-# Résultat : true
+# Vérifier que la connexion utilise SSL (via pg_stat_ssl)
+psql -h database.example.com -U alice -d mydb \
+  -c "SELECT ssl, version, cipher FROM pg_stat_ssl WHERE pid = pg_backend_pid();"
+# Résultat : ssl=t, version=TLSv1.3, cipher=TLS_AES_256_GCM_SHA384
+
+# Ou plus simplement, dans psql utiliser \conninfo
+# Affiche : SSL connection (protocol: TLSv1.3, cipher: TLS_AES_256_GCM_SHA384, ...)
 ```
 
 #### Méthode 2 : URI de Connexion
@@ -591,7 +594,7 @@ psql "host=db.example.com dbname=mydb user=alice sslmode=require"
 **Comportement :**
 - ✅ Exige une connexion SSL  
 - ✅ Refuse si le serveur ne supporte pas SSL  
-- ⚠️ N'vérifie PAS le certificat du serveur
+- ⚠️ Ne vérifie PAS le certificat du serveur
 
 **Problème :**
 - Vulnérable aux attaques Man-in-the-Middle
@@ -610,7 +613,7 @@ psql "host=db.example.com dbname=mydb user=alice sslmode=verify-ca sslrootcert=/
 **Comportement :**
 - ✅ Exige une connexion SSL  
 - ✅ Vérifie que le certificat est signé par une CA de confiance  
-- ⚠️ N'vérifie PAS que le nom du serveur correspond
+- ⚠️ Ne vérifie PAS que le nom du serveur correspond
 
 **Protection :**
 - Protège contre les certificats auto-signés non autorisés
@@ -665,20 +668,32 @@ psql "host=database.example.com \
 
 ### 1. Mode FIPS (Federal Information Processing Standards)
 
-**Nouveauté PostgreSQL 18 :** Support du mode FIPS pour les environnements hautement régulés.
+**⚠️ Important : Pas de paramètre `ssl_fips` dans PostgreSQL**
+
+Le mode FIPS **n'est pas activé par un paramètre PostgreSQL**. FIPS est une fonctionnalité d'**OpenSSL** (la bibliothèque cryptographique sous-jacente), et son activation se fait au **niveau du système d'exploitation** :
 
 **Qu'est-ce que FIPS ?**
 - Standard de sécurité cryptographique du gouvernement américain
 - Exigé pour les systèmes gouvernementaux et militaires
 - Utilise uniquement des algorithmes certifiés FIPS
 
-**Configuration :**
-```
-# postgresql.conf (PostgreSQL 18+)
-ssl_fips = on  # Active le mode FIPS
+**Activation correcte de FIPS :**
+```bash
+# Sur RHEL/CentOS/Rocky Linux (activation FIPS au niveau OS)
+sudo fips-mode-setup --enable  
+sudo reboot  
 
-# Limite les algorithmes à ceux certifiés FIPS
-ssl_ciphers = 'FIPS'
+# Vérifier que FIPS est activé au niveau OS
+fips-mode-setup --check  
+cat /proc/sys/crypto/fips_enabled  # Doit retourner 1  
+```
+
+Une fois FIPS activé au niveau OS, PostgreSQL utilise automatiquement OpenSSL en mode FIPS et n'autorise que les algorithmes certifiés FIPS. Pour renforcer côté PostgreSQL :
+
+```
+# postgresql.conf - Restreindre aux algorithmes FIPS-compatibles
+ssl_ciphers = 'FIPS:!aNULL:!eNULL'  
+ssl_min_protocol_version = 'TLSv1.2'  
 ```
 
 **Quand l'utiliser :**
@@ -686,19 +701,17 @@ ssl_ciphers = 'FIPS'
 - Secteurs hautement régulés (défense, santé)
 - Conformité stricte requise
 
-### 2. Configuration TLS 1.3 Avancée
+### 2. TLS 1.3 (support et utilisation)
 
-**Nouveauté PostgreSQL 18 :** Paramètres dédiés pour TLS 1.3.
+**Précision importante :** TLS 1.3 fonctionne nativement avec PostgreSQL via OpenSSL. **Il n'existe PAS** de paramètre PostgreSQL dédié pour configurer les ciphers TLS 1.3 (`ssl_tls13_ciphers` n'est pas un paramètre PostgreSQL). Les ciphers TLS 1.3 sont gérés directement par OpenSSL avec ses cipher suites standards.
 
 ```
-# postgresql.conf (PostgreSQL 18+)
-
-# Activer TLS 1.3 uniquement
+# postgresql.conf — Forcer TLS 1.3 uniquement
 ssl_min_protocol_version = 'TLSv1.3'  
 ssl_max_protocol_version = 'TLSv1.3'  
 
-# Algorithmes de chiffrement TLS 1.3
-ssl_tls13_ciphers = 'TLS_AES_256_GCM_SHA384:TLS_AES_128_GCM_SHA256:TLS_CHACHA20_POLY1305_SHA256'
+# Note : `ssl_ciphers` ne s'applique qu'à TLS 1.2 et antérieur,
+# pas à TLS 1.3.
 ```
 
 **Avantages de TLS 1.3 :**
@@ -707,13 +720,16 @@ ssl_tls13_ciphers = 'TLS_AES_256_GCM_SHA384:TLS_AES_128_GCM_SHA256:TLS_CHACHA20_
 - ✅ **Confidentialité** : Forward secrecy par défaut  
 - ✅ **Simplicité** : Configuration plus simple
 
-**Algorithmes TLS 1.3 recommandés :**
+**Cipher suites TLS 1.3 standards (gérés par OpenSSL, non configurables côté PostgreSQL) :**
 ```
-# Ordre de préférence (du plus fort au plus rapide)
 TLS_AES_256_GCM_SHA384        # AES 256-bit (le plus fort)  
 TLS_AES_128_GCM_SHA256        # AES 128-bit (bon compromis)  
 TLS_CHACHA20_POLY1305_SHA256  # ChaCha20 (rapide sur mobile)  
+TLS_AES_128_CCM_SHA256        # AES CCM (IoT)  
+TLS_AES_128_CCM_8_SHA256      # AES CCM 8 (IoT contraint)  
 ```
+
+> 💡 **Pour restreindre les ciphers TLS 1.3 au niveau système**, il faut configurer OpenSSL globalement (fichier `openssl.cnf`), pas PostgreSQL.
 
 ### 3. Authentification Mutuelle Améliorée (mTLS)
 
@@ -723,12 +739,19 @@ TLS_CHACHA20_POLY1305_SHA256  # ChaCha20 (rapide sur mobile)
 ```
 # pg_hba.conf (PostgreSQL 18)
 
-# Authentification par certificat client uniquement
+# Authentification par certificat client uniquement (sans mot de passe)
+# La méthode 'cert' implique clientcert=verify-full
 hostssl  all  all  0.0.0.0/0  cert
 
 # Certificat client + mot de passe (double facteur)
-hostssl  all  all  0.0.0.0/0  cert clientcert=verify-full scram-sha-256
+# La méthode est scram-sha-256, et clientcert=verify-full est une OPTION
+hostssl  all  all  0.0.0.0/0  scram-sha-256 clientcert=verify-full
 ```
+
+**⚠️ Attention sur la syntaxe :**
+- `pg_hba.conf` autorise **une seule méthode** d'authentification par ligne
+- Pour combiner certificat client + mot de passe : la méthode reste `scram-sha-256` et `clientcert=verify-full` est ajoutée comme **option** (pas comme seconde méthode)
+- `clientcert` accepte `verify-ca` (vérifier la CA) ou `verify-full` (vérifier CA + CN du certificat)
 
 ---
 
@@ -751,14 +774,14 @@ SHOW ssl_min_protocol_version;
 **Côté client (connexion active) :**
 ```sql
 -- Vérifier si la connexion actuelle utilise SSL
-SELECT ssl_is_used();
--- Résultat : true
+SELECT ssl FROM pg_stat_ssl WHERE pid = pg_backend_pid();
+-- Résultat : t (true)
 
--- Voir les détails de la connexion SSL
+-- Voir les détails de la connexion SSL en cours
 SELECT * FROM pg_stat_ssl WHERE pid = pg_backend_pid();
--- Affiche : version TLS, cipher, bits, compression, etc.
+-- Affiche : version TLS, cipher, bits, client_dn, etc.
 
--- Version plus détaillée
+-- Version plus détaillée (toutes les connexions)
 SELECT
   pid,
   ssl,
@@ -767,6 +790,9 @@ SELECT
   bits,
   client_dn
 FROM pg_stat_ssl;
+
+-- Astuce psql : la commande \conninfo affiche aussi les infos SSL
+-- de la connexion en cours sans requête SQL
 ```
 
 ### Tester la Connexion SSL avec OpenSSL
@@ -781,14 +807,16 @@ echo | openssl s_client -connect database.example.com:5432 -starttls postgres 2>
 
 ### Logs PostgreSQL pour SSL
 
-**Activer les logs SSL :**
+**Activer les logs des connexions (SSL inclus) :**
 ```
 # postgresql.conf
-log_connections = on  
+
+# PostgreSQL 18 : log_connections accepte plusieurs catégories
+log_connections = 'authentication, authorization, connection'  
 log_disconnections = on  
 
-# Logs détaillés (développement uniquement)
-log_statement = 'all'
+# Note : log_statement = 'all' loggue toutes les requêtes SQL
+# (sans rapport direct avec SSL, à utiliser uniquement en debug)
 ```
 
 **Exemple de logs :**
@@ -959,11 +987,10 @@ ssl_max_protocol_version = 'TLSv1.3'  # Maximum (PostgreSQL 18+)
 ```
 # postgresql.conf
 
-# Algorithmes recommandés (TLS 1.2)
+# Algorithmes recommandés (TLS 1.2 uniquement)
+# Note : ssl_ciphers ne s'applique PAS à TLS 1.3 — OpenSSL choisit
+# automatiquement parmi les cipher suites TLS 1.3 standards (toutes considérées sûres).
 ssl_ciphers = 'ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES128-GCM-SHA256'
-
-# Algorithmes recommandés (TLS 1.3) - PostgreSQL 18+
-ssl_tls13_ciphers = 'TLS_AES_256_GCM_SHA384:TLS_AES_128_GCM_SHA256'
 ```
 
 ❌ **Éviter :**
@@ -1083,7 +1110,7 @@ AND pid NOT IN (SELECT pid FROM pg_stat_ssl WHERE ssl = true);
 ☐ Si verify-full : Obtenir le certificat CA racine
 ☐ Placer le certificat CA dans ~/.postgresql/root.crt
 ☐ Tester la connexion
-☐ Vérifier avec SELECT ssl_is_used();
+☐ Vérifier avec SELECT ssl FROM pg_stat_ssl WHERE pid = pg_backend_pid();
 ☐ Documenter la configuration
 ```
 
@@ -1107,7 +1134,8 @@ AND pid NOT IN (SELECT pid FROM pg_stat_ssl WHERE ssl = true);
 Dans les sections suivantes du tutoriel :
 
 - **16.2** : Configuration de l'authentification (`pg_hba.conf`)  
-- **16.8** : Nouveautés PostgreSQL 18 - OAuth 2.0  
+- **16.2.2** : Nouveauté PostgreSQL 18 — Authentification OAuth 2.0  
+- **16.8** : Nouveauté PostgreSQL 18 — Mode FIPS et TLS 1.3  
 - **16.9** : Chiffrement au repos (Transparent Data Encryption - TDE)
 
 ### Concepts Avancés
@@ -1138,4 +1166,4 @@ Dans les sections suivantes du tutoriel :
 ---
 
 
-⏭️ [Nouveauté PG 18 : Mode FIPS et configuration TLS 1.3 (ssl_tls13_ciphers)](/16-administration-configuration-securite/08-mode-fips-tls13-pg18.md)
+⏭️ [Nouveauté PG 18 : Mode FIPS et TLS 1.3 (concepts)](/16-administration-configuration-securite/08-mode-fips-tls13-pg18.md)

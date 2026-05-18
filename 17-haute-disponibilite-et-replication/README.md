@@ -27,8 +27,8 @@ La disponibilité se mesure généralement en pourcentage, souvent exprimé en n
 |---------------|-----------------|-------------------|---------------------|----------------|
 | 90% ("one nine") | 36,5 jours | 3 jours | 16,8 heures | Inacceptable |
 | 99% ("two nines") | 3,65 jours | 7,3 heures | 1,68 heures | Faible |
-| 99,9% ("three nines") | 8,76 heures | 43,8 minutes | 10,1 minutes | Basique |
-| 99,99% ("four nines") | 52,6 minutes | 4,4 minutes | 1,01 minutes | Haute disponibilité |
+| 99,9% ("three nines") | 8,76 heures | 43,2 minutes | 10,08 minutes | Basique |
+| 99,99% ("four nines") | 52,56 minutes | 4,32 minutes | 1,01 minutes | Haute disponibilité |
 | 99,999% ("five nines") | 5,26 minutes | 26 secondes | 6 secondes | Très haute disponibilité |
 | 99,9999% ("six nines") | 31,5 secondes | 2,6 secondes | 0,6 secondes | Disponibilité extrême |
 
@@ -180,7 +180,7 @@ Selon une étude de Google (2007) sur des millions de disques :
 
 4. **Commande système destructive**
    ```bash
-   rm -rf /var/lib/postgresql/14/main/  # Mauvais répertoire
+   rm -rf /var/lib/postgresql/18/main/  # Mauvais répertoire
    ```
 
 **Statistiques alarmantes :**
@@ -235,10 +235,12 @@ Pour évaluer et gérer la HA, on utilise des métriques standardisées :
 
 **Implications techniques :**
 
-- **RTO = 24h** : Backup quotidien + restauration manuelle suffit  
-- **RTO = 1h** : Hot standby + monitoring + procédure de failover  
-- **RTO = 15 min** : Réplication synchrone + failover automatisé (Patroni)  
-- **RTO = 30s** : Multi-master ou réplication quasi-synchrone + détection automatique
+- **RTO = 24h** : Backup quotidien + restauration manuelle suffit
+- **RTO = 1h** : Hot standby + monitoring + procédure de failover
+- **RTO = 15 min** : Réplication synchrone + failover automatisé (Patroni)
+- **RTO = 30s** : Patroni avec fencing, anycast/VIP, et load balancer (HAProxy) déjà connecté à l'API Patroni
+
+> ℹ️ PostgreSQL n'a **pas** de "multi-master" natif. Les solutions multi-master existent via des extensions tierces (BDR de EDB, pgEdge, etc.) ou via une réplication logique bidirectionnelle soigneusement orchestrée avec gestion explicite des conflits.
 
 ### 3.2. RPO (Recovery Point Objective)
 
@@ -743,9 +745,10 @@ Pour expérimenter (en dehors de ce tutoriel théorique), il est recommandé d'a
 
 **Option 1 : Machines virtuelles locales**
 ```
-- 3 VM Linux (Ubuntu 22.04 / Debian 12)
+- 3 VM Linux (Ubuntu 24.04 LTS / Debian 12)
 - 2 CPU, 4 GB RAM chacune
 - Réseau privé entre les VMs
+- Hyperviseur : VirtualBox, libvirt/KVM, VMware Workstation, Proxmox, etc.
 ```
 
 **Option 2 : Cloud (AWS, GCP, Azure)**
@@ -766,10 +769,19 @@ Pour expérimenter (en dehors de ce tutoriel théorique), il est recommandé d'a
 
 Les concepts de ce chapitre s'appliquent à partir de **PostgreSQL 10** (introduction de la réplication logique native).
 
-**Versions recommandées :**
-- PostgreSQL 14+ : Améliorations de performance et monitoring
-- PostgreSQL 15+ : Amélioration de la réplication logique
-- **PostgreSQL 18** : I/O asynchrone, optimisations majeures (focus de ce tutoriel)
+**Politique de support PostgreSQL :**
+Chaque version majeure bénéficie de **5 ans de support communautaire**. Il n'existe pas de version "LTS" officielle : toutes les versions majeures sont supportées de la même façon. Vérifiez les dates de fin de support sur [postgresql.org/support/versioning/](https://www.postgresql.org/support/versioning/).
+
+**Jalons historiques de la réplication :**
+- **PostgreSQL 10** (2017) : réplication logique native (publications/subscriptions)
+- **PostgreSQL 11** (2018) : TRUNCATE répliqué par défaut en réplication logique
+- **PostgreSQL 12** (2019) : disparition de `recovery.conf`, paramètres de standby intégrés à `postgresql.conf`
+- **PostgreSQL 13** (2020) : `wal_keep_size` (remplace `wal_keep_segments`), `max_slot_wal_keep_size`
+- **PostgreSQL 14** (2021) : compression WAL (`wal_compression`), améliorations du décodage logique
+- **PostgreSQL 15** (2022) : filtres WHERE et de colonnes dans les publications, `archive_library`
+- **PostgreSQL 16** (2023) : `streaming = 'parallel'`, rôle `pg_create_subscription`, suppression de `promote_trigger_file`
+- **PostgreSQL 17** (2024) : failover slots logiques, `pg_createsubscriber`
+- **PostgreSQL 18** (2025) : sous-système I/O asynchrone (AIO), `uuidv7()`, data-checksums par défaut → **version ciblée par ce tutoriel**
 
 ---
 
@@ -811,9 +823,9 @@ Avant d'implémenter une stratégie HA en production :
 - [ ] Monitoring en place (Prometheus, Grafana, etc.)
 
 **PostgreSQL :**
-- [ ] Version supportée (ideally LTS)  
-- [ ] Configuration optimisée  
-- [ ] Backups testés et fonctionnels  
+- [ ] Version majeure encore supportée par la communauté (5 ans de support depuis sa sortie)
+- [ ] Configuration optimisée
+- [ ] Backups testés et fonctionnels
 - [ ] Procédure de restauration documentée
 
 **Équipe :**

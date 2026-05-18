@@ -102,14 +102,18 @@ COMMIT;
 
 ## Tableau récapitulatif des niveaux d'isolation
 
+Le tableau ci-dessous donne le **comportement réel de PostgreSQL** (qui est plus strict que la norme ANSI sur deux points) :
+
 | Niveau d'isolation | Dirty Read | Non-Repeatable Read | Phantom Read | Performance |
 |-------------------|------------|---------------------|--------------|-------------|
-| **Read Uncommitted** | ❌ Possible | ❌ Possible | ❌ Possible | ⚡⚡⚡ Maximale |
+| **Read Uncommitted*** | ✅ Impossible | ❌ Possible | ❌ Possible | ⚡⚡ Très bonne |
 | **Read Committed** | ✅ Impossible | ❌ Possible | ❌ Possible | ⚡⚡ Très bonne |
-| **Repeatable Read** | ✅ Impossible | ✅ Impossible | ✅ Impossible* | ⚡ Bonne |
+| **Repeatable Read** | ✅ Impossible | ✅ Impossible | ✅ Impossible** | ⚡ Bonne |
 | **Serializable** | ✅ Impossible | ✅ Impossible | ✅ Impossible | ⚠️ Variable |
 
-*PostgreSQL va plus loin que le standard ANSI : même Repeatable Read empêche les Phantom Reads grâce au MVCC.
+\* PostgreSQL ne supporte pas réellement `READ UNCOMMITTED` : il est silencieusement promu en `READ COMMITTED`. MVCC empêche **toujours** les dirty reads, indépendamment du niveau demandé.
+
+\** Le standard ANSI autorise les *phantom reads* en `REPEATABLE READ`. PostgreSQL est plus strict et les empêche également (le snapshot figé pour toute la transaction garantit un nombre de lignes stable).
 
 ---
 
@@ -589,6 +593,28 @@ SET SESSION CHARACTERISTICS AS TRANSACTION ISOLATION LEVEL SERIALIZABLE;
 default_transaction_isolation = 'serializable'
 ```
 
+### Cas spécial : `SERIALIZABLE READ ONLY DEFERRABLE` pour les longs rapports
+
+Une transaction `SERIALIZABLE` peut, à tout moment, échouer avec une `serialization_failure`. Pour un **long rapport** de plusieurs minutes (export, agrégat analytique), ce risque est inacceptable : retenter l'export coûte cher.
+
+PostgreSQL offre un mode **lecture seule différée** :
+
+```sql
+BEGIN TRANSACTION ISOLATION LEVEL SERIALIZABLE READ ONLY DEFERRABLE;  
+SELECT … ;   -- gros rapport, jointures, agrégats  
+COMMIT;  
+```
+
+**Comment ça marche** :
+
+- `READ ONLY` interdit toute écriture dans la transaction (`INSERT`, `UPDATE`, `DELETE`, DDL…).  
+- `DEFERRABLE` indique au serveur d'**attendre** au début de la transaction qu'il puisse prendre un snapshot « sûr » qui ne pourra jamais provoquer de `serialization_failure` — c'est-à-dire un snapshot pris à un instant où aucune transaction concurrente ne risque de violer la sérialisation avec celle-ci.  
+- Pendant l'attente initiale, vos lectures démarrent dès que le snapshot sûr est trouvé, puis votre transaction tourne **sans jamais être annulée** pour cause de conflit.
+
+C'est la meilleure option pour un rapport `SERIALIZABLE` long : pas de retry à gérer, garantie d'aboutir, sans relâcher la cohérence forte.
+
+> 💡 Les trois options de transaction (`READ WRITE`/`READ ONLY`, `DEFERRABLE`/`NOT DEFERRABLE`, `ISOLATION LEVEL …`) peuvent se cumuler après `BEGIN`. `DEFERRABLE` n'a d'effet **que** combiné à `SERIALIZABLE READ ONLY` ; ailleurs, il est silencieusement ignoré.
+
 ---
 
 ## Comparaison pratique des niveaux
@@ -709,37 +735,45 @@ ERROR: could not serialize access due to read/write dependencies among transacti
 
 ```python
 import time  
+import random  
 import psycopg2  
-from psycopg2.extensions import ISOLATION_LEVEL_REPEATABLE_READ  
+from psycopg2.extensions import TransactionRollbackError  
 
 def execute_with_retry(conn, operation, max_retries=5):
     """
-    Exécute une opération avec retry automatique en cas d'erreur de sérialisation
+    Exécute une opération avec retry sur les erreurs de la classe SQLSTATE 40 :
+    serialization_failure (40001) ET deadlock_detected (40P01).
+
+    Pré-requis :
+    - conn doit être configurée AVANT pour le bon niveau d'isolation
+      (par ex. conn.set_session(isolation_level='REPEATABLE READ')).
+    - operation(cur) doit être IDEMPOTENTE : elle peut être rejouée 1..N fois
+      sans effet de bord externe (envoi d'email, appel API non idempotent…).
     """
     for attempt in range(max_retries):
         try:
-            conn.set_isolation_level(ISOLATION_LEVEL_REPEATABLE_READ)
-
             with conn.cursor() as cur:
                 operation(cur)
-
             conn.commit()
-            return True  # Succès
+            return True
 
-        except psycopg2.extensions.TransactionRollbackError as e:
-            # Erreur de sérialisation
+        except TransactionRollbackError as e:
+            # Erreur transitoire (40001 ou 40P01) → on retente
             conn.rollback()
-
             if attempt == max_retries - 1:
-                # Dernier essai échoué
-                raise Exception(f"Échec après {max_retries} tentatives") from e
+                raise Exception(
+                    f"Échec après {max_retries} tentatives ({e.pgcode})"
+                ) from e
 
-            # Attente avec backoff exponentiel
-            wait_time = 0.1 * (2 ** attempt)
+            # Backoff exponentiel + jitter, plafonné à 5 s
+            wait_time = min(
+                5.0,
+                (0.1 * (2 ** attempt)) * (1 + random.uniform(0, 0.3))
+            )
             time.sleep(wait_time)
 
-        except Exception as e:
-            # Autre erreur
+        except Exception:
+            # Erreur définitive (hors classe 40) → on propage
             conn.rollback()
             raise
 
@@ -933,12 +967,13 @@ Dans la prochaine section (12.4), nous approfondirons les **anomalies transactio
 
 **Points clés à retenir :**
 
-- 🔑 4 niveaux d'isolation : Read Uncommitted, Read Committed, Repeatable Read, Serializable  
-- 🔑 PostgreSQL par défaut = Read Committed (bon équilibre)  
-- 🔑 Repeatable Read = snapshot figé pour toute la transaction  
-- 🔑 Serializable = cohérence maximale mais erreurs de sérialisation possibles  
-- 🔑 Plus strict = plus cohérent mais plus d'erreurs à gérer  
-- 🔑 Toujours implémenter une logique de retry pour RR et Serializable  
-- 🔑 Le choix dépend de votre logique métier, pas de la performance seule
+- 🔑 4 niveaux ANSI : Read Uncommitted, Read Committed, Repeatable Read, Serializable  
+- 🔑 PostgreSQL n'en implémente que **3 distincts** : Read Uncommitted est silencieusement promu en Read Committed (MVCC empêche tout *dirty read*)  
+- 🔑 **Read Committed** (défaut) : nouveau snapshot à chaque requête → Non-Repeatable / Phantom possibles  
+- 🔑 **Repeatable Read** : snapshot figé pour toute la transaction → PG va plus loin que la norme et empêche aussi les *phantom reads* (snapshot isolation)  
+- 🔑 **Serializable** : SSI (*Serializable Snapshot Isolation*) → seul niveau qui détecte le *write skew*  
+- 🔑 En RR / Serializable, retry **obligatoire** côté application pour `serialization_failure` (`SQLSTATE 40001`)  
+- 🔑 Pour un long rapport sans risque de retry : `SERIALIZABLE READ ONLY DEFERRABLE`  
+- 🔑 Le choix du niveau dépend de votre logique métier, pas de la performance seule
 
 ⏭️ [Anomalies transactionnelles : Dirty Read, Non-Repeatable Read, Phantom Read](/12-concurrence-et-transactions/04-anomalies-transactionnelles.md)

@@ -120,7 +120,7 @@ WHERE est_supprime = FALSE;
 - Données exceptionnelles (erreurs, priorités hautes)
 - Filtrage sur valeurs spécifiques fréquentes
 
-**Couvert dans :** [13.5.1. Index Partiels](./13-5-1-index-partiels.md)
+**Couvert dans :** [13.5.1. Index Partiels](./05.1-index-partiels.md)
 
 ---
 
@@ -131,18 +131,25 @@ WHERE est_supprime = FALSE;
 **Syntaxe :**
 ```sql
 CREATE INDEX nom_index ON table((expression));
--- Note : doubles parenthèses obligatoires !
+-- Les parenthèses externes sont OBLIGATOIRES seulement pour
+-- les expressions avec opérateurs (||, *, ->>, etc.).
+-- Pour un simple appel de fonction, elles sont optionnelles.
 ```
 
 **Exemple :**
 ```sql
--- Index sur email en minuscules
-CREATE INDEX idx_email_lower ON utilisateurs((LOWER(email)));
+-- Appel de fonction simple : parenthèses externes optionnelles
+CREATE INDEX idx_email_lower ON utilisateurs(LOWER(email));
 
 -- Requête optimisée
 SELECT * FROM utilisateurs WHERE LOWER(email) = 'john@example.com';
 -- Utilise l'index !
+
+-- Expression avec opérateur : parenthèses externes obligatoires
+CREATE INDEX idx_full_name ON personnes((nom || ' ' || prenom));
 ```
+
+Le détail complet sur les règles de parenthèses est documenté dans la section [13.5.2](./05.2-index-sur-expressions.md).
 
 **Avantages :**
 - ✅ Recherches **insensibles à la casse**  
@@ -155,7 +162,7 @@ SELECT * FROM utilisateurs WHERE LOWER(email) = 'john@example.com';
 - `data->>'field'` pour extraire champ JSON
 - Calculs métier (montant * TVA, longueur * largeur)
 
-**Couvert dans :** [13.5.2. Index sur Expressions](./13-5-2-index-sur-expressions.md)
+**Couvert dans :** [13.5.2. Index sur Expressions](./05.2-index-sur-expressions.md)
 
 ---
 
@@ -211,7 +218,7 @@ WHERE client_id = 12345;
 - SELECT avec colonnes supplémentaires
 - Élimination des Heap Fetches
 
-**Couvert dans :** [13.5.3. Index Multi-Colonnes et INCLUDE](./13-5-3-index-multi-colonnes-include.md)
+**Couvert dans :** [13.5.3. Index Multi-Colonnes et INCLUDE](./05.3-index-multi-colonnes-include.md)
 
 ---
 
@@ -257,7 +264,7 @@ WHERE metadata @> '{"marque": "Dell", "en_stock": true}';
 - Attributs dynamiques (CRM, ERP)
 - Configuration applicative
 
-**Couvert dans :** [13.5.4. Index sur Colonnes JSONB](./13-5-4-index-jsonb-gin.md)
+**Couvert dans :** [13.5.4. Index sur Colonnes JSONB](./05.4-index-sur-colonnes-jsonb.md)
 
 ---
 

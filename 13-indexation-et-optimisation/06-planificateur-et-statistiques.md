@@ -659,15 +659,19 @@ SET enable_nestloop = off;
 
 ### 7.3. Forcer la Replanification
 
-Par défaut, PostgreSQL met en cache les plans (Prepared Statements).
+PostgreSQL met en cache les plans pour les **prepared statements**. Cependant, ces plans en cache sont **automatiquement invalidés** lorsque les objets utilisés subissent un changement DDL ou que leurs statistiques sont mises à jour par `ANALYZE` (cf. section 13.10). En fonctionnement normal, vous n'avez donc pas à invalider manuellement le cache après un `ANALYZE`.
+
+Pour les besoins de **debugging** ou pour forcer une remise à zéro, on peut tout de même :
 
 ```sql
--- Invalider le cache de plans
+-- Vider le cache des plans pour tous les prepared statements de la session
 DISCARD PLANS;
 
--- Ou re-préparer après ANALYZE
+-- Variante plus radicale : supprimer aussi les prepared statements eux-mêmes
 DEALLOCATE ALL;
 ```
+
+> 💡 `DISCARD PLANS` ne supprime pas les prepared statements ; il invalide juste leurs plans en cache, qui seront re-construits au prochain `EXECUTE`. `DEALLOCATE ALL` supprime carrément les définitions des prepared statements de la session.
 
 ---
 
@@ -820,9 +824,10 @@ $$ LANGUAGE plpgsql;
 SELECT maintain_statistics();
 ```
 
-### 9.3. Nouveauté PostgreSQL 18 : Statistiques VACUUM/ANALYZE
+### 9.3. Nouveauté PostgreSQL 18 : Temps cumulés VACUUM/ANALYZE
 
-PostgreSQL 18 enrichit `pg_stat_all_tables` avec des statistiques détaillées :
+PostgreSQL 18 ajoute quatre colonnes à `pg_stat_all_tables` qui mesurent le
+**temps total cumulé** passé en VACUUM et ANALYZE pour chaque table :
 
 ```sql
 SELECT
@@ -832,15 +837,35 @@ SELECT
     last_autovacuum,
     last_analyze,
     last_autoanalyze,
-    vacuum_count,        -- Nouveauté PG 18
-    autovacuum_count,    -- Nouveauté PG 18
-    analyze_count,       -- Nouveauté PG 18
-    autoanalyze_count    -- Nouveauté PG 18
+    vacuum_count,            -- Existant depuis PG 9.1
+    autovacuum_count,        -- Existant depuis PG 9.1
+    analyze_count,           -- Existant depuis PG 9.1
+    autoanalyze_count,       -- Existant depuis PG 9.1
+    total_vacuum_time,       -- ⭐ Nouveauté PG 18 (ms cumulées)
+    total_autovacuum_time,   -- ⭐ Nouveauté PG 18 (ms cumulées)
+    total_analyze_time,      -- ⭐ Nouveauté PG 18 (ms cumulées)
+    total_autoanalyze_time   -- ⭐ Nouveauté PG 18 (ms cumulées)
 FROM pg_stat_all_tables  
 WHERE schemaname = 'public';  
 ```
 
-**Utilité** : Suivre la fréquence de maintenance et détecter les tables sous-maintenues.
+**Utilité** : avec les compteurs (`*_count`) on connaissait déjà la **fréquence**
+de la maintenance ; les nouveaux `total_*_time` permettent désormais de mesurer  
+son **coût cumulé** et de repérer les tables qui monopolisent l'autovacuum.  
+
+```sql
+-- Tables qui ont consommé le plus de temps autovacuum
+SELECT
+    relname,
+    autovacuum_count,
+    total_autovacuum_time,
+    ROUND(total_autovacuum_time / NULLIF(autovacuum_count, 0), 2)
+        AS avg_autovacuum_ms
+FROM pg_stat_all_tables  
+WHERE schemaname = 'public'  
+ORDER BY total_autovacuum_time DESC NULLS LAST  
+LIMIT 10;  
+```
 
 ---
 
