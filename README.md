@@ -30,12 +30,12 @@
 Cette formation propose une approche théorique complète de PostgreSQL 18, pensée pour accompagner développeurs et DevOps dans leur apprentissage du SGBD open source le plus avancé.
 
 **✨ Ce que vous découvrirez :**
-- 🎯 **21 chapitres progressifs** du débutant à l'expert  
+- 🎯 **22 chapitres progressifs** du débutant à l'expert  
 - 🏗️ **Architecture interne** et concepts fondamentaux (MVCC, WAL, TOAST)  
 - 🚀 **Performance** et optimisation (indexation, EXPLAIN, planificateur)  
 - 🔒 **Sécurité** moderne (OAuth 2.0, SCRAM, RLS, TLS 1.3)  
 - 🌐 **Production** (HA, réplication, monitoring, Kubernetes)  
-- 🆕 **Nouveautés PG 18** (I/O asynchrone, UUIDv7, colonnes virtuelles)  
+- 🆕 **Nouveautés PG 18** (I/O asynchrone, Skip Scan, UUIDv7, colonnes virtuelles, OAuth 2.0)  
 - 🇫🇷 **En français** - Formation théorique sans exercices pratiques
 
 **Durée estimée :** 40-60 heures • **Niveau :** Tous niveaux • **Format :** Théorique
@@ -78,8 +78,8 @@ Cette formation propose une approche théorique complète de PostgreSQL 18, pens
 18. **Extensions et Intégrations** - PostGIS, pgvector, TimescaleDB, FDW  
 19. **PostgreSQL en Production** - Cloud, Kubernetes, migrations, pg_upgrade 🆕  
 20. **Drivers et Connexion Applicative** - psycopg3, node-postgres, patterns  
-20bis. **Architectures Modernes** - Microservices, CQRS, serverless, K8s  
-21. **Conclusion et Perspectives** - Roadmap, certifications, ressources
+21. **Architectures Modernes** - Microservices, CQRS, serverless, K8s  
+22. **Conclusion et Perspectives** - Roadmap, certifications, ressources
 
 ### 📖 Annexes de Référence
 
@@ -127,7 +127,7 @@ formation-postgresql-18/
 ├── 02-presentation-de-postgresql/
 ├── 03-architecture-de-postgresql/
 ├── ...
-├── 21-conclusion-et-perspectives/
+├── 22-conclusion-et-perspectives/
 └── annexes/
     ├── glossaire/
     ├── commandes-psql/
@@ -139,9 +139,9 @@ formation-postgresql-18/
 ```
 
 **📊 Statistiques :**
-- 21 chapitres principaux + 1 bonus
+- 22 chapitres principaux
 - 7 annexes de référence
-- 370+ fichiers markdown
+- 375+ fichiers markdown
 - 100+ nouveautés PostgreSQL 18 documentées
 
 ---
@@ -149,16 +149,16 @@ formation-postgresql-18/
 ## 🎯 Comment utiliser cette formation
 
 ### 🌱 Débutant complet
-👉 Commencez par la [Partie 1](01-introduction-aux-bases-de-donnees/) et suivez l'ordre
+👉 Commencez par la [Partie 1](partie-01-introduction-concepts-fondamentaux.md) et suivez l'ordre
 
 ### 🌿 Développeur SQL
-👉 Allez directement à la [Partie 2](05-requetes-de-selection/) pour approfondir le langage SQL
+👉 Allez directement à la [Partie 2](partie-02-langage-sql-interrogation-manipulation.md) pour approfondir le langage SQL
 
 ### 🌳 DBA ou DevOps
-👉 Explorez la [Partie 4](12-concurrence-et-transactions/) (Administration & Performance)
+👉 Explorez la [Partie 4](partie-04-administration-performance-architecture.md) (Administration & Performance)
 
 ### 🚀 Architecture Production
-👉 Plongez dans la [Partie 5](18-extensions-et-integrations/) (Écosystème & Production)
+👉 Plongez dans la [Partie 5](partie-05-ecosysteme-production-ouverture.md) (Écosystème & Production)
 
 ### 📖 Référence rapide
 👉 Consultez les [Annexes](annexes/) pour des aide-mémoires et checklists
@@ -239,7 +239,7 @@ R : Oui, 90% du contenu s'applique à PG 12-17. Les nouveautés PG 18 sont clair
 R : Oui, sous licence CC BY-NC-SA 4.0. Attribution obligatoire, usage commercial interdit.
 
 **Q : PostgreSQL 18 est-il stable ?**
-R : PostgreSQL 18 sort en septembre 2025. Cette formation anticipe les fonctionnalités annoncées.
+R : PostgreSQL 18 est sorti le 25 septembre 2025 et est utilisé en production. Cette formation couvre la version stable.
 
 ---
 
@@ -303,7 +303,7 @@ Un grand merci à :
 
 **[⬆ Retour en haut](#-formation-complète-postgresql-18)**
 
-*Dernière mise à jour : Novembre 2025*
+*Dernière mise à jour : Mai 2026*
 *Version PostgreSQL : 18 (Septembre 2025)*
 
 </div>
