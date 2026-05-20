@@ -40,7 +40,7 @@ Définitions détaillées des concepts fondamentaux de PostgreSQL avec :
 
 **Sections principales** :
 - Concepts fondamentaux (ACID, MVCC, Transaction)
-- Architecture et stockage (WAL, TOAST, Tablespace, Heap)
+- Architecture et stockage (Cluster, Instance, WAL, TOAST, Tablespace, Heap)
 - Processus système (Postmaster, Backend, Shared Buffers)
 - Optimisation (Index B-Tree, GIN, GiST, BRIN)
 - Concurrence (Locks, Deadlock, Isolation Levels)
@@ -430,6 +430,8 @@ La maîtrise de la terminologie PostgreSQL est un investissement qui paiera rapi
    - Transaction
 
 2. **Architecture et Stockage**
+   - Cluster (Database Cluster)
+   - Instance
    - WAL (Write-Ahead Log)
    - TOAST (The Oversized-Attribute Storage Technique)
    - Tablespace

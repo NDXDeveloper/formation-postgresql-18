@@ -83,6 +83,62 @@ COMMIT;
 
 ## Architecture et Stockage
 
+### Cluster (Database Cluster)
+
+Un **database cluster** (ou simplement **cluster**) est une **collection de bases de données** et d'objets SQL globaux (rôles, tablespaces…), ainsi que leurs métadonnées communes statiques et dynamiques, stockées ensemble sur disque dans le répertoire de données (`PGDATA`).
+
+**Définition officielle** (doc PostgreSQL) : *« A collection of databases and global SQL objects, and their common static and dynamic metadata. »*
+
+**Création** : un cluster est initialisé par la commande `initdb`, qui crée la structure de fichiers nécessaire dans `PGDATA`.
+
+**Contenu typique d'un cluster** :
+- Plusieurs **databases** (au moins `postgres`, `template0`, `template1` créées par défaut)
+- Des **rôles** (utilisateurs, groupes) partagés entre toutes les databases
+- Des **tablespaces** définissant des emplacements physiques de stockage
+- Le journal **WAL** commun à toutes les databases du cluster
+- Les fichiers de **configuration** (`postgresql.conf`, `pg_hba.conf`, `pg_ident.conf`)
+
+**À ne pas confondre avec** :
+- La commande SQL `CLUSTER` (réorganisation physique d'une table selon un index)
+- Un **cluster réseau** (groupe de machines en haute disponibilité, type Patroni, repmgr)
+- Une **instance** (voir entrée suivante) — bien que la documentation officielle reconnaisse explicitement que *« the term cluster is also sometimes used to refer to an instance »*
+
+**Distinction conceptuelle** : un cluster est l'**ensemble des fichiers sur disque** ; une instance est le **groupe de processus** qui les gère. Une instance gère **exactement un** cluster.
+
+---
+
+### Instance
+
+Une **instance PostgreSQL** est l'ensemble des **processus serveur** (backend, postmaster, processus auxiliaires) qui communiquent via une zone de mémoire partagée et qui gèrent un cluster de bases de données.
+
+**Définition officielle** (doc PostgreSQL) : *« A group of backend and auxiliary processes that communicate using a common shared memory area. One postmaster process manages the instance; one instance manages exactly one database cluster with all its databases. »*
+
+**Composants d'une instance** :
+- Un processus **postmaster** (chef d'orchestre, parent de tous les autres)
+- Plusieurs processus **backend** (un par connexion client active)
+- Des processus **auxiliaires** : `walwriter`, `autovacuum launcher`, `background writer`, `checkpointer`, `logical replication launcher`, etc.
+- Une zone de **shared memory** (shared buffers, WAL buffers, lock tables…)
+
+**Caractéristiques** :
+- Une instance gère **un seul** database cluster (et donc plusieurs databases logiques au sein de ce cluster)
+- Une instance écoute sur **un port TCP unique** (par défaut 5432)
+- Plusieurs instances peuvent cohabiter sur la même machine si leurs ports diffèrent
+
+**Cycle de vie** : démarrage (`pg_ctl start` ou `systemctl start postgresql`) → service des requêtes → arrêt (`pg_ctl stop`). Le cluster sur disque reste persistant entre les redémarrages.
+
+**Cluster vs Instance — vue synthétique** :
+
+| Aspect | Cluster | Instance |
+|--------|---------|----------|
+| Nature | Fichiers sur disque (`PGDATA`) | Processus en mémoire |
+| Création | `initdb` | Démarrage des processus serveur |
+| Persistance | Persistant (sur disque) | Volatile (s'éteint à l'arrêt) |
+| Cardinalité | 1 cluster ↔ 1 instance gestionnaire |
+
+> 💡 **Usage pratique** : les DBA utilisent souvent « cluster » et « instance » comme synonymes — un usage consacré par la documentation officielle elle-même. La distinction devient importante dans des contextes formels (entretiens techniques, certifications EDB/Percona, documentation officielle, architectures haute disponibilité où l'on distingue le cluster de données et le cluster réseau).
+
+---
+
 ### WAL (Write-Ahead Log)
 
 Le **WAL** est un journal qui enregistre TOUTES les modifications avant qu'elles ne soient appliquées aux fichiers de données réels.
