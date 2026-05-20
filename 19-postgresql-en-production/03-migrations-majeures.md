@@ -213,19 +213,28 @@ CREATE TABLE products (
     -- ↑ Calculée à la volée, pas stockée physiquement
 );
 
--- Contraintes temporelles
-ALTER TABLE employees  
-ADD CONSTRAINT valid_employment_period  
-CHECK (end_date IS NULL OR end_date > start_date);  
+-- Contraintes temporelles (nouveauté PG 18 : WITHOUT OVERLAPS et PERIOD)
+-- PRIMARY KEY avec WITHOUT OVERLAPS : empêche les chevauchements
+CREATE TABLE room_reservations (
+    room_id INT,
+    reserved_period tstzrange,
+    PRIMARY KEY (room_id, reserved_period WITHOUT OVERLAPS)
+);
+-- ↑ Empêche les chevauchements de réservations sur une même chambre
+
+-- FOREIGN KEY avec PERIOD : référence temporelle
+-- FOREIGN KEY (room_id, PERIOD reserved_period)
+--   REFERENCES rooms (id, PERIOD valid_period)
 ```
 
 #### 3. Améliorations de sécurité
 
 ```
-✅ OAuth 2.0 natif : Authentification moderne
-✅ SCRAM passthrough : Amélioration sécurité réplication
-✅ Mode FIPS : Conformité gouvernementale
-✅ TLS 1.3 par défaut : Chiffrement renforcé
+✅ OAuth authentication : Nouvelle méthode dans pg_hba.conf
+✅ SCRAM passthrough : Pour postgres_fdw et dblink (sans stocker les credentials)
+✅ Fonction fips_mode() : Reporting du mode FIPS via pgcrypto
+✅ Configuration TLS 1.3 enrichie : ssl_tls13_ciphers, ssl_groups
+✅ OpenSSL 1.1.1+ requis : Suppression du support des versions plus anciennes
 ✅ Data Checksums activés par défaut : Détection corruption
 ```
 
@@ -269,18 +278,19 @@ WHERE created_at > '2024-01-01'
 │                                                             │
 │  Version    Release        Fin de support                   │
 │  ────────   ─────────────  ──────────────────               │
-│  PG 13      Sept 2020      Novembre 2025                    │
-│  PG 14      Sept 2021      Novembre 2026                    │
+│  PG 13      Sept 2020      ❌ Novembre 2025 (fin de vie)    │
+│  PG 14      Sept 2021      Novembre 2026 (urgent)           │
 │  PG 15      Sept 2022      Novembre 2027                    │
 │  PG 16      Sept 2023      Novembre 2028                    │
 │  PG 17      Sept 2024      Novembre 2029                    │
-│  PG 18      Sept 2025      Novembre 2030 (estimé)           │
+│  PG 18      Sept 2025      Novembre 2030                    │
 │                                                             │
 │  ⚠️  Après la fin de support :                              │
 │  • Plus de patches de sécurité                              │
 │  • Plus de corrections de bugs                              │
 │  • Risques de sécurité croissants                           │
 │                                                             │
+│  Source officielle : postgresql.org/support/versioning      │
 └─────────────────────────────────────────────────────────────┘
 ```
 

@@ -32,11 +32,11 @@ Toutes ces fonctionnalités nécessitent de manipuler des **données géographiq
 ### PostGIS en Quelques Chiffres
 
 - 🌍 **Leader mondial** des bases de données spatiales open-source  
-- 📅 **Première version** : 2001 (plus de 20 ans d'existence)  
+- 📅 **Première version** publique en 2001 par Refractions Research ; **1.0 stable** en 2005  
 - 🔧 **400+ fonctions** spatiales  
 - 🏆 **Standards OGC** : Implémente les standards de l'Open Geospatial Consortium  
-- 🚀 **Utilisé par** : Uber, Airbnb, CartoDB, OpenStreetMap, organisations gouvernementales  
-- 💰 **Économies** : Alternative gratuite à Oracle Spatial (~$50,000/processeur) et SQL Server Spatial
+- 🚀 **Utilisé par** : OpenStreetMap, Uber, CARTO (ex-CartoDB), organisations gouvernementales  
+- 💰 **Économies** : Alternative gratuite à Oracle Spatial (~$23 000/CPU en option) et SQL Server Spatial
 
 ### Une Extension, Pas un Logiciel Séparé
 
@@ -112,10 +112,11 @@ PostGIS couvre tous les besoins d'analyse spatiale :
 #### 4. Écosystème et Communauté
 
 - **Extensions complémentaires** :  
-  - **pgRouting** : Calcul d'itinéraires (Dijkstra, A*, TSP)  
-  - **pgrouting** : Analyse de réseaux  
-  - **PostGIS Raster** : Traitement d'images géospatiales  
-  - **PostGIS Topology** : Gestion topologique
+  - **pgRouting** : Calcul d'itinéraires et analyse de réseaux (Dijkstra, A*, TSP, k-shortest paths)  
+  - **PostGIS Raster** : Traitement d'images géospatiales (cartes thermiques, MNT)  
+  - **PostGIS Topology** : Gestion topologique (relations entre objets adjacents)  
+  - **pgPointcloud** : Manipulation de nuages de points (LIDAR)  
+  - **MobilityDB** : Données spatio-temporelles (trajectoires)
 
 - **Outils d'intégration** :  
   - **QGIS** : Logiciel SIG desktop qui s'interface parfaitement avec PostGIS  
@@ -129,8 +130,9 @@ PostGIS suit les évolutions de PostgreSQL et ajoute régulièrement de nouvelle
 - **PostGIS 1.0** (2005) : Fondations  
 - **PostGIS 2.0** (2012) : Type geography, 3D, raster  
 - **PostGIS 3.0** (2019) : Performance, JSON, clustering  
-- **PostGIS 3.4** (2023) : Support des courbes, améliorations 3D  
-- **PostGIS 3.5** (2024+) : Optimisations, nouvelles projections
+- **PostGIS 3.4** (sept. 2023) : Support des courbes, améliorations 3D  
+- **PostGIS 3.5** (sept. 2024) : Optimisations, support PG 17, nouvelles fonctions ST_*  
+- **PostGIS 3.6** (sept. 2025) : Support PG 18, améliorations GEOS 3.13
 
 ---
 
@@ -274,13 +276,13 @@ FROM pg_available_extensions
 WHERE name LIKE 'postgis%';  
 ```
 
-**Résultat attendu** :
+**Résultat attendu** (versions selon votre installation) :
 ```
-     name      | default_version |                comment
----------------+-----------------+---------------------------------------
- postgis       | 3.4.0          | PostGIS geometry and geography types
- postgis_raster| 3.4.0          | PostGIS raster types and functions
- postgis_topology| 3.4.0        | PostGIS topology spatial types
+     name        | default_version |                comment
+-----------------+-----------------+---------------------------------------
+ postgis         | 3.6.0           | PostGIS geometry and geography types
+ postgis_raster  | 3.6.0           | PostGIS raster types and functions
+ postgis_topology| 3.6.0           | PostGIS topology spatial types
 ```
 
 ### Activer PostGIS dans une Base de Données
@@ -304,9 +306,9 @@ CREATE EXTENSION postgis_raster;    -- Raster
 SELECT PostGIS_Version();
 
 -- Exemple de résultat :
--- "3.4 USE_GEOS=1 USE_PROJ=1 USE_STATS=1"
+-- "3.6 USE_GEOS=1 USE_PROJ=1 USE_STATS=1"
 
--- Version complète avec détails
+-- Version complète avec détails (toutes les libs)
 SELECT PostGIS_Full_Version();
 ```
 
@@ -559,13 +561,13 @@ PostGIS s'appuie sur plusieurs bibliothèques open-source de référence :
 
 - **Rôle** : Opérations géométriques (intersection, union, buffer, etc.)  
 - **Origine** : Portage C++ de JTS (Java Topology Suite)  
-- **Version recommandée** : 3.11+  
+- **Version recommandée** : 3.12+ (3.13+ pour PostGIS 3.6)  
 - **Fonctions** : ST_Intersection, ST_Union, ST_Buffer, ST_Contains, etc.
 
 #### PROJ
 
 - **Rôle** : Transformations de coordonnées et projections cartographiques  
-- **Version recommandée** : 9.0+  
+- **Version recommandée** : 9.1+ (9.4+ recommandé pour PostGIS 3.5/3.6)  
 - **Fonctions** : ST_Transform, ST_SetSRID  
 - **Base de données** : 6000+ systèmes de coordonnées
 

@@ -306,7 +306,7 @@ def get_user_statistics(user_id):
     - L'ORM génère un plan inefficace (450ms vs 80ms en SQL brut)
     - Testé et vérifié avec EXPLAIN ANALYZE
 
-    Dernière révision : 2025-11-23
+    Dernière révision : 2026-05-19
     """
     with connection.cursor() as cursor:
         cursor.execute(COMPLEX_STATS_QUERY, [user_id])

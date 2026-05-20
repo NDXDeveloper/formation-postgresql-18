@@ -164,8 +164,10 @@ from psycopg_pool import ConnectionPool
 pool = ConnectionPool(
     "postgresql://user:pass@localhost/mydb",
     min_size=5,    # Minimum 5 connexions maintenues
-    max_size=20    # Maximum 20 connexions
+    max_size=20,   # Maximum 20 connexions
+    open=False,    # Recommandé depuis psycopg_pool 3.2
 )
+pool.open(wait=True)  # Ouverture explicite (lève si timeout dépassé)
 
 def get_user(user_id):
     # Emprunter une connexion du pool
@@ -333,11 +335,13 @@ After 1 hour: 0 connexions disponibles → Application bloquée !
 **Cause typique** :
 ```python
 # CODE PROBLÉMATIQUE
-conn = pool.connection()  
+# (pool.getconn() : API bas-niveau, retourne une vraie connexion.
+#  Note : pool.connection() retourne un context manager, pas une connexion.)
+conn = pool.getconn()  
 cursor = conn.cursor()  
 cursor.execute("SELECT ...")  
 return cursor.fetchone()  
-# OUBLI : ne jamais fermer conn → Fuite !
+# OUBLI : pool.putconn(conn) jamais appelé → Fuite !
 ```
 
 **Solution** : Utiliser des gestionnaires de contexte (`with`, `try-finally`)
@@ -452,19 +456,21 @@ GROUP BY state;
 **Principe important** : Une transaction est toujours liée à **une seule connexion**.
 
 ```python
-# Transaction commence
-with pool.connection() as conn:  # Emprunte connexion A
-    conn.execute("BEGIN")
-    conn.execute("INSERT INTO users ...")
-    conn.execute("UPDATE accounts ...")
-    conn.execute("COMMIT")
-# Transaction termine, connexion A rendue au pool
+# Transaction commence — pattern psycopg3 idiomatique
+with pool.connection() as conn:           # Emprunte connexion A
+    with conn.transaction():              # BEGIN implicite
+        conn.execute("INSERT INTO users ...")
+        conn.execute("UPDATE accounts ...")
+    # COMMIT à la sortie sans exception, ROLLBACK avec exception
+# Connexion A rendue au pool
 
 # Nouvelle transaction, probablement une autre connexion
-with pool.connection() as conn:  # Emprunte connexion B
-    conn.execute("BEGIN")
-    # ...
+with pool.connection() as conn:           # Emprunte connexion B
+    with conn.transaction():
+        ...
 ```
+
+> **À éviter** : appeler manuellement `conn.execute("BEGIN")` / `conn.execute("COMMIT")` en psycopg3. La gestion de transaction est automatique via `conn.transaction()` (ou par le `with` autour de la connexion).
 
 **Important** : Ne pas partager une connexion entre threads !
 
@@ -476,16 +482,18 @@ with pool.connection() as conn:  # Emprunte connexion B
 from threading import Thread
 
 def worker(user_id):
-    with pool.connection() as conn:  # Thread-safe
-        # Chaque thread obtient sa propre connexion
-        cursor = conn.cursor()
-        cursor.execute("SELECT * FROM users WHERE id = %s", (user_id,))
-        return cursor.fetchone()
+    with pool.connection() as conn:           # Thread-safe : chaque thread emprunte sa propre connexion
+        with conn.cursor() as cursor:         # `with` pour fermer le cursor proprement
+            cursor.execute("SELECT * FROM users WHERE id = %s", (user_id,))
+            return cursor.fetchone()
+    # Connexion rendue au pool ici, prête pour un autre thread
 
 # 10 threads en parallèle
 threads = [Thread(target=worker, args=(i,)) for i in range(10)]  
 for t in threads:  
     t.start()
+for t in threads:  # Toujours rejoindre les threads avant de fermer le pool
+    t.join()
 ```
 
 **Important** : Ne jamais partager **une connexion** entre threads, mais le **pool** oui !
@@ -662,22 +670,31 @@ statement_timeout = 60000                       # 1 minute (ajuster selon besoin
 ```python
 from psycopg_pool import ConnectionPool
 
-# Pool de connexions basique
+# Pool de connexions basique (pattern recommandé psycopg_pool 3.2+)
 pool = ConnectionPool(
     "postgresql://user:password@localhost:5432/mydb",
     min_size=2,
     max_size=10,
-    timeout=30
+    timeout=30,
+    open=False,        # Important depuis psycopg_pool 3.2
 )
+pool.open(wait=True)   # Ouverture explicite
 
-# Utilisation correcte avec context manager
-def get_data(query):
+# Utilisation correcte avec context manager + paramètres liés
+# ⚠️ Toujours passer les valeurs utilisateur via le tuple `params`, JAMAIS
+#    en les concaténant dans la query — sinon injection SQL.
+def get_data(query, params=None):
     with pool.connection() as conn:
         with conn.cursor() as cursor:
-            cursor.execute(query)
+            cursor.execute(query, params)
             return cursor.fetchall()
 
-# Fermer le pool à l'arrêt de l'application
+# Exemples d'usage
+get_data("SELECT * FROM users LIMIT 10")                       # query statique : OK  
+get_data("SELECT * FROM users WHERE id = %s", (user_id,))      # paramètre lié : OK  
+# get_data(f"SELECT * FROM users WHERE id = {user_id}")        # ❌ INJECTION SQL
+
+# Fermer le pool à l'arrêt de l'application (atexit, signal SIGTERM)
 # pool.close()
 ```
 

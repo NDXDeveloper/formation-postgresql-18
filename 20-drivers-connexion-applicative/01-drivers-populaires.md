@@ -304,7 +304,7 @@ Créer une connexion PostgreSQL coûte ~50-200ms. Un pool réutilise les connexi
 - ✅ Métriques et monitoring
 
 **Exemples :**
-- Python : `psycopg3.pool`
+- Python : `psycopg_pool.ConnectionPool` (package `psycopg-pool`)
 - Node.js : `pg.Pool`
 - Java : `HikariCP` (le meilleur)
 - Go : `pgxpool`
@@ -343,7 +343,7 @@ cursor.execute(query, (email,))
 
 **Ce qui est bon :**
 - ✅ Conversion automatique vers les types natifs du langage  
-- ✅ Support de JSONB (essentiel en 2025)  
+- ✅ Support de JSONB (incontournable aujourd'hui)  
 - ✅ Support des arrays PostgreSQL
 
 ### 4. Gestion des Transactions
@@ -495,7 +495,8 @@ Quel que soit le driver ou l'ORM choisi, voici les bonnes pratiques à suivre :
 
 ### Comparateurs et Benchmarks
 
-- **Database Driver Benchmarks** : https://github.com/mrjoes/sockjs-bench  
+- **MagicStack/pgbench** (drivers Python) : https://github.com/MagicStack/pgbench  
+- **porsager/postgres-benchmarks** (drivers Node.js) : https://github.com/porsager/postgres-benchmarks  
 - **ORM Benchmarks** : Rechercher "[langage] ORM benchmark" sur GitHub
 
 ### Communautés

@@ -539,7 +539,7 @@ Bon format d'erreur :
     "message": "User with ID 123 not found",
     "details": {
       "user_id": 123,
-      "timestamp": "2025-11-23T14:30:00Z"
+      "timestamp": "2026-05-19T14:30:00Z"
     }
   }
 }

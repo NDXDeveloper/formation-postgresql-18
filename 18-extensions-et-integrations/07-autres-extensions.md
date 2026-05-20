@@ -141,15 +141,19 @@ pg_partman automatise la **création, maintenance et suppression de partitions**
 ```sql
 -- Configurer une table partitionnée par mois
 -- avec création automatique de 3 mois à l'avance
--- et suppression automatique après 1 an
 
 SELECT partman.create_parent(
     p_parent_table := 'public.orders',
     p_control := 'order_date',
-    p_interval := 'monthly',
-    p_premake := 3,        -- Créer 3 mois à l'avance
-    p_retention := '1 year' -- Supprimer après 1 an
+    p_interval := '1 month',  -- pg_partman 5.x : INTERVAL natif (plus 'monthly')
+    p_premake := 3            -- Créer 3 mois à l'avance
 );
+
+-- La rétention se configure séparément via UPDATE :
+UPDATE partman.part_config  
+SET retention = '1 year',     -- Supprimer/détacher après 1 an  
+    retention_keep_table = FALSE
+WHERE parent_table = 'public.orders';
 ```
 
 **Pourquoi c'est important** :
@@ -611,7 +615,7 @@ Les extensions tierces (non fournies par PostgreSQL) peuvent présenter des risq
 
 **Extensions recommandées** (haute confiance) :
 - Extensions officielles PostgreSQL (contrib)
-- Extensions de Citus Data (pg_cron, HypoPG)
+- Extensions issues de Citus Data, maintenant Microsoft (pg_cron) ou autres éditeurs (HypoPG par Dalibo)
 - Extensions largement adoptées (PostGIS, TimescaleDB)
 
 ---
@@ -696,9 +700,9 @@ $$ LANGUAGE plpgsql;
 
 **Support commercial** :
 
-- **Crunchy Data** : Support PostgreSQL et extensions  
-- **EDB (EnterpriseDB)** : Support et extensions propriétaires  
-- **2ndQuadrant** : Consulting et développement d'extensions
+- **Crunchy Data** : Support PostgreSQL et extensions
+- **EDB (EnterpriseDB)** : Support et extensions propriétaires (a absorbé 2ndQuadrant en 2020)
+- **Cybertec, Percona, Timescale, Microsoft (Citus)** : Autres acteurs majeurs du support PostgreSQL
 
 ---
 

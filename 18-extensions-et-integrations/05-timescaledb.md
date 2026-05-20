@@ -135,11 +135,11 @@ C'est exactement pourquoi **TimescaleDB** existe : optimiser PostgreSQL pour ces
 **TimescaleDB** est une extension open-source de PostgreSQL qui ajoute :
 
 - ✅ **Partitionnement automatique** par temps (chunking)  
-- ✅ **Compression native** des données anciennes  
+- ✅ **Compression native** des données anciennes (columnar storage)  
 - ✅ **Fonctions de séries temporelles** (agrégations, interpolation, etc.)  
 - ✅ **Rétention automatique** des données (data retention policies)  
 - ✅ **Continuous Aggregates** (vues matérialisées incrémentales)  
-- ✅ **Support distribué** (TimescaleDB Distributed) pour le scale-out
+- ✅ **Partitionnement spatial supplémentaire** (`by_hash`) en complément du temps
 
 ### Architecture : L'Extension Intelligente
 
@@ -181,15 +181,20 @@ TimescaleDB ne remplace pas PostgreSQL, **il l'augmente** :
 **TimescaleDB Community (Apache 2.0)** :
 - Gratuit et open-source
 - Hypertables, compression, continuous aggregates
+- Politiques de rétention/compression incluses
 - Parfait pour la plupart des cas d'usage
 
-**TimescaleDB Enterprise** :
-- Fonctionnalités avancées (multi-node, replication policies)
-- Support commercial
+**TimescaleDB License (TSL)** :
+- Licence source-available pour certaines fonctionnalités (skip-scan time, bgw_loader avancé, etc.)
+- Gratuit à utiliser, restrictions sur la revente
+- Inclus dans la même distribution Open-Source
 
-**TimescaleDB Cloud** :
+**Timescale Cloud** :
 - Service managé (SaaS)
 - Hébergé et géré par Timescale
+- Offre commerciale avec support entreprise
+
+> ⚠️ Depuis **TimescaleDB 2.0** (2020), la quasi-totalité des fonctionnalités historiquement "Enterprise" sont passées sous licence libre. Le déploiement **multi-nœuds (TimescaleDB Distributed)** a quant à lui été déprécié à partir de la **2.13 (sept. 2023)** : la roadmap se concentre sur le mode single-node + Timescale Cloud pour le scale-out.
 
 ---
 
@@ -256,7 +261,8 @@ TimescaleDB crée automatiquement des chunks basés sur un **intervalle de temps
 
 ```sql
 -- Création d'une hypertable avec chunks de 7 jours
-SELECT create_hypertable('sensor_data', by_range('time'), chunk_time_interval => INTERVAL '7 days');
+-- L'intervalle est intégré dans by_range() avec la nouvelle API (TimescaleDB 2.13+)
+SELECT create_hypertable('sensor_data', by_range('time', INTERVAL '7 days'));
 ```
 
 TimescaleDB :
@@ -271,18 +277,22 @@ TimescaleDB :
 
 ### Prérequis
 
-- PostgreSQL 12, 13, 14, 15, 16, 17 ou 18
+- PostgreSQL 14, 15, 16, 17 ou 18 (les versions plus anciennes sont en fin de vie)
 - Droits d'administration système (pour installer l'extension)
 - Droits de superutilisateur PostgreSQL (pour activer l'extension)
+
+> 💡 TimescaleDB 2.x officiellement supporté sur PG 13–18 (selon la version mineure). Pour PG 18, utilisez TimescaleDB 2.17+ ou 2.18+.
 
 ### Installation sur Ubuntu/Debian
 
 ```bash
-# 1. Ajouter le dépôt Timescale
-sudo sh -c "echo 'deb https://packagecloud.io/timescale/timescaledb/ubuntu/ $(lsb_release -c -s) main' > /etc/apt/sources.list.d/timescaledb.list"
+# 1. Importer la clé GPG dans /usr/share/keyrings (méthode moderne)
+wget --quiet -O - https://packagecloud.io/timescale/timescaledb/gpgkey | \
+  sudo gpg --dearmor -o /usr/share/keyrings/timescaledb.gpg
 
-# 2. Importer la clé GPG
-wget --quiet -O - https://packagecloud.io/timescale/timescaledb/gpgkey | sudo apt-key add -
+# 2. Ajouter le dépôt Timescale (signed-by = méthode actuelle sans apt-key)
+echo "deb [signed-by=/usr/share/keyrings/timescaledb.gpg] https://packagecloud.io/timescale/timescaledb/ubuntu/ $(lsb_release -c -s) main" | \
+  sudo tee /etc/apt/sources.list.d/timescaledb.list
 
 # 3. Mettre à jour et installer
 sudo apt update  
@@ -294,6 +304,8 @@ sudo timescaledb-tune --quiet --yes
 # 5. Redémarrer PostgreSQL
 sudo systemctl restart postgresql
 ```
+
+> 💡 `apt-key add` est **déprécié** depuis Ubuntu 22.04 / Debian 12. La méthode ci-dessus (`signed-by`) est désormais standard.
 
 ### Installation sur Red Hat/CentOS/Fedora
 
@@ -375,11 +387,11 @@ CREATE EXTENSION IF NOT EXISTS timescaledb;
 \dx timescaledb
 ```
 
-**Résultat attendu** :
+**Résultat attendu** (version selon installation, 2.17+ recommandé pour PG 18) :
 ```
 Name        | Version | Schema  | Description
 ------------+---------+---------+--------------------------------
-timescaledb | 2.15.0  | public  | Enables scalable inserts and...
+timescaledb | 2.18.0  | public  | Enables scalable inserts and...
 ```
 
 ---
@@ -419,27 +431,22 @@ SELECT create_hypertable('sensor_data', by_range('time'));
 -- Spécifier l'intervalle des chunks (défaut : 7 jours)
 SELECT create_hypertable(
     'sensor_data',
-    by_range('time'),
-    chunk_time_interval => INTERVAL '1 day'
+    by_range('time', INTERVAL '1 day')
 );
 
--- Avec partitionnement spatial supplémentaire (optionnel)
-SELECT create_hypertable(
-    'sensor_data',
-    by_range('time'),
-    partitioning_column => 'sensor_id',
-    number_partitions => 4,
-    chunk_time_interval => INTERVAL '1 day'
-);
+-- Avec partitionnement spatial supplémentaire (TimescaleDB 2.13+)
+SELECT create_hypertable('sensor_data', by_range('time', INTERVAL '1 day'));  
+SELECT add_dimension('sensor_data', by_hash('sensor_id', 4));  
 ```
 
 **Explication des paramètres** :
 
 - `'sensor_data'` : Nom de la table à convertir  
-- `by_range('time')` : Colonne de temps pour le partitionnement  
-- `chunk_time_interval` : Durée de chaque chunk (1 jour, 7 jours, 1 mois, etc.)  
-- `partitioning_column` : Colonne supplémentaire pour le partitionnement spatial (optionnel)  
-- `number_partitions` : Nombre de partitions spatiales (si partitionnement spatial)
+- `by_range('time', INTERVAL ...)` : dimension de partitionnement temporel  
+- `by_hash('col', N)` : dimension de partitionnement par hash (N partitions)  
+- `add_dimension` : ajoute une dimension supplémentaire après création
+
+> 💡 **Note sur les versions** : La syntaxe `by_range`/`by_hash` est l'API moderne introduite dans **TimescaleDB 2.13** (fin 2023). L'ancienne syntaxe `create_hypertable(table, 'colonne', partitioning_column => ..., number_partitions => ...)` reste fonctionnelle mais dépréciée.
 
 ### Étape 3 : Utiliser comme une Table Normale
 
@@ -613,10 +620,15 @@ ORDER BY bucket;
 
 **Note** : `time_bucket_gapfill()` remplit les trous temporels et `interpolate()` calcule les valeurs manquantes.
 
-### 5. Fonctions d'Agrégation Spécialisées
+### 5. Fonctions d'Agrégation Spécialisées (TimescaleDB Toolkit)
+
+> 💡 Les fonctions avancées suivantes (`approx_percentile`, `percentile_agg`, `uddsketch`, `tdigest`, etc.) appartiennent à l'extension **TimescaleDB Toolkit**, distincte de TimescaleDB. Installer avec :  
+> ```sql  
+> CREATE EXTENSION timescaledb_toolkit;  
+> ```
 
 ```sql
--- Calculer des statistiques hyperspécifiques
+-- Percentiles approximatifs (très efficaces sur de très grands volumes)
 SELECT
     time_bucket('1 hour', time) AS hour,
     approx_percentile(0.95, percentile_agg(temperature)) AS p95_temp,
@@ -624,6 +636,11 @@ SELECT
 FROM sensor_data  
 WHERE time > NOW() - INTERVAL '1 day'  
 GROUP BY hour;  
+
+-- Histogramme native (déjà inclus dans TimescaleDB core)
+SELECT histogram(temperature, 20.0, 30.0, 10)  
+FROM sensor_data  
+WHERE time > NOW() - INTERVAL '1 day';  
 ```
 
 ---
@@ -686,11 +703,16 @@ FROM show_chunks('sensor_data', older_than => INTERVAL '30 days') i;
 ### Décompresser (si nécessaire)
 
 ```sql
--- Décompresser un chunk pour permettre les UPDATE/DELETE
+-- Décompresser un chunk pour des modifications massives
 SELECT decompress_chunk('_timescaledb_internal._hyper_1_1_chunk');
 ```
 
-**Note** : Les chunks compressés sont **en lecture seule**. Pour modifier des données, il faut d'abord décompresser.
+> 💡 **Évolution importante** : historiquement les chunks compressés étaient en **lecture seule**, mais :  
+> - **TimescaleDB 2.11 (juin 2023)** a introduit les `INSERT` directs sur chunks compressés  
+> - **TimescaleDB 2.12** a ajouté le support des `UPDATE` et `DELETE`  
+> - Performances meilleures qu'avant, mais les opérations massives restent plus rapides après décompression manuelle  
+>  
+> Pour des modifications **ponctuelles**, vous pouvez désormais modifier directement les chunks compressés sans décompression préalable.
 
 ### Vérifier la Compression
 
@@ -763,8 +785,10 @@ SELECT remove_retention_policy('sensor_data');
 -- Supprimer manuellement les chunks anciens
 SELECT drop_chunks('sensor_data', older_than => INTERVAL '1 year');
 
--- Supprimer avec clause WHERE (plus sélectif)
-SELECT drop_chunks('sensor_data', older_than => INTERVAL '6 months', cascade_to_materializations => false);
+-- Supprimer avec mode verbose (afficher le détail des chunks supprimés)
+SELECT drop_chunks('sensor_data', older_than => INTERVAL '6 months', verbose => true);
+-- ⚠️ Le paramètre `cascade_to_materializations` a été retiré dans TimescaleDB 2.0.
+-- Les continuous aggregates gèrent automatiquement leur propre rétention.
 ```
 
 ---
@@ -922,13 +946,8 @@ Pour des charges distribuées sur plusieurs dimensions :
 
 ```sql
 -- Partitionner par temps ET par sensor_id
-SELECT create_hypertable(
-    'sensor_data',
-    by_range('time'),
-    partitioning_column => 'sensor_id',
-    number_partitions => 4,
-    chunk_time_interval => INTERVAL '1 day'
-);
+SELECT create_hypertable('sensor_data', by_range('time', INTERVAL '1 day'));  
+SELECT add_dimension('sensor_data', by_hash('sensor_id', 4));  
 ```
 
 **Cas d'usage** : Quand vos requêtes filtrent souvent sur une autre colonne que le temps (ex: sensor_id, user_id, device_id).
@@ -976,7 +995,8 @@ CREATE TABLE system_metrics (
 );
 
 -- Conversion en hypertable
-SELECT create_hypertable('system_metrics', by_range('time'), chunk_time_interval => INTERVAL '1 day');
+-- L'intervalle est intégré dans by_range() avec la nouvelle API (TimescaleDB 2.13+)
+SELECT create_hypertable('system_metrics', by_range('time', INTERVAL '1 day'));
 
 -- Index pour requêtes par hostname
 CREATE INDEX idx_hostname_time ON system_metrics (hostname, time DESC);
@@ -1022,13 +1042,8 @@ CREATE TABLE iot_sensors (
 );
 
 -- Hypertable avec partitionnement spatial
-SELECT create_hypertable(
-    'iot_sensors',
-    by_range('time'),
-    partitioning_column => 'device_id',
-    number_partitions => 4,
-    chunk_time_interval => INTERVAL '7 days'
-);
+SELECT create_hypertable('iot_sensors', by_range('time', INTERVAL '7 days'));  
+SELECT add_dimension('iot_sensors', by_hash('device_id', 4));  
 
 -- Agrégation horaire par type de capteur
 CREATE MATERIALIZED VIEW iot_hourly  
@@ -1068,7 +1083,7 @@ CREATE TABLE web_events (
     revenue NUMERIC(10,2)
 );
 
-SELECT create_hypertable('web_events', by_range('time'), chunk_time_interval => INTERVAL '1 day');
+SELECT create_hypertable('web_events', by_range('time', INTERVAL '1 day'));
 
 -- Dashboard temps réel : agrégations par 5 minutes
 CREATE MATERIALIZED VIEW web_events_5min  
@@ -1114,7 +1129,7 @@ CREATE TABLE market_ticks (
     ask NUMERIC(20,8)
 );
 
-SELECT create_hypertable('market_ticks', by_range('time'), chunk_time_interval => INTERVAL '1 day');
+SELECT create_hypertable('market_ticks', by_range('time', INTERVAL '1 day'));
 
 -- Index pour requêtes par symbole
 CREATE INDEX idx_symbol_time ON market_ticks (symbol, time DESC);
@@ -1183,7 +1198,7 @@ SELECT create_hypertable('sensor_data', by_range('time'));
 CREATE TABLE sensor_data_new (LIKE sensor_data INCLUDING ALL);
 
 -- 2. Convertir en hypertable
-SELECT create_hypertable('sensor_data_new', by_range('time'), chunk_time_interval => INTERVAL '1 day');
+SELECT create_hypertable('sensor_data_new', by_range('time', INTERVAL '1 day'));
 
 -- 3. Copier les données (par lots pour éviter les verrous)
 INSERT INTO sensor_data_new  
@@ -1233,19 +1248,26 @@ DROP TABLE sensor_data;
 
 #### 1. UPDATE et DELETE sur Données Compressées
 
-**Problème** : Les chunks compressés sont en lecture seule.
+**Historiquement (avant TimescaleDB 2.11/2.12)** : les chunks compressés étaient en lecture seule, ce qui obligeait à décompresser puis recompresser.
 
-**Solution** : Décompresser temporairement ou éviter les UPDATE/DELETE sur données anciennes.
+**Aujourd'hui (TimescaleDB 2.12+)** : les INSERT, UPDATE et DELETE fonctionnent directement sur les chunks compressés, mais avec un coût en performance. Pour des **modifications massives**, la décompression temporaire reste la voie la plus rapide.
 
 ```sql
--- Décompresser pour permettre les modifications
-SELECT decompress_chunk('_timescaledb_internal._hyper_1_1_chunk');
+-- Approche A — modifications ponctuelles (TimescaleDB 2.12+) : aucune action préalable
+UPDATE sensor_data SET temperature = 25.0  
+WHERE time = '2024-06-15 10:00' AND sensor_id = 42;  
 
--- Modifier
-UPDATE sensor_data SET temperature = 25.0 WHERE ...;
+-- Approche B — modifications massives : décompresser, modifier, recompresser
+SELECT decompress_chunk(c) FROM show_chunks('sensor_data',
+    older_than => INTERVAL '7 days',
+    newer_than => INTERVAL '30 days') c;
 
--- Recompresser
-SELECT compress_chunk('_timescaledb_internal._hyper_1_1_chunk');
+UPDATE sensor_data SET temperature = temperature - 0.5  
+WHERE time BETWEEN '2024-06-01' AND '2024-06-30';  
+
+SELECT compress_chunk(c) FROM show_chunks('sensor_data',
+    older_than => INTERVAL '7 days',
+    newer_than => INTERVAL '30 days') c;
 ```
 
 #### 2. Foreign Keys
@@ -1509,7 +1531,7 @@ sudo systemctl restart postgresql
 CREATE EXTENSION timescaledb;
 
 CREATE TABLE my_table (time TIMESTAMPTZ NOT NULL, ...);  
-SELECT create_hypertable('my_table', by_range('time'), chunk_time_interval => INTERVAL '1 day');  
+SELECT create_hypertable('my_table', by_range('time', INTERVAL '1 day'));  
 ```
 
 ### Compression

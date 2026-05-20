@@ -182,9 +182,11 @@ PostgreSQL a introduit le support SQL/MED dans **PostgreSQL 9.1** (2011) et l'a 
 | **10** (2017) | **Pushdown d'agrégations** (révolution performance) |
 | **11** (2018) | Parallélisation des requêtes sur foreign tables |
 | **13** (2020) | Amélioration du partitionnement avec FDW |
-| **14** (2021) | Bulk insert plus rapide |
-| **16** (2023) | Amélioration du pushdown et optimisations |
-| **18** (2025) | I/O asynchrone, amélioration des performances |
+| **14** (2021) | Bulk insert plus rapide, exécution asynchrone (`async_capable`) |
+| **15** (2022) | `parallel_commit` sur postgres_fdw (commits parallèles) |
+| **16** (2023) | SCRAM passthrough, amélioration du pushdown |
+| **17** (2024) | `parallel_abort`, optimisation des requêtes distantes |
+| **18** (2025) | I/O asynchrone (AIO), amélioration des performances |
 
 ---
 
@@ -239,7 +241,7 @@ OPTIONS (
 - Intégration hybride Oracle/PostgreSQL
 - Accès aux données Oracle legacy
 
-**Maintenu par** : Laurenz Albe (EnterpriseDB)
+**Maintenu par** : Laurenz Albe (Cybertec)
 
 **Prérequis** : Oracle Instant Client
 

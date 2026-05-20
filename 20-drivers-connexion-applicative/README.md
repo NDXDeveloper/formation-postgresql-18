@@ -143,7 +143,7 @@ Ce chapitre est organisé en **5 sections principales**, progressant du choix du
 │        → Database migrations                                │
 │        → Zero-downtime deployments                          │
 │                                                             │
-│  20bis. PostgreSQL et Architectures Modernes                │
+│  21. PostgreSQL et Architectures Modernes                │
 │         → Microservices                                     │
 │         → Event Sourcing / CQRS                             │
 │         → Serverless                                        │
@@ -268,27 +268,27 @@ Ce chapitre est organisé en **5 sections principales**, progressant du choix du
 
 **Durée estimée** : 3-4 heures
 
-### Section 20bis : PostgreSQL et Architectures Modernes
+### Section 21 : PostgreSQL et Architectures Modernes
 
 **Objectif** : Intégrer PostgreSQL dans des architectures contemporaines.
 
 **Contenu** :
-- **20bis.1. Microservices et bases de données**
+- **21.1. Microservices et bases de données**
   - Database per service vs Shared database
   - Distributed transactions et Saga pattern
   - Foreign Data Wrappers pour la fédération
 
-- **20bis.2. Event Sourcing et CQRS avec PostgreSQL**
+- **21.2. Event Sourcing et CQRS avec PostgreSQL**
   - Event Store pattern
   - NOTIFY/LISTEN pour événements temps réel
   - Change Data Capture (CDC) avec Debezium
 
-- **20bis.3. PostgreSQL en architecture serverless**
+- **21.3. PostgreSQL en architecture serverless**
   - Connection pooling serverless
   - Neon, Supabase, alternatives
   - Cold starts et optimisations
 
-- **20bis.4. Intégration avec Kubernetes**
+- **21.4. Intégration avec Kubernetes**
   - StatefulSets et persistance
   - Operators (Zalando, CloudNativePG)
   - Backup automation et observabilité
@@ -339,7 +339,7 @@ Application (patterns professionnels)
 "Comment construire un système maintenable ?"
 ```
 
-### Niveau 5 : L'architecture moderne (20bis)
+### Niveau 5 : L'architecture moderne (21)
 ```
 ┌────────────────────────────────────────────┐
 │ Microservices / Event-Driven / Serverless  │
@@ -374,7 +374,7 @@ AVEC pooling :
 → Performance optimale
 ```
 
-**Où on le retrouve** : Sections 20.1, 20.2, 20.3, 20.4, 20bis
+**Où on le retrouve** : Sections 20.1, 20.2, 20.3, 20.4, 21
 
 ### 2. Patterns et Anti-patterns
 
@@ -416,7 +416,7 @@ AVEC pooling :
 - **Timeout** : Limiter le temps d'attente  
 - **Fallback** : Solution de repli si échec
 
-**Où on le retrouve** : Sections 20.2.4, 20.4, 20bis
+**Où on le retrouve** : Sections 20.2.4, 20.4, 21
 
 ### 5. Trade-offs (Compromis)
 
@@ -469,7 +469,7 @@ Durée totale : 1-2 jours de formation
 3. Section 20.2.3 (Dimensionnement) ──────────────── [2h]
 4. Section 20.3 (Patterns anti-corruption) ───────── [3h]
 5. Section 20.4 (Conception d'APIs) ──────────────── [3h]
-6. Section 20bis (Architectures modernes) ────────── [4h]
+6. Section 21 (Architectures modernes) ────────── [4h]
 
 Durée totale : 2-3 jours de formation
 ```
@@ -486,7 +486,7 @@ Durée totale : 2-3 jours de formation
 4. Section 20.2.4 (Troubleshooting) ──────────────── [2h]
 5. Section 20.4.2 (Migrations) ───────────────────── [2h]
 6. Section 20.4.4 (Zero-downtime) ────────────────── [2h]
-7. Section 20bis.4 (Kubernetes) ──────────────────── [3h]
+7. Section 21.4 (Kubernetes) ──────────────────── [3h]
 
 Durée totale : 2-3 jours de formation
 ```
@@ -502,7 +502,7 @@ Durée totale : 2-3 jours de formation
 3. Focus sur 20.2 (Gestion connexions) ───────────── [4h]
 4. Focus sur 20.3 (Patterns) ─────────────────────── [3h]
 5. Focus sur 20.4 (Conception) ───────────────────── [4h]
-6. Focus sur 20bis (Architectures modernes) ──────── [5h]
+6. Focus sur 21 (Architectures modernes) ──────── [5h]
 
 Durée totale : 3-4 jours de formation
 ```
@@ -600,14 +600,15 @@ docker --version
 # Monitoring
 docker-compose up -d prometheus grafana
 
-# Logs analysis
-pip install pgbadger
+# Logs analysis (pgBadger est un script Perl, pas Python)
+sudo apt install pgbadger              # Debian/Ubuntu
+# brew install pgbadger                # macOS
 
 # Load testing
 sudo apt install pgbench
 
 # Container orchestration
-kubectl version  # Si section 20bis.4
+kubectl version  # Si section 21.4
 ```
 
 ---
@@ -639,14 +640,14 @@ Les exemples utilisent des annotations visuelles :
 ```python
 # Code CORRECT
 with pool.connection() as conn:
-    # ...
+    pass  # ... votre code utilise conn ici ...
 ```
 
 **❌ Mauvais exemple** (à éviter) :
 ```python
 # Code INCORRECT - NE PAS FAIRE
-conn = pool.connection()
-# ... oubli de fermeture
+conn = pool.connection()  
+pass  # ... oubli de fermeture (conn.close() jamais appelé)  
 ```
 
 **⚠️ Attention** (cas particulier) :
@@ -680,12 +681,12 @@ Le chapitre fournit des exemples dans **5 langages principaux** :
 # Approche puriste (complexe)
 class RepositoryFactory:
     def create_user_repository(self, dialect):
-        # 50 lignes de code abstrait...
+        pass  # 50 lignes de code abstrait...
 
 # Approche pragmatique (simple et efficace)
 def get_user(user_id):
     with pool.connection() as conn:
-        # 5 lignes de code qui marchent
+        pass  # 5 lignes de code qui marchent
 ```
 
 **Choix** : On privilégie la clarté et l'efficacité.
@@ -716,7 +717,7 @@ Application avec 1000 req/sec :
 → Ajouter PgBouncer (Section 20.2.2)
 
 Application avec microservices distribués :
-→ Architecture événementielle (Section 20bis.2)
+→ Architecture événementielle (Section 21.2)
 ```
 
 ### 4. Production-first mindset
@@ -866,7 +867,7 @@ Avant de plonger dans les sections détaillées, assurez-vous d'avoir :
 ☐ Docker installé (pour tests isolés)
 ☐ Outil de monitoring installé (Grafana, DataDog, etc.)
 ☐ PgBouncer installé (pour section 20.2.2)
-☐ Kubernetes accessible (pour section 20bis.4)
+☐ Kubernetes accessible (pour section 21.4)
 ```
 
 ---
@@ -897,24 +898,27 @@ statement_timeout = 60000                     # 1 minute
 ### Base de données de test
 
 ```sql
--- Créer une base de test
+-- Créer une base de test (en tant que superuser, ex. postgres)
 CREATE DATABASE learning_db;
 
--- Créer un utilisateur
+-- Créer un utilisateur applicatif
 CREATE USER learning_user WITH PASSWORD 'learning_pass';
 
--- Donner les permissions
+-- Permissions sur la base
 GRANT ALL PRIVILEGES ON DATABASE learning_db TO learning_user;
 
--- Se connecter à la base
+-- ⚠️ PostgreSQL 15+ : GRANT ALL PRIVILEGES ON DATABASE ne donne PLUS
+-- automatiquement le droit CREATE sur le schéma public.
+-- Il faut l'attribuer explicitement pour que learning_user puisse créer des tables :
 \c learning_db
+GRANT CREATE, USAGE ON SCHEMA public TO learning_user;
 
 -- Créer une table simple pour les tests
 CREATE TABLE users (
     id SERIAL PRIMARY KEY,
     name VARCHAR(100),
     email VARCHAR(100) UNIQUE,
-    created_at TIMESTAMP DEFAULT NOW()
+    created_at TIMESTAMPTZ DEFAULT NOW()    -- TIMESTAMPTZ : recommandé pour les dates métier
 );
 
 -- Insérer quelques données

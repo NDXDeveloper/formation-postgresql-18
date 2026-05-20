@@ -263,13 +263,15 @@ Français :
 Anglais :
 "running"    → "run"
 "runs"       → "run"
-"ran"        → "run"
+"ran"        → "ran"      ← ⚠️ verbe irrégulier non transformé par Snowball
 
 "databases"  → "databas"
 "database"   → "databas"
 ```
 
 **Avantage** : Recherche de "chaussure" trouve aussi "chaussures", "chausser", etc.
+
+> ⚠️ **Limitation du stemming algorithmique** : Snowball applique des règles morphologiques régulières. Les **verbes irréguliers** (anglais : `ran`, `went`, `was`...) et les pluriels irréguliers (`mice`, `feet`) ne sont pas réduits à leur lemme. Pour cela, il faut utiliser un **dictionnaire morphologique** (Ispell/Hunspell) qui fait de la lemmatisation, pas du stemming.
 
 ### 3.4. Stop Words (Mots Vides)
 
@@ -491,14 +493,16 @@ CREATE TABLE produits (
     description TEXT,
     marque VARCHAR(100),
     categorie VARCHAR(50),
+    prix NUMERIC(10, 2),
     search_vector tsvector
 );
 
--- Recherche produits
-SELECT nom, marque, prix  
-FROM produits  
-WHERE search_vector @@ websearch_to_tsquery('french', 'chaussure running nike')  
-ORDER BY ts_rank(search_vector, query) DESC;  
+-- Recherche produits (avec la query nommée dans le FROM pour la réutiliser dans ORDER BY)
+SELECT nom, marque, prix, ts_rank(search_vector, query) AS score  
+FROM produits,  
+     websearch_to_tsquery('french', 'chaussure running nike') AS query
+WHERE search_vector @@ query  
+ORDER BY score DESC;  
 ```
 
 **Fonctionnalités** :
@@ -550,11 +554,12 @@ CREATE TABLE tickets (
 );
 
 -- Trouver tickets similaires
-SELECT id, sujet, statut  
-FROM tickets  
-WHERE search_vector @@ plainto_tsquery('french', 'erreur connexion base')  
+SELECT id, sujet, statut, ts_rank(search_vector, query) AS score  
+FROM tickets,  
+     plainto_tsquery('french', 'erreur connexion base') AS query
+WHERE search_vector @@ query
   AND statut = 'résolu'
-ORDER BY ts_rank(search_vector, query) DESC;
+ORDER BY score DESC;
 ```
 
 **Fonctionnalités** :
@@ -576,11 +581,12 @@ CREATE TABLE posts (
 );
 
 -- Recherche temporelle + textuelle
-SELECT contenu, auteur_id, created_at  
-FROM posts  
-WHERE search_vector @@ plainto_tsquery('french', 'postgresql tips')  
+SELECT contenu, auteur_id, created_at, ts_rank(search_vector, query) AS score  
+FROM posts,  
+     plainto_tsquery('french', 'postgresql tips') AS query
+WHERE search_vector @@ query
   AND created_at > NOW() - INTERVAL '7 days'
-ORDER BY ts_rank(search_vector, query) DESC;
+ORDER BY score DESC;
 ```
 
 ### 6.6. Recherche Juridique
@@ -881,7 +887,7 @@ Le **Full-Text Search** de PostgreSQL est une fonctionnalité puissante et matur
 
 Le Full-Text Search transforme PostgreSQL en un moteur de recherche complet, directement au cœur de votre base de données. C'est une compétence essentielle pour tout développeur travaillant avec des données textuelles.
 
-**Prochaine étape** : Plongez dans les détails techniques avec [18.3.1. tsvector et tsquery](./18.3.1-tsvector-tsquery.md) pour comprendre le fonctionnement interne et commencer à construire vos premières recherches !
+**Prochaine étape** : Plongez dans les détails techniques avec [18.3.1. tsvector et tsquery](./03.1-tsvector-tsquery.md) pour comprendre le fonctionnement interne et commencer à construire vos premières recherches !
 
 ---
 

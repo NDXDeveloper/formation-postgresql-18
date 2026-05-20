@@ -690,24 +690,24 @@ Kubernetes : Si vous avez...
 
 ## Tendances et Avenir
 
-### État du Marché en 2025
+### État du Marché en 2026
 
 **Adoption actuelle (estimations) :**
 
 ```
 Déploiements PostgreSQL Production Monde :
 
-Bare Metal           : ████████░░ 30%  ↘ (en baisse)  
-Virtual Machines     : ████████████████ 40%  → (stable)  
-Conteneurs (simple)  : ████░░░░░░ 10%  ↗ (en hausse)  
-Kubernetes           : ████░░░░░░ 10%  ↗↗ (forte hausse)  
-DBaaS Cloud          : ████░░░░░░ 10%  ↗ (en hausse)  
+Bare Metal           : ██████░░░░ 25%  ↘ (en baisse)  
+Virtual Machines     : ██████████████ 38%  → (stable)  
+Conteneurs (simple)  : ████░░░░░░ 12%  ↗ (en hausse)  
+Kubernetes           : █████░░░░░ 13%  ↗↗ (forte hausse)  
+DBaaS Cloud          : █████░░░░░ 12%  ↗ (en hausse)  
 
 Tendance :
-└─ Migration progressive bare metal → VMs → K8s
+└─ Migration progressive bare metal → VMs → K8s/DBaaS
 ```
 
-### Projections 2025-2030
+### Projections 2026-2030
 
 **Évolution attendue :**
 
@@ -745,24 +745,31 @@ Tendance :
 - ✅ Gain maximal : Bare Metal + NVMe (jusqu'à 3×)  
 - ✅ Gain significatif : VMs, Conteneurs, K8s
 
-**UUIDv7 (Time-ordered)**
-- ✅ Simplifie architectures distribuées  
+**uuidv7() natif (Time-ordered)**
+- ✅ Simplifie architectures distribuées (clés primaires triables chronologiquement)  
 - ✅ Idéal pour microservices (Kubernetes)  
-- ✅ Facilite sharding
+- ✅ Facilite sharding et pagination par cursor
 
-**Colonnes Virtuelles**
-- ✅ Optimise stockage (tous déploiements)  
-- ✅ Simplifie migrations de schémas
+**Colonnes générées VIRTUAL (nouveau défaut)**
+- ✅ Calcul à la lecture, pas de stockage physique  
+- ✅ Simplifie migrations de schémas  
+- ✅ Option STORED toujours disponible si nécessaire
 
-**OAuth 2.0**
-- ✅ Intégration moderne (K8s + Service Mesh)  
-- ✅ SSO facilité  
+**Authentification OAuth (méthode `oauth`)**
+- ✅ Intégration moderne avec IdP (Keycloak, Auth0, Azure AD)  
+- ✅ SSO et MFA centralisés  
 - ✅ Architectures cloud-native
 
 **Améliorations pg_upgrade**
-- ✅ Simplifie mises à jour (tous déploiements)  
-- ✅ Option --swap accélère upgrades  
-- ✅ Préservation statistiques
+- ✅ Préservation des statistiques (plus besoin d'ANALYZE après migration)  
+- ✅ Option `--swap` (échange atomique des répertoires, ultra-rapide)  
+- ✅ Vérifications `--check` parallélisées (`--jobs`)  
+- ✅ Nouvelle option `--no-statistics` pour désactiver si nécessaire
+
+**Contraintes temporelles (WITHOUT OVERLAPS, PERIOD)**
+- ✅ Plages temporelles dans les PRIMARY KEY et UNIQUE  
+- ✅ PERIOD dans les FOREIGN KEY  
+- ✅ Réservations, périodes d'emploi, historiques natifs
 
 ---
 

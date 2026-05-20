@@ -221,8 +221,10 @@ Stratégies PostgreSQL :
 │   ├─ Table partitionnée (range, list, hash)
 │   └─ PostgreSQL gère automatiquement
 │
-└─ Solutions externes (Citus, Postgres-XL)
-    └─ PostgreSQL distribué transparent
+└─ Solutions distribuées (Citus, YugabyteDB, CockroachDB)
+    ├─ Citus : extension PostgreSQL (sharding transparent)
+    ├─ YugabyteDB : fork distribué, compatible wire protocol
+    └─ CockroachDB : SQL distribué inspiré Spanner
 ```
 
 **Exemple architecture scalable :**
@@ -301,10 +303,10 @@ Sécurité = Defense in Depth (Défense en profondeur)
 ```
 pg_hba.conf (Host-Based Authentication) :
 ├─ Définit qui peut se connecter depuis où
-├─ Méthode : scram-sha-256 (PG 18 recommandé)
-│   └─ Fini md5 (déprécié, faible)
-└─ OAuth 2.0 (PG 18 nouveau)
-    └─ Intégration SSO moderne
+├─ Méthode : scram-sha-256 (recommandée depuis PG 10)
+│   └─ md5 toujours supporté mais cryptographiquement plus faible
+└─ OAuth 2.0 (nouveauté PG 18)
+    └─ Intégration SSO moderne (token validation)
 
 Autorisations (GRANT/REVOKE) :
 ├─ Principe moindre privilège
@@ -902,9 +904,11 @@ Impact Production :
 └─ Throughput augmenté
 
 Configuration :  
-io_method = 'worker'  # ou 'io_uring' sur Linux  
-io_async_workers = 16  
+io_method = 'worker'   # défaut PG 18 (alternative : 'io_uring' Linux ou 'sync')  
+io_workers = 3         # défaut PG 18, peut être augmenté (3-16 selon charge I/O)  
 ```
+
+> **Note** : `io_uring` nécessite que PostgreSQL ait été compilé avec `--with-liburing` et un noyau Linux 5.1+.
 
 ### 2. Améliorations pg_upgrade (Migrations)
 
@@ -954,22 +958,63 @@ Gestion automatique améliorée :
 ├─ Moins d'interventions manuelles
 └─ Performances maintenues automatiquement
 
-Configuration :  
-autovacuum_vacuum_max_threshold = 10000000  
+Configuration (PG 18) :  
+autovacuum_vacuum_max_threshold = 100000000   # défaut : 100M tuples morts  
+autovacuum_worker_slots = 16                   # nombre de slots de workers  
+vacuum_max_eager_freeze_failure_rate = 0.03    # nouveauté PG 18  
 ```
 
 ### 6. Colonnes Virtuelles (Évolutivité)
 
 ```
 Facilite évolutions schéma :
-├─ Colonnes calculées sans stockage
-├─ Migrations simplifiées
-├─ Stockage optimisé
-└─ Performances préservées
+├─ Colonnes calculées sans stockage (calculées à la lecture)
+├─ VIRTUAL est devenu le défaut dans PG 18
+├─ STORED reste disponible si stockage souhaité
+└─ Migrations simplifiées
 
 Exemple :  
 ALTER TABLE users ADD COLUMN full_name TEXT  
   GENERATED ALWAYS AS (first_name || ' ' || last_name) VIRTUAL;
+-- Le mot-clé VIRTUAL est désormais le défaut en PG 18
+```
+
+### 7. RETURNING OLD/NEW (Audit et Triggers Simplifiés)
+
+```
+Récupérer les valeurs avant ET après modification :
+├─ INSERT...RETURNING NEW.col (valeur insérée)
+├─ UPDATE...RETURNING OLD.col, NEW.col (avant/après)
+├─ DELETE...RETURNING OLD.col (valeur supprimée)
+└─ Simplifie audit, soft-delete, triggers
+
+Exemple :  
+UPDATE orders SET status = 'paid' WHERE id = 42  
+RETURNING OLD.status AS previous_status, NEW.status AS new_status;  
+```
+
+### 8. Optimiseur (Performances Requêtes)
+
+```
+Optimisations automatiques PG 18 :
+├─ Skip Scan sur index multi-colonnes
+├─ Self-join elimination (jointures inutiles supprimées)
+├─ OR → ANY transformation automatique
+├─ Right Semi Joins pour EXISTS
+└─ Gain perceptible sans réécrire les requêtes
+```
+
+### 9. VACUUM/ANALYZE ONLY (Maintenance Partitions)
+
+```
+⚠️ Changement de comportement par défaut :
+├─ VACUUM/ANALYZE traitent maintenant les partitions enfants
+├─ Pour comportement historique (parent uniquement) : utiliser ONLY
+└─ Important pour scripts de maintenance existants
+
+Exemple :  
+VACUUM ONLY parent_table;    -- Comme avant PG 18  
+VACUUM parent_table;         -- Inclut maintenant toutes les partitions  
 ```
 
 ---

@@ -86,17 +86,18 @@ FROM pg_available_extensions
 ORDER BY name;  
 ```
 
-**Ce que vous verrez** :
+**Ce que vous verrez** (extrait, sur une installation PostgreSQL 18) :
 ```
 name              | default_version | comment
 ------------------+-----------------+------------------------------------------
-adminpack         | 2.1             | administrative functions for PostgreSQL  
 bloom             | 1.0             | bloom access method - signature file...  
 btree_gin         | 1.3             | support for indexing common datatypes...  
+btree_gist        | 1.7             | support for indexing common datatypes...  
 hstore            | 1.8             | data type for storing sets of key/value...  
 pg_stat_statements| 1.11            | track execution statistics of all SQL...  
+pg_trgm           | 1.6             | text similarity measurement and indexing  
 pgcrypto          | 1.3             | cryptographic functions  
-postgis           | 3.5.0           | PostGIS geometry and geography spatial...  
+postgis           | 3.6.0           | PostGIS geometry and geography spatial...  
 uuid-ossp         | 1.1             | generate universally unique identifiers  
 ```
 
@@ -109,8 +110,10 @@ CREATE EXTENSION nom_extension;
 
 **Exemple simple** :
 ```sql
-CREATE EXTENSION uuid-ossp;
+CREATE EXTENSION "uuid-ossp";
 ```
+
+> ⚠️ Le nom `uuid-ossp` contient un tiret : il **doit** être entouré de guillemets doubles, sinon PostgreSQL l'interprète comme une soustraction et retourne `ERROR: syntax error at or near "-"`.
 
 **Avec options** :
 ```sql
@@ -118,7 +121,7 @@ CREATE EXTENSION uuid-ossp;
 CREATE EXTENSION hstore SCHEMA public;
 
 -- Installation d'une version précise
-CREATE EXTENSION postgis VERSION '3.5.0';
+CREATE EXTENSION postgis VERSION '3.6.0';
 
 -- Installation conditionnelle (ne génère pas d'erreur si déjà présente)
 CREATE EXTENSION IF NOT EXISTS pg_stat_statements;
@@ -163,7 +166,7 @@ Les extensions évoluent avec le temps. Pour bénéficier des nouvelles fonction
 ALTER EXTENSION pg_stat_statements UPDATE;
 
 -- Mise à jour vers une version spécifique
-ALTER EXTENSION postgis UPDATE TO '3.5.1';
+ALTER EXTENSION postgis UPDATE TO '3.6.0';
 ```
 
 **Attention** : Lisez toujours les notes de version avant de mettre à jour, certaines mises à jour peuvent contenir des changements incompatibles.
@@ -310,8 +313,8 @@ Ce sont des extensions développées par la communauté ou des entreprises tierc
 
 1. **Installation système** (avec apt, yum, ou depuis les sources) :
 ```bash
-# Exemple Ubuntu/Debian
-sudo apt install postgresql-16-postgis-3
+# Exemple Ubuntu/Debian (adapter au numéro de version installé)
+sudo apt install postgresql-18-postgis-3
 ```
 
 2. **Activation dans la base** :
@@ -396,16 +399,18 @@ ORDER BY similarity(word, 'PostgreSQL') DESC;
 -- Installer toutes les extensions "au cas où"
 CREATE EXTENSION postgis;  
 CREATE EXTENSION timescaledb;  
-CREATE EXTENSION pgvector;  
+CREATE EXTENSION vector;     -- ⚠️ package "pgvector", mais extension "vector"  
 CREATE EXTENSION pg_partman;  
 -- ... alors que vous n'utilisez aucune de ces fonctionnalités
 ```
+
+> 💡 **Piège fréquent** : Le **package** se nomme `pgvector` (paquet apt/rpm), mais l'**extension** s'appelle `vector` dans PostgreSQL. Utilisez donc `CREATE EXTENSION vector;` (et non `CREATE EXTENSION pgvector;`).
 
 ✅ **Recommandé** :
 ```sql
 -- Installer uniquement ce qui est nécessaire pour votre application
 CREATE EXTENSION IF NOT EXISTS pg_stat_statements; -- Monitoring  
-CREATE EXTENSION IF NOT EXISTS uuid-ossp; -- Génération d'identifiants  
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp"; -- Génération d'identifiants (guillemets obligatoires : le nom contient un tiret)  
 ```
 
 ### 2. Utiliser IF NOT EXISTS
@@ -516,7 +521,7 @@ Les extensions suivent généralement le **Semantic Versioning** (SemVer) : `MAJ
 Les extensions incluent des scripts de migration entre versions :
 
 ```
-/usr/share/postgresql/16/extension/
+/usr/share/postgresql/18/extension/
   ├── postgis--3.5.0.sql          # Installation initiale v3.5.0
   ├── postgis--3.5.0--3.5.1.sql   # Migration 3.5.0 → 3.5.1
   ├── postgis--3.5.1--3.5.2.sql   # Migration 3.5.1 → 3.5.2
@@ -569,6 +574,11 @@ WHERE name = 'pg_stat_statements';
 - uuid-ossp
 - pg_trgm
 - btree_gin
+- btree_gist
+- citext, hstore, ltree, cube
+- **vector** (pgvector ≥ 0.5)
+
+> 💡 Les extensions **non trusted** (PostGIS, TimescaleDB, pg_cron, pg_partman, etc.) nécessitent toujours un superutilisateur pour `CREATE EXTENSION`. C'est pour cela qu'elles ne sont parfois pas activables sur certains services cloud managés.
 
 ### Recommandations de Sécurité
 
@@ -587,7 +597,7 @@ WHERE name = 'pg_stat_statements';
 **Symptôme** :
 ```sql
 CREATE EXTENSION postgis;
--- ERROR: could not open extension control file "/usr/share/postgresql/16/extension/postgis.control": No such file or directory
+-- ERROR: could not open extension control file "/usr/share/postgresql/18/extension/postgis.control": No such file or directory
 ```
 
 **Cause** : L'extension n'est pas installée au niveau système.
@@ -595,10 +605,10 @@ CREATE EXTENSION postgis;
 **Solution** :
 ```bash
 # Ubuntu/Debian
-sudo apt install postgresql-16-postgis-3
+sudo apt install postgresql-18-postgis-3
 
-# Red Hat/CentOS
-sudo yum install postgis35_16
+# Red Hat/CentOS (PGDG, adapter la version PostGIS)
+sudo dnf install postgis36_18
 
 # macOS (Homebrew)
 brew install postgis
@@ -655,7 +665,7 @@ DROP EXTENSION postgis CASCADE;
 
 ```bash
 # 1. Sur le serveur cible, installer les extensions système
-sudo apt install postgresql-16-postgis-3
+sudo apt install postgresql-18-postgis-3
 
 # 2. Restaurer le dump (les CREATE EXTENSION seront exécutés)
 pg_restore -d mydb backup.dump
@@ -693,12 +703,14 @@ CREATE INDEX idx_spatial ON my_table USING GIST(geom);
 
 3. **pgvector** : Choisissez le bon type d'index selon vos besoins
 ```sql
--- Pour petites données : index exact
-CREATE INDEX ON items USING ivfflat (embedding vector_cosine_ops);
+-- IVFFlat : construction rapide, recherche approximative, nécessite un paramètre 'lists'
+CREATE INDEX ON items USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100);
 
--- Pour grandes données : index approximatif (HNSW)
+-- HNSW : recherche plus précise et plus rapide, mais construction plus lente et plus de RAM
 CREATE INDEX ON items USING hnsw (embedding vector_cosine_ops);
 ```
+
+> 💡 IVFFlat et HNSW sont tous deux des index **approximatifs** (ANN). Pour une recherche exacte, n'utilisez aucun index (scan séquentiel). Voir le chapitre 18.6 pour les détails.
 
 ---
 
@@ -708,25 +720,38 @@ CREATE INDEX ON items USING hnsw (embedding vector_cosine_ops);
 
 **Problème** : Vous voulez des identifiants uniques distribués sans coordination.
 
-**Solution** :
-```sql
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+**Solution moderne (PostgreSQL 13+)** : `gen_random_uuid()` est désormais **intégré au cœur de PostgreSQL** — aucune extension nécessaire.
 
--- Créer une table avec identifiant UUID
+```sql
+-- Aucune extension à activer (gen_random_uuid() est natif depuis PG 13)
 CREATE TABLE users (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     username VARCHAR(100) NOT NULL,
     email VARCHAR(255) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Insertion automatique d'UUID
+-- Insertion automatique d'UUID v4
 INSERT INTO users (username, email)  
 VALUES ('alice', 'alice@example.com');  
 
 SELECT id FROM users;
 -- Résultat : a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11
 ```
+
+**Solution alternative avec `uuid-ossp`** (utile si vous avez besoin d'UUID v1, v3 ou v5) :
+
+```sql
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+-- v1 = horodatage + MAC (déconseillé : fuite d'information)
+-- v3 = MD5 d'un namespace + nom (déterministe)
+-- v4 = aléatoire (équivalent à gen_random_uuid())
+-- v5 = SHA-1 d'un namespace + nom (déterministe)
+SELECT uuid_generate_v4();
+```
+
+> 💡 **Recommandation PG 18** : Préférer `gen_random_uuid()` natif (UUID v4) pour les nouveaux projets. Réserver `uuid-ossp` aux cas spécifiques (UUID v1/v3/v5).
 
 ### Exemple 2 : Recherche Approximative avec pg_trgm
 

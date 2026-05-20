@@ -292,10 +292,11 @@ Les entreprises les plus innovantes utilisent massivement les extensions Postgre
 **Exemples d'adoption** :
 
 - **🌍 OpenStreetMap** : PostGIS pour gérer la carte mondiale  
-- **📸 Instagram** : TimescaleDB pour les métriques (avant passage à une solution custom)  
-- **🚀 Uber** : PostGIS pour le matching conducteurs/passagers  
-- **🎵 Spotify** : PostgreSQL + extensions pour les métadonnées musicales  
-- **📺 Netflix** : pg_stat_statements pour l'optimisation des requêtes
+- **📊 Cisco, Comcast** : TimescaleDB pour la télémétrie réseau et l'IoT industriel  
+- **🚀 Uber** : PostgreSQL + Schemaless / partitionnement géographique  
+- **🎵 Spotify** : PostgreSQL pour de nombreux services internes  
+- **📺 Netflix** : pg_stat_statements pour l'optimisation des requêtes  
+- **🛒 Shopify, GitLab, Instacart** : pgvector et Full-Text Search pour la recherche
 
 ---
 
@@ -456,8 +457,10 @@ Si vous avez déjà de l'expérience avec PostgreSQL, vous apprécierez :
 **Approche par besoin** :
 - Vous avez des données géographiques ? → Allez directement à 18.2 (PostGIS)
 - Vous faites de l'IA/ML ? → Allez à 18.6 (pgvector)
-- Vous avez des métriques/logs ? → Allez à 18.5 (TimescaleDB)
-- Vous devez optimiser les requêtes ? → Commencez par 18.1 (pg_stat_statements)
+- Vous avez des métriques/logs / IoT ? → Allez à 18.5 (TimescaleDB)
+- Vous voulez fédérer des données de plusieurs systèmes ? → 18.4 (FDW)
+- Vous voulez automatiser de la maintenance ? → 18.7.1 (pg_cron) ou 18.7.2 (pg_partman)
+- Vous devez optimiser les requêtes lentes ? → 18.7.3 (pg_stat_kcache) et 18.7.4 (HypoPG)
 
 ---
 
@@ -477,7 +480,7 @@ Pour tirer le meilleur parti de ce chapitre, vous devriez maîtriser :
 ### Environnement Technique
 
 **Logiciels nécessaires** :
-- PostgreSQL 12+ installé (idéalement PostgreSQL 16, 17 ou 18)
+- PostgreSQL 14+ installé (idéalement PostgreSQL 16, 17 ou 18 — PostgreSQL 12 et 13 sont en fin de vie)
 - Droits d'administration système (pour installer les extensions)
 - Privilège superutilisateur PostgreSQL (pour activer les extensions)
 - Un client SQL (psql, pgAdmin, DBeaver, ou autre)

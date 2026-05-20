@@ -41,7 +41,8 @@ Au lieu de posséder et maintenir une infrastructure physique, les organisations
 │  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━     │
 │  • Second mondial (~23% du marché)                      │
 │  • Lancé : 2010                                         │
-│  • Services PostgreSQL : Flexible Server, Hyperscale    │
+│  • Services PostgreSQL : Flexible Server, Cosmos DB     │
+│    for PostgreSQL (ex-Hyperscale Citus)                 │
 │  • Points forts : Intégration Microsoft, entreprise     │
 │                                                         │
 │  Google Cloud Platform (GCP)                            │
@@ -588,7 +589,7 @@ Chaque fournisseur propose généralement **deux niveaux de service** :
 | Fournisseur | Service | Innovation Clé |
 |-------------|---------|----------------|
 | **AWS** | Aurora PostgreSQL | Stockage distribué, 5× plus rapide |
-| **Azure** | Hyperscale (Citus) | Scale-out horizontal, multi-tenant |
+| **Azure** | Cosmos DB for PostgreSQL (ex-Hyperscale Citus) | Scale-out horizontal, multi-tenant |
 | **Google** | AlloyDB | Columnar engine, 100× OLAP |
 
 **Profil :**
@@ -614,8 +615,8 @@ Chaque fournisseur propose généralement **deux niveaux de service** :
 │     │         └────────────┘                            │
 │     │                                                   │
 │     │    ┌────────────┐  ┌────────────┐                 │
-│     │    │  Aurora    │  │ Hyperscale │ Scale-out       │
-│     │    │   (AWS)    │  │  (Azure)   │                 │
+│     │    │  Aurora    │  │ Cosmos DB  │ Scale-out       │
+│     │    │   (AWS)    │  │ PostgreSQL │ (ex-Hyperscale) │
 │     │    └────────────┘  └────────────┘                 │
 │     │                                                   │
 │     │ ┌──────┐ ┌────────┐ ┌──────┐                      │
@@ -654,7 +655,7 @@ Chaque fournisseur propose généralement **deux niveaux de service** :
 | **OLTP standard** | RDS, Flexible Server, Cloud SQL (tous équivalents) |
 | **OLTP haute performance** | Aurora, AlloyDB |
 | **HTAP (OLTP + OLAP)** | AlloyDB (columnar natif) |
-| **Multi-tenant SaaS** | Hyperscale (Citus) |
+| **Multi-tenant SaaS** | Azure Cosmos DB for PostgreSQL (Citus) |
 | **Geo-distribution** | Aurora Global Database, GCP multi-région |
 | **Workload variable** | Aurora Serverless v2 |
 
@@ -749,7 +750,7 @@ Dans les sections suivantes, nous allons explorer en détail chaque offre :
 
 ### 19.2.2. Azure Database for PostgreSQL
 - Flexible Server (recommandé)
-- Hyperscale (Citus) pour scale-out
+- Azure Cosmos DB for PostgreSQL (ex-Hyperscale Citus) pour scale-out
 - Intégration écosystème Azure
 - Comparaison avec AWS
 
@@ -769,7 +770,7 @@ Dans les sections suivantes, nous allons explorer en détail chaque offre :
 
 ## Tableau Récapitulatif : Offres PostgreSQL Cloud
 
-| Critère | AWS RDS | AWS Aurora | Azure Flexible | Azure Hyperscale | Cloud SQL | AlloyDB |
+| Critère | AWS RDS | AWS Aurora | Azure Flexible | Azure Cosmos DB PG | Cloud SQL | AlloyDB |
 |---------|---------|------------|----------------|------------------|-----------|---------|
 | **Type** | Standard | Propriétaire | Standard | Distribué | Standard | Propriétaire |
 | **Compatibilité PG** | 100% | ~100% | 100% | 95% | 100% | ~100% |
@@ -800,7 +801,7 @@ PostgreSQL dans le cloud offre une richesse d'options adaptées à tous les beso
 **Pour des besoins spécifiques :**
 - **Haute performance** : Aurora, AlloyDB  
 - **HTAP (analytique + transactionnel)** : AlloyDB  
-- **Multi-tenant SaaS** : Hyperscale (Citus)  
+- **Multi-tenant SaaS** : Azure Cosmos DB for PostgreSQL (ex-Hyperscale Citus)  
 - **Contrôle total** : IaaS (EC2/VMs + PostgreSQL self-hosted)
 
 **Le choix du fournisseur** dépend principalement de :

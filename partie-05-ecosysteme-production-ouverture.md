@@ -62,12 +62,12 @@ Dans le monde professionnel moderne, la valeur d'une technologie ne réside pas 
 
 #### La Réalité des Stacks Modernes
 
-Une application web typique en 2025 utilise :
+Une application web typique en 2026 utilise :
 - PostgreSQL comme base de données principale
-- Redis pour le caching
-- Elasticsearch pour la recherche
-- Kafka pour le streaming d'événements
-- S3 pour le stockage d'objets
+- Redis (ou Valkey) pour le caching
+- Elasticsearch ou OpenSearch pour la recherche
+- Kafka ou Redpanda pour le streaming d'événements
+- S3 (ou MinIO/Ceph) pour le stockage d'objets
 - Kubernetes pour l'orchestration
 - Prometheus/Grafana pour le monitoring
 - GitHub Actions/GitLab CI pour le CI/CD
@@ -134,7 +134,7 @@ Les équipes en production font face à des questions comme :
 
 ### Structure de Cette Partie
 
-Cette cinquième et dernière partie contient **5 chapitres** qui couvrent l'ensemble de l'écosystème PostgreSQL :
+Cette cinquième et dernière partie contient **5 chapitres** (18 à 22) complétés par des **annexes de référence**, couvrant l'ensemble de l'écosystème PostgreSQL :
 
 #### **Chapitre 18 : Extensions et Intégrations**
 Le catalogue des super-pouvoirs de PostgreSQL. Vous découvrirez :
@@ -169,7 +169,7 @@ Le pont entre PostgreSQL et vos applications. Vous apprendrez :
 
 **Cas d'usage :** Développement d'applications web, APIs REST/GraphQL, microservices.
 
-#### **Chapitre 20bis : PostgreSQL et Architectures Modernes**
+#### **Chapitre 21 : PostgreSQL et Architectures Modernes**
 PostgreSQL dans le paysage technologique actuel. Vous explorerez :
 - PostgreSQL dans les **microservices** (database per service vs shared)
 - **Event Sourcing et CQRS** avec PostgreSQL  
@@ -179,15 +179,26 @@ PostgreSQL dans le paysage technologique actuel. Vous explorerez :
 
 **Cas d'usage :** Architectures distribuées, event-driven systems, cloud-native applications.
 
-#### **Chapitre 21 : Conclusion et Perspectives**
+#### **Chapitre 22 : Conclusion et Perspectives**
 La synthèse et l'ouverture vers l'avenir. Vous découvrirez :
-- Un résumé structuré des concepts clés par niveau
+- Un résumé structuré des concepts clés par niveau (débutant, intermédiaire, avancé)
 - L'avenir de PostgreSQL (IA, cloud-native, columnar storage)
 - Les apports majeurs de PostgreSQL 18
-- Les ressources pour continuer votre apprentissage
-- Des roadmaps de montée en compétence par profil
+- Les ressources pour continuer votre apprentissage (documentation, livres, blogs, conférences)
+- Des roadmaps de montée en compétence par profil (Développeur, DevOps/SRE, DBA)
 
 **Objectif :** Consolider vos acquis et vous donner les clés pour continuer à progresser.
+
+#### **Annexes : Références et Aide-Mémoire**
+En complément des chapitres, des annexes pratiques sont disponibles :
+- **Glossaire** des termes et acronymes PostgreSQL (ACID, MVCC, WAL, TOAST, FDW, etc.)
+- **Commandes psql** essentielles (navigation, configuration, export/import)
+- **Requêtes SQL de référence** (administration, monitoring, analyse)
+- **Configurations de référence** par cas d'usage (OLTP, OLAP, mixed workload, dev local)
+- **Checklist de performance** et **commandes shell/scripts** utiles
+- **Nouveautés PostgreSQL 18** : aide-mémoire concentré
+
+Ces annexes sont conçues comme des **références à consulter** plutôt qu'à lire de bout en bout.
 
 ---
 
@@ -196,20 +207,22 @@ La synthèse et l'ouverture vers l'avenir. Vous découvrirez :
 Cette partie finale s'adresse à tous les profils, avec des focus différents :
 
 #### 👨‍💻 **Développeurs Backend/Fullstack**
-**Chapitres prioritaires :** 18, 20, 20bis
+**Chapitres prioritaires :** 18, 20, 21
 - Les extensions vous ouvrent de nouvelles possibilités (recherche, géolocalisation, IA)
 - Le chapitre 20 est essentiel pour écrire du code robuste
-- Le chapitre 20bis vous prépare aux architectures modernes
+- Le chapitre 21 vous prépare aux architectures modernes
 
 **Conseil :** Expérimentez avec pgvector et PostGIS pour enrichir vos applications.
 
 #### 🔧 **DevOps / SRE / Platform Engineers**
-**Chapitres prioritaires :** 19, 20bis
+**Chapitres prioritaires :** 19, 20, 21, 22
 - Le déploiement et l'orchestration sont votre domaine
 - Kubernetes et les cloud services sont votre quotidien
 - Le troubleshooting de production est votre responsabilité
+- Le connection pooling (PgBouncer) impacte directement la fiabilité
+- La roadmap DevOps/SRE du chapitre 22 trace votre progression
 
-**Conseil :** Explorez les Operators Kubernetes pour PostgreSQL (CloudNativePG, Zalando).
+**Conseil :** Explorez les Operators Kubernetes pour PostgreSQL (CloudNativePG, Crunchy, Zalando).
 
 #### 🗄️ **DBA / Database Engineers**
 **Tous les chapitres sont pertinents**
@@ -220,7 +233,7 @@ Cette partie finale s'adresse à tous les profils, avec des focus différents :
 **Conseil :** Créez un catalogue des extensions et patterns adaptés à votre organisation.
 
 #### 🏗️ **Architectes / Tech Leads**
-**Chapitres prioritaires :** 18, 19, 20bis, 21
+**Chapitres prioritaires :** 18, 19, 21, 22
 - Les choix d'architecture (managed vs self-hosted, microservices)
 - L'intégration dans l'écosystème technologique global
 - Les perspectives d'évolution et la roadmap
@@ -228,12 +241,13 @@ Cette partie finale s'adresse à tous les profils, avec des focus différents :
 **Conseil :** Utilisez cette partie pour affiner votre stratégie data.
 
 #### 🚀 **Startup Founders / CTOs**
-**Chapitres prioritaires :** 19, 20, 20bis
+**Chapitres prioritaires :** 18, 19, 20, 21, 22
 - Quand utiliser un managed service vs self-hosted
 - Comment scaler avec un budget limité
-- Quelles extensions apportent le plus de valeur business
+- Quelles extensions (pgvector pour l'IA, PostGIS, FTS) apportent le plus de valeur business
+- Les perspectives stratégiques (chapitre 22) éclairent les choix long-terme
 
-**Conseil :** Focus sur les quick wins et les solutions cloud-native.
+**Conseil :** Focus sur les quick wins et les solutions cloud-native ; pgvector permet souvent d'éviter une bdd vectorielle dédiée.
 
 ---
 
@@ -256,9 +270,15 @@ PostgreSQL 18 (septembre 2025) apporte des améliorations qui facilitent son int
 - ✨ **Mode FIPS** : conformité réglementaire facilitée  
 - ✨ **Data Checksums** par défaut : intégrité des données renforcée
 
+#### **Modélisation et Types**
+- ✨ **`uuidv7()`** natif : UUID triés temporellement, idéal pour les clés primaires distribuées  
+- ✨ **Colonnes générées virtuelles** : calcul à la lecture, sans coût de stockage  
+- ✨ Contraintes `WITHOUT OVERLAPS` : exclusions temporelles natives
+
 #### **Observabilité**
-- ✨ Statistiques I/O et WAL enrichies : meilleur monitoring  
-- ✨ Améliorations EXPLAIN : debugging facilité
+- ✨ Statistiques I/O et WAL enrichies (vue `pg_aios`) : meilleur monitoring  
+- ✨ Améliorations EXPLAIN (statistiques I/O par nœud) : debugging facilité  
+- ✨ `OLD`/`NEW` dans `RETURNING` : audit applicatif simplifié
 
 Ces nouveautés rendent PostgreSQL 18 encore plus adapté aux **environnements de production modernes** et aux **architectures cloud-native**.
 
@@ -386,12 +406,12 @@ L'écosystème PostgreSQL et les pratiques évoluent constamment. Restez curieux
 
 ---
 
-### Pourquoi PostgreSQL en 2025 ?
+### Pourquoi PostgreSQL en 2026 ?
 
 Avant de commencer, rappelons pourquoi PostgreSQL est plus pertinent que jamais :
 
 #### **Maturité et Stabilité**
-- 35+ ans de développement
+- 40 ans de développement (projet POSTGRES initié à Berkeley en 1986)
 - Fiabilité éprouvée à l'échelle mondiale
 - Communauté active et pérenne
 
@@ -402,9 +422,10 @@ Avant de commencer, rappelons pourquoi PostgreSQL est plus pertinent que jamais 
 - Types de données avancés (géométrie, vectors, etc.)
 
 #### **Performance**
-- Optimisations continues (PostgreSQL 18 : I/O async, skip scan)
+- Optimisations continues (PostgreSQL 18 : I/O asynchrone jusqu'à 3× plus rapide, Skip Scan B-tree)
 - Scalabilité verticale et horizontale
 - Performance comparable aux bases NoSQL pour beaucoup de cas d'usage
+- Parallélisation des requêtes et VACUUM
 
 #### **Écosystème Vivant**
 - Extensions de qualité (PostGIS, TimescaleDB, pgvector)

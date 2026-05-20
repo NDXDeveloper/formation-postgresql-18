@@ -42,7 +42,7 @@ Bibliothécaire magique : *Comprend le CONCEPT*
 
 ## Le Contexte : L'Ère de l'IA et des Embeddings
 
-### L'explosion de l'IA (2020-2025)
+### L'explosion de l'IA (2020-2026)
 
 Ces dernières années ont vu une explosion des applications d'intelligence artificielle :
 
@@ -52,10 +52,13 @@ Ces dernières années ont vu une explosion des applications d'intelligence arti
 | **2021** | DALL-E | Génération d'images depuis texte |
 | **2022** | ChatGPT | Chatbots conversationnels grand public |
 | **2022** | Stable Diffusion | IA générative open-source |
-| **2023** | GPT-4 | Modèles multimodaux (texte + images) |
+| **2023** | GPT-4 + Vision | Modèles multimodaux (texte + images) |
 | **2023** | Explosion RAG | ChatGPT + données privées |
-| **2024** | LLMs locaux | Llama, Mistral (open-source) |
-| **2025** | IA embarquée | IA dans les bases de données |
+| **2024** | LLMs locaux | Llama, Mistral, Qwen (open-source) |
+| **2024** | GPT-4o | Multimodal natif (texte + audio + image) |
+| **2025** | Contextes 1M+ | GPT-4.1, Gemini 2 Pro : 1-2M tokens |
+| **2025** | Agents IA | LLMs autonomes, tool use, MCP |
+| **2026** | IA embarquée | IA dans les bases de données (pgvector mature) |
 
 **Constat** : L'IA n'est plus réservée aux géants de la tech. N'importe quelle application peut maintenant intégrer des capacités d'IA.
 
@@ -104,11 +107,11 @@ Application moderne avec pgvector :
 - Des opérateurs pour calculer la similarité entre vecteurs
 - Des index spécialisés pour recherches ultra-rapides
 
-**Développé par** : Ankane (Andrew Kane)  
-**Première version** : 2021  
+**Développé par** : Andrew Kane (et la communauté)  
+**Première version** : avril 2021  
 **Licence** : Open-source (PostgreSQL License)  
 **GitHub** : https://github.com/pgvector/pgvector  
-**Stars** : 10K+ (très populaire !)  
+**Stars** : 16K+ (devenu un standard de facto)  
 
 ### Architecture conceptuelle
 
@@ -655,19 +658,26 @@ from pgvector.psycopg2 import register_vector
 conn = psycopg2.connect("postgresql://...")  
 register_vector(conn)  
 
-# LangChain
-from langchain.vectorstores import PGVector
+# LangChain (paquet langchain_postgres depuis fin 2023)
+from langchain_postgres import PGVector  
+from langchain_openai import OpenAIEmbeddings  
 
 vectorstore = PGVector(
-    connection_string="postgresql://...",
-    embedding_function=embeddings
+    connection="postgresql+psycopg://user:pass@localhost/db",
+    embeddings=OpenAIEmbeddings(),
+    collection_name="documents",
 )
 
-# LlamaIndex
-from llama_index import VectorStoreIndex  
-from llama_index.vector_stores import PGVectorStore  
+# LlamaIndex (nouveau namespace depuis 0.10)
+from llama_index.core import VectorStoreIndex  
+from llama_index.vector_stores.postgres import PGVectorStore  
 
-vector_store = PGVectorStore.from_params(...)
+vector_store = PGVectorStore.from_params(
+    database="db", host="localhost", port=5432,
+    user="user", password="pass",
+    table_name="llama_docs",
+    embed_dim=1536,
+)
 ```
 
 #### Node.js / TypeScript
@@ -783,7 +793,7 @@ SELECT * FROM pg_available_extensions WHERE name = 'vector';
 #### Ubuntu / Debian
 
 ```bash
-sudo apt install postgresql-16-pgvector
+sudo apt install postgresql-18-pgvector
 ```
 
 #### macOS (Homebrew)
@@ -811,10 +821,11 @@ sudo make install
 ### Méthode 3 : Services Managés
 
 **Supabase** : ✅ Inclus par défaut  
-**Neon** : ✅ Disponible  
-**AWS RDS** : ⚠️ Certaines instances  
-**Azure Database** : ⚠️ Certaines instances  
-**Google Cloud SQL** : ⚠️ Vérifier disponibilité  
+**Neon** : ✅ Inclus par défaut (PostgreSQL serverless)  
+**AWS RDS / Aurora PostgreSQL** : ✅ Disponible (PG 15+, vérifier la version pgvector)  
+**Azure Database for PostgreSQL Flexible Server** : ✅ Disponible (allowlist `vector`)  
+**Google Cloud SQL pour PostgreSQL** : ✅ Disponible (depuis 2024)  
+**AlloyDB (GCP)** : ✅ Avec `alloydb-ai-nl` (extension officielle améliorée)  
 
 ### Activer l'Extension
 
@@ -826,11 +837,11 @@ CREATE EXTENSION vector;
 SELECT extversion FROM pg_extension WHERE extname = 'vector';
 ```
 
-**Résultat** :
+**Résultat** (version courante en 2026, peut varier selon installation) :
 ```
  extversion
 ------------
- 0.7.0
+ 0.8.0
 ```
 
 ### Utilisation Basique
@@ -862,8 +873,8 @@ LIMIT 2;
 ```
   nom   | distance
 --------+----------
- item1  |   2.45
- item2  |   5.10
+ item1  |   2.449   (√((3-1)² + (1-2)² + (2-3)²) = √6)
+ item2  |   5.745   (√((3-4)² + (1-5)² + (2-6)²) = √33)
 ```
 
 Ça marche ! 🎉
@@ -1005,17 +1016,21 @@ def search(query: str):
 
 ## Roadmap et Futur
 
-### Évolutions Récentes (2024-2025)
+### Évolutions Récentes (2024-2026)
 
-✅ **pgvector 0.7.0** (2024) :
+✅ **pgvector 0.7.x** (2024) :
 - Amélioration performances HNSW
-- Support de nouvelles distances
-- Optimisations mémoire
+- Support du type `halfvec` (float16, 2× moins de mémoire)
+- Support du type `bit` et `sparsevec`
+
+✅ **pgvector 0.8.x** (fin 2024) :
+- Optimisations supplémentaires de la mémoire et de la quantization
+- Support amélioré des distances L1 (taxicab) et de Hamming
 
 ✅ **Intégration écosystème** :
-- LangChain natif support
-- LlamaIndex integration
-- Supabase by default
+- LangChain : support via `langchain_postgres` (réorganisation 2024)
+- LlamaIndex : intégration native via `PGVectorStore`
+- Supabase : pgvector inclus par défaut
 
 ✅ **Adoption massive** :
 - 10K+ stars GitHub
@@ -1024,7 +1039,7 @@ def search(query: str):
 ### Futures Directions
 
 🔮 **pgvector 1.0** (roadmap) :
-- Quantization (réduction taille)
+- Quantization plus poussée (scalar, product)
 - Nouveaux types d'index
 - Performances accrues
 
