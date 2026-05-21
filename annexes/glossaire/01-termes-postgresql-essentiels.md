@@ -121,8 +121,10 @@ Une **instance PostgreSQL** est l'ensemble des **processus serveur** (backend, p
 
 **Caractéristiques** :
 - Une instance gère **un seul** database cluster (et donc plusieurs databases logiques au sein de ce cluster)
-- Une instance écoute sur **un port TCP unique** (par défaut 5432)
-- Plusieurs instances peuvent cohabiter sur la même machine si leurs ports diffèrent
+- Une instance se lie à un (ou plusieurs) couple(s) **`(adresse IP, port TCP)`** — paramètres `listen_addresses` et `port` dans `postgresql.conf`
+- Plusieurs instances peuvent cohabiter sur la même machine selon deux configurations :
+  - **Cas le plus répandu** — ports TCP différents sur la même IP : instance A sur `5432`, instance B sur `5433`, etc.
+  - **Autre cas** — IP dédiée par instance, même port : chaque instance écoute sur sa propre interface réseau (ou IP alias) avec le port `5432`. Possible car le binding TCP s'effectue sur le couple `(IP, port)`, pas uniquement sur le port. Utile derrière un reverse proxy, en multi-tenant ou pour conserver le port standard de plusieurs instances.
 
 **Cycle de vie** : démarrage (`pg_ctl start` ou `systemctl start postgresql`) → service des requêtes → arrêt (`pg_ctl stop`). Le cluster sur disque reste persistant entre les redémarrages.
 
