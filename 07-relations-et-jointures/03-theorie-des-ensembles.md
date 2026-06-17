@@ -53,6 +53,8 @@ UNION
 SELECT id FROM table_b;  
 ```
 
+> 💡 **`UNION` vs `UNION ALL`** : `UNION` applique l'union ensembliste stricte et **élimine les doublons** (via un tri ou un hachage). `UNION ALL` conserve **toutes** les lignes, doublons compris — c'est l'opération sur les *multiensembles*, et elle est plus rapide car elle évite la déduplication. Quand vous savez qu'il n'y a pas de doublon, ou qu'ils sont acceptables, préférez `UNION ALL`. (Les variantes `INTERSECT ALL` et `EXCEPT ALL` existent également.)
+
 #### b) Intersection (∩)
 
 L'**intersection** de deux ensembles contient les éléments présents dans **les deux** ensembles.
@@ -247,7 +249,7 @@ SELECT
     couleurs.nom AS couleur
 FROM tailles  
 CROSS JOIN couleurs  
-ORDER BY tailles.ordre, couleurs.nom;  
+ORDER BY tailles.id, couleurs.nom;  
 ```
 
 | taille | couleur |
@@ -783,11 +785,11 @@ ORDER BY tailles.id, couleurs.nom;
 
 | taille | couleur |
 |--------|---------|
-| XS     | Bleu    |
 | XS     | Blanc   |
+| XS     | Bleu    |
 | XS     | Noir    |
 | XS     | Rouge   |
-| S      | Bleu    |
+| S      | Blanc   |
 | ...    | ...     |
 
 ### Exemple 2 : Planning de Réunions
@@ -953,13 +955,14 @@ Table A (Clients)        Table B (Commandes)
 ┌────┬───────┐           ┌────┬────────────┬─────────┐
 │ id │ nom   │           │ id │ client_id  │ montant │
 ├────┼───────┤           ├────┼────────────┼─────────┤
-│ 1  │ Alice │    ┌─────→│ 10 │     1      │   150   │
-│ 2  │ Bob   │────┤      │ 20 │     1      │   200   │
-│ 3  │ Clara │    └─────→│ 30 │     2      │   100   │
+│ 1  │ Alice │           │ 10 │     1      │   150   │ ← Alice (client 1)
+│ 2  │ Bob   │           │ 20 │     1      │   200   │ ← Alice (client 1)
+│ 3  │ Clara │           │ 30 │     2      │   100   │ ← Bob   (client 2)
 └────┴───────┘           └────┴────────────┴─────────┘
+   Clara (id = 3) n'a aucune commande → exclue d'un INNER JOIN
 
 Produit cartésien : 3 × 3 = 9 lignes  
-Après sélection (id = client_id) : 3 lignes  
+Après sélection (clients.id = commandes.client_id) : 3 lignes  
 ```
 
 ---
@@ -1027,9 +1030,12 @@ Avant d'exécuter une jointure sur de grandes tables :
 SELECT COUNT(*) FROM table_a;  
 SELECT COUNT(*) FROM table_b;  
 
--- Estimer le résultat
--- INNER JOIN : ≤ MIN(count_a, count_b)
--- LEFT JOIN : = count_a
+-- Estimer le résultat — cela DÉPEND de la cardinalité de la jointure :
+-- INNER JOIN : entre 0 et count_a × count_b
+--   • cas 1:1 (clé unique des deux côtés) → au plus MIN(count_a, count_b)
+--   • cas 1:N (FK → clé unique, le plus courant) → jusqu'à count du côté « N »
+-- LEFT JOIN : ≥ count_a  (= count_a UNIQUEMENT si chaque ligne de A a au plus
+--   une correspondance ; en 1:N, une ligne de A est dupliquée par match → total > count_a)
 -- CROSS JOIN : = count_a × count_b (danger !)
 ```
 
@@ -1054,7 +1060,7 @@ Soit :
 - Table A : 50 lignes
 - Table B : 30 lignes
 
-Combien de lignes retournent les opérations suivantes ?
+Combien de lignes retournent les opérations suivantes ? *(hypothèse : `B.a_id` est **unique** — relation 1:0..1 — donc chaque ligne de A a **au plus une** correspondance dans B. Sans cette hypothèse, en 1:N, b et c pourraient être plus grands.)*
 
 a) `A CROSS JOIN B`  
 b) `A INNER JOIN B ON A.id = B.a_id` (supposons 20 correspondances)  

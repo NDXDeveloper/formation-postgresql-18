@@ -88,7 +88,7 @@ LIMIT 10;
 
 ### Syntaxe standard SQL : FETCH FIRST
 
-`LIMIT` est spécifique à PostgreSQL (et MySQL). Le standard SQL:2008 définit une syntaxe équivalente que PostgreSQL supporte également :
+`LIMIT` est une extension **non-standard** (très répandue : PostgreSQL, MySQL/MariaDB, SQLite…). Le standard SQL:2008 définit une syntaxe équivalente que PostgreSQL supporte également :
 
 ```sql
 -- Syntaxe PostgreSQL (LIMIT)
@@ -806,10 +806,10 @@ LIMIT 20 OFFSET 1000;
 
 Pour éviter les abus et les problèmes de performance :
 
-```sql
--- Côté application : limiter les pages accessibles
-max_page = 100  
-max_offset = (max_page - 1) * page_size  
+```python
+# Côté application : limiter les pages accessibles
+max_page = 100
+max_offset = (max_page - 1) * page_size
 
 if offset > max_offset:
     return error("Page trop élevée, utilisez les filtres de recherche")

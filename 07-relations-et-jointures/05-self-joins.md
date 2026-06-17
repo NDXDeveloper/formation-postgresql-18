@@ -313,11 +313,12 @@ ORDER BY difference;
 
 **Résultat** :
 
-| employe1       | salaire1 | employe2   | salaire2 | difference |
-|----------------|----------|------------|----------|------------|
-| Charlie Durand | 95000    | Bob Dupont | 100000   | 5000       |
+| employe1     | salaire1 | employe2       | salaire2 | difference |
+|--------------|----------|----------------|----------|------------|
+| Bob Dupont   | 100000   | Charlie Durand | 95000    | 5000       |
+| Eve Laurent  | 60000    | Frank Petit    | 55000    | 5000       |
 
-**Note** : seules les paires avec ≤ 5000 € d'écart apparaissent ; les autres comparaisons (Diana ↔ Eve, par exemple, avec 15 000 € d'écart) sont éliminées par la condition du `ON`.
+**Note** : deux paires ont exactement 5 000 € d'écart — Bob/Charlie **et** Eve/Frank. La condition `e1.id < e2.id` met l'employé au plus petit `id` en premier (Bob a `id=2`, Charlie `id=3`). Les paires plus éloignées (Diana ↔ Eve, 15 000 € d'écart) sont éliminées par la condition du `ON`.
 
 ### Exemple 3 : Comparer les Ventes Année par Année
 
@@ -749,7 +750,7 @@ WHERE e1.id < e2.id;
 SELECT e.nom, m.nom  
 FROM employes AS e  
 INNER JOIN employes AS m ON e.manager_id = m.id;  
--- Alice (PDG) ne apparaît pas
+-- Alice (PDG) n'apparaît pas
 
 -- LEFT JOIN : Inclut tous les employés
 SELECT e.nom, m.nom  
@@ -1020,8 +1021,8 @@ WHERE 1 = ANY(amis);  -- Utilisateurs dont Alice (id=1) est amie
 SELECT
     enfant.nom AS enfant,
     parent.nom AS parent
-FROM table AS enfant  
-LEFT JOIN table AS parent ON enfant.parent_id = parent.id;  
+FROM ma_table AS enfant  
+LEFT JOIN ma_table AS parent ON enfant.parent_id = parent.id;  
 ```
 
 ### Modèle 2 : Comparaison (Éviter Doublons)
@@ -1030,8 +1031,8 @@ LEFT JOIN table AS parent ON enfant.parent_id = parent.id;
 SELECT
     t1.colonne,
     t2.colonne
-FROM table AS t1  
-INNER JOIN table AS t2 ON t1.colonne_cle = t2.colonne_cle  
+FROM ma_table AS t1  
+INNER JOIN ma_table AS t2 ON t1.colonne_cle = t2.colonne_cle  
 WHERE t1.id < t2.id;  -- Clé pour éviter doublons  
 ```
 
@@ -1042,8 +1043,8 @@ SELECT
     t1.id,
     t1.valeur AS valeur_actuelle,
     t2.valeur AS valeur_precedente
-FROM table AS t1  
-LEFT JOIN table AS t2 ON t1.id = t2.id + 1  
+FROM ma_table AS t1  
+LEFT JOIN ma_table AS t2 ON t1.id = t2.id + 1  
 ORDER BY t1.id;  
 ```
 
@@ -1068,7 +1069,7 @@ WHERE r1.utilisateur_id < r1.ami_id;
 ### Points Clés à Retenir
 
 1. **Self-join** = Joindre une table à elle-même en utilisant des alias différents  
-2. **Alias obligatoires** : `FROM table AS t1 JOIN table AS t2`  
+2. **Alias obligatoires** : `FROM ma_table AS t1 JOIN ma_table AS t2`  
 3. **Cas d'usage principaux** :
    - Hiérarchies (employés/managers)
    - Comparaisons entre lignes

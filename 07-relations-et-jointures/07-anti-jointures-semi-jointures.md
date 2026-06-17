@@ -889,6 +889,8 @@ WHERE produits.stock > 0
   );
 ```
 
+> ⚠️ **Nuance** : `EXCEPT` **déduplique** son résultat (un `DISTINCT` est implicite), contrairement à l'anti-jointure `NOT EXISTS` ou `LEFT JOIN … IS NULL` qui conserve chaque ligne de gauche. Les deux coïncident dans cet exemple parce que `produits.id` est unique ; sur une projection comportant des doublons, `EXCEPT` en renverrait moins. Pour préserver les doublons, il faut `EXCEPT ALL`.
+
 ### INTERSECT ALL et EXCEPT ALL
 
 Les variantes `ALL` conservent les doublons.
@@ -1146,12 +1148,12 @@ WHERE EXISTS (
 -- Semi-jointure : Clients AYANT commandé
 SELECT nom FROM clients  
 WHERE EXISTS (SELECT 1 FROM commandes WHERE commandes.client_id = clients.id);  
-→ {Alice, Bob, Diana}
+-- → {Alice, Bob, Diana}
 
 -- Anti-jointure : Clients N'AYANT JAMAIS commandé
 SELECT nom FROM clients  
 WHERE NOT EXISTS (SELECT 1 FROM commandes WHERE commandes.client_id = clients.id);  
-→ {Charlie, Eve}
+-- → {Charlie, Eve}
 ```
 
 **Complémentarité** : les deux requêtes sont **complémentaires** et couvrent 100 % des clients.

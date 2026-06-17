@@ -379,6 +379,8 @@ WHEN NOT MATCHED THEN INSERT ...
 WHEN NOT MATCHED BY SOURCE THEN DELETE;  
 ```
 
+> 🆕 **Attention aux versions** : `MERGE` existe depuis **PG 15**, mais `WHEN NOT MATCHED BY SOURCE` (utilisé ci-dessus) et le support de `RETURNING` avec `MERGE` ne sont arrivés qu'en **PostgreSQL 17**.
+
 Nous l'explorerons dans la section 6.8.
 
 ### 5. Support OLD et NEW dans RETURNING (PostgreSQL 18)
@@ -575,7 +577,7 @@ Si vous venez d'un autre système de gestion de bases de données, voici les pri
 
 | Aspect | PostgreSQL | MySQL / MariaDB |
 |--------|-----------|-----------------|
-| **`RETURNING`** | ✅ Supporté (INSERT/UPDATE/DELETE/MERGE) | ❌ MySQL : non — utiliser `LAST_INSERT_ID()`<br>✅ MariaDB 10.5+ : `INSERT`/`DELETE`/`REPLACE … RETURNING` |
+| **`RETURNING`** | ✅ Supporté (INSERT/UPDATE/DELETE/MERGE) | ❌ MySQL : non — utiliser `LAST_INSERT_ID()`<br>⚠️ MariaDB : `DELETE … RETURNING` (10.0), `INSERT`/`REPLACE … RETURNING` (10.5) ; **pas** `UPDATE … RETURNING` (hors preview 13.0) |
 | **UPSERT** | `INSERT … ON CONFLICT` (standard) | `INSERT … ON DUPLICATE KEY UPDATE` (non standard) |
 | **Transactions** | Toujours actives, partout | InnoDB : oui ; MyISAM (déprécié) : non |
 | **`DELETE` sans `WHERE`** | Autorisé mais dangereux | Idem |
@@ -585,7 +587,7 @@ Si vous venez d'un autre système de gestion de bases de données, voici les pri
 
 | Aspect | PostgreSQL | SQL Server |
 |--------|-----------|-----------|
-| **RETURNING** | `RETURNING` (clause standard SQL:2023) | `OUTPUT` (avec pseudo-tables `INSERTED` / `DELETED`) |
+| **RETURNING** | `RETURNING` (extension PostgreSQL, **pas** dans le standard SQL) | `OUTPUT` (avec pseudo-tables `INSERTED` / `DELETED`) |
 | **`MERGE`** | Depuis PG 15 | Depuis SQL Server 2008 |
 | **Séquences / auto-incr.** | `GENERATED … AS IDENTITY` (standard, recommandé) ou `SERIAL` (legacy) | `IDENTITY` (non standard) ou `SEQUENCE` (depuis 2012) |
 | **Transactions** | Explicites (mode *autocommit* par défaut) | *Autocommit* par défaut, sauf `SET IMPLICIT_TRANSACTIONS ON` |

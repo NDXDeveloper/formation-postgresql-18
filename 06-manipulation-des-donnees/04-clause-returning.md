@@ -234,9 +234,9 @@ RETURNING
 
 > ⚠️ **Cette astuce a des limites importantes** :  
 > - Elle ne fonctionne **que** pour des transformations **inversibles** (`+`, `-`, `*`, `/` par une constante). Une mise à jour comme `salaire = COALESCE(autre_colonne, salaire)` ou `statut = 'archivé'` ne peut **pas** se « dé-calculer ».  
-> - Sur des valeurs en virgule flottante ou en `NUMERIC` arrondi, la division peut introduire de très petites erreurs d'arrondi.
->
-> 🆕 **PostgreSQL 18** introduit **`OLD.`** et **`NEW.`** dans `RETURNING`, ce qui permet de récupérer **directement et exactement** l'ancienne et la nouvelle valeur, sans dépendre d'une formule inverse :
+> - Sur des valeurs en virgule flottante ou en `NUMERIC` arrondi, la division peut introduire de très petites erreurs d'arrondi.  
+>  
+> 🆕 **PostgreSQL 18** introduit **`OLD.`** et **`NEW.`** dans `RETURNING`, ce qui permet de récupérer **directement et exactement** l'ancienne et la nouvelle valeur, sans dépendre d'une formule inverse :  
 >
 > ```sql
 > -- Disponible en PostgreSQL 18+
@@ -245,7 +245,7 @@ RETURNING
 > WHERE id = 42
 > RETURNING id, nom, OLD.salaire AS ancien, NEW.salaire AS nouveau;
 > ```
->
+>  
 > Voir la section [6.5](/06-manipulation-des-donnees/05-old-new-dans-returning.md) pour le détail.
 
 ### UPDATE multiple avec RETURNING
@@ -407,7 +407,7 @@ SELECT
     COUNT(*) AS nb_suppressions,
     MIN(date_creation) AS plus_ancien,
     MAX(date_creation) AS plus_recent,
-    pg_size_pretty(SUM(pg_column_size(logs.*))::bigint) AS espace_libere
+    pg_size_pretty(SUM(pg_column_size(deleted.*))::bigint) AS espace_libere
 FROM deleted;
 ```
 
@@ -734,11 +734,12 @@ affectations_creees AS (
     FROM nouveaux_employes
     RETURNING employe_id, projet_id
 )
--- Étape 3 : Retourner un résumé
+-- Étape 3 : Retourner un résumé.
+-- ⚠️ Un COUNT par sous-requête : écrire « FROM nouveaux_employes, affectations_creees »
+--    ferait un PRODUIT CARTÉSIEN (2 × 2 = 4) et gonflerait les deux compteurs.
 SELECT
-    COUNT(*) AS nb_employes_crees,
-    COUNT(*) AS nb_affectations_creees
-FROM nouveaux_employes, affectations_creees;
+    (SELECT COUNT(*) FROM nouveaux_employes)   AS nb_employes_crees,
+    (SELECT COUNT(*) FROM affectations_creees) AS nb_affectations_creees;
 ```
 
 ### Exemple : Réorganisation avec historique
@@ -791,17 +792,26 @@ WITH lignes_valides AS (
     WHERE email ~ '^[^@]+@[^@]+\.[^@]+$'
     RETURNING *
 ),
+lignes_invalides AS (
+    -- ⚠️ On NE PEUT PAS lire les invalides via « SELECT … FROM staging » ici :
+    --    à cause du snapshot partagé, ce SELECT verrait ENCORE les lignes valides
+    --    que lignes_valides vient de supprimer. On supprime donc explicitement les
+    --    invalides (condition inverse), pour les lire depuis CETTE CTE.
+    DELETE FROM staging
+    WHERE email !~ '^[^@]+@[^@]+\.[^@]+$'
+    RETURNING *
+),
 inserees AS (
     INSERT INTO clients (email, nom)
     SELECT email, nom FROM lignes_valides
     RETURNING id
 )
--- Les lignes restantes (invalides) sont déplacées en quarantaine
+-- Les invalides (lues depuis la CTE, PAS depuis staging) partent en quarantaine
 INSERT INTO clients_rejetes (email, nom, raison)  
-SELECT email, nom, 'email malformé' FROM staging;  
+SELECT email, nom, 'email malformé' FROM lignes_invalides;  
 ```
 
-Notez que la dernière instruction (qui n'est pas dans une CTE) référence `staging` **après** que le `DELETE` de `lignes_valides` ait extrait les bonnes lignes. C'est pourquoi le `staging` final ne contient plus que les invalides — à condition que le `DELETE` ait été exécuté **avant** le `SELECT` final. Ici, comme `inserees` dépend de `lignes_valides`, l'ordre est respecté.
+Point crucial : on lit les invalides depuis la **CTE `lignes_invalides`**, et **non** depuis `staging`. Un `SELECT … FROM staging` à cet endroit renverrait **toutes** les lignes d'origine (les valides incluses) : les *data-modifying CTEs* partagent le **même snapshot**, donc ce `SELECT` ne « voit » pas le `DELETE` de `lignes_valides` (cf. règle 1 plus haut). On partitionne donc le staging explicitement avec **deux `DELETE`** aux conditions inverses.
 
 > 💡 **Règle pratique** : pour rendre l'ordre **explicite et déterministe**, créez une chaîne de dépendances entre vos CTE modifiantes via leurs `RETURNING` (par exemple : `archives` lit `anciens`, `inserees` lit `valides`).
 
@@ -875,13 +885,13 @@ RETURNING id, salaire;
 
 | SGBD | Support `RETURNING` | Notes |
 |------|---------------------|-------|
-| **PostgreSQL** | ✅ Complet | `INSERT` / `UPDATE` / `DELETE` (et `MERGE` depuis PG 17) ; `OLD.` / `NEW.` depuis PG 18 |
+| **PostgreSQL** | ✅ Complet | `INSERT` / `UPDATE` / `DELETE` (et avec `MERGE` depuis PG 17 — `MERGE` lui-même existe depuis PG 15) ; `OLD.` / `NEW.` depuis PG 18 |
 | **Oracle** | ✅ Partiel | Clause `RETURNING … INTO` uniquement en PL/SQL |
 | **SQL Server** | ✅ Via `OUTPUT` | Clause `OUTPUT` avec pseudo-tables `INSERTED` / `DELETED` (équivalent fonctionnel) |
 | **MySQL** | ❌ Non | Pas de support natif ; utiliser `LAST_INSERT_ID()` |
-| **MariaDB** | ✅ Partiel | `INSERT` / `DELETE` / `REPLACE … RETURNING` depuis 10.5 ; pas de `UPDATE … RETURNING` |
+| **MariaDB** | ✅ Partiel | `DELETE … RETURNING` depuis **10.0**, `INSERT` / `REPLACE … RETURNING` depuis **10.5** ; `UPDATE … RETURNING` seulement en preview 13.0 (2026) |
 | **SQLite** | ✅ Depuis 3.35 (2021) | Syntaxe quasi identique à PostgreSQL |
-| **Standard SQL** | ✅ Depuis SQL:2023 | Clause `RETURN` standardisée — PostgreSQL utilise `RETURNING` (variante historique) |
+| **Standard SQL** | ❌ `RETURNING` n'est pas standard | Le standard définit les *data change delta tables* (`SELECT … FROM FINAL TABLE (UPDATE …)`), une syntaxe distincte. `RETURNING` est une **extension PostgreSQL** (reprise ensuite par SQLite, MariaDB…) |
 
 ### Équivalents dans d'autres SGBD
 

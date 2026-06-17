@@ -127,8 +127,8 @@ PostgreSQL combine les deux tables selon la condition de jointure, créant un je
 > - Une **fonction** retournant un ensemble de lignes (`FROM generate_series(1, 10)`)  
 > - Un constructeur `VALUES` (`FROM (VALUES (1, 'a'), (2, 'b')) AS t(id, nom)`)  
 > - Une **jointure latérale** `LATERAL` (la sous-requête de droite peut référencer les colonnes de gauche — extrêmement puissant)  
-> - Une **vue** ou une **vue matérialisée**
->
+> - Une **vue** ou une **vue matérialisée**  
+>  
 > Tous ces cas sont traités à l'étape `FROM`, avant `WHERE`.
 
 ---
@@ -212,7 +212,7 @@ HAVING COUNT(*) > 10;
 1. Charger `employes` (FROM)  
 2. Filtrer `salaire > 50000` (WHERE)  
 3. Regrouper par `departement` (GROUP BY)  
-4. **Éliminer les groupes ayant moins de 10 employés** (HAVING)  
+4. **Éliminer les groupes ayant 10 employés ou moins** (HAVING : `COUNT(*) > 10` garde ceux d'au moins 11)  
 5. Afficher le résultat (SELECT)
 
 **Différence WHERE vs HAVING :**
@@ -417,12 +417,12 @@ Résultat : 150 lignes disponibles
 ```
 Action : Garder seulement les employés embauchés depuis 2020  
 Condition : annee_embauche >= 2020  
-Résultat : 60 lignes restantes  
+Résultat : 80 lignes restantes  
 ```
 
 **Étape 3 : GROUP BY**
 ```
-Action : Regrouper les 60 employés par departement  
+Action : Regrouper les 80 employés par departement  
 Résultat : 8 groupes créés  
   - IT : 15 employés
   - RH : 4 employés
@@ -533,8 +533,8 @@ FROM employes
 GROUP BY 1;  -- 1 = première colonne du SELECT  
 ```
 
-> 📚 **Précision factuelle** : PostgreSQL accepte les **alias** dans `GROUP BY` depuis très longtemps (extension documentée du standard SQL). Le standard strict n'autorise lui que les **colonnes sources** ou les **numéros de position**. Conceptuellement, `GROUP BY` est toujours évalué avant `SELECT`, mais PostgreSQL fait une résolution préalable des alias pour cette commodité.
->
+> 📚 **Précision factuelle** : PostgreSQL accepte les **alias** dans `GROUP BY` depuis très longtemps (extension documentée du standard SQL). Le standard strict n'autorise lui que les **colonnes sources** ou les **numéros de position**. Conceptuellement, `GROUP BY` est toujours évalué avant `SELECT`, mais PostgreSQL fait une résolution préalable des alias pour cette commodité.  
+>  
 > 💡 **Pour la portabilité**, préférez la forme avec l'expression complète ou le numéro de colonne si votre code doit fonctionner sur d'autres SGBD (Oracle, SQL Server…).
 
 ### 3. ORDER BY peut utiliser des alias

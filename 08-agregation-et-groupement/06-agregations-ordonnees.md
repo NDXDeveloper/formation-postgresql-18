@@ -70,6 +70,8 @@ Elles répondent à la question « **si on insérait cette valeur, quel serait s
 | `PERCENT_RANK(val)` | Rang en pourcentage | Position relative dans [0, 1] |
 | `CUME_DIST(val)` | Distribution cumulée | Proportion de valeurs ≤ `val` |
 
+> 📌 **Version et standard** : la clause `WITHIN GROUP` et ces deux familles d'agrégats existent dans PostgreSQL **depuis la version 9.4** (2014) ; `PERCENTILE_CONT`/`PERCENTILE_DISC`/`RANK`/`DENSE_RANK`/`PERCENT_RANK`/`CUME_DIST` sont définis par le standard **SQL:2008**. Seule exception : **`MODE()` est une extension propre à PostgreSQL** — pratique, mais absente du standard SQL.
+
 Voyons d'abord `MODE`, puis nous verrons les hypothétiques plus loin.
 
 ---
@@ -91,6 +93,8 @@ MODE() WITHIN GROUP (ORDER BY colonne)
 ```
 
 **Note importante** : MODE() prend **zéro paramètre** dans les parenthèses, et la colonne est spécifiée dans ORDER BY.
+
+> 📌 **En cas d'ex-aequo** : si plusieurs valeurs partagent la fréquence maximale, `MODE()` retourne la **première selon l'`ORDER BY`** — la plus petite avec `ORDER BY colonne`, la plus grande avec `ORDER BY colonne DESC`.
 
 ### Exemple Théorique
 
@@ -176,7 +180,7 @@ SELECT MODE() WITHIN GROUP (ORDER BY EXTRACT(DOW FROM date_visite)::INTEGER) AS 
 FROM visites_site;  
 ```
 
-> ⚠️ **Attention** : `TO_CHAR(integer, 'Day')` ne fonctionne pas — `TO_CHAR` au format `'Day'` attend un type **date** ou **timestamp**, pas un entier. Pour formater à partir d'un `EXTRACT(DOW …)`, il faut soit revenir à une date (par exemple `MAKE_DATE(2000,1,2)::DATE + dow`), soit utiliser un `CASE`.
+> ⚠️ **Attention** : `TO_CHAR(integer, 'Day')` ne donne **pas** le nom du jour. Pire : au lieu de lever une erreur, PostgreSQL renvoie **silencieusement** une chaîne absurde — `TO_CHAR(3, 'Day')` produit `.ay` — car avec un entier le masque `'Day'` est interprété comme un **format numérique**. `TO_CHAR` au format `'Day'` attend un type **date** ou **timestamp**. Pour formater à partir d'un `EXTRACT(DOW …)`, il faut soit revenir à une date (par exemple `MAKE_DATE(2000,1,2)::DATE + dow`, car le 2 janvier 2000 est un dimanche → `DOW = 0`), soit utiliser un `CASE`.
 
 ---
 
@@ -245,7 +249,8 @@ SELECT
     id_commande,
     STRING_AGG(produit, ', ' ORDER BY produit) AS produits
 FROM lignes_commande  
-GROUP BY id_commande;  
+GROUP BY id_commande  
+ORDER BY id_commande;  
 ```
 
 **Résultat théorique :**
@@ -260,12 +265,16 @@ GROUP BY id_commande;
 
 ```sql
 -- Concaténer tous les tags pour chaque article
+-- ⚠️ On préfixe CHAQUE tag par '#' (« '#' || tag ») et on sépare par un espace.
+-- Écrire STRING_AGG(tag, ' #') serait un piège : le séparateur n'est inséré
+-- qu'ENTRE les éléments, donc le tout PREMIER tag n'aurait pas de '#' devant.
 SELECT
     article_id,
     titre,
-    STRING_AGG(tag, ' #' ORDER BY tag) AS tags
+    STRING_AGG('#' || tag, ' ' ORDER BY tag) AS tags
 FROM articles_tags  
-GROUP BY article_id, titre;  
+GROUP BY article_id, titre  
+ORDER BY article_id;  
 ```
 
 **Résultat théorique :**
@@ -406,7 +415,8 @@ SELECT
     article_id,
     ARRAY_AGG(tag ORDER BY tag) AS tags
 FROM articles_tags  
-GROUP BY article_id;  
+GROUP BY article_id  
+ORDER BY article_id;  
 ```
 
 **Résultat :**
@@ -424,7 +434,8 @@ SELECT
     produit_id,
     ARRAY_AGG(prix ORDER BY date_modification) AS historique_prix
 FROM historique_prix  
-GROUP BY produit_id;  
+GROUP BY produit_id  
+ORDER BY produit_id;  
 ```
 
 **Résultat :**
@@ -506,13 +517,16 @@ FROM employes;
 ### JSON_AGG avec ORDER BY
 
 ```sql
--- JSON ordonné par nom
+-- Top 10 des étudiants, en JSON ordonné par note décroissante.
+-- ⚠️ Le LIMIT doit être dans une SOUS-REQUÊTE : JSON_AGG agrège toutes
+--    les lignes en UNE seule (un LIMIT externe ne garderait pas le top 10).
 SELECT JSON_AGG(
     JSON_BUILD_OBJECT('nom', nom, 'note', note)
     ORDER BY note DESC
 ) AS top_etudiants
-FROM etudiants  
-LIMIT 10;  
+FROM (
+    SELECT nom, note FROM etudiants ORDER BY note DESC LIMIT 10
+) AS top10;  
 ```
 
 ### JSONB_AGG : JSON Binaire
@@ -525,6 +539,24 @@ SELECT JSONB_AGG(
 ) AS catalogue_jsonb
 FROM produits;
 ```
+
+### JSON_OBJECT_AGG : Construire un Objet Clé→Valeur
+
+Là où `JSON_AGG` produit un **tableau** `[ … ]`, `JSON_OBJECT_AGG(clé, valeur)` (variante binaire : `JSONB_OBJECT_AGG`) produit un **objet** `{ clé: valeur, … }` — idéal pour bâtir un dictionnaire ou une *map* :
+
+```sql
+-- Catalogue sous forme d'objet { produit: prix }
+SELECT JSON_OBJECT_AGG(produit, prix ORDER BY produit) AS catalogue  
+FROM produits;  
+```
+
+**Résultat :**
+
+```json
+{ "Clavier": 75.00, "Laptop": 899.99, "Souris": 25.00 }
+```
+
+> ⚠️ Les **clés ne doivent jamais être `NULL`** (sinon `ERROR: null value not allowed for object key`). En cas de **clés en double**, `JSON_OBJECT_AGG` (texte) **conserve les deux** (`{"a":1,"a":2}`, JSON techniquement ambigu) tandis que `JSONB_OBJECT_AGG` (binaire) ne **garde que la dernière** (`{"a":2}`).
 
 ### Cas d'Usage : API Response
 
@@ -557,7 +589,7 @@ WHERE c.id_commande = 12345;
 {
   "commande_id": 12345,
   "client": "Jean Dupont",
-  "total": 299.97,
+  "total": 949.99,
   "produits": [
     {"nom": "Laptop", "quantite": 1, "prix": 899.99},
     {"nom": "Souris", "quantite": 2, "prix": 25.00}
@@ -609,7 +641,8 @@ FROM etudiants;
 SELECT
     PERCENT_RANK(500) WITHIN GROUP (ORDER BY montant) AS percentile_500
 FROM ventes;
--- Retourne 0.75 = 75e percentile
+-- Retourne une valeur entre 0 et 1 selon les données
+-- (p. ex. 0.75 signifierait que 500 € dépasse 75 % des montants)
 ```
 
 ---
@@ -714,7 +747,7 @@ ORDER BY duree_session_sec DESC;
 
 | session_id | user_id | parcours                                      | duree_session_sec | nb_pages_vues |
 |------------|---------|-----------------------------------------------|-------------------|---------------|
-| abc123     | 42      | /home → /produits → /produit/12 → /panier → /checkout | 482        | 5             |
+| abc123     | 42      | /home → /produits → /produit/12 → /produit/45 → /panier → /checkout | 482 | 6 |
 
 ### 📱 Réseaux Sociaux : Agrégation de Commentaires
 
@@ -791,7 +824,7 @@ GROUP BY e.etudiant_id, e.nom, e.prenom;
 | **Performance** | ✅ Léger | ⚠️ Plus lourd en mémoire |
 | **Séparateur** | ✅ Personnalisable | ❌ Structure fixe |
 | **Indexation** | ❌ Impossible | ✅ Possible (GIN) |
-| **Longueur maximale** | Limitée (1GB par champ) | Limitée (nombre éléments) |
+| **Longueur maximale** | Limitée (≈ 1 Go, type `TEXT`) | Limitée (≈ 1 Go au total) |
 
 ### Recommandations
 
@@ -895,7 +928,7 @@ CREATE INDEX idx_produits_tags_cache ON produits_tags_cache(produit_id);
 
 ```sql
 -- Peut générer des chaînes très longues !
-SELECT STRING_AGG(description_longue, '\n')  
+SELECT STRING_AGG(description_longue, E'\n')  
 FROM articles;  
 
 -- Tronquer si nécessaire :
@@ -905,7 +938,7 @@ SELECT STRING_AGG(
         THEN LEFT(description_longue, 100) || '...'
         ELSE description_longue
     END,
-    '\n'
+    E'\n'
 )
 FROM articles;
 ```
@@ -988,7 +1021,7 @@ Ces trois fonctions ont une caractéristique commune importante : elles **matér
    ```sql
    STRING_AGG(
        CASE WHEN LENGTH(texte) > 50 THEN LEFT(texte, 50) || '...' ELSE texte END,
-       '\n'
+       E'\n'
    )
    ```
 
@@ -1012,10 +1045,10 @@ Ces trois fonctions ont une caractéristique commune importante : elles **matér
 2. **Concaténer sans limite sur de gros volumes**
    ```sql
    -- ❌ Peut générer une chaîne de plusieurs MB !
-   STRING_AGG(log_message, '\n')
+   STRING_AGG(log_message, E'\n')
 
    -- ✅ Limiter d'abord
-   SELECT STRING_AGG(log_message, '\n')
+   SELECT STRING_AGG(log_message, E'\n')
    FROM (
        SELECT log_message
        FROM logs
@@ -1074,7 +1107,8 @@ SELECT
     departement,
     STRING_AGG(nom, ', ' ORDER BY salaire DESC) AS employes_par_salaire
 FROM employes  
-GROUP BY departement;  
+GROUP BY departement  
+ORDER BY departement;  
 ```
 
 **Résultat** : une ligne par département
@@ -1092,7 +1126,8 @@ SELECT
     nom,
     salaire,
     ROW_NUMBER() OVER (PARTITION BY departement ORDER BY salaire DESC) AS rang
-FROM employes;
+FROM employes
+ORDER BY departement, salaire DESC;
 ```
 
 **Résultat** : une ligne par employé

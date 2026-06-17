@@ -15,6 +15,8 @@ Sans les extensions de groupement, vous devriez écrire plusieurs requêtes dist
 
 **Les extensions de groupement** (ROLLUP, CUBE, GROUPING SETS) permettent de générer **plusieurs niveaux d'agrégation en une seule requête** !
 
+> 📌 **Origine et disponibilité** : ROLLUP, CUBE et GROUPING SETS font partie du **standard SQL** (SQL:1999, fonctionnalité « extended grouping capabilities »). Ils sont disponibles dans PostgreSQL **depuis la version 9.5** (janvier 2016). Votre code est donc à la fois portable et pérenne.
+
 ---
 
 ## Le Problème : Rapport Multi-Niveaux
@@ -92,7 +94,7 @@ SELECT
     colonne2,
     colonne3,
     SUM(valeur) AS total
-FROM table  
+FROM nom_table  
 GROUP BY ROLLUP(colonne1, colonne2, colonne3);  
 ```
 
@@ -234,7 +236,7 @@ SELECT
     colonne1,
     colonne2,
     SUM(valeur) AS total
-FROM table  
+FROM nom_table  
 GROUP BY CUBE(colonne1, colonne2);  
 ```
 
@@ -394,7 +396,7 @@ SELECT
     colonne1,
     colonne2,
     SUM(valeur) AS total
-FROM table  
+FROM nom_table  
 GROUP BY GROUPING SETS (  
     (colonne1, colonne2),  -- Groupement 1
     (colonne1),            -- Groupement 2
@@ -562,7 +564,8 @@ SELECT
     GROUPING(region) AS est_subtotal_region,
     GROUPING(categorie) AS est_subtotal_categorie
 FROM ventes  
-GROUP BY ROLLUP(region, categorie);  
+GROUP BY ROLLUP(region, categorie)  
+ORDER BY GROUPING(region), region NULLS LAST, GROUPING(categorie), categorie NULLS LAST;  
 ```
 
 **Résultat :**
@@ -866,7 +869,7 @@ GROUP BY GROUPING SETS (
 
 Les extensions de groupement sont **plus efficaces** que plusieurs UNION ALL :
 
-**Approche Naïve (4 scans de table) :**
+**Approche Naïve (3 scans de table) :**
 ```sql
 SELECT region, SUM(montant) FROM ventes GROUP BY region  
 UNION ALL  
@@ -910,7 +913,7 @@ MixedAggregate  (cost=25.50..30.75 rows=10 width=20)
 - `Group Key: region` → sous-totaux par région
 - `Group Key: ()` → grand total
 
-> 💡 **Pourquoi un `Sort` apparaît-il ?** `MixedAggregate` opère en mode *streaming* sur des données triées : il accumule l'état d'un groupe au fur et à mesure que la clé change. Un tri préalable (ou un index ordonné) est donc nécessaire — c'est pourquoi le plan inclut un nœud `Sort` quand aucun index ne fournit l'ordre. Pour les gros volumes, créer un index sur `(region, categorie)` permet d'éviter ce tri et accélère significativement la requête.
+> 💡 **`Sort` ou `Hash Key` ?** `MixedAggregate` doit traiter plusieurs niveaux de regroupement à la fois : pour cela, il **combine** la stratégie par tri (*streaming* sur données triées) et la stratégie par hachage — c'est ce que signifie son nom (*mixed*). Le plan affiché ci-dessus utilise un `Sort`, mais sur de **petites tables** PostgreSQL choisit fréquemment des `Hash Key` (aucun tri, vous verrez alors `Hash Key: region, categorie` au lieu de `Sort`). Pour de **gros volumes hiérarchiques**, créer un index sur `(region, categorie)` fournit l'ordre et évite un tri coûteux.
 
 ### Complexité combinatoire : le piège de CUBE
 
@@ -980,6 +983,8 @@ ORDER BY
     categorie NULLS LAST;
 ```
 
+> ⚠️ **Attention au format anglo-saxon** : dans `TO_CHAR`, `,` est le séparateur de **milliers** et `.` le séparateur **décimal** (convention US, indépendante de la locale). `'FM999,999.00€'` produit donc `1,550.00€` — qu'un lecteur **français** pourrait lire à tort comme « 1,55 ». Pour un rendu **localisé** (en français : espace pour les milliers, virgule pour les décimales), utilisez les motifs `G` (séparateur de groupe) et `D` (séparateur décimal), qui suivent le `lc_numeric` de la session : `TO_CHAR(SUM(montant), 'FM999G999D00 €')`.
+
 ### Indenter les Sous-Totaux
 
 ```sql
@@ -991,7 +996,8 @@ SELECT
     END AS libelle,
     SUM(montant) AS montant
 FROM ventes  
-GROUP BY ROLLUP(region, categorie);  
+GROUP BY ROLLUP(region, categorie)  
+ORDER BY GROUPING(region), region NULLS LAST, GROUPING(categorie), categorie NULLS LAST;  
 ```
 
 **Résultat :**

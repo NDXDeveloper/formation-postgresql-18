@@ -113,13 +113,13 @@ SELECT COUNT(date_livraison) FROM commandes;  -- 3 (seulement les non-NULL)
 Sur les **grandes tables**, `COUNT(*)` peut être très rapide grâce à un *index-only scan* :
 
 ```sql
--- Avec un index sur (date_creation) :
-EXPLAIN SELECT COUNT(*) FROM commandes WHERE date_creation >= '2025-01-01';
+-- Avec un index sur (date_livraison) :
+EXPLAIN SELECT COUNT(*) FROM commandes WHERE date_livraison >= '2025-01-01';
 
 -- Plan typique :
 --   Aggregate
---     ->  Index Only Scan using idx_commandes_date_creation on commandes
---           Index Cond: (date_creation >= '2025-01-01')
+--     ->  Index Only Scan using idx_commandes_date_livraison on commandes
+--           Index Cond: (date_livraison >= '2025-01-01')
 --           Heap Fetches: 0       ← idéal : zéro accès à la table principale
 ```
 
@@ -332,7 +332,8 @@ FROM commandes;
 -- Trouver le produit le plus cher par catégorie (nécessite GROUP BY)
 SELECT categorie, MAX(prix) AS prix_max  
 FROM produits  
-GROUP BY categorie;  
+GROUP BY categorie  
+ORDER BY prix_max DESC;  
 -- Résultat :
 -- Électronique | 899
 -- Accessoires  | 75
@@ -343,6 +344,41 @@ GROUP BY categorie;
 - **Identification de records** : Meilleur score, prix le plus élevé  
 - **Analyse temporelle** : Dernière transaction, date la plus récente  
 - **Détection de pics** : Valeur maximale atteinte dans une période
+
+---
+
+## Au-delà des Cinq : les Agrégats Booléens (`bool_and`, `bool_or`)
+
+PostgreSQL fournit aussi des **agrégats booléens** qui répondent à des questions de type « **tout** / **au moins un** » sur un groupe de valeurs `boolean` :
+
+| Fonction | Question posée | Retourne `true` si… |
+|----------|----------------|---------------------|
+| `bool_and(expr)` | « **Toutes** les lignes satisfont-elles la condition ? » | toutes les valeurs sont `true` |
+| `bool_or(expr)` | « **Au moins une** ligne satisfait-elle la condition ? » | au moins une valeur est `true` |
+| `every(expr)` | Synonyme **SQL standard** de `bool_and` | toutes les valeurs sont `true` |
+
+Comme les autres agrégations, ils **ignorent les `NULL`** et renvoient `NULL` si toutes les valeurs sont `NULL`.
+
+```sql
+-- Pour chaque commande : tous les articles sont-ils en stock ?
+--                        au moins un article est-il en promotion ?
+SELECT
+    id_commande,
+    bool_and(en_stock) AS tous_en_stock,
+    bool_or(en_promo)  AS au_moins_une_promo
+FROM lignes_commande  
+GROUP BY id_commande  
+ORDER BY id_commande;  
+```
+
+**Résultat :**
+
+| id_commande | tous_en_stock | au_moins_une_promo |
+|-------------|---------------|--------------------|
+| 1           | true          | false              |
+| 2           | false         | true               |
+
+> 📌 **Équivalences avec `FILTER`** : `bool_or(cond)` revient à `COUNT(*) FILTER (WHERE cond) > 0`, et `bool_and(cond)` à `COUNT(*) FILTER (WHERE NOT cond) = 0` (voir section 8.5) — les agrégats booléens sont simplement plus lisibles. Le standard SQL nomme `bool_and` → **`EVERY`** ; il n'existe pas d'agrégat `ANY`/`SOME` (ces mots-clés sont déjà pris par les sous-requêtes), d'où le nom `bool_or` spécifique à PostgreSQL.
 
 ---
 
@@ -468,7 +504,8 @@ SELECT
     COUNT(*) AS nb_commandes,
     SUM(montant) AS total_depense
 FROM commandes  
-GROUP BY client_id;  
+GROUP BY client_id  
+ORDER BY client_id;  
 ```
 
 **Résultat théorique :**
@@ -587,7 +624,7 @@ MIN et MAX peuvent être **extrêmement rapides** si un index existe sur la colo
 
 ```sql
 -- Si un index existe sur montant, PostgreSQL peut récupérer
--- directement la première/dernière valeur de l'index (O(1))
+-- directement la première/dernière valeur de l'index (O(log n) : descente du B-tree)
 SELECT MIN(montant), MAX(montant)  
 FROM commandes;  
 ```
@@ -596,15 +633,17 @@ FROM commandes;
 
 - **`COUNT(*)`** nécessite un scan de toutes les lignes visibles (parfois optimisé en *index-only scan* si la *visibility map* de la table est à jour — voir `VACUUM`).
 - **`SUM`, `AVG`** nécessitent aussi un scan complet (toutes les valeurs doivent être additionnées).
-- **`MIN`/`MAX`** peuvent être ultra-rapides : si un index B-tree existe sur la colonne, PostgreSQL récupère **directement** la première ou dernière valeur de l'index (`Index Scan` avec `Limit 1`).
+- **`MIN`/`MAX`** peuvent être ultra-rapides : si un index B-tree existe sur la colonne, PostgreSQL récupère **directement** la première (ou la dernière) valeur de l'index via un nœud `Limit` imbriqué — sans additionner ni parcourir toutes les lignes.
 
 ```sql
 EXPLAIN SELECT MIN(montant) FROM commandes;
--- Si index présent sur montant :
+-- Si index présent sur montant (et visibility map à jour) :
 --   Result
---     ->  Limit
---           ->  Index Only Scan using idx_commandes_montant on commandes
---                 Index Cond: (montant IS NOT NULL)
+--     InitPlan 1
+--       ->  Limit
+--             ->  Index Only Scan using idx_commandes_montant on commandes
+--                   Index Cond: (montant IS NOT NULL)
+-- (pour MAX : « Index Only Scan Backward » — parcours de l'index en sens inverse)
 ```
 
 ---
@@ -613,9 +652,9 @@ EXPLAIN SELECT MIN(montant) FROM commandes;
 
 | Fonction | Objectif | Traite les NULL | Type de Résultat | Exemple |
 |----------|----------|-----------------|------------------|---------|
-| COUNT(*) | Compter toutes les lignes | Compte tout | BIGINT | `SELECT COUNT(*) FROM table` |
+| COUNT(*) | Compter toutes les lignes | Compte tout | BIGINT | `SELECT COUNT(*) FROM nom_table` |
 | COUNT(col) | Compter valeurs non-NULL | Ignore NULL | BIGINT | `SELECT COUNT(email) FROM users` |
-| SUM(col) | Additionner les valeurs | Ignore NULL | Type de la colonne | `SELECT SUM(prix) FROM produits` |
+| SUM(col) | Additionner les valeurs | Ignore NULL | Type élargi (`int`→`bigint`, `bigint`→`numeric`) | `SELECT SUM(prix) FROM produits` |
 | AVG(col) | Calculer la moyenne | Ignore NULL | NUMERIC | `SELECT AVG(note) FROM evaluations` |
 | MIN(col) | Trouver le minimum | Ignore NULL | Type de la colonne | `SELECT MIN(date_creation) FROM articles` |
 | MAX(col) | Trouver le maximum | Ignore NULL | Type de la colonne | `SELECT MAX(temperature) FROM mesures` |

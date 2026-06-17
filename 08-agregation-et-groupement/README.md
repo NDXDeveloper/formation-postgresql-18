@@ -63,7 +63,7 @@ Les rapports de gestion, tableaux de bord et KPI (Key Performance Indicators) so
 
 **Exemples de KPI :**
 - Chiffre d'affaires mensuel : `SUM(montant_vente)`
-- Taux de conversion : `COUNT(achats) / COUNT(visites)`
+- Taux de conversion : `100.0 * COUNT(achats) / COUNT(visites)` (le `100.0` évite la division entière)
 - Note moyenne produit : `AVG(note_client)`
 - Nombre de clients actifs : `COUNT(DISTINCT client_id)`
 
@@ -235,7 +235,7 @@ Comprendre l'ordre d'exécution est **crucial** pour écrire des requêtes corre
 SELECT      -- 5. Sélection finale
     colonne,
     SUM(valeur) AS total
-FROM table  -- 1. Chargement des données  
+FROM nom_table  -- 1. Chargement des données  
 WHERE       -- 2. Filtrage des LIGNES  
     condition_ligne
 GROUP BY    -- 3. Création des GROUPES
@@ -287,11 +287,13 @@ SELECT
     produit,
     COUNT(*) AS nb_ventes,
     SUM(montant) AS ca_total,
-    AVG(montant) AS prix_moyen
+    ROUND(AVG(montant), 2) AS prix_moyen
 FROM ventes  
 GROUP BY produit  
-ORDER BY ca_total DESC;  
+ORDER BY ca_total DESC, nb_ventes DESC;  
 ```
+
+> 📌 **Pourquoi `ROUND` et un second critère de tri ?** `AVG(montant)` renvoie un `numeric` à forte précision (ex. `899.0000000000000000`) : `ROUND(…, 2)` le ramène à 2 décimales lisibles. Et comme **Souris** et **Clavier** ont le **même `ca_total` (75)**, `ORDER BY ca_total DESC` seul ne garantit pas leur ordre relatif : on ajoute `nb_ventes DESC` pour rendre le résultat **déterministe** (voir le piège « `GROUP BY` ne trie pas » à la section 8.3).
 
 **Processus :**
 
@@ -482,7 +484,7 @@ Les bases de données sont **optimisées** pour les agrégations. Côté Postgre
 
 | Algorithme | Mécanique | Quand le planificateur le choisit |
 |------------|-----------|------------------------------------|
-| **PlainAggregate** | Une seule passe linéaire | `GROUP BY` absent (agrégation globale, une ligne en sortie) |
+| **`Aggregate`** (mode *plain*) | Une seule passe linéaire | `GROUP BY` absent (agrégation globale, une ligne en sortie) — c'est le libellé exact dans `EXPLAIN` |
 | **HashAggregate** | Table de hachage en mémoire (clé = groupe) | Beaucoup de groupes, **`work_mem`** suffisant pour la table de hachage |
 | **GroupAggregate** | Tri préalable des données, puis parcours | Données déjà triées par un index, ou tri rentable |
 
@@ -573,7 +575,7 @@ Cette section 8 est structurée de manière progressive, du plus simple au plus 
 **Niveau :** Intermédiaire  
 **Durée estimée :** 2-3 heures  
 
-**Durée totale estimée :** 12-18 heures
+**Durée totale estimée :** 11-17 heures
 
 ---
 

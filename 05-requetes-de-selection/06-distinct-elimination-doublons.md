@@ -77,6 +77,8 @@ Paris
 
 Maintenant, chaque ville n'apparaît qu'**une seule fois** !
 
+> ⚠️ **`DISTINCT` ne trie pas** : il élimine les doublons, mais l'ordre du résultat **n'est pas garanti**. Ici l'ordre alphabétique est un simple hasard du plan d'exécution (`HashAggregate`) ; sur une autre table ou une autre version, il pourrait différer. Pour un ordre fiable, ajoutez toujours `ORDER BY` (voir juste après).
+
 ---
 
 ## DISTINCT : Syntaxe et fonctionnement
@@ -660,14 +662,15 @@ SELECT id FROM clients;
 ### 1. DISTINCT avec ORDER BY sur colonne non sélectionnée
 
 ```sql
--- ❌ ERREUR (sur certains SGBD, pas PostgreSQL)
+-- ❌ ERREUR : avec DISTINCT, ORDER BY ne peut porter que sur des colonnes du SELECT
 SELECT DISTINCT ville  
 FROM clients  
 ORDER BY date_inscription;  
 -- ERROR: for SELECT DISTINCT, ORDER BY expressions must appear in select list
 
--- PostgreSQL autorise cela, mais c'est ambigu
--- Quelle date_inscription choisir quand plusieurs clients ont la même ville ?
+-- Pourquoi cette restriction ? Le tri serait ambigu : quand plusieurs clients
+-- d'une même ville sont fusionnés en une seule ligne (DISTINCT), laquelle de leurs
+-- date_inscription faudrait-il utiliser pour trier ? PostgreSQL refuse donc.
 
 -- ✅ Solution : inclure la colonne de tri
 SELECT DISTINCT ville, date_inscription  
@@ -917,8 +920,8 @@ CROSS JOIN LATERAL (
 -- pour ce type de requête sur de grandes tables.
 ```
 
-> 💡 **Quand utiliser quoi pour « top N par groupe » ?**
->
+> 💡 **Quand utiliser quoi pour « top N par groupe » ?**  
+>  
 > | Méthode | Top 1 | Top N | Performance grande table | Complexité |  
 > |---------|-------|-------|--------------------------|------------|  
 > | `DISTINCT ON` | ✅ | ❌ | Moyenne | Simple |  

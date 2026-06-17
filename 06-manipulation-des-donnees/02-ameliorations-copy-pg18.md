@@ -7,7 +7,7 @@
 PostgreSQL 18, sorti en septembre 2025, apporte plusieurs améliorations à la commande `COPY`. Cette section explore en détail :
 
 1. La **fin du double sens du marqueur `\.`** lors de la lecture depuis un fichier
-2. Les nouvelles options **`REJECT_LIMIT`** et **`LOG_VERBOSITY = 'silent'`** qui complètent `ON_ERROR`
+2. Les nouvelles options **`REJECT_LIMIT`** et **`LOG_VERBOSITY 'silent'`** qui complètent `ON_ERROR`
 3. La possibilité de **`COPY TO` depuis une vue matérialisée**
 4. L'**interdiction de `FREEZE` sur les *foreign tables***
 
@@ -23,7 +23,7 @@ Pour comprendre l'amélioration apportée par PostgreSQL 18, il faut d'abord com
 
 #### Le format texte de PostgreSQL
 
-Historiquement, PostgreSQL utilise un format propriétaire appelé « format texte » pour ses opérations d'import/export via `COPY`. Dans ce format :
+Historiquement, PostgreSQL utilise un format spécifique (non standardisé) appelé « format texte » pour ses opérations d'import/export via `COPY`. Dans ce format :
 
 - Les colonnes sont séparées par des **tabulations** (`\t`)
 - Les lignes sont séparées par des **retours à la ligne** (`\n`)
@@ -229,13 +229,13 @@ Quand on rejoue ce dump avec `psql -f dump.sql`, psql lit ces lignes depuis **ST
 
 ## Nouvelles options de gestion d'erreurs
 
-Pour les imports d'origine externe (CSV venant d'un partenaire, d'un export tiers, etc.), il est fréquent d'avoir quelques lignes mal formées dans un fichier par ailleurs valide. PostgreSQL 17 avait introduit `ON_ERROR = 'ignore'` ; PostgreSQL 18 ajoute deux options pour mieux le contrôler.
+Pour les imports d'origine externe (CSV venant d'un partenaire, d'un export tiers, etc.), il est fréquent d'avoir quelques lignes mal formées dans un fichier par ailleurs valide. PostgreSQL 17 avait introduit `ON_ERROR 'ignore'` ; PostgreSQL 18 ajoute deux options pour mieux le contrôler.
 
 ### Rappel : `ON_ERROR` (PostgreSQL 17)
 
 ```sql
 COPY employes FROM '/tmp/employes.csv'  
-WITH (FORMAT csv, HEADER true, ON_ERROR = 'ignore');  
+WITH (FORMAT csv, HEADER true, ON_ERROR 'ignore');  
 ```
 
 - Les lignes pour lesquelles la **conversion de type** échoue (par exemple `"abc"` dans une colonne `INTEGER`) sont **ignorées** au lieu d'avorter la commande.
@@ -244,13 +244,13 @@ WITH (FORMAT csv, HEADER true, ON_ERROR = 'ignore');
 
 ### `REJECT_LIMIT` (PostgreSQL 18)
 
-Plafonne le nombre de lignes que `ON_ERROR = 'ignore'` est autorisé à ignorer :
+Plafonne le nombre de lignes que `ON_ERROR 'ignore'` est autorisé à ignorer :
 
 ```sql
 COPY employes FROM '/tmp/employes.csv'  
 WITH (FORMAT csv, HEADER true,  
-      ON_ERROR = 'ignore',  
-      REJECT_LIMIT = 100);  
+      ON_ERROR 'ignore',  
+      REJECT_LIMIT 100);  
 ```
 
 - Si **plus de 100** lignes sont invalides, `COPY` échoue (avec rollback total).
@@ -258,26 +258,26 @@ WITH (FORMAT csv, HEADER true,
 
 C'est un garde-fou précieux : on tolère « un peu de bruit » dans les données, mais on refuse un fichier massivement corrompu (qui pourrait masquer un vrai problème en amont).
 
-`REJECT_LIMIT` n'est valide qu'en combinaison avec `ON_ERROR = 'ignore'`.
+`REJECT_LIMIT` n'est valide qu'en combinaison avec `ON_ERROR 'ignore'`.
 
 ### `LOG_VERBOSITY` (PostgreSQL 18)
 
-Contrôle le détail des messages produits par `ON_ERROR = 'ignore'` :
+Contrôle le détail des messages produits par `ON_ERROR 'ignore'` :
 
 ```sql
 -- Mode silencieux : ne pas spammer le journal pour chaque ligne ignorée
 COPY employes FROM '/tmp/employes.csv'  
 WITH (FORMAT csv, HEADER true,  
-      ON_ERROR = 'ignore',  
-      LOG_VERBOSITY = 'silent');  
+      ON_ERROR 'ignore',  
+      LOG_VERBOSITY 'silent');  
 ```
 
 Valeurs :
-- `'default'` (par défaut) : log un `NOTICE` pour chaque ligne ignorée.
-- `'verbose'` : log détaillé incluant la cause de l'erreur.
-- `'silent'` (**nouveau PG 18**) : ne log qu'un résumé final, pas chaque ligne.
+- `'default'` (par défaut) : un seul `NOTICE` **récapitulatif** en fin de commande (« N rows were skipped due to data type incompatibility »).
+- `'verbose'` : un `NOTICE` **par ligne ignorée** (numéro de ligne, colonne et valeur fautive), suivi du récapitulatif.
+- `'silent'` (**nouveau PG 18**) : **aucun** message — ni par ligne, ni récapitulatif.
 
-Utile lors d'imports volumineux : sans `silent`, le journal du serveur peut être noyé sous des milliers de `NOTICE` pour les lignes ignorées.
+Utile pour un import volumineux où l'on ne veut **aucun bruit** dans le journal : le mode `'verbose'` peut sinon émettre des milliers de `NOTICE`, un par ligne ignorée.
 
 ### Exemple combiné
 
@@ -291,9 +291,9 @@ FROM '/imports/ventes_J-1.csv'
 WITH (  
     FORMAT csv,  
     HEADER true,  
-    ON_ERROR = 'ignore',  
-    REJECT_LIMIT = 50,  
-    LOG_VERBOSITY = 'silent'  
+    ON_ERROR 'ignore',  
+    REJECT_LIMIT 50,  
+    LOG_VERBOSITY 'silent'  
 );  
 ```
 
@@ -354,7 +354,7 @@ C'est un changement « cosmétique » mais utile : il évite de croire qu'on a u
 | Script avec contournement maison du `\.` | 🧹 Vous pouvez le retirer |
 | `\copy` depuis un client **psql ≤ 17** vers un serveur PG 18 | ⚠️ Mettre à jour psql côté client |
 | `COPY foreign_table FROM … FREEZE` | ❌ Retirer `FREEZE` ou cibler une table locale |
-| Pipeline ignorant manuellement des lignes erronées | 💡 Envisager `ON_ERROR = 'ignore'` + `REJECT_LIMIT` |
+| Pipeline ignorant manuellement des lignes erronées | 💡 Envisager `ON_ERROR 'ignore'` + `REJECT_LIMIT` |
 
 ### Avant / après : un script qui contournait le bug
 
@@ -401,7 +401,7 @@ CREATE TABLE test_pg18_copy (id INTEGER, libelle TEXT);
 
 -- 2. Import
 COPY test_pg18_copy FROM '/tmp/test_pg18_copy.csv'  
-WITH (FORMAT csv, HEADER true, ON_ERROR = 'ignore');  
+WITH (FORMAT csv, HEADER true, ON_ERROR 'ignore');  
 
 -- 3. Comptage
 SELECT count(*) FROM test_pg18_copy;
@@ -458,16 +458,16 @@ Oui :
 ```sql
 COPY t FROM '/tmp/data.csv'  
 WITH (FORMAT csv, HEADER true,  
-      ON_ERROR = 'ignore',  
-      REJECT_LIMIT = 100,  
-      LOG_VERBOSITY = 'silent');  
+      ON_ERROR 'ignore',  
+      REJECT_LIMIT 100,  
+      LOG_VERBOSITY 'silent');  
 ```
 
-`REJECT_LIMIT` et `LOG_VERBOSITY = 'silent'` n'ont de sens qu'avec `ON_ERROR = 'ignore'`.
+`REJECT_LIMIT` et `LOG_VERBOSITY 'silent'` n'ont de sens qu'avec `ON_ERROR 'ignore'`.
 
 ### Q7 — `ON_ERROR` couvre-t-il les violations de contraintes ?
 
-**Non.** `ON_ERROR = 'ignore'` ne capte que les erreurs de conversion d'entrée (mauvais type, format de date invalide, etc.). Les violations de `NOT NULL`, `UNIQUE`, `CHECK`, clés étrangères provoquent toujours l'avortement de la commande, quel que soit le réglage de `ON_ERROR`.
+**Non.** `ON_ERROR 'ignore'` ne capte que les erreurs de conversion d'entrée (mauvais type, format de date invalide, etc.). Les violations de `NOT NULL`, `UNIQUE`, `CHECK`, clés étrangères provoquent toujours l'avortement de la commande, quel que soit le réglage de `ON_ERROR`.
 
 ---
 
@@ -480,9 +480,9 @@ WITH (FORMAT csv, HEADER true,
 | `\.` seul sur une ligne, `COPY FROM` fichier `text` | Marqueur de fin | Marqueur de fin (inchangé) |
 | `COPY TO` depuis vue matérialisée peuplée | ❌ Erreur (sous-requête requise) | ✅ Direct |
 | `COPY FREEZE` sur *foreign table* | Silencieusement ignoré | ❌ Erreur explicite |
-| `ON_ERROR = 'ignore'` | ✅ (déjà PG 17) | ✅ (inchangé) |
+| `ON_ERROR 'ignore'` | ✅ (déjà PG 17) | ✅ (inchangé) |
 | `REJECT_LIMIT` | ❌ | ✅ **Nouveau** |
-| `LOG_VERBOSITY = 'silent'` | ❌ | ✅ **Nouveau** |
+| `LOG_VERBOSITY 'silent'` | ❌ | ✅ **Nouveau** |
 
 ---
 
@@ -491,7 +491,7 @@ WITH (FORMAT csv, HEADER true,
 Les évolutions de `COPY` dans PostgreSQL 18 sont **discrètes mais utiles** :
 
 - **Robustesse** : un piège silencieux du parseur CSV (`\.` isolé interprété comme EOF) disparaît. Un import qui semblait fonctionner en PG 17 mais tronquait parfois ses données va désormais aller au bout — ou échouer explicitement si la ligne pose réellement problème.
-- **Tolérance** : `REJECT_LIMIT` et `LOG_VERBOSITY = 'silent'` complètent `ON_ERROR`, transformant `COPY` en outil d'ingestion fiable même sur des données « sales ».
+- **Tolérance** : `REJECT_LIMIT` et `LOG_VERBOSITY 'silent'` complètent `ON_ERROR`, transformant `COPY` en outil d'ingestion fiable même sur des données « sales ».
 - **Cohérence** : `COPY TO` accepte les vues matérialisées peuplées comme n'importe quelle table ; `FREEZE` est refusé sur ce qui n'a pas de sens.
 
 Le changement le plus important à retenir pour un développeur ou un DBA migrant vers PG 18 : **revérifiez vos imports CSV historiques** — il est possible que certains d'entre eux ramenaient en silence moins de lignes qu'attendu.

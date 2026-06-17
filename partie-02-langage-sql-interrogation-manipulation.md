@@ -265,10 +265,10 @@ La **clé pour maîtriser SQL** est de comprendre que **l'ordre d'écriture n'es
 **Conséquences pratiques fréquemment piégeantes** :
 
 ```sql
--- ❌ ERREUR : alias non utilisable dans WHERE (SELECT est évalué APRÈS WHERE)
-SELECT prix_ttc, prix_ht * 1.20 AS prix_ttc FROM produits WHERE prix_ttc > 100;
---                                                              ^^^^^^^^^
---           ERROR: column "prix_ttc" does not exist
+-- ❌ ERREUR : l'alias « prix_ttc » n'est pas utilisable dans WHERE
+--    (le SELECT qui définit l'alias est évalué APRÈS le WHERE)
+SELECT prix_ht * 1.20 AS prix_ttc FROM produits WHERE prix_ttc > 100;
+-- ERROR: column "prix_ttc" does not exist   (le WHERE ne « voit » pas l'alias)
 
 -- ✅ Solutions :
 -- 1) Répéter l'expression
@@ -458,7 +458,7 @@ HAVING COUNT(c.id) > 0;
 
 ### 🔤 Nommage
 
-- **Tables** : pluriel, minuscules, séparées par underscores (`utilisateurs`, `commandes_lignes`)  
+- **Tables** : pluriel, minuscules, séparées par underscores (`utilisateurs`, `lignes_commande`)  
 - **Colonnes** : singulier, snake_case (`date_creation`, `prix_unitaire`)  
 - **Alias** : courts et significatifs (`u` pour users, `c` pour commandes)
 

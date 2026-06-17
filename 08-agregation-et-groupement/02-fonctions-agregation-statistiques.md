@@ -45,16 +45,19 @@ La variance mesure **à quel point les valeurs sont dispersées autour de la moy
 
 ### Formule Mathématique
 
-Pour une population :
+Deux variantes existent, selon que les données représentent une **population complète** ou un **échantillon** :
 
 ```
-Variance = Σ(xi - moyenne)² / N
+Variance de population  (VAR_POP)  = Σ(xi - moyenne)² / N
+Variance d'échantillon  (VAR_SAMP) = Σ(xi - moyenne)² / (N - 1)
 ```
 
 Où :
 - `xi` = chaque valeur  
 - `moyenne` = moyenne des valeurs  
 - `N` = nombre total de valeurs
+
+> ⚠️ **Correction de Bessel** : `VARIANCE` / `VAR_SAMP` (la variante par défaut) divise par **N − 1**, pas par N. C'est pourquoi, dans l'exemple ci-dessous, la variance vaut **2 500 000** (= 10 000 000 / 4) et non 2 000 000 (= 10 000 000 / 5, qui serait `VAR_POP`).
 
 ### Syntaxe PostgreSQL
 
@@ -176,13 +179,13 @@ Imaginons deux départements :
 **Département A :**
 ```sql
 -- Salaires : 35k, 36k, 37k (très homogènes)
--- Moyenne : 36k, Écart-type : ~817€
+-- Moyenne : 36k, Écart-type (STDDEV) : 1000€
 ```
 
 **Département B :**
 ```sql
 -- Salaires : 25k, 36k, 47k (très dispersés)
--- Moyenne : 36k, Écart-type : ~9000€
+-- Moyenne : 36k, Écart-type (STDDEV) : 11000€
 ```
 
 **Observation** : Même moyenne, mais dispersion radicalement différente !
@@ -448,7 +451,7 @@ SELECT
 FROM salaires_employes;
 ```
 
-**Résultat théorique :**
+**Résultat théorique** *(sur un jeu de données élargi et asymétrique — différent des 5 lignes définies plus haut — afin d'illustrer l'écart médiane/moyenne)* :
 
 | salaire_min | q1_25  | mediane | moyenne | q3_75  | p95    | salaire_max | ecart_type |
 |-------------|--------|---------|---------|--------|--------|-------------|------------|
@@ -523,15 +526,15 @@ FROM ventes_marketing;
 
 **Résultat théorique :**
 
-| pente | ordonnee | r_carre | correlation |
-|-------|----------|---------|-------------|
-| 8.5   | 6500     | 0.90    | 0.95        |
+| pente  | ordonnee | r_carre | correlation |
+|--------|----------|---------|-------------|
+| 6.18   | 8735     | 0.998   | 0.999       |
 
 **Interprétation :**
-- **Équation de régression** : `Ventes = 8.5 × Budget_pub + 6500`
-- Pour chaque euro investi en pub, on génère 8,5 € de ventes supplémentaires
-- R² de 0,90 signifie que 90 % de la variance des ventes est expliquée par le budget pub
-- **Prédiction** : si budget = 2000 € → ventes prédites = 8,5 × 2000 + 6500 = 23 500 €
+- **Équation de régression** : `Ventes ≈ 6,18 × Budget_pub + 8735`
+- Pour chaque euro investi en pub, on génère environ 6,18 € de ventes supplémentaires
+- R² de 0,998 signifie que 99,8 % de la variance des ventes est expliquée par le budget pub
+- **Prédiction** : si budget = 2000 € → ventes prédites ≈ **21 088 €**. ⚠️ Ce résultat s'obtient avec les coefficients **non arrondis** (`6,1765 × 2000 + 8735,29`) ; en réutilisant la pente arrondie à `6,18` on trouverait ≈ 21 095 €. Règle : **n'arrondissez jamais les coefficients avant le calcul final** (l'arrondi de la pente est amplifié par la multiplication).
 
 ### 5.2. Fonctions d'Agrégation Statistiques par Groupe
 
@@ -731,17 +734,17 @@ WHERE a_achete = TRUE
 Les fonctions statistiques nécessitent généralement de **parcourir toutes les lignes du périmètre filtré** :
 
 - **`COUNT`, `SUM`, `AVG`** : Scan simple, une seule passe (rapide)  
-- **`STDDEV`, `VARIANCE`** : **Une seule passe** en PostgreSQL grâce à l'algorithme de Welford (cf. encadré ci-dessous), pas deux comme on le pense souvent  
+- **`STDDEV`, `VARIANCE`** : **Une seule passe** en PostgreSQL grâce à l'algorithme de Youngs-Cramer (cf. encadré ci-dessous), pas deux comme on le pense souvent  
 - **`PERCENTILE_CONT`, `PERCENTILE_DISC`** : nécessitent le **tri complet** des valeurs — la plus coûteuse des opérations statistiques  
 - **`CORR`, `COVAR`** : calculs croisés sur deux colonnes, une seule passe également
 
-> 🧪 **L'algorithme de Welford pour `STDDEV` et `VARIANCE`**
->
-> Une implémentation naïve calculerait d'abord la moyenne (1ʳᵉ passe), puis la somme des écarts au carré (2ᵉ passe). PostgreSQL utilise l'**algorithme de Welford** (1962), qui maintient les statistiques (moyenne, variance) en mise à jour incrémentale au fur et à mesure du scan. Avantages :
->
+> 🧪 **L'algorithme de Youngs-Cramer pour `STDDEV` et `VARIANCE`**  
+>  
+> Une implémentation naïve calculerait d'abord la moyenne (1ʳᵉ passe), puis la somme des écarts au carré (2ᵉ passe). PostgreSQL utilise l'**algorithme de Youngs-Cramer** (1971), qui maintient les statistiques (moyenne, somme des écarts au carré) en mise à jour incrémentale au fur et à mesure du scan — un cousin de l'algorithme de Welford, conçu pour pouvoir aussi **combiner des sous-totaux** (utile pour l'agrégation parallèle). Avantages :  
+>  
 > - **Une seule passe** sur les données  
-> - **Stabilité numérique** très supérieure à la formule naïve `(Σx² - (Σx)²/n) / (n-1)` qui souffre de pertes de précision catastrophiques sur des valeurs grandes et proches.
->
+> - **Stabilité numérique** très supérieure à la formule naïve `(Σx² - (Σx)²/n) / (n-1)` qui souffre de pertes de précision catastrophiques sur des valeurs grandes et proches.  
+>  
 > C'est pourquoi `STDDEV(prix)` reste fiable sur une colonne de prix en milliards d'euros, alors qu'un calcul Python naïf en `float64` pourrait afficher `0` ou même `NaN`.
 
 ### Précision et types flottants : un piège pour les calculs financiers
@@ -758,7 +761,7 @@ SELECT AVG(prix::NUMERIC) FROM produits;
 -- → 19.99
 ```
 
-**Règle d'or** : pour les **montants financiers**, stockez vos données en `NUMERIC` et acceptez le coût d'agrégation légèrement supérieur (≈ 30 % plus lent que `double precision`). La précision exacte vaut amplement ce surcoût.
+**Règle d'or** : pour les **montants financiers**, stockez vos données en `NUMERIC` et acceptez un coût d'agrégation un peu supérieur — l'arithmétique `NUMERIC` est **logicielle**, là où `double precision` est **câblée dans le processeur** (le surcoût va de quelques pour cent à quelques dizaines de pour cent selon les opérations). La précision exacte vaut amplement ce surcoût.
 
 ### Optimisations
 
@@ -860,16 +863,18 @@ ORDER BY ABS((p.prix - s.moyenne) / s.ecart_type) DESC;
 WITH series AS (
     SELECT
         date_vente,
-        EXTRACT(EPOCH FROM date_vente) AS temps_unix,  -- Convertir date en nombre
+        -- EXTRACT(EPOCH ...) donne des SECONDES ; on divise par 86400
+        -- pour obtenir un nombre de JOURS, sinon la pente serait en €/seconde
+        EXTRACT(EPOCH FROM date_vente) / 86400 AS jours_depuis_epoque,
         montant_vente
     FROM ventes
     WHERE date_vente >= '2024-01-01'
 )
 SELECT
-    REGR_SLOPE(montant_vente, temps_unix) AS tendance_journaliere,
-    REGR_INTERCEPT(montant_vente, temps_unix) AS base,
-    REGR_R2(montant_vente, temps_unix) AS qualite_fit,
-    CORR(montant_vente, temps_unix) AS correlation
+    REGR_SLOPE(montant_vente, jours_depuis_epoque) AS tendance_journaliere,  -- € gagnés par jour écoulé
+    REGR_INTERCEPT(montant_vente, jours_depuis_epoque) AS base,
+    REGR_R2(montant_vente, jours_depuis_epoque) AS qualite_fit,
+    CORR(montant_vente, jours_depuis_epoque) AS correlation
 FROM series;
 
 -- Si tendance_journaliere > 0 → ventes en croissance

@@ -520,7 +520,7 @@ VACUUM FULL employes;
 
 -- Vérifier après VACUUM FULL
 SELECT pg_size_pretty(pg_relation_size('employes')) AS taille_table;
--- Résultat : ~8 KB (table vide avec structure minimale)
+-- Résultat : 0 bytes (le fichier heap est réécrit sans aucune page : taille nulle)
 ```
 
 ### TRUNCATE : Libération immédiate
@@ -535,7 +535,7 @@ TRUNCATE TABLE employes;
 
 -- Après (immédiatement)
 SELECT pg_size_pretty(pg_relation_size('employes')) AS taille_apres;
--- Résultat : ~8 KB (libération immédiate)
+-- Résultat : 0 bytes (fichier tronqué immédiatement à une taille nulle)
 ```
 
 Aucun VACUUM nécessaire !
@@ -838,6 +838,10 @@ CREATE TABLE application_logs (
 ) PARTITION BY RANGE (date_creation);
 
 -- 2. Une partition par mois (à créer à l'avance, idéalement par un job automatisé)
+CREATE TABLE application_logs_2024_11   -- ancienne partition, que l'on purgera plus bas
+    PARTITION OF application_logs
+    FOR VALUES FROM ('2024-11-01') TO ('2024-12-01');
+
 CREATE TABLE application_logs_2025_11
     PARTITION OF application_logs
     FOR VALUES FROM ('2025-11-01') TO ('2025-12-01');
@@ -847,8 +851,10 @@ CREATE TABLE application_logs_2025_12
     FOR VALUES FROM ('2025-12-01') TO ('2026-01-01');
 
 -- 3. Les INSERT sur application_logs sont routés vers la bonne partition
+--    (la date doit tomber dans une partition existante, sinon PostgreSQL
+--     renvoie « no partition of relation found for row »)
 INSERT INTO application_logs (date_creation, niveau, message)  
-VALUES (NOW(), 'INFO', 'Application started');  
+VALUES ('2025-11-15 10:00:00+00', 'INFO', 'Application started');  
 
 -- 4. La purge devient instantanée :
 DROP TABLE application_logs_2024_11;
@@ -866,8 +872,12 @@ Si on veut conserver la partition ailleurs avant de la jeter :
 ALTER TABLE application_logs DETACH PARTITION application_logs_2024_11;
 
 -- À ce stade, on peut :
---   - Exporter via COPY pour archive S3 / Glacier
-COPY application_logs_2024_11 TO '/archive/logs_2024_11.csv.gz'  
+--   - Exporter via COPY pour archive S3 / Glacier.
+--     ⚠️ COPY ne compresse JAMAIS de lui-même : un simple
+--        COPY ... TO '/archive/logs_2024_11.csv.gz' écrirait du CSV
+--        *non compressé* sous un nom trompeur. Pour obtenir un vrai .gz,
+--        on délègue la compression à gzip via TO PROGRAM.
+COPY application_logs_2024_11 TO PROGRAM 'gzip > /archive/logs_2024_11.csv.gz'  
 WITH (FORMAT csv, HEADER true);  
 --   - Puis détruire
 DROP TABLE application_logs_2024_11;
@@ -1059,7 +1069,7 @@ INSERT INTO test_data (nom) VALUES ('Test');
 -- Tables avec beaucoup de dead tuples après DELETE
 SELECT
     schemaname,
-    tablename,
+    relname AS tablename,   -- la vue expose 'relname' (pas 'tablename')
     n_dead_tup,
     n_live_tup,
     ROUND(100.0 * n_dead_tup / NULLIF(n_live_tup + n_dead_tup, 0), 2) AS dead_pct,

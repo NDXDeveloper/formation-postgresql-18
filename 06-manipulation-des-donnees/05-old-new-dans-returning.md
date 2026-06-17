@@ -58,7 +58,7 @@ Avec PostgreSQL 18, ces mêmes concepts sont maintenant disponibles **directemen
 
 > 📌 **Clé importante** : `OLD` et `NEW` sont **toujours accessibles** depuis PG 18, mais peuvent valoir `NULL` selon le type d'opération. Cela permet d'écrire des requêtes **polymorphes** qui marchent pour tout type d'opération (par exemple un `MERGE` dont la branche dépend du `MATCHED`/`NOT MATCHED`) et de tester `OLD IS NULL` pour distinguer une insertion d'une mise à jour.
 
-> 💡 **Renommage des qualificateurs** : on peut renommer `OLD` et `NEW` (par exemple si vous avez réellement une table ou colonne nommée « old ») via la syntaxe :
+> 💡 **Renommage des qualificateurs** : on peut renommer `OLD` et `NEW` (par exemple si vous avez réellement une table ou colonne nommée « old ») via la syntaxe :  
 >
 > ```sql
 > UPDATE produits SET prix = prix * 1.10
@@ -614,7 +614,7 @@ Les variables `OLD` et `NEW` sont historiquement associées aux **triggers** (de
 | **Overhead** | Permanent (overhead par ligne, même quand pas nécessaire) | Aucun overhead si on n'utilise pas la clause |
 | **Logique conditionnelle** | Plein PL/pgSQL : branches, appels de fonctions, exceptions | Expressions SQL uniquement |
 | **Destination des données** | N'importe où : autre table, fichier, NOTIFY, appel de fonction externe | Le résultat de la commande (à consommer côté client ou via CTE) |
-| **Mode `DEFERRABLE`** | ✅ Possible (triggers `INITIALLY DEFERRED`) | ❌ Pas applicable |
+| **Mode `DEFERRABLE`** | ⚠️ Seulement via un `CONSTRAINT TRIGGER` (`INITIALLY DEFERRED`) — un trigger `AFTER UPDATE` ordinaire n'accepte pas `DEFERRABLE` | ❌ Pas applicable |
 | **Tests unitaires** | Difficile : il faut tester côté base | Facile : tout le comportement est dans la requête testée |
 
 ### Quand préférer un **trigger**
@@ -814,7 +814,7 @@ CREATE OR REPLACE PROCEDURE augmenter_salaires_par_lots(taille_lot INTEGER)
 LANGUAGE plpgsql  
 AS $$  
 DECLARE  
-    ids_traites INTEGER[];
+    nb_lignes INTEGER;
 BEGIN
     LOOP
         -- Sélectionner un lot de lignes non encore traitées
@@ -836,10 +836,14 @@ BEGIN
             RETURNING e.id, OLD.salaire AS ancien, NEW.salaire AS nouveau
         )
         INSERT INTO historique_salaires (employe_id, ancien, nouveau)
-        SELECT id, ancien, nouveau FROM modifies
-        RETURNING employe_id INTO ids_traites;  -- pour détecter la fin
+        SELECT id, ancien, nouveau FROM modifies;
 
-        EXIT WHEN ids_traites IS NULL OR array_length(ids_traites, 1) IS NULL;
+        -- ROW_COUNT = nombre de lignes réellement traitées par le dernier ordre.
+        -- (On ne peut pas faire « RETURNING ... INTO tableau » : un RETURNING qui
+        --  ramène plusieurs lignes vers une variable lève « query returned more
+        --  than one row ». GET DIAGNOSTICS est le mécanisme idiomatique ici.)
+        GET DIAGNOSTICS nb_lignes = ROW_COUNT;
+        EXIT WHEN nb_lignes = 0;  -- plus aucune ligne à traiter : on sort
 
         -- Commit après chaque lot : indispensable pour libérer les verrous
         -- et limiter la taille de la transaction.

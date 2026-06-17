@@ -38,7 +38,7 @@ Imaginez que vous avez une pile de factures d'entreprise. Sans GROUP BY, vous ca
 SELECT
     colonne_de_groupement,
     fonction_agregation(colonne)
-FROM table  
+FROM nom_table  
 GROUP BY colonne_de_groupement;  
 ```
 
@@ -81,7 +81,8 @@ SELECT
     client_id,
     SUM(montant) AS total_depense
 FROM ventes  
-GROUP BY client_id;  
+GROUP BY client_id  
+ORDER BY client_id;  
 ```
 
 **Résultat :**
@@ -96,6 +97,8 @@ GROUP BY client_id;
 1. PostgreSQL a regroupé toutes les lignes ayant le même `client_id`  
 2. Pour chaque groupe, il a calculé `SUM(montant)`  
 3. Il a retourné **une ligne par groupe** (donc 3 lignes, une par client)
+
+> 📌 **`GROUP BY` ne trie pas !** L'ordre des lignes en sortie n'est **pas garanti** sans `ORDER BY` — il dépend de l'algorithme interne (`HashAggregate` ou `GroupAggregate`). C'est pourquoi nous ajoutons `ORDER BY client_id` ci-dessus : sans lui, PostgreSQL pourrait renvoyer les clients dans un ordre comme `101, 103, 102`. Si l'ordre compte, **spécifiez-le toujours explicitement**.
 
 ---
 
@@ -561,8 +564,8 @@ ORDER BY mois;
 SELECT
     CASE
         WHEN montant < 50 THEN 'Petit panier'
-        WHEN montant BETWEEN 50 AND 200 THEN 'Panier moyen'
-        WHEN montant BETWEEN 201 AND 500 THEN 'Gros panier'
+        WHEN montant < 200 THEN 'Panier moyen'
+        WHEN montant < 500 THEN 'Gros panier'
         ELSE 'Très gros panier'
     END AS tranche_prix,
     COUNT(*) AS nb_ventes,
@@ -571,13 +574,15 @@ FROM ventes
 GROUP BY  
     CASE
         WHEN montant < 50 THEN 'Petit panier'
-        WHEN montant BETWEEN 50 AND 200 THEN 'Panier moyen'
-        WHEN montant BETWEEN 201 AND 500 THEN 'Gros panier'
+        WHEN montant < 200 THEN 'Panier moyen'
+        WHEN montant < 500 THEN 'Gros panier'
         ELSE 'Très gros panier'
     END
 ORDER BY
     MIN(montant);  -- Trier par le montant minimum de chaque tranche
 ```
+
+> 📌 **Pourquoi des seuils `<` et non `BETWEEN` ?** Pour découper en tranches, préférez des comparaisons `<` successives plutôt que `BETWEEN x AND y`. Avec `BETWEEN 50 AND 200` puis `BETWEEN 201 AND 500`, un montant **décimal** comme `200,50 €` ne tomberait dans **aucune** tranche et basculerait dans le `ELSE` (« Très gros panier ») ! Des seuils `<` qui s'enchaînent garantissent une partition **sans trou ni recouvrement**, quelle que soit la précision des valeurs.
 
 ---
 
@@ -913,7 +918,7 @@ GroupAggregate  (cost=0.15..25.30 rows=100 width=20)
 | **Données triées requises ?** | Non | Oui (ou tri préalable) |
 | **Mémoire** | O(nombre de groupes × taille état) — tient en `work_mem` | O(1) — streaming |
 | **Performance** | Très rapide si `work_mem` suffit | Constante, indépendante du nombre de groupes |
-| **Spill disque** | Possible si `work_mem` débordé (PG 13+ : *Hash Disk Spilling*) | Jamais |
+| **Spill disque** | Possible si `work_mem` débordé (PG 13+ : *Hash Disk Spilling*) | Jamais pour l'agrégation (mais un `Sort` préalable, faute d'index, peut déborder) |
 | **Cas favori** | Beaucoup de groupes, pas de tri disponible | Index couvrant la clé de groupement, ou tri déjà nécessaire pour `ORDER BY` |
 
 ### Diagnostic d'un `HashAggregate` qui *spille* sur disque
@@ -987,7 +992,7 @@ GROUP BY c.client_id, c.nom, c.prenom, c.email
 ORDER BY total_depense DESC;  
 ```
 
-**Note** : Toutes les colonnes de `clients` sélectionnées doivent être dans GROUP BY !
+**Note** : En SQL standard strict, toutes les colonnes de `clients` sélectionnées devraient figurer dans `GROUP BY`. Mais **PostgreSQL (depuis la version 9.1) reconnaît la dépendance fonctionnelle** : si vous groupez par la **clé primaire** (`GROUP BY c.client_id`), vous pouvez sélectionner les autres colonnes de `clients` (`nom`, `prenom`, `email`) **sans les répéter** — elles sont déterminées de manière unique par la PK. La forme ci-dessus (lister toutes les colonnes) reste néanmoins valable et plus portable vers d'autres SGBD.
 
 ### GROUP BY + CTE (Common Table Expression)
 

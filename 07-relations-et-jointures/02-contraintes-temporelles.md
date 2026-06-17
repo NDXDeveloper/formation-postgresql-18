@@ -142,6 +142,7 @@ UNIQUE | PRIMARY KEY ( col_1, col_2, …, col_range WITHOUT OVERLAPS )
 - Elle doit être d'un type **`range`** ou **`multirange`**.
 - Les autres colonnes sont comparées pour **égalité** (comme dans un `UNIQUE` classique).
 - L'index sous-jacent est un **GiST**, pas un B-tree.
+- La contrainte doit comporter **au moins deux colonnes** : au moins une colonne d'égalité **et** la colonne range. Une contrainte `WITHOUT OVERLAPS` portant sur le seul range est refusée (`constraint using WITHOUT OVERLAPS needs at least two columns`). Pour interdire tout chevauchement *global*, sans colonne de partitionnement, il faut revenir à `EXCLUDE USING gist (periode WITH &&)`.
 
 ### Premier exemple — réservations de salles
 
@@ -188,8 +189,8 @@ INSERT INTO reservations_salles (salle_id, utilisateur_id, periode) VALUES
 
 PostgreSQL détecte automatiquement le chevauchement et rejette l'insertion.
 
-> 💡 **Pourquoi `btree_gist` ?** Les contraintes `WITHOUT OVERLAPS` s'appuient sur un index **GiST** (les ranges ne sont pas indexables en B-tree). Or `salle_id` est un `INTEGER` : par défaut, GiST ne connaît pas l'opérateur d'égalité sur les types scalaires. L'extension `btree_gist` ajoute le support des opérateurs B-tree (`=`, `<`, etc.) aux index GiST, ce qui permet de mélanger des colonnes scalaires (`salle_id`) avec des colonnes range (`periode`) dans la même contrainte.
->
+> 💡 **Pourquoi `btree_gist` ?** Les contraintes `WITHOUT OVERLAPS` s'appuient sur un index **GiST** (les ranges ne sont pas indexables en B-tree). Or `salle_id` est un `INTEGER` : par défaut, GiST ne connaît pas l'opérateur d'égalité sur les types scalaires. L'extension `btree_gist` ajoute le support des opérateurs B-tree (`=`, `<`, etc.) aux index GiST, ce qui permet de mélanger des colonnes scalaires (`salle_id`) avec des colonnes range (`periode`) dans la même contrainte.  
+>  
 > Si tous les composants de la contrainte sont déjà des ranges, `btree_gist` n'est pas nécessaire.
 
 ### `PRIMARY KEY WITHOUT OVERLAPS`
@@ -337,6 +338,8 @@ INSERT INTO reservations_capacite (salle_id, periode) VALUES
 | `ON DELETE SET NULL` | ❌ Non |
 | `ON DELETE SET DEFAULT` | ❌ Non |
 
+> ⚠️ La même restriction vaut pour **`ON UPDATE`** : seul `NO ACTION` est accepté. Un `ON UPDATE CASCADE` (ou `RESTRICT`, `SET NULL`…) est rejeté avec `unsupported ON UPDATE action for foreign key constraint using PERIOD`.
+
 Si vous avez besoin de cascades ou de comportements actifs sur les FK temporelles, il faut implémenter la logique vous-même (typiquement via un trigger ou côté application).
 
 ---
@@ -393,13 +396,15 @@ WITH journee AS (
     SELECT tstzrange('2025-01-10 09:00+01', '2025-01-10 18:00+01', '[)') AS plage
 )
 SELECT range_agg(occupe.periode) AS plages_occupees,
-       (SELECT plage FROM journee) - range_agg(occupe.periode) AS plages_libres
+       -- range_agg renvoie un MULTIRANGE : on convertit la plage de référence
+       -- en multirange pour pouvoir soustraire (un « range − multirange » n'existe pas)
+       tstzmultirange((SELECT plage FROM journee)) - range_agg(occupe.periode) AS plages_libres
 FROM reservations_salles occupe  
 WHERE occupe.salle_id = 1  
   AND occupe.periode && (SELECT plage FROM journee);
 ```
 
-> 📌 `range_agg` (PostgreSQL 14+) consolide plusieurs ranges en un `multirange`. Sa différence avec un range simple donne les **plages libres**, sans avoir à les calculer manuellement avec des `LEAD`/`LAG`.
+> 📌 `range_agg` (PostgreSQL 14+) consolide plusieurs ranges en un **`multirange`**. Comme la soustraction veut deux opérandes de même nature, on convertit la plage de référence en multirange via `tstzmultirange(...)` : `multirange − multirange` donne les **plages libres**, sans calcul manuel avec des `LEAD`/`LAG`. *(Un `range − multirange` direct lèverait `operator does not exist`.)*
 
 ### d) « Quelle est l'occupation cumulée par jour ? »
 
@@ -440,9 +445,13 @@ CREATE INDEX idx_resa_utilisateur ON reservations_salles(utilisateur_id);
 Si la quasi-totalité des requêtes ne porte que sur les périodes courantes ou futures, un index partiel réduit la taille de l'index :
 
 ```sql
+-- ⚠️ Le prédicat d'un index partiel doit être IMMUTABLE : « now() » y est
+--    REFUSÉ (« functions in index predicate must be marked IMMUTABLE »),
+--    car c'est une fonction STABLE. On fige donc une date « charnière »
+--    constante, qu'on actualise périodiquement en recréant l'index.
 CREATE INDEX idx_resa_futures
     ON reservations_salles USING gist (salle_id, periode)
-    WHERE upper(periode) > now();
+    WHERE upper(periode) > '2025-01-01'::timestamptz;
 ```
 
 ---
@@ -536,7 +545,13 @@ C'est la valeur par défaut recommandée pour une table de réservation.
 
 ### c) Ranges vides
 
-Un range vide (`'empty'::tstzrange`) ne chevauche **rien** par définition. Pour interdire les ranges vides :
+En **PostgreSQL 18, un range vide (`'empty'::tstzrange`) est automatiquement rejeté** dès qu'il vise une colonne couverte par `WITHOUT OVERLAPS` :
+
+```
+ERROR:  empty WITHOUT OVERLAPS value found in column "periode" in relation "reservations_salles"
+```
+
+Aucune protection supplémentaire n'est donc requise pour ce cas précis. Un `CHECK (NOT isempty(periode))` reste néanmoins recommandé comme **garde-fou explicite** : il documente l'intention, renvoie un message d'erreur plus parlant, et continue de protéger la table si la contrainte `WITHOUT OVERLAPS` venait à être retirée :
 
 ```sql
 CHECK (NOT isempty(periode))
@@ -570,7 +585,7 @@ Le GiST est plus coûteux à maintenir qu'un B-tree. Sur une table d'historique 
 
 1. **Stocker les périodes comme des ranges**, pas comme deux colonnes séparées. C'est plus naturel, et l'opérateur `&&` devient utilisable partout.
 2. **Toujours rendre la colonne range `NOT NULL`** sur les tables où la période est intrinsèque (réservation, contrat, location).
-3. **Toujours ajouter `CHECK (NOT isempty(periode))`** pour exclure les ranges vides.
+3. **Exclure les ranges vides avec `CHECK (NOT isempty(periode))`** comme garde-fou explicite. *(Dans une contrainte `WITHOUT OVERLAPS`, PostgreSQL 18 rejette déjà nativement les ranges vides — voir la section 9c ; le `CHECK` documente l'intention et renvoie un message plus parlant.)*
 4. **Préférer la convention `[)`** (inclusif à gauche, exclusif à droite) : elle rend les périodes contiguës (`[8h,10h)` puis `[10h,12h)`) sans chevauchement ni trou.
 5. **Documenter la contrainte** :
    ```sql

@@ -71,7 +71,9 @@ WHERE nom = 'Dupont' AND prenom = 'Marie';
 
 ```sql
 SELECT nom, prenom, salaire FROM employes WHERE nom = 'Dupont';
+```
 
+```text
   nom   | prenom | salaire
 --------+--------+----------
  Dupont | Marie  | 47000.00
@@ -175,7 +177,9 @@ SET salaire = 30000;
 
 ```sql
 SELECT nom, prenom, salaire FROM employes;
+```
 
+```text
   nom   | prenom | salaire
 --------+--------+----------
  Dupont | Marie  | 30000.00  ← Avant : 47000
@@ -345,7 +349,7 @@ WHERE poste LIKE 'D_veloppeur';
 -- Syntaxe ~ (sensible à la casse)
 UPDATE employes  
 SET domaine_valide = true  
-WHERE email ~ '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}$';  
+WHERE email ~ '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$';  
 
 -- Syntaxe ~* (insensible à la casse)
 UPDATE employes  
@@ -652,7 +656,8 @@ DELETE FROM departements WHERE id = 1;
 ```
 
 Options de `ON DELETE` :
-- `RESTRICT` (défaut) : Empêche la suppression si des dépendances existent  
+- `NO ACTION` (**défaut**) : empêche la suppression si des dépendances existent ; la vérification a lieu en **fin d'instruction**, ce qui la rend *différable* avec `DEFERRABLE INITIALLY DEFERRED`  
+- `RESTRICT` : empêche la suppression de la même façon, mais la vérification est **immédiate** (non différable)  
 - `CASCADE` : Supprime aussi les lignes dépendantes  
 - `SET NULL` : Met à NULL la foreign key dans les lignes dépendantes  
 - `SET DEFAULT` : Met la valeur par défaut dans les lignes dépendantes
@@ -683,8 +688,8 @@ Pour éviter de verrouiller la table trop longtemps et d'enfler le journal des t
 
 ```sql
 -- Supprimer par lots de 10 000 lignes au sein d'une procédure
--- (la procédure peut COMMITer entre chaque lot, contrairement à un bloc DO
---  ou à une fonction PL/pgSQL classique)
+-- (une procédure appelée par CALL peut COMMITer entre chaque lot ; une
+--  FONCTION PL/pgSQL classique, elle, ne le peut pas)
 CREATE OR REPLACE PROCEDURE purge_anciens_logs()  
 LANGUAGE plpgsql  
 AS $$  
@@ -715,9 +720,9 @@ $$;
 CALL purge_anciens_logs();
 ```
 
-> 📌 **Pourquoi une procédure et pas un bloc `DO` ?** Depuis PostgreSQL 11, **seules les procédures** (`CREATE PROCEDURE`) appelées par `CALL` peuvent contenir un `COMMIT` au milieu de leur exécution. Un bloc `DO $$ … $$` s'exécute dans une transaction unique : un `COMMIT` à l'intérieur déclenchera l'erreur `cannot commit while a subtransaction is active` ou similaire.
+> 📌 **Qui peut faire un `COMMIT` au milieu du code ?** Depuis PostgreSQL 11, le contrôle de transaction (`COMMIT`/`ROLLBACK`) est autorisé **aussi bien dans une procédure (`CALL`) que dans un bloc anonyme `DO`** — les deux conviennent pour cette purge par lots. Une **fonction** PL/pgSQL classique (évaluée à l'intérieur d'un `SELECT`), elle, ne le peut **pas** : un `COMMIT` y lève `ERROR: invalid transaction termination`. Seule condition pour que le `COMMIT` interne soit permis : la procédure (ou le `DO`) doit être lancée **hors d'une transaction explicite** — un `BEGIN; CALL …; COMMIT;` (ou `BEGIN; DO …; COMMIT;`) englobant ferait échouer le `COMMIT` interne avec cette même `invalid transaction termination`. On choisit ici une **procédure nommée** parce qu'elle est réutilisable et planifiable (par exemple via `pg_cron`), non pour une raison technique de transaction.
 
-> 💡 **Variante avec `FOR UPDATE SKIP LOCKED`** : dans un système où plusieurs workers purgent en parallèle, ajouter `FOR UPDATE SKIP LOCKED` dans la sous-requête évite que deux workers attendent les mêmes lignes :
+> 💡 **Variante avec `FOR UPDATE SKIP LOCKED`** : dans un système où plusieurs workers purgent en parallèle, ajouter `FOR UPDATE SKIP LOCKED` dans la sous-requête évite que deux workers attendent les mêmes lignes :  
 >
 > ```sql
 > DELETE FROM logs
@@ -884,7 +889,7 @@ UPDATE produits SET date_maj = NOW() WHERE id = 42;
 UPDATE produits SET prix = prix * 1.1 WHERE id = 42;
 ```
 
-> 💡 **Conséquence pratique** : si une table subit beaucoup d'`UPDATE` fréquents sur une colonne « technique » (compteur, dernier accès, `last_seen_at`), évitez de l'indexer si ce n'est pas nécessaire — vous préserverez la possibilité de HOT updates. Pour favoriser les HOT, on peut aussi baisser le `fillfactor` de la table (par défaut 100, on met souvent 80–90 sur les tables très volatiles) afin de laisser de la place libre sur chaque page pour la nouvelle version :
+> 💡 **Conséquence pratique** : si une table subit beaucoup d'`UPDATE` fréquents sur une colonne « technique » (compteur, dernier accès, `last_seen_at`), évitez de l'indexer si ce n'est pas nécessaire — vous préserverez la possibilité de HOT updates. Pour favoriser les HOT, on peut aussi baisser le `fillfactor` de la table (par défaut 100, on met souvent 80–90 sur les tables très volatiles) afin de laisser de la place libre sur chaque page pour la nouvelle version :  
 >
 > ```sql
 > ALTER TABLE produits SET (fillfactor = 85);
@@ -914,7 +919,7 @@ L'accumulation de tuples obsolètes non encore *vacuumés* s'appelle le **bloat*
 #### 3. UPDATE partiel vs UPDATE complet
 
 ```sql
--- ❌ Inutilement coûteux : liste toutes les colonnes même si elles ne changent pas
+-- ⚠️ Verbeux : réassigne des colonnes qui ne changent pas (expressions évaluées pour rien)
 UPDATE employes  
 SET nom = nom,  
     prenom = prenom,
@@ -928,9 +933,10 @@ SET salaire = salaire * 1.1;
 
 Pourquoi cette différence ?
 
-- Une nouvelle version du tuple est **toujours créée** dès lors que l'`UPDATE` matche la ligne, **même si toutes les nouvelles valeurs sont identiques aux anciennes** (PostgreSQL ne fait pas de comparaison « avant/après » sur les colonnes non listées dans `SET`).
-- Mais la première forme **liste explicitement** `nom`, `prenom`, `email` dans `SET`. Si l'une de ces colonnes est indexée, PostgreSQL **ne pourra pas faire de HOT update** (cf. optimisation ci-dessus), même si la valeur n'a pas changé.
-- La seconde forme ne touche que `salaire` ; si seule la colonne `salaire` est indexée, le HOT update reste impossible ; mais si `salaire` n'est pas indexé, on bénéficie pleinement du HOT.
+- Une nouvelle version du tuple est **toujours créée** dès lors que l'`UPDATE` matche la ligne, **même si toutes les nouvelles valeurs sont identiques aux anciennes** (PostgreSQL ne compare pas « avant/après » pour *annuler* l'écriture).
+- Ce qui décide du **HOT update**, ce n'est pas la *présence* d'une colonne dans `SET`, mais le fait qu'une colonne **indexée change réellement de valeur**. PostgreSQL compare l'ancienne et la nouvelle valeur de chaque colonne indexée : réécrire `nom = nom` (valeur identique) **préserve** le HOT update, alors que `nom = UPPER(nom)` (valeur réellement modifiée), si `nom` est indexé, le **bloque**. *(Vérifiable via `n_tup_hot_upd` dans `pg_stat_user_tables`.)*
+- Lister inutilement des colonnes reste néanmoins une mauvaise habitude : on évalue des expressions pour rien et on risque de déclencher des triggers `BEFORE UPDATE OF colonne`.
+- La seconde forme ne touche que `salaire` : si `salaire` n'est pas indexé, le HOT update est pleinement possible.
 
 ### DELETE : Considérations de performance
 
@@ -1044,7 +1050,7 @@ UPDATE taches SET statut = 'fait' WHERE id = …;
 COMMIT;  
 ```
 
-Chaque *worker* récupère **une** tâche, saute toutes celles déjà tenues par d'autres *workers*, et n'attend pas. C'est le pattern utilisé par des systèmes comme [Sidekiq Pro](https://github.com/sidekiq/sidekiq), [Oban](https://github.com/oban-bg/oban) ou [pgworker](https://github.com/citusdata/pg_cron).
+Chaque *worker* récupère **une** tâche, saute toutes celles déjà tenues par d'autres *workers*, et n'attend pas. C'est le pattern utilisé par les files de tâches **basées sur PostgreSQL** comme [Oban](https://github.com/oban-bg/oban) (Elixir), [graphile-worker](https://github.com/graphile/worker) (Node.js) ou [Que](https://github.com/que-rb/que) (Ruby). *(À l'inverse, des systèmes comme Sidekiq reposent sur Redis, pas sur PostgreSQL.)*
 
 ### Détecter les conflits de verrous (*lock waits*)
 
@@ -1231,7 +1237,7 @@ Avant chaque UPDATE ou DELETE en production :
 | Modifier des lignes | UPDATE | ✅ (transaction) | Requis | Moyen |
 | Supprimer des lignes | DELETE | ✅ (transaction) | Requis | Moyen |
 | Vider table | TRUNCATE | ✅ (transaction) | ❌ | ⚡ Rapide |
-| Supprimer table | DROP TABLE | ❌ | N/A | ⚡ Instantané |
+| Supprimer table | DROP TABLE | ✅ (transaction) | N/A | ⚡ Instantané |
 
 ---
 

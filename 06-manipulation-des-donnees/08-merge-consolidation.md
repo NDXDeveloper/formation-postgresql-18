@@ -285,6 +285,25 @@ WHEN NOT MATCHED AND source.disponible = true THEN
     VALUES (source.reference, source.designation, source.prix_achat * 1.5, 0, CURRENT_TIMESTAMP);
 ```
 
+### `WHEN … THEN DO NOTHING` : ignorer explicitement certaines lignes
+
+Outre `UPDATE`, `DELETE` et `INSERT`, une branche `WHEN` peut décider de **ne rien faire** grâce à `DO NOTHING`. C'est pratique pour **exclure** du traitement certaines lignes (figées, verrouillées par une règle métier…) sans les sortir de la condition de jointure :
+
+```sql
+MERGE INTO cible AS t  
+USING source AS s ON t.id = s.id  
+WHEN MATCHED AND t.statut = 'figé' THEN  
+    DO NOTHING                       -- ligne protégée : laissée intacte
+WHEN MATCHED THEN
+    UPDATE SET valeur = s.valeur
+WHEN NOT MATCHED AND s.ignorer THEN
+    DO NOTHING                       -- cette ligne source n'est pas insérée
+WHEN NOT MATCHED THEN
+    INSERT (id, valeur) VALUES (s.id, s.valeur);
+```
+
+`DO NOTHING` est accepté **aussi bien en `WHEN MATCHED` qu'en `WHEN NOT MATCHED`**. Les lignes traitées par une branche `DO NOTHING` ne sont **ni comptées** dans le `MERGE n` final, **ni renvoyées** par un éventuel `RETURNING` — ce qui en fait un moyen propre de filtrer sans effet de bord.
+
 ---
 
 ## 6.8.6. OLD et NEW dans MERGE (PostgreSQL 18)
@@ -332,6 +351,24 @@ RETURNING
  UPDATE | PROD-003  |       79.99 |        89.99 |          10.00
  INSERT | PROD-004  |             |       299.99 |         299.99
 ```
+
+> 💡 **Plus simple : la fonction `merge_action()` (PG 17+)** — pour connaître l'action effectuée sur chaque ligne dans le `RETURNING` d'un `MERGE`, PostgreSQL offre une fonction dédiée qui renvoie directement `'INSERT'`, `'UPDATE'` ou `'DELETE'`, sans passer par la nullité de `OLD`/`NEW` :  
+>
+> ```sql
+> MERGE INTO produits AS target
+> USING produits_import AS source
+> ON target.sku = source.sku
+> WHEN MATCHED THEN UPDATE SET prix = source.prix
+> WHEN NOT MATCHED THEN INSERT (sku, nom, prix)
+>     VALUES (source.sku, source.nom, source.prix)
+> RETURNING
+>     merge_action() AS action,          -- 'INSERT' | 'UPDATE' | 'DELETE'
+>     COALESCE(OLD.sku, NEW.sku) AS sku,
+>     OLD.prix AS ancien_prix,
+>     NEW.prix AS nouveau_prix;
+> ```
+>  
+> `merge_action()` ne s'utilise **que** dans la clause `RETURNING` d'un `MERGE`. Le motif `CASE WHEN OLD.… IS NULL …` reste valable (et nécessaire avant PG 17), mais pour le cas courant `merge_action()` est plus lisible et ne dépend d'aucune colonne particulière.
 
 ### Distinguer les trois types d'opérations
 
@@ -538,8 +575,11 @@ WHEN MATCHED THEN
     UPDATE SET
         quantite = target.quantite + source.ajustement_total,
         statut = CASE
+            -- ⚠️ Ordre important : tester la RUPTURE (stock épuisé) AVANT l'ALERTE,
+            --    sinon « <= seuil_alerte » capterait déjà le cas 0 et 'RUPTURE'
+            --    serait inatteignable.
+            WHEN target.quantite + source.ajustement_total <= 0 THEN 'RUPTURE'
             WHEN target.quantite + source.ajustement_total <= target.seuil_alerte THEN 'ALERTE'
-            WHEN target.quantite + source.ajustement_total = 0 THEN 'RUPTURE'
             ELSE 'OK'
         END
 WHEN NOT MATCHED THEN
@@ -648,6 +688,24 @@ WHEN NOT MATCHED THEN
     INSERT (email, nom, prenom, source, date_creation)
     VALUES (source.email, source.nom, source.prenom, source.source, CURRENT_TIMESTAMP);
 ```
+
+> ⚠️ **Piège de cardinalité avec `UNION` multi-sources** : chaque sous-`SELECT` ajoute une colonne `source` différente (`'CRM'`, `'Newsletter'`…). Si un même `email` existe dans **plusieurs** sources, l'`UNION` ne les fusionne **pas** (les lignes diffèrent par la colonne `source`) — la source du `MERGE` contient alors **deux lignes** pour cet `email`. Le `MERGE` échoue alors, soit avec `duplicate key value violates unique constraint` (si les deux lignes partent en `INSERT`), soit avec `MERGE command cannot affect row a second time` (si elles matchent la même ligne cible). C'est un cas **très réaliste** : un contact présent à la fois dans le CRM *et* la newsletter.  
+>  
+> **Solution** — dédupliquer la source pour ne garder qu'**une ligne par clé**, par exemple via `DISTINCT ON` et un ordre de priorité entre sources :  
+>
+> ```sql
+> USING (
+>     SELECT DISTINCT ON (email) email, nom, prenom, source
+>     FROM (
+>         SELECT email, nom, prenom, 'CRM'        AS source, 1 AS prio FROM crm_contacts
+>         UNION ALL
+>         SELECT email, nom, prenom, 'Newsletter', 2           FROM newsletter_subscribers
+>         UNION ALL
+>         SELECT email, nom, prenom, 'Support',    3           FROM support_tickets
+>     ) t
+>     ORDER BY email, prio          -- priorité : CRM > Newsletter > Support
+> ) AS source
+> ```
 
 ---
 
@@ -1082,36 +1140,40 @@ CREATE TABLE dim_client_h (
 CREATE UNIQUE INDEX dim_client_h_actif
     ON dim_client_h (client_id) WHERE actif;
 
--- L'algorithme SCD2 en un seul MERGE :
-WITH
--- 1) Pour chaque ligne source, retrouver la version active
-src_avec_actif AS (
-    SELECT s.*, h.sk AS sk_actif, h.segment AS segment_actuel,
-           h.ville AS ville_actuelle, h.nom AS nom_actuel
-    FROM staging_client s
-    LEFT JOIN dim_client_h h
-      ON h.client_id = s.client_id AND h.actif
-),
--- 2) Ne garder que celles qui ont vraiment changé
-modifications AS (
-    SELECT *
-    FROM src_avec_actif
-    WHERE sk_actif IS NULL                                  -- nouveau client
-       OR nom IS DISTINCT FROM nom_actuel                   -- ou changement
-       OR ville IS DISTINCT FROM ville_actuelle
-       OR segment IS DISTINCT FROM segment_actuel
-),
--- 3) Clore les versions actuelles concernées
-fermees AS (
-    UPDATE dim_client_h
-    SET actif = false, valide_au = now()
-    WHERE sk IN (SELECT sk_actif FROM modifications WHERE sk_actif IS NOT NULL)
-    RETURNING sk
-)
--- 4) Insérer les nouvelles versions actives
+-- ⚠️ Piège : on ne peut PAS clôturer l'ancienne version ET insérer la nouvelle
+-- dans un seul WITH. Les sous-instructions d'un même WITH partagent le même
+-- snapshot et ne voient pas leurs effets mutuels ; l'UPDATE de clôture et
+-- l'INSERT (nouvelle ligne « active ») s'appliquent dans un ordre imprévisible.
+-- L'index partiel « WHERE actif » verrait alors DEUX lignes actives pour le
+-- même client_id, et l'opération échouerait avec :
+--    ERROR: duplicate key value violates unique constraint "dim_client_h_actif"
+--
+-- La clôture doit être VISIBLE de l'insertion : on enchaîne donc des
+-- instructions séquentielles, encapsulées dans une transaction pour l'atomicité.
+BEGIN;
+
+-- 1) Calculer les lignes à versionner (nouveau client OU attribut modifié)
+CREATE TEMP TABLE changements ON COMMIT DROP AS  
+SELECT s.client_id, s.nom, s.ville, s.segment, h.sk AS sk_actif  
+FROM staging_client s  
+LEFT JOIN dim_client_h h  
+  ON h.client_id = s.client_id AND h.actif  
+WHERE h.sk IS NULL                              -- nouveau client
+   OR s.nom     IS DISTINCT FROM h.nom          -- ou changement d'attribut
+   OR s.ville   IS DISTINCT FROM h.ville
+   OR s.segment IS DISTINCT FROM h.segment;
+
+-- 2) Clore les versions actuellement actives concernées
+UPDATE dim_client_h  
+SET actif = false, valide_au = now()  
+WHERE sk IN (SELECT sk_actif FROM changements WHERE sk_actif IS NOT NULL);  
+
+-- 3) Insérer les nouvelles versions actives (l'étape 2 est déjà visible ici)
 INSERT INTO dim_client_h (client_id, nom, ville, segment, valide_du)  
 SELECT client_id, nom, ville, segment, now()  
-FROM modifications;  
+FROM changements;  
+
+COMMIT;
 ```
 
 L'index partiel `WHERE actif` garantit qu'il y a **au plus une ligne active** par `client_id` à tout instant, et accélère la lookup de la version courante. La table contient l'**historique complet** des transitions, qu'on peut interroger temporellement :
@@ -1124,7 +1186,7 @@ WHERE client_id = 42
   AND (valide_au IS NULL OR valide_au > '2024-05-15'::timestamptz);
 ```
 
-> 💡 **MERGE pur ou CTE chaînées ?** Le SCD2 ci-dessus utilise plusieurs CTE chaînées plutôt qu'un seul `MERGE`. Pourquoi ? Parce que SCD2 nécessite **deux écritures par changement** (clôture + nouvelle version), et `MERGE` n'autorise qu'**une seule action par ligne source**. Un `MERGE` plus un `INSERT` séparé est nécessaire — ce que nous faisons ici, élégamment, dans un seul `WITH`.
+> 💡 **Pourquoi pas un seul `MERGE` (ni un seul `WITH`) ?** SCD2 demande **deux écritures par changement** : clôturer la version courante *et* insérer la nouvelle. Or `MERGE` n'autorise qu'**une seule action par ligne source**. Et regrouper l'`UPDATE` de clôture et l'`INSERT` dans un même `WITH` est impossible ici : le snapshot partagé par les sous-instructions ferait coexister deux lignes « actives » pour un même client, ce qui viole l'index partiel `WHERE actif`. Les deux écritures doivent donc être **séquentielles** — d'où la transaction explicite, qui garantit malgré tout l'atomicité de l'ensemble.
 
 ---
 

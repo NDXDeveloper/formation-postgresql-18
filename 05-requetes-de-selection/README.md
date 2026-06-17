@@ -226,7 +226,7 @@ Pierre Bernard | p.bernard@mail.com
 
 **L'opérateur `||`** est utilisé pour concaténer (coller ensemble) des chaînes de caractères.
 
-> ⚠️ **Piège du NULL** : si une seule des chaînes concaténées est `NULL`, le résultat entier est `NULL`. Par exemple, si `prenom` est `NULL`, alors `prenom || ' ' || nom` renvoie `NULL` (pas seulement « ` ` + nom »). Pour éviter ce piège, utilisez la fonction `CONCAT()` qui ignore les `NULL`, ou `COALESCE()` pour fournir une valeur de remplacement. Ce comportement sera détaillé en section [5.3 sur le piège du NULL](/05-requetes-de-selection/03-piege-du-null.md).
+> ⚠️ **Piège du NULL** : si une seule des chaînes concaténées est `NULL`, le résultat entier est `NULL`. Par exemple, si `prenom` est `NULL`, alors `prenom || ' ' || nom` renvoie `NULL` (pas seulement « ` ` + nom »). Pour éviter ce piège, utilisez la fonction `CONCAT()` qui ignore les `NULL`, ou `COALESCE()` pour fournir une valeur de remplacement. Ce comportement sera détaillé en section [5.3 sur le piège du NULL](/05-requetes-de-selection/03-piege-du-null.md).  
 >
 > ```sql
 > -- Avec ||, si prenom est NULL → résultat NULL
@@ -398,7 +398,7 @@ FROM agenda;
 
 L'expression `CASE` évalue les conditions dans l'ordre et retourne le résultat de la **première condition vraie**. Si aucune condition n'est vraie, elle retourne la valeur du `ELSE` (ou `NULL` si pas de `ELSE`).
 
-> ⚠️ **Piège avec CASE simple et NULL** : la forme `CASE expression WHEN valeur THEN …` utilise l'opérateur `=`, qui retourne `NULL` quand l'expression vaut `NULL` (logique ternaire). Pour tester explicitement `NULL`, utilisez la forme cherchée avec `IS NULL` :
+> ⚠️ **Piège avec CASE simple et NULL** : la forme `CASE expression WHEN valeur THEN …` utilise l'opérateur `=`, qui retourne `NULL` quand l'expression vaut `NULL` (logique ternaire). Pour tester explicitement `NULL`, utilisez la forme cherchée avec `IS NULL` :  
 >
 > ```sql
 > -- ❌ Ne fonctionne pas comme attendu
@@ -475,7 +475,8 @@ SELECT 2 + 2;
 -- Date et heure actuelles
 SELECT CURRENT_DATE, CURRENT_TIME, NOW();
 
--- Résultat exemple : 2026-05-15 | 14:30:45.123 | 2026-05-15 14:30:45.123+02
+-- Résultat exemple : 2026-05-15 | 14:30:45.123+02 | 2026-05-15 14:30:45.123+02
+-- (CURRENT_TIME est de type « time with time zone » : il inclut donc le fuseau)
 
 -- Tester une fonction
 SELECT UPPER('bonjour');

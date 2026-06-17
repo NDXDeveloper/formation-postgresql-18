@@ -210,12 +210,12 @@ ORDER BY pays ASC, ville ASC, nom ASC;
 ```
 nom      | ville      | pays
 ---------|------------|--------
+Schmidt  | Berlin     | Allemagne  
+Mueller  | Munich     | Allemagne  
 Dupont   | Lyon       | France  
 Martin   | Lyon       | France  
 Durand   | Paris      | France  
 Petit    | Paris      | France  
-Schmidt  | Berlin     | Allemagne  
-Mueller  | Munich     | Allemagne  
 ```
 
 **Logique :**
@@ -663,7 +663,7 @@ Le tri est une opération **coûteuse** en termes de performances, surtout sur d
 - Les trier en mémoire (ou sur disque si trop volumineux)
 - Puis retourner le résultat
 
-**Complexité algorithmique** : O(n log n) dans le meilleur cas
+**Complexité algorithmique** : O(n log n) pour un tri complet (par comparaison). Avec `ORDER BY … LIMIT k`, PostgreSQL bascule sur un *top-N heapsort* en O(n log k), bien plus efficace quand k est petit (voir plus bas).
 
 ### Optimiser le tri avec des index
 
@@ -722,10 +722,14 @@ SELECT * FROM clients
 ORDER BY LOWER(nom);  -- Utilise l'index, pas de tri  
 
 -- Autre exemple : index sur date tronquée
-CREATE INDEX idx_commandes_jour ON commandes (DATE_TRUNC('day', date_commande));  
-SELECT DATE_TRUNC('day', date_commande), COUNT(*)  
+-- ⚠️ DATE_TRUNC('day', date_commande) n'est IMMUTABLE (donc indexable) que si date_commande
+--    est un TIMESTAMP SANS fuseau. Sur un TIMESTAMPTZ, l'expression est STABLE (elle dépend
+--    du fuseau de session) et PostgreSQL refuse l'index : on fixe alors le fuseau.
+CREATE INDEX idx_commandes_jour
+  ON commandes (DATE_TRUNC('day', date_commande AT TIME ZONE 'Europe/Paris'));  
+SELECT DATE_TRUNC('day', date_commande AT TIME ZONE 'Europe/Paris') AS jour, COUNT(*)  
 FROM commandes  
-GROUP BY DATE_TRUNC('day', date_commande)  
+GROUP BY jour  
 ORDER BY 1;  
 ```
 
@@ -854,7 +858,8 @@ FROM clients
 ORDER BY nom COLLATE "fr_FR";  
 
 -- ⚠️ "fr_FR" dépend de la libc du système. Pour un tri stable et portable entre serveurs,
--- préférez une collation ICU (PostgreSQL 10+, défaut en PG 16+) :
+-- préférez une collation ICU (disponible depuis PostgreSQL 10 ; à demander explicitement,
+-- car le provider de collation par défaut reste libc, y compris en PG 16/17/18) :
 SELECT nom  
 FROM clients  
 ORDER BY nom COLLATE "fr-x-icu";  
@@ -1014,8 +1019,11 @@ FROM clients
 ORDER BY ville ASC;  
 
 -- Départements distincts avec tri personnalisé
-SELECT DISTINCT departement  
-FROM employes  
+-- ⚠️ Trier par une EXPRESSION (ici un CASE) est impossible directement avec DISTINCT
+--    (« ORDER BY expressions must appear in select list »). On isole le DISTINCT
+--    dans une sous-requête, puis on trie à l'extérieur :
+SELECT departement  
+FROM (SELECT DISTINCT departement FROM employes) d  
 ORDER BY  
     CASE departement
         WHEN 'Direction' THEN 1

@@ -377,10 +377,12 @@ RETURNS TABLE (
 ) AS $$
 BEGIN
     RETURN QUERY
-    SELECT id, montant, date_commande
-    FROM commandes
-    WHERE client_id = p_client_id
-    ORDER BY date_commande DESC
+    -- Colonnes qualifiées (c.) : sinon « montant » et « date_commande » sont
+    -- ambigus entre les colonnes OUT de RETURNS TABLE et celles de la table
+    SELECT c.id, c.montant, c.date_commande
+    FROM commandes c
+    WHERE c.client_id = p_client_id
+    ORDER BY c.date_commande DESC
     LIMIT p_limit;
 END;
 $$ LANGUAGE plpgsql;
@@ -900,23 +902,26 @@ LEFT JOIN LATERAL (
 ) AS orders ON true;
 ```
 
-### Erreur 3 : Oublier l'Alias
+### Bonne pratique : nommer la sous-requête (alias)
+
+> 🆕 **Depuis PostgreSQL 16**, l'alias d'une sous-requête dans `FROM` est **optionnel**. Avant PG 16, l'omettre déclenchait `ERROR: subquery in FROM must have an alias` ; ce n'est **plus** le cas (PostgreSQL a aligné son comportement sur d'autres SGBD).
 
 ```sql
--- ❌ ERREUR : Sous-requête doit avoir un alias
+-- ✅ Accepté depuis PG 16 (c'était une erreur avant) — mais sans alias,
+--    on ne peut pas préfixer les colonnes de la sous-requête.
 SELECT *  
 FROM clients  
 CROSS JOIN LATERAL (  
     SELECT * FROM commandes WHERE commandes.client_id = clients.id
 );
--- ERROR: subquery in FROM must have an alias
 
--- ✅ CORRECT
-SELECT *  
+-- ✅ Recommandé : avec un alias, on peut qualifier les colonnes (orders.montant…),
+--    indispensable dès qu'un nom de colonne existe dans plusieurs tables.
+SELECT clients.nom, orders.montant  
 FROM clients  
 CROSS JOIN LATERAL (  
     SELECT * FROM commandes WHERE commandes.client_id = clients.id
-) AS orders;  -- Alias obligatoire
+) AS orders;
 ```
 
 ### Erreur 4 : Mauvais Ordre des Jointures
@@ -952,7 +957,7 @@ CROSS JOIN LATERAL (
 ### Support PostgreSQL
 
 - **Introduit** : PostgreSQL 9.3 (2013)  
-- **Standard SQL** : SQL:2003 (partie de la norme)  
+- **Standard SQL** : SQL:1999 (le mot-clé `LATERAL` y a été introduit)  
 - **Maturité** : Stable et largement utilisé
 
 ### Autres SGBD
@@ -960,7 +965,7 @@ CROSS JOIN LATERAL (
 | SGBD | Support LATERAL | Notes |
 |------|-----------------|-------|
 | PostgreSQL | ✅ Oui (depuis 9.3) | Support complet |
-| MySQL | ❌ Non | Utilisez des sous-requêtes corrélées |
+| MySQL | ✅ Oui (depuis 8.0.14, 2019) | *Lateral derived tables* (même rôle que `LATERAL`) |
 | SQL Server | ✅ Oui (CROSS APPLY / OUTER APPLY) | Syntaxe différente |
 | Oracle | ✅ Oui (LATERAL) | Depuis Oracle 12c |
 | SQLite | ❌ Non | Pas de support |
@@ -1097,7 +1102,7 @@ ORDER BY m1.mois;
 6. **LEFT JOIN LATERAL** = LEFT (inclut toutes les lignes avec NULL)  
 7. **Performances** : Indexer les colonnes de corrélation  
 8. **Alternative** : Window Functions (souvent plus rapides pour Top N)  
-9. **Compatibilité** : PostgreSQL 9.3+, SQL:2003  
+9. **Compatibilité** : PostgreSQL 9.3+, standard SQL:1999  
 10. **Équivalent SQL Server** : CROSS APPLY / OUTER APPLY
 
 ---

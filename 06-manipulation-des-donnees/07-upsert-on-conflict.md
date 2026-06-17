@@ -310,15 +310,20 @@ DO UPDATE SET
 
 > 💡 **Pourquoi le mot `EXCLUDED` ?** Sémantiquement, c'est « la ligne qui aurait dû être insérée mais qui a été **exclue** » par le conflit. Le mot est statique et ne change pas avec le nom de la table : `EXCLUDED.colonne` fonctionne pour n'importe quel `INSERT`.
 
-> ⚠️ **Différence avec PG 18 `OLD`/`NEW`** : `EXCLUDED` désigne la ligne qu'on **voulait insérer**, **avant** l'éventuelle réécriture par `DO UPDATE SET`. Dans le `RETURNING`, `NEW` désigne la ligne **finale après application du `SET`**. Ce sont deux choses différentes :
+> ⚠️ **Différence avec PG 18 `OLD`/`NEW`** : `EXCLUDED` désigne la ligne qu'on **voulait insérer**, **avant** l'éventuelle réécriture par `DO UPDATE SET`. `NEW`, lui, désigne la ligne **finale après application du `SET`**. Ce sont deux choses différentes — et surtout, **elles ne sont pas accessibles aux mêmes endroits** :  
+>  
+> - `EXCLUDED` n'est visible que dans la clause `DO UPDATE SET …` (et son éventuel `WHERE`).  
+> - `OLD` / `NEW` ne sont visibles que dans le `RETURNING` (nouveauté PG 18).  
+>  
+> Écrire `EXCLUDED` dans le `RETURNING` est **interdit** et déclenche l'erreur `invalid reference to FROM-clause entry for table "excluded"`. Pour exposer à la fois l'ancienne et la nouvelle valeur, on s'appuie donc sur `OLD`/`NEW` :  
 >
 > ```sql
 > INSERT INTO statistiques (page, vues) VALUES ('accueil', 10)
 > ON CONFLICT (page) DO UPDATE SET vues = statistiques.vues + EXCLUDED.vues
 > RETURNING
->     EXCLUDED.vues AS tentee,        -- 10 (ce qu'on voulait insérer)
->     OLD.vues AS ancienne,           -- 42 (s'il y avait conflit)
->     NEW.vues AS finale;             -- 52 (résultat du SET : 42 + 10)
+>     OLD.vues AS ancienne,              -- 42 (NULL si c'était une insertion neuve)
+>     NEW.vues AS finale,                -- 52 (résultat du SET : 42 + 10)
+>     NEW.vues - OLD.vues AS difference; -- 10 (ici, équivaut à la valeur tentée)
 > ```
 
 ### Exemples avec EXCLUDED
@@ -719,8 +724,11 @@ INSERT INTO utilisateurs (email, nom)
 VALUES ('alice@example.com', 'Alice')  
 ON CONFLICT (email) DO NOTHING;  -- Fonctionne  
 
--- ❌ Sans index unique : erreur
-ON CONFLICT (nom) DO NOTHING;  -- ERROR: there is no unique constraint matching...
+-- ❌ Sans index unique sur 'nom' : erreur
+INSERT INTO utilisateurs (email, nom)  
+VALUES ('bob@example.com', 'Bob')  
+ON CONFLICT (nom) DO NOTHING;  
+-- ERROR: there is no unique or exclusion constraint matching the ON CONFLICT specification
 ```
 
 #### 2. Préférer les batch operations
@@ -780,34 +788,43 @@ ON CONFLICT (level) DO NOTHING;
 ALTER TABLE logs ADD CONSTRAINT unique_message_level UNIQUE (message, level);
 ```
 
-### Limitation 2 : WHERE ne peut référencer que la table cible
+### Limitation 2 : une même ligne ne peut être affectée qu'une seule fois par commande
+
+Si un même `INSERT … ON CONFLICT DO UPDATE` propose **deux lignes qui entrent en conflit avec la même ligne cible**, PostgreSQL refuse l'opération :
 
 ```sql
--- ❌ Impossible : WHERE référençant une autre table
-INSERT INTO produits (sku, prix)  
-VALUES ('PROD-123', 99.99)  
-ON CONFLICT (sku)  
-DO UPDATE SET prix = EXCLUDED.prix  
-WHERE EXCLUDED.prix < (SELECT prix_max FROM config);  -- Erreur  
-
--- ✅ Solution : Utiliser une sous-requête dans SET
-INSERT INTO produits (sku, prix)  
-VALUES ('PROD-123', 99.99)  
-ON CONFLICT (sku)  
-DO UPDATE SET prix = CASE  
-    WHEN EXCLUDED.prix < (SELECT prix_max FROM config) THEN EXCLUDED.prix
-    ELSE produits.prix
-END;
+-- ❌ La clé 1 apparaît deux fois dans le même INSERT
+INSERT INTO stats (id, counter)  
+VALUES (1, 10), (1, 20)  
+ON CONFLICT (id) DO UPDATE SET counter = EXCLUDED.counter;  
+-- ERROR:  ON CONFLICT DO UPDATE command cannot affect row a second time
+-- HINT:   Ensure that no rows proposed for insertion within the same command
+--         have duplicate constrained values.
 ```
+
+Le `DO UPDATE` ne saurait pas laquelle des deux valeurs en conflit appliquer. **Solution** : dédupliquer (ou agréger) la source en amont pour ne présenter qu'une seule ligne par clé :
+
+```sql
+-- ✅ On agrège avant l'upsert : une seule ligne par id
+INSERT INTO stats (id, counter)  
+SELECT id, SUM(counter)  
+FROM (VALUES (1, 10), (1, 20)) AS source(id, counter)  
+GROUP BY id  
+ON CONFLICT (id) DO UPDATE SET counter = EXCLUDED.counter;  
+```
+
+> 💡 **À ne pas confondre** : la clause `WHERE` d'un `DO UPDATE` est au contraire très permissive — elle peut référencer la table cible, `EXCLUDED`, **et** des sous-requêtes sur d'autres tables. Par exemple `… DO UPDATE SET prix = EXCLUDED.prix WHERE EXCLUDED.prix < (SELECT prix_max FROM config)` est parfaitement valide.
 
 ### Piège 1 : Oublier EXCLUDED
 
 ```sql
--- ❌ Erreur courante : Utiliser directement les valeurs
+-- ❌ Erreur courante : « vues » non qualifié à droite du SET
 INSERT INTO stats (page, vues)  
 VALUES ('accueil', 100)  
 ON CONFLICT (page)  
-DO UPDATE SET vues = vues + 100;  -- Quelle variable "vues" ?  
+DO UPDATE SET vues = vues + 100;
+-- ERROR: column reference "vues" is ambiguous
+-- → PostgreSQL ne sait pas si « vues » désigne stats.vues ou excluded.vues  
 
 -- ✅ Correct : Être explicite
 INSERT INTO stats (page, vues)  
@@ -1015,12 +1032,12 @@ DO UPDATE SET value = counters.value + EXCLUDED.value;
 
 | Aspect | `INSERT … ON CONFLICT` | `MERGE` |
 |--------|------------------------|---------|
-| **Standard SQL** | ❌ Extension propre à PostgreSQL (et adoptée par SQLite) | ✅ Standard SQL:2003 (étendu en SQL:2008/2016/2023) |
+| **Standard SQL** | ❌ Extension propre à PostgreSQL (et adoptée par SQLite) | ✅ Standard SQL:2003 (clause `DELETE` ajoutée en SQL:2008) |
 | **Verbosité** | ✅ Très concis pour l'upsert | ⚠️ Plus long (clauses `WHEN MATCHED` / `WHEN NOT MATCHED`) |
 | **Opérations possibles** | `INSERT` ou (`INSERT`+`UPDATE`) ; pas de `DELETE` | `INSERT`, `UPDATE` **et `DELETE`** dans la même commande |
 | **Sources multiples** | ❌ Une seule source (le `VALUES`/`SELECT` de l'`INSERT`) | ✅ N'importe quelle relation jointe en `USING` |
 | **Détection du conflit** | Sur **contrainte unique / clé primaire** (par colonnes ou nom de contrainte) | Sur une **condition de jointure** arbitraire (`ON …`) |
-| **Concurrence** | ✅ Garantie d'absence d'erreur de doublon, même sous forte concurrence | ⚠️ Peut lever `serialization_failure` si deux sessions insèrent la même clé simultanément — il faut éventuellement réessayer en isolation `READ COMMITTED` |
+| **Concurrence** | ✅ Garantie d'absence d'erreur de doublon, même sous forte concurrence | ⚠️ Peut lever une `unique_violation` (en `READ COMMITTED`) ou une `serialization_failure` (en `REPEATABLE READ`/`SERIALIZABLE`) si deux sessions insèrent la même clé simultanément — l'application doit être prête à réessayer |
 | **Cas d'usage typique** | UPSERT pur (la majorité des cas applicatifs courants) | Synchronisation, *delta load* d'ETL, application de différentiels |
 
 ### Équivalence

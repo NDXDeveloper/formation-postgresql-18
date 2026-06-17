@@ -775,7 +775,8 @@ SELECT
     clients.nom,
     clients.ville,
     CASE
-        WHEN commandes.id IS NOT NULL THEN 'Oui'
+        -- commandes.id n'étant ni groupé ni agrégé, il faut un agrégat ici
+        WHEN COUNT(commandes.id) > 0 THEN 'Oui'
         ELSE 'Non'
     END AS a_commande
 FROM clients  
@@ -857,17 +858,19 @@ INSERT INTO jours_semaine VALUES
     (1, 'Lundi'), (2, 'Mardi'), (3, 'Mercredi'),
     (4, 'Jeudi'), (5, 'Vendredi');
 
--- Générer tous les créneaux
+-- Générer tous les créneaux.
+-- ⚠️ generate_series n'existe PAS pour le type TIME : on génère des timestamps
+--    puis on extrait l'heure avec ::TIME.
 SELECT
     jours.nom AS jour,
-    horaires.heure::TIME AS heure
+    horaires.instant::TIME AS heure
 FROM jours_semaine jours  
 CROSS JOIN generate_series(  
-    '09:00'::TIME,
-    '17:00'::TIME,
-    '1 hour'::INTERVAL
-) AS horaires(heure)
-ORDER BY jours.id, horaires.heure;
+    timestamp '2025-01-01 09:00',
+    timestamp '2025-01-01 17:00',
+    interval '1 hour'
+) AS horaires(instant)
+ORDER BY jours.id, horaires.instant;
 ```
 
 **Résultat** : 5 jours × 9 heures = 45 créneaux
@@ -935,8 +938,8 @@ LEFT JOIN lignes_commande ON commandes.id = lignes_commande.commande_id
 LEFT JOIN produits ON lignes_commande.produit_id = produits.id;  
 ```
 
-> ⚠️ **Important : un `INNER JOIN` après un `LEFT JOIN` "annule" le `LEFT`**
->
+> ⚠️ **Important : un `INNER JOIN` après un `LEFT JOIN` "annule" le `LEFT`**  
+>  
 > Quand vous chaînez plusieurs jointures, faire un `INNER JOIN` sur une table issue d'un `LEFT JOIN` précédent **fait perdre les lignes sans correspondance** que le `LEFT` avait pourtant conservées.
 
 ### Règle : Cohérence des Jointures
@@ -1139,6 +1142,8 @@ Nested Loop  (cost=0.28..16.95 rows=3 width=68)
 - `Seq Scan on clients` : la table `clients` est petite, donc lue intégralement (séquentiellement).
 - `Index Scan using idx_commandes_client_id` : pour chaque ligne de `clients`, recherche dans `commandes` via l'index — c'est exactement le pattern qui rend ce plan rapide.
 - `cost=0.28..16.95` : coût estimé (démarrage..total). `rows=3` : nombre de lignes estimé. `width` : taille moyenne d'une ligne en octets.
+
+> 📌 Ce plan illustre la **mécanique** d'un `Nested Loop`. Ne soyez pas surpris si, sur de **très petites tables** (quelques lignes comme dans nos exemples), PostgreSQL choisit plutôt un `Hash Join` : avec si peu de données, construire une mini table de hachage coûte moins cher que des allers-retours dans un index. Le `Nested Loop` avec `Index Scan` devient gagnant quand la table extérieure est petite **et** la table intérieure volumineuse mais indexée (récupérer les commandes de quelques clients parmi des millions, par exemple).
 
 ##### Avec `ANALYZE`, on obtient les vraies mesures
 
@@ -1435,19 +1440,20 @@ Vous devez créer un rapport montrant :
 
 **Réponse** : `LEFT JOIN` depuis `produits` vers `lignes_commande`, car vous voulez tous les produits même s'ils n'ont jamais été vendus.
 
-### Question 3 : Optimisation
+### Question 3 : Lisibilité (et une idée reçue sur la performance)
 
-Une requête est très lente :
+Une requête est écrite ainsi :
 ```sql
 SELECT * FROM table_a CROSS JOIN table_b WHERE table_a.id = table_b.a_id;
 ```
 
 **Comment l'améliorer ?**
 
-**Réponse** : Remplacer par `INNER JOIN` :
+**Réponse** : Réécrivez-la en `INNER JOIN` explicite, **pour la lisibilité** (forme idiomatique) :
 ```sql
 SELECT * FROM table_a INNER JOIN table_b ON table_a.id = table_b.a_id;
 ```
+⚠️ Mais ce n'est **pas** un gain de performance : PostgreSQL reconnaît le filtre d'égalité et produit **exactement le même plan** pour les deux formes (vérifiable avec `EXPLAIN`). Si la requête est réellement *lente*, la vraie optimisation est ailleurs : un **index** sur `table_b.a_id`, des statistiques à jour (`ANALYZE`), ou éviter `SELECT *` pour réduire le volume ramené.
 
 ---
 

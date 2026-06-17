@@ -204,7 +204,7 @@ Pour garantir que chaque valeur est unique **et présente**, combinez `UNIQUE` a
 ```sql
 CREATE TABLE utilisateurs (
     id SERIAL PRIMARY KEY,
-    email VARCHAR(255) NOT NULL UNIQUE,
+    email VARCHAR(255) NOT NULL UNIQUE
     -- Équivalent à : email VARCHAR(255) UNIQUE NOT NULL
 );
 ```
@@ -556,9 +556,11 @@ INSERT INTO employes (nom, manager_id) VALUES ('Bob', 1);  -- id=2
 
 ### Sous le capot : les FK sont implémentées par des triggers cachés
 
-Une `FOREIGN KEY` n'est pas une simple « règle » : sous le capot, PostgreSQL crée **deux triggers système cachés** par contrainte :
-- Sur la table **enfant** : un trigger `AFTER INSERT OR UPDATE` qui vérifie que la valeur de FK existe bien dans la table parent.
-- Sur la table **parent** : un trigger `AFTER UPDATE OR DELETE` qui applique l'action (`RESTRICT`, `CASCADE`, etc.).
+Une `FOREIGN KEY` n'est pas une simple « règle » : sous le capot, PostgreSQL crée **quatre triggers système cachés** par contrainte, répartis sur les deux tables :
+- Sur la table **enfant** : **deux** triggers (un sur `INSERT`, un sur `UPDATE`) qui vérifient que la valeur de FK existe bien dans la table parent.
+- Sur la table **parent** : **deux** triggers (un sur `UPDATE`, un sur `DELETE`) qui appliquent l'action (`RESTRICT`, `CASCADE`, etc.).
+
+C'est pourquoi la requête ci-dessous retourne **4 lignes** pour une seule contrainte de clé étrangère.
 
 Ces triggers sont visibles en consultant `pg_trigger` (mais sont cachés des affichages standards comme `\d`) :
 
@@ -740,7 +742,7 @@ CREATE TABLE utilisateurs (
     email VARCHAR(255) NOT NULL,
     telephone VARCHAR(20),
     -- Vérification basique du format email
-    CONSTRAINT chk_email_format CHECK (email ~* '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}$'),
+    CONSTRAINT chk_email_format CHECK (email ~* '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$'),
     -- Vérification format téléphone français
     CONSTRAINT chk_telephone_format CHECK (telephone IS NULL OR telephone ~ '^0[1-9][0-9]{8}$')
 );
@@ -1083,7 +1085,8 @@ CREATE TABLE commandes (
     -- Numéro de commande unique (identifiant métier)
     numero_commande VARCHAR(20) NOT NULL,
 
-    -- Clé étrangère vers clients avec cascade à la suppression
+    -- Clé étrangère vers clients : suppression du client interdite tant
+    -- qu'il a des commandes (ON DELETE RESTRICT, défini plus bas)
     client_id INTEGER NOT NULL,
 
     -- Dates avec validation

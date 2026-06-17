@@ -606,10 +606,12 @@ SELECT nom FROM employes
 WHERE nom LIKE '%ard';  
 -- Trouve : Bernard, Gérard, Richard, etc.
 
--- Noms contenant 'mar' (n'importe où)
+-- Noms contenant 'mar' en minuscules (n'importe où)
 SELECT nom FROM employes  
 WHERE nom LIKE '%mar%';  
--- Trouve : Martin, Lamarche, Dumarché, Marie, etc.
+-- Trouve : Lamarche, Dumarché, Aymar… — mais PAS 'Martin' ni 'Marie' !
+-- ⚠️ LIKE est sensible à la casse : leur 'M' majuscule ne correspond pas à 'm'.
+-- Pour les trouver quelle que soit la casse, utilisez ILIKE '%mar%' (voir plus bas).
 
 -- Emails du domaine gmail.com
 SELECT email FROM clients  
@@ -799,7 +801,10 @@ WHERE salaire * 12 > 600000;
 -- Produits avec une remise de plus de 20%
 SELECT nom_produit, prix, prix_reduit  
 FROM produits  
-WHERE ((prix - prix_reduit) / prix) > 0.20;  
+WHERE (prix - prix_reduit) > prix * 0.20;  
+-- 💡 On compare par multiplication plutôt que via (prix - prix_reduit) / prix > 0.20 :
+-- si prix et prix_reduit sont des ENTIERS, cette division serait ENTIÈRE (résultat 0,
+-- donc condition toujours fausse !). Multiplier évite le piège ; sinon, caster en ::numeric.
 
 -- Clients dont le nom complet (prénom + nom) dépasse 20 caractères
 SELECT prenom, nom  
@@ -989,17 +994,17 @@ SELECT * FROM clients WHERE nom ILIKE '%dupont%';
 -- → tsvector / tsquery + index GIN (voir chapitre 14 sur l'indexation)
 ```
 
-### 6. Combinez les conditions intelligemment
+### 6. L'ordre des conditions : laissez l'optimiseur décider
 
 ```sql
--- ❌ Moins efficace (évalue toutes les conditions)
-WHERE condition_rare AND condition_frequente;
-
--- ✅ Plus efficace (ordre optimisé)
-WHERE condition_frequente AND condition_rare;
+-- Dans un AND, une ligne est éliminée dès qu'une condition vaut FALSE.
+-- Intuitivement, placer la condition la plus SÉLECTIVE (qui élimine le plus
+-- de lignes) en premier permettrait de « court-circuiter » plus tôt :
+WHERE statut = 'archivé'              -- très sélectif (peu de lignes concernées)
+  AND date_creation > '2000-01-01';   -- peu sélectif (la plupart des lignes)
 ```
 
-PostgreSQL optimise généralement cela automatiquement, mais c'est une bonne pratique à garder en tête.
+> 💡 **En pratique, l'ordre dans lequel vous écrivez les conditions n'a aucun impact sur les performances** : l'optimiseur de PostgreSQL réordonne lui-même les prédicats selon leurs **coûts** et **sélectivités** estimés (statistiques `ANALYZE`). Écrivez-les donc dans l'ordre le plus **lisible** — c'est le planificateur qui décide de l'ordre d'évaluation réel.
 
 ---
 

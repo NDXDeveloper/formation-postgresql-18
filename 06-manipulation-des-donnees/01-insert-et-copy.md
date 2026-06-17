@@ -47,9 +47,9 @@ CREATE TABLE employes (
 
 > 📌 **`GENERATED AS IDENTITY` vs `SERIAL`** : `SERIAL` (et `BIGSERIAL`) reste supporté mais c'est un *raccourci historique* qui crée en sous-main une séquence et un `DEFAULT nextval(...)`. La syntaxe `GENERATED { ALWAYS | BY DEFAULT } AS IDENTITY`, **conforme au standard SQL** et disponible depuis PostgreSQL 10, est désormais recommandée : meilleurs droits par défaut, séquence détruite avec la colonne, et `ALWAYS` interdit toute insertion explicite (sécurité). Vous croiserez encore `SERIAL` dans beaucoup de bases existantes — c'est normal, et il fonctionne toujours parfaitement.
 
-> ⚠️ **Piège classique : les séquences ne sont pas transactionnelles**
->
-> Quand un `INSERT` consomme une valeur de séquence (`IDENTITY` ou `SERIAL`), cette consommation est **immédiate** et **non annulée** par un `ROLLBACK`. Conséquence : vos `id` peuvent comporter des **trous**.
+> ⚠️ **Piège classique : les séquences ne sont pas transactionnelles**  
+>  
+> Quand un `INSERT` consomme une valeur de séquence (`IDENTITY` ou `SERIAL`), cette consommation est **immédiate** et **non annulée** par un `ROLLBACK`. Conséquence : vos `id` peuvent comporter des **trous**.  
 >
 > ```sql
 > BEGIN;
@@ -59,7 +59,7 @@ CREATE TABLE employes (
 >
 > INSERT INTO employes (nom, prenom) VALUES ('Réel', 'C');   -- id = 3, pas 1 !
 > ```
->
+>  
 > C'est **voulu** : si les séquences étaient transactionnelles, deux transactions concurrentes devraient se sérialiser autour de la séquence, anéantissant le débit d'insertion. Ne tentez pas de combler manuellement ces trous avec `ALTER SEQUENCE … RESTART` en production : vous risquez des collisions avec des `id` déjà attribués mais non encore *committés* par d'autres sessions.
 
 Pour insérer un nouvel employé :
@@ -328,7 +328,7 @@ FROM '/chemin/vers/fichier.csv'
 WITH (FORMAT csv, HEADER true, DELIMITER ',');  
 ```
 
-> ⚠️ **Important** : le fichier doit être accessible **par le processus PostgreSQL** (utilisateur système `postgres`), pas par le client SQL. Cette commande nécessite par défaut des privilèges de superutilisateur. Depuis PostgreSQL 11, on peut aussi accorder l'accès via les rôles prédéfinis `pg_read_server_files` (pour `COPY FROM`) et `pg_write_server_files` (pour `COPY TO`), sans devoir donner les droits superutilisateur complets :
+> ⚠️ **Important** : le fichier doit être accessible **par le processus PostgreSQL** (utilisateur système `postgres`), pas par le client SQL. Cette commande nécessite par défaut des privilèges de superutilisateur. Depuis PostgreSQL 11, on peut aussi accorder l'accès via les rôles prédéfinis `pg_read_server_files` (pour `COPY FROM`) et `pg_write_server_files` (pour `COPY TO`), sans devoir donner les droits superutilisateur complets :  
 >
 > ```sql
 > GRANT pg_read_server_files TO mon_role_import;
@@ -537,8 +537,8 @@ WITH (FORMAT csv, HEADER true);
 PostgreSQL 18 apporte plusieurs améliorations à `COPY`, détaillées dans la section [6.2](/06-manipulation-des-donnees/02-ameliorations-copy-pg18.md). En résumé :
 
 1. **Marqueur `\.`** : `COPY FROM` lisant depuis un **fichier** ne reconnaît plus `\.` comme marqueur de fin de données (en CSV comme en text). Le marqueur n'est conservé que pour `STDIN` lu via psql, pour la compatibilité des scripts.
-2. **`ON_ERROR = 'ignore'`** (déjà PG 17) couplé à **`REJECT_LIMIT n`** (nouveau PG 18) : permet de poursuivre l'import en ignorant les lignes invalides jusqu'à `n` rejets maximum.
-3. **`LOG_VERBOSITY = 'silent'`** (nouveau PG 18) : supprime le journal des lignes ignorées par `ON_ERROR = 'ignore'`.
+2. **`ON_ERROR 'ignore'`** (déjà PG 17) couplé à **`REJECT_LIMIT n`** (nouveau PG 18) : permet de poursuivre l'import en ignorant les lignes invalides jusqu'à `n` rejets maximum.
+3. **`LOG_VERBOSITY 'silent'`** (nouveau PG 18) : supprime le journal des lignes ignorées par `ON_ERROR 'ignore'`.
 4. **`COPY (SELECT … FROM mv)`** : `COPY TO` accepte désormais une sous-requête sur une **vue matérialisée** peuplée comme source de données.
 5. **Restriction `FREEZE` sur tables étrangères** : `COPY FREEZE` est explicitement refusé sur les *foreign tables* (auparavant accepté mais silencieusement ignoré).
 
@@ -650,7 +650,7 @@ COMMIT;
 | `maintenance_work_mem` | Mémoire pour `CREATE INDEX`, `VACUUM`, etc. | Monter à plusieurs Go le temps de l'import |
 | `synchronous_commit` | Si `off`, `COMMIT` ne bloque pas l'écriture WAL sur disque | `off` accélère, **au prix** d'une fenêtre de perte sur crash (acceptable pour un *staging* rejouable) |
 | `max_wal_size` | Plafond avant *checkpoint* forcé | Monter (ex : 4 Go) pour éviter des checkpoints fréquents |
-| `wal_compression` | Compression LZ4/zstd des enregistrements WAL | `lz4` ou `zstd` (PG 15+) ; gain net sur le débit disque |
+| `wal_compression` | Compression des **images de pages complètes** (FPI) écrites dans le WAL — pas de tout le WAL | `lz4` ou `zstd` (PG 15+) ; gain net sur le débit disque |
 | `autovacuum` | Maintenance automatique en arrière-plan | Ne **pas** désactiver : laisser tourner, ou si vraiment nécessaire, désactiver pour la table cible précise via `ALTER TABLE … SET (autovacuum_enabled = false)` puis lancer `VACUUM ANALYZE` manuellement à la fin |
 
 > ⚠️ Tout changement de paramètre serveur impacte **toute l'instance**. Préférez les paramètres `SET LOCAL …` à l'intérieur d'une transaction, ou faites les modifications pendant une fenêtre de maintenance.
@@ -716,11 +716,11 @@ COPY employes FROM '/tmp/data.csv' WITH (FORMAT csv);
 
 #### Option `ON_ERROR` (PostgreSQL 17+)
 
-Depuis PostgreSQL 17, l'option `ON_ERROR = 'ignore'` permet de passer outre les lignes invalides au lieu d'avorter :
+Depuis PostgreSQL 17, l'option `ON_ERROR 'ignore'` permet de passer outre les lignes invalides au lieu d'avorter :
 
 ```sql
 COPY employes FROM '/tmp/data.csv'  
-WITH (FORMAT csv, HEADER true, ON_ERROR = 'ignore');  
+WITH (FORMAT csv, HEADER true, ON_ERROR 'ignore');  
 -- Les lignes invalides (mauvais type, conversion impossible) sont ignorées
 -- Les lignes valides sont importées
 ```
@@ -735,14 +735,14 @@ PostgreSQL 18 ajoute deux options qui complètent `ON_ERROR` :
 -- Limiter à 100 lignes invalides maximum ; au-delà, COPY échoue
 COPY employes FROM '/tmp/data.csv'  
 WITH (FORMAT csv, HEADER true,  
-      ON_ERROR = 'ignore',  
-      REJECT_LIMIT = 100);  
+      ON_ERROR 'ignore',  
+      REJECT_LIMIT 100);  
 
 -- Importer sans journal verbeux pour les lignes ignorées
 COPY employes FROM '/tmp/data.csv'  
 WITH (FORMAT csv, HEADER true,  
-      ON_ERROR = 'ignore',  
-      LOG_VERBOSITY = 'silent');  
+      ON_ERROR 'ignore',  
+      LOG_VERBOSITY 'silent');  
 ```
 
 Ces options sont détaillées en section [6.2](/06-manipulation-des-donnees/02-ameliorations-copy-pg18.md).
@@ -771,7 +771,7 @@ SELECT
     email,
     salaire::NUMERIC  -- Conversion avec gestion d'erreur
 FROM employes_staging  
-WHERE email ~ '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}$'  -- Validation  
+WHERE email ~ '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$'  -- Validation  
     AND salaire ~ '^[0-9]+\.?[0-9]*$';  -- Validation numérique
 ```
 
@@ -845,14 +845,14 @@ SELECT
     CASE
         WHEN nom IS NULL OR nom = '' THEN 'Nom manquant'
         WHEN prenom IS NULL OR prenom = '' THEN 'Prénom manquant'
-        WHEN email !~ '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}$' THEN 'Email invalide'
+        WHEN email !~ '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$' THEN 'Email invalide'
         WHEN salaire !~ '^[0-9]+\.?[0-9]*$' THEN 'Salaire invalide'
         ELSE 'OK'
     END AS statut_validation
 FROM employes_staging  
 WHERE nom IS NULL OR nom = ''  
    OR prenom IS NULL OR prenom = ''
-   OR email !~ '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}$'
+   OR email !~ '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$'
    OR salaire !~ '^[0-9]+\.?[0-9]*$';
 
 -- 5. Insérer uniquement les données valides
@@ -866,7 +866,7 @@ SELECT
 FROM employes_staging  
 WHERE nom IS NOT NULL AND nom != ''  
   AND prenom IS NOT NULL AND prenom != ''
-  AND email ~ '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}$'
+  AND email ~ '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$'
   AND salaire ~ '^[0-9]+\.?[0-9]*$';
 
 -- 6. Vérifier le résultat

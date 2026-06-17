@@ -259,9 +259,11 @@ SELECT
     COUNT(*) FILTER (WHERE statut = 'Annulée') AS nb_annulees,
 
     -- Chiffre d'affaires par statut
+    -- COALESCE convertit en 0 le NULL que SUM(...) FILTER renvoie
+    -- lorsqu'aucune ligne du groupe ne satisfait la condition
     SUM(montant) AS ca_total,
-    SUM(montant) FILTER (WHERE statut = 'Validée') AS ca_valide,
-    SUM(montant) FILTER (WHERE statut = 'Annulée') AS ca_perdu,
+    COALESCE(SUM(montant) FILTER (WHERE statut = 'Validée'), 0) AS ca_valide,
+    COALESCE(SUM(montant) FILTER (WHERE statut = 'Annulée'), 0) AS ca_perdu,
 
     -- Taux de conversion
     ROUND(
@@ -277,8 +279,8 @@ ORDER BY ca_valide DESC;
 
 | region | total_ventes | nb_validees | nb_annulees | ca_total | ca_valide | ca_perdu | taux_validation_pct |
 |--------|--------------|-------------|-------------|----------|-----------|----------|---------------------|
-| Nord   | 2            | 2           | 0           | 225      | 225       | 0        | 100.00              |
 | Est    | 1            | 1           | 0           | 300      | 300       | 0        | 100.00              |
+| Nord   | 2            | 2           | 0           | 225      | 225       | 0        | 100.00              |
 | Sud    | 2            | 0           | 2           | 325      | 0         | 325      | 0.00                |
 
 **Interprétation :**
@@ -461,8 +463,9 @@ SELECT
     -- Montants
     SUM(montant) FILTER (WHERE type_transaction = 'Débit') AS total_debits,
     SUM(montant) FILTER (WHERE type_transaction = 'Crédit') AS total_credits,
-    SUM(montant) FILTER (WHERE type_transaction = 'Crédit') -
-    SUM(montant) FILTER (WHERE type_transaction = 'Débit') AS solde_variation,
+    -- COALESCE évite un solde NULL si le compte n'a que des débits (ou que des crédits)
+    COALESCE(SUM(montant) FILTER (WHERE type_transaction = 'Crédit'), 0) -
+    COALESCE(SUM(montant) FILTER (WHERE type_transaction = 'Débit'), 0) AS solde_variation,
 
     -- Transactions suspectes
     COUNT(*) FILTER (
@@ -672,6 +675,8 @@ FROM ventes
 GROUP BY region;  
 ```
 
+> ⚠️ **Différence subtile à connaître** : ces deux écritures ne sont pas *strictement* équivalentes pour un groupe **où aucune ligne ne satisfait la condition**. `SUM(CASE … ELSE 0)` renvoie alors **0**, tandis que `SUM(…) FILTER (…)` renvoie **`NULL`** (agrégat sur un ensemble vide). Pour forcer un 0 avec `FILTER`, enveloppez d'un `COALESCE(…, 0)`. En revanche, `COUNT(*) FILTER (…)` renvoie toujours **0** (jamais `NULL`), exactement comme `COUNT(CASE …)`.
+
 ### Avantages de FILTER
 
 1. **Lisibilité** : L'intention est immédiatement claire  
@@ -711,6 +716,8 @@ Dans **PostgreSQL moderne**, `FILTER` et `CASE WHEN` produisent quasiment **le m
 
 ```sql
 -- Ces deux requêtes ont un plan d'exécution quasi identique
+
+-- Version FILTER (moderne, lisible)
 EXPLAIN ANALYZE  
 SELECT  
     region,
@@ -719,19 +726,20 @@ SELECT
 FROM ventes  
 GROUP BY region;  
 
+-- Version CASE WHEN (ancien style, même résultat de plan)
 EXPLAIN ANALYZE  
 SELECT  
     region,
-    COUNT(*) FILTER (WHERE statut = 'Validée') AS nb_validees,
-    SUM(montant) FILTER (WHERE statut = 'Validée') AS ca_valide
+    COUNT(CASE WHEN statut = 'Validée' THEN 1 END) AS nb_validees,
+    SUM(CASE WHEN statut = 'Validée' THEN montant END) AS ca_valide
 FROM ventes  
 GROUP BY region;  
 ```
 
 > 📌 **Cas particuliers où `FILTER` peut être marginalement meilleur** :  
 > - Avec `COUNT(DISTINCT …) FILTER (…)`, le moteur peut éviter de matérialiser une seconde fois la même structure de hachage.  
-> - Avec les fonctions ordonnées (`PERCENTILE_*`), `FILTER` permet d'éviter une seconde lecture des données triées.
->
+> - Avec les fonctions ordonnées (`PERCENTILE_*`), `FILTER` permet d'éviter une seconde lecture des données triées.  
+>  
 > Dans tous les autres cas, **choisissez `FILTER` pour la lisibilité**, pas pour les microsecondes gagnées.
 
 ### Bonnes Pratiques de Performance
@@ -788,8 +796,8 @@ GROUP BY region;
 2. **Nommer clairement les colonnes agrégées**
    ```sql
    SELECT
-       COUNT(*) FILTER (WHERE statut = 'Validée') AS nb_ventes_validees,
-       -- Pas juste "validees" ou "count"
+       COUNT(*) FILTER (WHERE statut = 'Validée') AS nb_ventes_validees
+       -- ☝ un nom explicite, pas juste "validees" ou "count"
    FROM ventes;
    ```
 
@@ -806,11 +814,11 @@ GROUP BY region;
 4. **Documenter les conditions complexes**
    ```sql
    SELECT
-       -- Ventes en heures creuses (20h-8h)
+       -- Ventes du week-end (dimanche = 0, samedi = 6)
        COUNT(*) FILTER (
-           WHERE EXTRACT(HOUR FROM date_vente) >= 20
-              OR EXTRACT(HOUR FROM date_vente) < 8
-       ) AS ventes_heures_creuses
+           WHERE EXTRACT(DOW FROM date_vente) = 0
+              OR EXTRACT(DOW FROM date_vente) = 6
+       ) AS ventes_weekend
    FROM ventes;
    ```
 
@@ -872,7 +880,7 @@ GROUP BY region;
    WITH lignes_complexes AS (
        SELECT *,
               ((a > 10 AND b < 20 OR c = 'X') AND (d != 'Y' OR e IS NULL)) AS condition_ok
-       FROM table
+       FROM nom_table
    )
    SELECT COUNT(*) FILTER (WHERE condition_ok)
    FROM lignes_complexes;
@@ -963,7 +971,7 @@ WHERE date_commande >= CURRENT_DATE - INTERVAL '30 days';
 6. Combinez WHERE (réduire volume) et FILTER (conditions spécifiques)  
 7. Utilisez **COALESCE** pour gérer les NULL dans les résultats  
 8. FILTER est un **standard SQL** (depuis SQL:2003)  
-9. **Performance** : Généralement meilleur que CASE WHEN  
+9. **Performance** : équivalente à `CASE WHEN` (même plan d'exécution) — le vrai gain de `FILTER` est la **lisibilité**, pas la vitesse  
 10. Idéal pour les **tableaux de bord** et **rapports multi-critères**
 
 ---

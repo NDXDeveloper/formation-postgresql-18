@@ -760,7 +760,7 @@ INSERT INTO produits (nom, prix) VALUES ('Mystère', NULL);
 -- Aucune erreur, la ligne est insérée alors que le prix viole logiquement la règle.
 ```
 
-> 🚨 **Règle de validation** : si vous voulez interdire les NULL en plus de la contrainte CHECK, **toujours ajouter `NOT NULL`** explicitement à la colonne :
+> 🚨 **Règle de validation** : si vous voulez interdire les NULL en plus de la contrainte CHECK, **toujours ajouter `NOT NULL`** explicitement à la colonne :  
 >
 > ```sql
 > CREATE TABLE produits (
@@ -860,7 +860,7 @@ INSERT INTO utilisateurs (email) VALUES (NULL);  -- OK
 INSERT INTO utilisateurs (email) VALUES (NULL);  -- ❌ ERREUR : doublon  
 ```
 
-> 🆕 **Nouveauté PostgreSQL 15** : la clause `NULLS NOT DISTINCT` (sur `UNIQUE` et `PRIMARY KEY`) permet enfin de traiter les NULL comme égaux pour les contraintes d'unicité, ce qui simplifie de nombreux cas (champs optionnels mais uniques s'ils sont fournis ET interdiction qu'ils soient tous NULL en même temps).
+> 🆕 **Nouveauté PostgreSQL 15** : la clause `NULLS NOT DISTINCT` (sur une contrainte `UNIQUE` ou un index unique — **pas** sur `PRIMARY KEY`, qui est de toute façon `NOT NULL`) permet enfin de traiter les NULL comme égaux pour les contraintes d'unicité, ce qui simplifie de nombreux cas (champ optionnel mais unique s'il est fourni, ET interdiction qu'il soit `NULL` sur plus d'une ligne).
 
 ### Piège 4 : ORDER BY et NULL
 
