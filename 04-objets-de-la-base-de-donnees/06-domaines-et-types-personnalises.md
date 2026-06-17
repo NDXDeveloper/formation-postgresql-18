@@ -607,7 +607,7 @@ CREATE TABLE commandes (
 
 -- Avantages :
 -- ✓ Validation automatique
--- ✓ Stockage efficace (1-4 octets)
+-- ✓ Stockage efficace (4 octets, un OID)
 -- ✓ Ordre préservé
 
 -- Modifier
@@ -653,7 +653,7 @@ SELECT '(1, 10)'::INT4RANGE;  -- 2, 3, ..., 9
 SELECT 'empty'::INT4RANGE;
 
 -- Plage infinie
-SELECT '[1, )'::INT4RANGE;    -- De 1 à l'infini  
+SELECT '[1,)'::INT4RANGE;    -- De 1 à l'infini  
 SELECT '(, 10]'::INT4RANGE;   -- De l'infini négatif à 10  
 ```
 
@@ -722,25 +722,26 @@ SELECT '[1, 5]'::INT4RANGE -|- '[5, 10]'::INT4RANGE; -- false (chevauchement)
 SELECT '[1, 5)'::INT4RANGE -|- '[5, 10]'::INT4RANGE; -- true  (vraiment adjacentes)  
 SELECT '[1, 5]'::INT4RANGE -|- '[7, 10]'::INT4RANGE; -- false (séparées par un trou)  
 
--- Union
-SELECT '[1, 5]'::INT4RANGE + '[3, 8]'::INT4RANGE;  -- [1, 8]
+-- Union (⚠️ int4range est discret : les bornes sont normalisées en [) )
+SELECT '[1, 5]'::INT4RANGE + '[3, 8]'::INT4RANGE;  -- [1,9)   (équivaut à [1,8] inclusif)
 
 -- Intersection
-SELECT '[1, 10]'::INT4RANGE * '[5, 15]'::INT4RANGE;  -- [5, 10]
+SELECT '[1, 10]'::INT4RANGE * '[5, 15]'::INT4RANGE;  -- [5,11)  (équivaut à [5,10] inclusif)
 
 -- Différence
-SELECT '[1, 10]'::INT4RANGE - '[5, 15]'::INT4RANGE;  -- [1, 5)
+SELECT '[1, 10]'::INT4RANGE - '[5, 15]'::INT4RANGE;  -- [1,5)
 ```
 
 ### Fonctions sur les Plages
 
 ```sql
--- Limites
+-- Limites (⚠️ int4range normalise [1,10] en [1,11), donc upper renvoie 11)
 SELECT lower('[1, 10]'::INT4RANGE);  -- 1  
-SELECT upper('[1, 10]'::INT4RANGE);  -- 10  
+SELECT upper('[1, 10]'::INT4RANGE);  -- 11  
 
 -- Est vide ?
-SELECT isempty('[1, 1]'::INT4RANGE);  -- true  
+SELECT isempty('[1, 1)'::INT4RANGE);  -- true  (borne droite exclue → aucune valeur)  
+SELECT isempty('[1, 1]'::INT4RANGE);  -- false (contient la valeur 1)  
 SELECT isempty('[1, 10]'::INT4RANGE); -- false  
 
 -- Borne inférieure/supérieure est inclusive ?
@@ -748,8 +749,8 @@ SELECT lower_inc('[1, 10]'::INT4RANGE);  -- true
 SELECT upper_inc('[1, 10)'::INT4RANGE);  -- false  
 
 -- Borne inférieure/supérieure est infinie ?
-SELECT lower_inf('[1, )'::INT4RANGE);   -- false  
-SELECT upper_inf('[1, )'::INT4RANGE);   -- true  
+SELECT lower_inf('[1,)'::INT4RANGE);   -- false  
+SELECT upper_inf('[1,)'::INT4RANGE);   -- true  
 ```
 
 ### Cas d'Usage des Range Types
@@ -770,7 +771,7 @@ CREATE TABLE tarifs (
 INSERT INTO tarifs (produit_id, quantite_range, prix_unitaire) VALUES
     (1, '[1, 10)'::INT4RANGE, 10.00),   -- 1-9 unités : 10€
     (1, '[10, 50)'::INT4RANGE, 9.00),   -- 10-49 unités : 9€
-    (1, '[50, )'::INT4RANGE, 8.00);     -- 50+ unités : 8€
+    (1, '[50,)'::INT4RANGE, 8.00);     -- 50+ unités : 8€
 
 -- Trouver le prix pour 25 unités
 SELECT prix_unitaire  
@@ -815,7 +816,7 @@ INSERT INTO categories_age (nom, plage_age) VALUES
     ('Enfant', '[0, 13)'::INT4RANGE),
     ('Adolescent', '[13, 18)'::INT4RANGE),
     ('Adulte', '[18, 65)'::INT4RANGE),
-    ('Senior', '[65, )'::INT4RANGE);
+    ('Senior', '[65,)'::INT4RANGE);  -- borne supérieure infinie : pas d'espace avant ')'
 
 -- Trouver la catégorie pour un âge donné
 SELECT nom FROM categories_age  
@@ -847,7 +848,7 @@ CREATE TABLE segments_prix (
 INSERT INTO segments_prix (categorie, plage_prix) VALUES
     ('Budget', '[0, 50)'::prix_range),
     ('Milieu', '[50, 200)'::prix_range),
-    ('Premium', '[200, )'::prix_range);
+    ('Premium', '[200,)'::prix_range);
 ```
 
 > ⚠️ **Erreur courante** : `subtype_diff = float8mi` ne fonctionne **que pour `double precision`**. Pour `NUMERIC` ou un domaine basé sur `NUMERIC`, il faut soit omettre `subtype_diff`, soit écrire une fonction `subtype_diff` qui retourne un `float8` à partir de deux valeurs du sous-type.

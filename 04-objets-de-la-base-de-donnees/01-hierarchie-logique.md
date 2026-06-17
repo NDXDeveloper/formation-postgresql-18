@@ -149,7 +149,7 @@ Les schémas permettent :
 |--------|------|----------------------|
 | `public` | Schéma par défaut, libre pour vos objets | ✅ Oui |
 | `pg_catalog` | Catalogue système : toutes les vues `pg_class`, `pg_attribute`, `pg_proc`… | ❌ Non par défaut |
-| `information_schema` | Vues conformes au standard SQL (`tables`, `columns`, `key_column_usage`…) — portable entre SGBD | ✅ Oui |
+| `information_schema` | Vues conformes au standard SQL (`tables`, `columns`, `key_column_usage`…) — portable entre SGBD | ❌ Non (`\dnS`) |
 | `pg_toast` | Stockage interne des grandes valeurs (TOAST) | ❌ Non (interne) |
 | `pg_temp_<N>`, `pg_toast_temp_<N>` | Schémas temporaires créés à la volée pour les `TEMP TABLE` de chaque session | ❌ Non (par session) |
 

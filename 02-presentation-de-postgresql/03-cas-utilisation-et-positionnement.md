@@ -216,7 +216,7 @@ Applications collectant des données horodatées en continu :
 
 **Comparaison :**
 
-PostgreSQL + TimescaleDB rivalise avec des bases dédiées comme InfluxDB ou TimeSeries DB, tout en conservant la puissance SQL complète.
+PostgreSQL + TimescaleDB rivalise avec des bases dédiées comme InfluxDB ou QuestDB, tout en conservant la puissance SQL complète.
 
 **Entreprises utilisant PostgreSQL pour IoT/TimeSeries :**
 - **Comcast** : Monitoring réseau câble  

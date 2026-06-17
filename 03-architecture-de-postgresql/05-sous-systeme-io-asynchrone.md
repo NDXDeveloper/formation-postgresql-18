@@ -237,12 +237,14 @@ Cette approche est moins performante que io_uring mais fonctionne partout.
 
 ### Benchmarks et Gains Réels
 
+> ℹ️ Les chiffres ci-dessous sont des **ordres de grandeur typiques** (charge lecture-intensive, stockage rapide, cache froid), destinés à illustrer les gains — ce ne sont pas des mesures officielles. Les résultats réels dépendent fortement du matériel, du taux de cache et de la requête : **mesurez sur votre environnement**.
+
 #### Test 1 : Index Scan sur Grande Table
 
 **Configuration** :
 - Table : 100 millions de lignes
 - Requête : `SELECT * FROM table WHERE id IN (1000 ids aléatoires)`
-- Type : Index Scan (lecture aléatoire)
+- Type : Bitmap Heap Scan (lectures aléatoires multiples — c'est ce que l'AIO accélère)
 
 **Résultats** :
 
@@ -342,10 +344,11 @@ PostgreSQL 18 introduit un nouveau paramètre principal :
 -- Voir la méthode I/O actuelle
 SHOW io_method;
 
--- Résultat (Linux avec io_uring disponible)
+-- Résultat PAR DÉFAUT (même sur Linux : 'worker' n'est jamais remplacé
+-- automatiquement par io_uring, il faut le configurer explicitement)
  io_method
 -----------
- io_uring
+ worker
 ```
 
 **Valeurs possibles** :
@@ -395,7 +398,7 @@ io_workers = 3        # Défaut : 3, plage : 1 à 32
 | Gros serveur OLAP (> 32 cœurs, gros scans) | 8 à 16 |
 | Stockage très rapide (NVMe haut de gamme) | 8 à 16 |
 
-> ⚙️ **Méthode empirique** : commencez avec le défaut (3), surveillez `pg_stat_io` pour voir si les workers sont saturés (`io_workers_concurrent_max`), augmentez progressivement.  
+> ⚙️ **Méthode empirique** : commencez avec le défaut (3), surveillez `pg_stat_io` (temps d'attente / volumes d'I/O) pour voir si les workers sont saturés, augmentez progressivement.  
 >  
 > ⚠️ Trop de workers gaspille des ressources sans gain. Sur des bases avec un cache hit ratio > 99 %, augmenter `io_workers` n'aura aucun effet (les I/O sont rares).
 
@@ -496,17 +499,28 @@ client backend  | bulkread |   98765  |      0 |    2100   |       0
 - `read_time` : Temps total de lecture (ms)  
 - **Latence moyenne** = `read_time / reads`
 
-#### 2. `pg_stat_wal` (Améliorée)
+> ⚠️ **`read_time` et `write_time` ne sont mesurés que si `track_io_timing = on`** (désactivé par défaut !). Sans ce paramètre, ces colonnes restent à **0** et toute « latence moyenne » calculée vaudra zéro. Pour le diagnostic, activez-le (rechargeable à chaud) :
+>
+> ```sql
+> ALTER SYSTEM SET track_io_timing = on;
+> SELECT pg_reload_conf();
+> ```
+>
+> L'overhead est négligeable sur la plupart des systèmes modernes — mesurez-le au besoin avec l'outil `pg_test_timing`.
+
+#### 2. `pg_stat_wal` et `pg_stat_io`
 
 ```sql
--- Statistiques WAL avec métriques I/O
+-- Volume de WAL généré (pg_stat_wal)
 SELECT
     wal_records,
+    wal_fpi,
     wal_bytes,
-    wal_write_time,
-    wal_sync_time
+    wal_buffers_full
 FROM pg_stat_wal;
 ```
+
+> ⚠️ **PG 18** : les **temps** d'écriture et de synchronisation du WAL (`wal_write_time`, `wal_sync_time`) ne sont plus dans `pg_stat_wal` — ils ont migré vers `pg_stat_io` (lignes `object = 'wal'`, colonnes `write_time` / `fsync_time`).
 
 ### Logs d'Événements I/O
 
@@ -552,6 +566,23 @@ Pour les opérations de maintenance (VACUUM, CREATE INDEX) :
 -- Concurrence I/O pour maintenance
 maintenance_io_concurrency = 200  -- Peut être plus élevé que effective_io_concurrency
 ```
+
+#### `io_combine_limit`
+
+Plutôt que de lire les pages une par une, PostgreSQL **regroupe les lectures de blocs contigus** en une seule opération d'I/O — bien plus efficace, surtout avec l'AIO. `io_combine_limit` fixe la **taille maximale** d'une telle I/O combinée.
+
+```sql
+-- Taille max d'une I/O combinée (défaut : 128 kB = 16 × 8 Ko)
+SHOW io_combine_limit;
+
+-- Ajustable par session (contexte 'user'), jusqu'au plafond io_max_combine_limit
+SET io_combine_limit = '256kB';
+```
+
+- `io_combine_limit` (contexte `user`) : modifiable à chaud, par session ou par requête
+- `io_max_combine_limit` (contexte `postmaster`) : **plafond** fixé au démarrage (défaut 128 kB ; maximum 1 Mo, soit 128 blocs de 8 Ko)
+
+Sur un stockage capable de gros transferts (NVMe, SAN haut de gamme), augmenter `io_combine_limit` réduit le nombre d'opérations d'I/O lors des gros scans séquentiels.
 
 ### 2. Optimiser pour les SSD NVMe
 
@@ -616,12 +647,13 @@ ANALYZE test_table;
 #### Étape 2 : Benchmark avec I/O Sync (Mode PG 17)
 
 ```sql
--- Configurer I/O sync
+-- Configurer I/O sync — ⚠️ io_method est en contexte « postmaster » :
+-- il faut REDÉMARRER PostgreSQL (le pg_reload_conf() ci-dessous ne suffit pas pour ce paramètre)
 ALTER SYSTEM SET io_method = 'sync';  
 SELECT pg_reload_conf();  
 
--- Vider les caches
-SELECT pg_prewarm_reset();  -- Si extension pg_prewarm installée
+-- Cache froid : il n'existe PAS de fonction SQL qui vide les shared_buffers.
+-- Redémarrez PostgreSQL (vide le cache PG), puis en root : echo 3 > /proc/sys/vm/drop_caches (cache OS)
 
 -- Requête test (Index Scan)
 EXPLAIN (ANALYZE, BUFFERS)  
@@ -643,8 +675,7 @@ SELECT pg_reload_conf();
 -- Redémarrer PostgreSQL
 -- (nécessaire car io_method = postmaster context)
 
--- Vider les caches à nouveau
-SELECT pg_prewarm_reset();
+-- Vider les caches à nouveau (redémarrage PostgreSQL + drop_caches OS, comme à l'étape 2)
 
 -- Même requête
 EXPLAIN (ANALYZE, BUFFERS)  
@@ -711,14 +742,16 @@ Overhead : 5 % (négligeable)
 PostgreSQL 18 est la **première version** à introduire l'I/O asynchrone — le sous-système est donc encore en évolution. Voici ce qu'il faut savoir pour cadrer ses attentes :
 
 **Ce que l'AIO PG 18 fait** :
-- ✅ Lectures asynchrones pour les `seq scan`, `bitmap heap scan`, `vacuum`, `analyze`
-- ✅ Prefetch (lecture anticipée) sur index scan
-- ✅ Lectures pour `pg_prewarm`, `pg_basebackup`
+- ✅ Lectures asynchrones pour les **`seq scan`**, **`bitmap heap scan`** et **`VACUUM`** — les opérations qui parcourent beaucoup de pages
+- ✅ Lectures pour `pg_prewarm`, `ANALYZE` et `pg_basebackup`
 
 **Ce que l'AIO PG 18 ne fait PAS (encore)** :
+- ❌ **`Index Scan` / `Index Only Scan` simples** : la lecture page par page guidée par un index n'est **pas** encore asynchrone en PG 18 (prévu pour une version ultérieure)
 - ❌ **Écritures asynchrones** (les `INSERT`/`UPDATE`/`DELETE` utilisent toujours l'I/O classique)
 - ❌ Écriture asynchrone du WAL (toujours synchrone, c'est nécessaire pour la durabilité)
 - ❌ Écriture des pages sales par le Background Writer (synchrone)
+
+> 📌 **« Index scan » dans ce chapitre** : les exemples de lectures aléatoires multiples (`WHERE id IN (...)`, `WHERE val BETWEEN ...`) sont en pratique exécutés par le planificateur comme des **Bitmap Heap Scans** — qui, eux, bénéficient pleinement de l'AIO. Un `Index Scan` strictement page-par-page n'en profite pas encore. Vérifiez le nœud réellement choisi avec `EXPLAIN`.
 
 **Roadmap** : la communauté PostgreSQL travaille sur l'AIO pour les écritures (background writer, checkpointer) pour les versions 19 et 20. Le potentiel de gain est important pour les workloads d'écriture intensive.
 
@@ -763,7 +796,7 @@ random_page_cost = 1.1  # Pour SSD
 3. Benchmarker les requêtes critiques
 
 ✅ **Après la migration** :  
-1. Vérifier `SHOW io_method;` → Devrait être `io_uring` (Linux)  
+1. Vérifier `SHOW io_method;` → `worker` par défaut ; passez à `io_uring` sur Linux (kernel 5.1+) pour les performances maximales  
 2. Monitorer `pg_stat_io` pour voir les gains  
 3. Ajuster `effective_io_concurrency` si nécessaire  
 4. Comparer les performances avec des benchmarks
@@ -780,7 +813,7 @@ SELECT
     'I/O Concurrency' as metric,
     current_setting('effective_io_concurrency') as value;
 
--- Latence moyenne de lecture
+-- Latence moyenne de lecture (nécessite track_io_timing = on, sinon read_time = 0)
 SELECT
     CASE WHEN reads > 0
          THEN round(read_time::numeric / reads, 2)
@@ -960,7 +993,7 @@ Toutes les pages arrivent en ~5-10ms
 Sans AIO : 33 × 5ms = 165ms  
 Avec AIO : ~10ms  
 
-GAIN : 16× plus rapide ! ⚡⚡⚡
+GAIN : ~16× — mais c'est un **cas théorique idéal** (parallélisme parfait sur stockage très rapide). En pratique, comptez plutôt **jusqu'à 3×** sur des charges réelles. ⚡
 ```
 
 ---

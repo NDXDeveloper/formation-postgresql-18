@@ -120,9 +120,11 @@ Pour mieux comprendre la permissivité de la licence PostgreSQL, comparons-la av
 
 **Exemple concret :**
 
-Vous créez une application SaaS qui utilise PostgreSQL :
-- ✅ Avec licence PostgreSQL : Vous pouvez vendre votre application sans partager le code  
-- ❌ Avec GPL : Vous devriez théoriquement publier le code de votre application
+Vous **distribuez un logiciel** qui embarque un composant tiers :
+- ✅ Sous licence permissive (PostgreSQL/BSD) : vous l'intégrez dans un produit propriétaire sans publier votre code  
+- ❌ Sous GPL : le produit **distribué** doit lui-même passer sous GPL (effet « copyleft »)
+
+> 💡 La GPL se déclenche à la **distribution** du logiciel, pas à son simple usage en ligne : un pur service **SaaS** y échappe — c'est l'**AGPL** qui couvre ce cas. Et se *connecter* à PostgreSQL comme base de données ne « contamine » jamais votre application, quelle que soit la licence.
 
 #### Licence PostgreSQL vs MySQL (Double Licence)
 
@@ -147,7 +149,7 @@ Avec PostgreSQL :
 
 | Aspect | PostgreSQL | Oracle |
 |--------|-----------|--------|
-| **Coût de licence** | 💰 Gratuit | 💰💰💰💰💰 47 500 $/cœur (Enterprise Edition) + ~22 % de maintenance/an |
+| **Coût de licence** | 💰 Gratuit | 💰💰💰💰💰 47 500 $/processeur (Enterprise Edition) + ~22 % de maintenance/an |
 | **Utilisation** | ✅ Illimitée | ⚠️ Limitée par licence et par « core factor » |
 | **Audit** | ❌ Jamais | ✅ Possible (risque financier) |
 | **Vendor lock-in** | ❌ Aucun | ✅ Fort |

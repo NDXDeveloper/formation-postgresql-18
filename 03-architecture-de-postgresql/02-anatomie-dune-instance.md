@@ -180,7 +180,7 @@ CLIENT 3                            |
 > - De l'accès à la mémoire partagée (Shared Buffers, etc.)  
 > - Des descripteurs de fichiers ouverts  
 >  
-> Le child appelle ensuite `exec()`-like en interne pour devenir un backend, puis se charge de l'authentification. Ce mécanisme est **rapide** sur Linux (~1 ms), mais **lent sur Windows** où `fork()` n'existe pas — PostgreSQL doit y simuler ce comportement via `CreateProcess()`, ce qui explique pourquoi PostgreSQL est historiquement moins performant sur Windows pour des charges avec beaucoup de connexions courtes.  
+> Le child exécute alors directement le code du backend (sur Unix, **sans nouvel `exec()`** : le binaire `postgres` est déjà chargé en mémoire) et se charge de l'authentification. Ce mécanisme est **rapide** sur Linux (~1 ms), mais **lent sur Windows** où `fork()` n'existe pas — PostgreSQL doit y simuler ce comportement via `CreateProcess()`, ce qui explique pourquoi PostgreSQL est historiquement moins performant sur Windows pour des charges avec beaucoup de connexions courtes.  
 >  
 > 👉 **Implication** : sur Windows et pour les workloads à fort taux de connexions/déconnexions (serverless, lambdas), **PgBouncer est encore plus indispensable**.
 
@@ -239,6 +239,7 @@ POSTMASTER (parent)
     ├─── Autovacuum Launcher
     ├─── Autovacuum Workers (0-N)
     ├─── Logical Replication Workers
+    ├─── I/O Workers (PG 18, pour l'AIO)
     └─── Autres Workers (extensions, etc.)
 ```
 
@@ -340,7 +341,7 @@ max_wal_size = 1GB
 -- Avertir si les checkpoints sont trop fréquents
 checkpoint_warning = 30s
 
--- Durée d'étalement de l'écriture (0,5 = 50 % du checkpoint_timeout)
+-- Étalement de l'écriture des pages sales (0,9 = sur 90 % du checkpoint_timeout)
 checkpoint_completion_target = 0.9
 ```
 
@@ -408,7 +409,7 @@ wal_buffers = 16MB
 -- Délai max avant flush (millisecondes)
 wal_writer_delay = 200ms
 
--- Flush automatique tous les N commits (asynchrone)
+-- Flush automatique après ce volume de WAL écrit (défaut : 1 Mo)
 wal_writer_flush_after = 1MB
 ```
 
@@ -551,9 +552,9 @@ Ces statistiques sont **essentielles** pour :
 
 #### Nouveauté PostgreSQL 18
 
-- `pg_stat_io` (introduit en PG 16) reporte désormais les I/O **en octets** plutôt qu'en pages — plus pratique pour l'analyse
+- `pg_stat_io` (introduit en PG 16) expose désormais le **volume en octets** (`read_bytes`, `write_bytes`, `extend_bytes`), en plus du nombre d'opérations — plus pratique pour l'analyse
 - Les statistiques sont maintenant disponibles **par backend** (via `pg_stat_get_backend_io()` et `pg_stat_get_backend_wal()`), pas seulement globales
-- Les statistiques WAL ont été consolidées dans `pg_stat_io`
+- Les statistiques d'**I/O du WAL** (temps et volumes de lecture/écriture/fsync) sont passées dans `pg_stat_io` (objet `wal`) ; `pg_stat_wal` ne conserve que les compteurs de génération (`wal_records`, `wal_fpi`, `wal_bytes`, `wal_buffers_full`)
 
 ```sql
 -- Statistiques I/O globales (PG 16+)
@@ -630,7 +631,22 @@ Le placeholder `%p` est le chemin du fichier source, `%f` est le nom du fichier 
 
 > ⚠️ **Piège classique** : si `archive_command` échoue silencieusement, le répertoire `pg_wal/` peut se remplir jusqu'à saturer le disque et **bloquer toute écriture** sur la base. Toujours monitorer `pg_stat_archiver` (`failed_count`, `last_failed_time`).
 
-### 9. 🌐 Autres Background Workers
+### 9. ⚡ I/O Workers (nouveauté PostgreSQL 18)
+
+Avec le **sous-système I/O asynchrone (AIO)** de PostgreSQL 18 (détaillé en [section 3.5](/03-architecture-de-postgresql/05-sous-systeme-io-asynchrone.md)), un nouveau type de processus apparaît : les **I/O workers**. Lorsque `io_method = 'worker'` (le mode par défaut), ce sont eux qui exécutent les lectures disque **pour le compte des backends** — le backend n'a plus à rester bloqué le temps de chaque I/O.
+
+```
+postgres: io worker 0
+postgres: io worker 1
+postgres: io worker 2
+```
+
+- **Nombre** : contrôlé par `io_workers` (défaut **3**), rechargeable à chaud (contexte `sighup`, sans redémarrage)
+- **Présence** : uniquement avec `io_method = 'worker'`. En `io_method = 'io_uring'` (Linux) c'est le noyau qui gère l'asynchronisme ; en `io_method = 'sync'` il n'y a pas d'I/O worker.
+
+> 💡 Ne confondez pas `io_workers` (processus d'**I/O**, PG 18) avec les *parallel workers* de `max_worker_processes` (parallélisation des **requêtes**) : ce sont deux mécanismes distincts.
+
+### 10. 🌐 Autres Background Workers
 
 PostgreSQL supporte des **workers personnalisés** via les extensions :
 
@@ -932,6 +948,7 @@ PostgreSQL utilise la **mémoire partagée**. Si un processus corrompt cette mé
 | **WAL Receiver**      | Reçoit le WAL (sur les replicas)                  |
 | **Autovacuum Launcher**| Lance les workers autovacuum                     |
 | **Autovacuum Workers**| Nettoient les tables (VACUUM/ANALYZE)             |
+| **I/O Workers**       | Exécutent les lectures disque asynchrones (AIO, PG 18) |
 
 ---
 

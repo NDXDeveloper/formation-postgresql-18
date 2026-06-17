@@ -956,7 +956,7 @@ Pendant des années, le **mode `transaction`** de PgBouncer (le plus efficace) �
 ```ini
 # pgbouncer.ini
 pool_mode = transaction  
-max_prepared_statements = 100   # Active le support (0 = désactivé, défaut)  
+max_prepared_statements = 100   # 0 = désactivé (défaut PgBouncer ≤ 1.23 ; 200 depuis 1.24)  
 ```
 
 **Impact** : les ORMs modernes (Hibernate, Sequelize, SQLAlchemy 2+, EF Core) qui utilisent intensivement les prepared statements peuvent maintenant tourner derrière PgBouncer en mode transaction. C'est un changement majeur qui rend PgBouncer compatible avec presque toutes les stacks modernes.
@@ -1116,8 +1116,8 @@ psql -h $DB_HOST -U $DB_USER -d $DB_NAME -f migrations/002_add_indexes.sql
 
 ```bash
 # Ne JAMAIS mettre le mot de passe en ligne de commande
-# ❌ MAUVAIS :
-PGPASSWORD=mypassword psql -U myuser -d mydb  # Visible dans les processus (ps aux) !
+# ❌ MAUVAIS : mot de passe dans l'URI de connexion → visible par tous dans `ps aux`
+psql "postgresql://myuser:mypassword@localhost/mydb"
 
 # ✅ BON :
 # Utiliser .pgpass
@@ -1125,7 +1125,8 @@ echo "localhost:5432:mydb:myuser:mypassword" >> ~/.pgpass
 chmod 600 ~/.pgpass  
 psql -U myuser -d mydb  
 
-# Ou variable d'environnement (scripts)
+# Acceptable pour les scripts : PGPASSWORD (absente de `ps aux`, mais lisible
+# dans l'environnement du processus via /proc/PID/environ — .pgpass reste préférable)
 export PGPASSWORD=mypassword  
 psql -U myuser -d mydb  
 ```
@@ -1198,7 +1199,7 @@ max_client_conn = 1000
 
 ## 🔗 Prochaine Étape
 
-Maintenant que vous connaissez les **outils de l'écosystème PostgreSQL**, la prochaine partie de la formation abordera **le langage SQL** : comment interroger et manipuler les données avec les requêtes de sélection (DQL) et de manipulation (DML).
+Maintenant que vous connaissez les **outils de l'écosystème PostgreSQL**, la prochaine partie de la formation abordera **les objets de la base de données (DDL)** : comment créer et structurer vos tables, types de données, schémas, index et contraintes.
 
 ---
 

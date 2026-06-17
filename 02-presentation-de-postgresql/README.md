@@ -11,11 +11,11 @@ Ce chapitre est conçu pour vous donner une compréhension complète de **qui es
 ### En une frise : 40 ans d'histoire
 
 ```
-1970 ──┬── INGRES (Berkeley) — Stonebraker invente l'un des premiers SGBDR
+1973 ──┬── INGRES (Berkeley) — Stonebraker et Wong, l'un des premiers SGBDR
        │
 1986 ──┼── POSTGRES — papier fondateur « The Design of POSTGRES »
        │
-1994 ──┼── Andrew Yu et Jolly Chen ajoutent SQL → Postgres95
+1995 ──┼── Andrew Yu et Jolly Chen ajoutent SQL → Postgres95
        │
 1996 ──┼── Renommage en PostgreSQL, licence permissive, open source
        │

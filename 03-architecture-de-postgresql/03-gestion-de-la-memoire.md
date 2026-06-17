@@ -150,7 +150,7 @@ Cache Hit Ratio = (Lectures en cache / Total lectures) × 100
 SELECT
     sum(heap_blks_read) as disk_reads,
     sum(heap_blks_hit) as cache_reads,
-    sum(heap_blks_hit) / (sum(heap_blks_hit) + sum(heap_blks_read)) * 100 AS cache_hit_ratio
+    sum(heap_blks_hit) / NULLIF(sum(heap_blks_hit) + sum(heap_blks_read), 0) * 100 AS cache_hit_ratio
 FROM pg_statio_user_tables;
 ```
 
@@ -306,7 +306,7 @@ huge_pages = try       # Essaie d'utiliser huge pages, sinon retombe sur 4 Ko (d
 # huge_pages = on      # Échec si huge pages indisponibles (strict)
 # huge_pages = off     # N'utilise jamais huge pages
 
-# Sur PG 15+ : taille des huge pages explicite
+# Sur PG 14+ : taille des huge pages explicite
 huge_page_size = 2MB   # Ou 1GB sur très grosses instances
 ```
 
@@ -418,10 +418,12 @@ work_mem = 64MB
 -- Modifier pour la session en cours (sans redémarrage)
 SET work_mem = '256MB';
 
--- Modifier pour une requête spécifique
-SET LOCAL work_mem = '1GB';  
-SELECT * FROM huge_table ORDER BY column;  
-RESET work_mem;  
+-- Modifier pour une seule requête, le temps d'une transaction
+-- (SET LOCAL n'a d'effet QUE dans un bloc transactionnel ; sinon : WARNING sans effet)
+BEGIN;
+SET LOCAL work_mem = '1GB';
+SELECT * FROM huge_table ORDER BY column;
+COMMIT;  -- work_mem revient automatiquement à la valeur de session (256MB)
 ```
 
 #### ⚠️ Piège Critique : Multiplication de work_mem
@@ -672,7 +674,7 @@ Total Maximum = 4 GB + 8.2 GB + 1 GB = 13.2 GB
 ```sql
 -- Cache Hit Ratio global
 SELECT
-    sum(blks_hit) / (sum(blks_hit) + sum(blks_read)) * 100 AS cache_hit_ratio
+    sum(blks_hit) / NULLIF(sum(blks_hit) + sum(blks_read), 0) * 100 AS cache_hit_ratio
 FROM pg_stat_database;
 ```
 
@@ -722,10 +724,11 @@ SELECT
     c.relname,
     pg_size_pretty(count(*) * 8192) as cached,
     round(100.0 * count(*) / (SELECT setting::int FROM pg_settings WHERE name='shared_buffers'), 2) as pct_cache,
-    round(100.0 * count(*) * 8192 / pg_relation_size(c.oid), 2) as pct_table_in_cache
+    round(100.0 * count(*) * 8192 / NULLIF(pg_relation_size(c.oid), 0), 2) as pct_table_in_cache
 FROM pg_buffercache b  
 JOIN pg_class c ON b.relfilenode = pg_relation_filenode(c.oid)  
-WHERE b.reldatabase IN (0, (SELECT oid FROM pg_database WHERE datname = current_database()))  
+WHERE b.reldatabase IN (0, (SELECT oid FROM pg_database WHERE datname = current_database()))
+  AND b.relforknumber = 0   -- fork principal seul (sinon FSM/VM peuvent faire dépasser 100 %)
 GROUP BY c.relname, c.oid  
 ORDER BY count(*) DESC  
 LIMIT 10;  
@@ -751,8 +754,16 @@ LIMIT 10;
 
 ### 5. Statistiques par Requête (pg_stat_statements)
 
+> ⚠️ **Prérequis** : `pg_stat_statements` doit être **préchargé** au démarrage. Ajoutez-le à `shared_preload_libraries` dans `postgresql.conf`, puis **redémarrez** PostgreSQL (paramètre en contexte `postmaster`) :
+>
+> ```ini
+> shared_preload_libraries = 'pg_stat_statements'
+> ```
+>
+> Sans ce préchargement, `CREATE EXTENSION` réussit mais toute requête sur la vue échoue : `ERROR: pg_stat_statements must be loaded via "shared_preload_libraries"`.
+
 ```sql
--- Activer l'extension
+-- Activer l'extension (après préchargement + redémarrage)
 CREATE EXTENSION pg_stat_statements;
 
 -- Requêtes avec le plus d'I/O disque (cache misses)
@@ -956,7 +967,7 @@ SHOW effective_cache_size;
 
 -- Vérifier le cache hit ratio
 SELECT
-    sum(blks_hit) / (sum(blks_hit) + sum(blks_read)) * 100 AS cache_hit_ratio
+    sum(blks_hit) / NULLIF(sum(blks_hit) + sum(blks_read), 0) * 100 AS cache_hit_ratio
 FROM pg_stat_database;
 ```
 

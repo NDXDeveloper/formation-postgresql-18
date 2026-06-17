@@ -398,7 +398,7 @@ Cette caractéristique est extrêmement utile pour tester des modifications de s
 - `CREATE DATABASE` / `DROP DATABASE` / `ALTER DATABASE … RENAME` (les autres variantes d'`ALTER DATABASE` sont transactionnelles)
 - `CREATE TABLESPACE` / `DROP TABLESPACE`
 - `CREATE INDEX CONCURRENTLY` / `REINDEX … CONCURRENTLY` / `DROP INDEX CONCURRENTLY`
-- `VACUUM` (toutes formes), `ANALYZE` en variante autonome
+- `VACUUM` (toutes formes, y compris `VACUUM ANALYZE`) — note : `ANALYZE` **seul** est en revanche transactionnel
 - `CLUSTER` (sans nom de table : recluster global)
 - `ALTER TYPE … ADD VALUE` sur un ENUM (dans certains cas, lorsque la nouvelle valeur est utilisée immédiatement après)
 - `ALTER SYSTEM`

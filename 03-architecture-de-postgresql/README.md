@@ -267,7 +267,7 @@ Comprendre le stockage physique explique pourquoi certaines opérations sont co�
 - Le problème de l'I/O synchrone (versions ≤ 17)
 - La révolution de l'I/O asynchrone (version 18)
 - io_uring sur Linux et ses avantages
-- Gains de performance spectaculaires (2-4× plus rapide !)
+- Gains de performance importants (jusqu'à 3× plus rapide selon le scénario)
 
 **Pourquoi c'est important :**
 C'est l'une des innovations majeures de PostgreSQL 18. Si vous migrez ou installez PG 18, vous bénéficierez automatiquement de ces gains.

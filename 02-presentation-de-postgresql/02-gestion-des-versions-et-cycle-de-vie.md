@@ -373,23 +373,26 @@ SELECT uuidv7();  -- Nouveau ! Génère un UUIDv7 avec timestamp intégré
 
 **Cas d'usage :** Réservations, historiques, validité temporelle.
 
-**Exemple conceptuel :**
+**Exemple :**
 ```sql
--- Empêcher les chevauchements de périodes
+-- Requis pour combiner une égalité (salle_id) et un range dans la même clé
+CREATE EXTENSION IF NOT EXISTS btree_gist;
+
+-- PG 18 : clé primaire « temporelle » qui interdit les périodes qui se chevauchent
 CREATE TABLE reservations (
-    id SERIAL PRIMARY KEY,
     salle_id INTEGER,
-    date_debut TIMESTAMP,
-    date_fin TIMESTAMP,
-    CONSTRAINT pas_de_chevauchement
-        EXCLUDE USING gist (
-            salle_id WITH =,
-            tsrange(date_debut, date_fin) WITH &&
-        )
+    periode  tsrange,
+    PRIMARY KEY (salle_id, periode WITHOUT OVERLAPS)
 );
+
+INSERT INTO reservations VALUES (1, '[2025-01-01 10:00, 2025-01-01 12:00)');
+INSERT INTO reservations VALUES (1, '[2025-01-01 11:00, 2025-01-01 13:00)');
+-- ERROR : conflicting key value violates exclusion constraint  (chevauchement détecté)
 ```
 
-Cette contrainte garantit qu'une salle ne peut pas être réservée deux fois en même temps.
+La véritable nouveauté SQL standard de PostgreSQL 18 tient en deux clauses : **`WITHOUT OVERLAPS`** (sur `PRIMARY KEY` / `UNIQUE`, pour interdire les périodes qui se chevauchent) et **`PERIOD`** (sur `FOREIGN KEY`, pour référencer une ligne valide sur toute une période).
+
+> 💡 Avant PG 18, on obtenait un résultat équivalent avec une contrainte d'exclusion : `EXCLUDE USING gist (salle_id WITH =, tsrange(date_debut, date_fin) WITH &&)`. La syntaxe `WITHOUT OVERLAPS` est plus concise et conforme au standard SQL:2011.
 
 #### 6. Optimisations du Planificateur
 
@@ -441,7 +444,7 @@ RETURNING OLD.prix as ancien_prix, NEW.prix as nouveau_prix;
 
 **Nouveautés :**
 - Préservation des statistiques de l'ancien cluster
-- Option `--swap` pour upgrade ultra-rapide (hard links)
+- Option `--swap` pour upgrade ultra-rapide (déplacement des répertoires de données, distinct des hard links de `--link`)
 - Vérifications parallèles avec `--jobs`
 
 **Impact :** Migrations majeures beaucoup plus rapides et fiables.

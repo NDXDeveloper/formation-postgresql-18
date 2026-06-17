@@ -610,8 +610,8 @@ Pour la plupart des applications, une approche **hybride** est idéale :
 
 **Réalité** : Non, ils sont complémentaires.
 - SQL reste dominant pour les applications transactionnelles
-- En 2025, les bases relationnelles représentent encore **environ 57 %** du marché des SGBD (source : analyses sectorielles)
-- PostgreSQL est, selon le *Stack Overflow Developer Survey 2024*, le **SGBD le plus utilisé par les développeurs** (≈ 49 %), devant MongoDB (≈ 25 %)
+- Les bases relationnelles dominent toujours largement : dans le classement de popularité **DB-Engines** (2026), les quatre SGBD les plus populaires (Oracle, MySQL, SQL Server, PostgreSQL) sont tous relationnels — MongoDB, premier NoSQL, n'arrive qu'en cinquième position
+- PostgreSQL est, selon le *Stack Overflow Developer Survey 2024*, le **SGBD le plus utilisé par les développeurs** (≈ 49 %, pour la deuxième année consécutive) — loin devant le NoSQL le plus populaire, MongoDB (≈ 25 %)
 - NoSQL est un outil additionnel, pas un remplacement
 
 ### ❌ Mythe 3 : « NoSQL n'a pas besoin de schéma »

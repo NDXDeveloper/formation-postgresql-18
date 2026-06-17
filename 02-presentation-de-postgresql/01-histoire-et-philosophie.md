@@ -12,7 +12,7 @@ PostgreSQL n'est pas un simple système de gestion de bases de données parmi d'
 
 ### Les Années 1970 : INGRES
 
-L'histoire de PostgreSQL commence bien avant sa création officielle. Dans les années 1970, à l'Université de Californie à Berkeley, le professeur **Michael Stonebraker** et son équipe développent un système de bases de données appelé **INGRES** (*INteractive GRaphics REtrieval System*).
+L'histoire de PostgreSQL commence bien avant sa création officielle. Au début des années 1970 — à partir de **1973** —, à l'Université de Californie à Berkeley, le professeur **Michael Stonebraker** et son collègue **Eugene Wong** développent, avec leur équipe, un système de bases de données appelé **INGRES** (*INteractive GRaphics REtrieval System*).
 
 INGRES était l'un des premiers systèmes de gestion de bases de données relationnelles, concurrent direct d'Oracle et de System R d'IBM. Ce projet a posé les bases de nombreux concepts que nous utilisons encore aujourd'hui.
 
@@ -70,10 +70,10 @@ Depuis 1996, PostgreSQL a connu une évolution constante avec une nouvelle versi
 - **PostgreSQL 9.0 (2010)** : réplication en streaming, Hot Standby
 - **PostgreSQL 9.4 (2014)** : type JSONB (JSON binaire indexable)
 - **PostgreSQL 10 (2017)** : partitionnement déclaratif natif, réplication logique
-- **PostgreSQL 11 (2018)** : procédures stockées (CALL, transactions imbriquées), JIT compilation
+- **PostgreSQL 11 (2018)** : procédures stockées (CALL, avec contrôle transactionnel `COMMIT`/`ROLLBACK`), JIT compilation
 - **PostgreSQL 12 (2019)** : améliorations massives des performances, colonnes générées (stockées)
 - **PostgreSQL 13 (2020)** : déduplication B-Tree, vacuum parallèle
-- **PostgreSQL 14 (2021)** : pipeline mode du protocole, améliorations JSON, *predicate locks* en logical replication
+- **PostgreSQL 14 (2021)** : pipeline mode du protocole, *subscripting* JSON, streaming des transactions longues en réplication logique
 - **PostgreSQL 15 (2022)** : MERGE SQL standard, compression LZ4 pour TOAST
 - **PostgreSQL 16 (2023)** : parallélisation accrue, réplication logique depuis un standby
 - **PostgreSQL 17 (2024)** : *incremental backup*, optimisations VACUUM, MERGE amélioré
@@ -253,9 +253,9 @@ CREATE TABLE clients_v2 (
 
 Pour les performances maximales, on peut écrire un type en C avec ses fonctions d'entrée/sortie, opérateurs, comparateurs. C'est ainsi que sont construits PostGIS (géométries), pgvector (embeddings), hstore (clé-valeur)…
 
-##### b) **Types Composites**
+##### b) **Types Complexes (tableaux, JSON, géométrie)**
 
-PostgreSQL permet de créer des structures de données complexes, comme des objets imbriqués.
+PostgreSQL permet de stocker des structures de données complexes, comme des objets imbriqués.
 
 **Exemple :**
 - Une colonne peut contenir un tableau de valeurs (type ARRAY)

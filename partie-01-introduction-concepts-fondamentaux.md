@@ -167,7 +167,7 @@ docker run --name pg18 \
 Cette première partie introduit les innovations suivantes de PostgreSQL 18 :
 
 ### ⚡ Performance et I/O (Chapitre 3)
-- **Sous-système I/O asynchrone (AIO)** : nouveau mécanisme de lectures parallélisées qui peut multiplier le débit par 2 à 3 × sur les workloads en lecture intensive (sequential scans, bitmap heap scans, `VACUUM`). Les écritures restent synchrones dans PG 18.  
+- **Sous-système I/O asynchrone (AIO)** : nouveau mécanisme de lectures parallélisées qui peut accroître nettement le débit (**jusqu'à ~3× selon le scénario**, surtout avec `io_uring` sur un stockage à forte latence) sur les workloads en lecture intensive (sequential scans, bitmap heap scans, `VACUUM`). Les écritures restent synchrones dans PG 18.  
 - **Paramètre `io_method`** (à définir dans `postgresql.conf`, nécessite redémarrage) :  
   - `sync` : comportement historique (équivalent PG 17), lectures bloquantes avec `posix_fadvise`  
   - `worker` : processus dédiés en arrière-plan (défaut PG 18)  
@@ -176,7 +176,7 @@ Cette première partie introduit les innovations suivantes de PostgreSQL 18 :
 
 ### 📊 Types de données (Chapitre 4)
 - **UUIDv7** : nouvelle version des UUID avec tri temporel natif, idéale pour les clés primaires distribuées et l'efficacité des index B-tree  
-- **Colonnes générées VIRTUAL** : `GENERATED ALWAYS AS … VIRTUAL` (calcul à la lecture, sans coût de stockage) — complète le mode `STORED` existant depuis PG 12
+- **Colonnes générées VIRTUAL** : `GENERATED ALWAYS AS … VIRTUAL` calcule la valeur **à la lecture** (sans coût de stockage). C'est désormais le **mode par défaut** en PG 18 lorsqu'on omet le mot-clé, là où `STORED` (valeur matérialisée sur disque) était l'unique mode — et obligatoire — de PG 12 à 17
 
 > 💡 Les autres nouveautés majeures de PostgreSQL 18 (OAuth 2.0, contraintes temporelles `WITHOUT OVERLAPS`, Data Checksums activés par défaut, `pg_upgrade` amélioré, etc.) sont couvertes dans les parties suivantes de la formation.
 
@@ -202,7 +202,7 @@ Si vous avez accès à une instance PostgreSQL, expérimentez avec les concepts 
 
 ### ❓ Questions et approfondissement
 
-Chaque chapitre peut soulever des questions. Notez-les et cherchez à y répondre via la documentation officielle PostgreSQL ou la communauté. Les ressources sont listées dans le chapitre 21.
+Chaque chapitre peut soulever des questions. Notez-les et cherchez à y répondre via la documentation officielle PostgreSQL ou la communauté. Les ressources sont rassemblées dans le **chapitre 22** (« Conclusion et perspectives ») et dans les **annexes** (glossaire, référence des requêtes SQL, référence de configuration).
 
 ### 🚨 Erreurs courantes à éviter
 
@@ -284,7 +284,8 @@ Extensions, déploiement production, architectures modernes, intégrations.
 - [EDB Blog](https://www.enterprisedb.com/blog) — éditeur d'EDB Postgres Advanced Server (a absorbé 2ndQuadrant), nombreuses analyses techniques  
 - [CrunchyData Blog](https://www.crunchydata.com/blog) — pratique production, performance, partitionnement, PostGIS  
 - [Percona Database Performance Blog](https://www.percona.com/blog/) — perspective multi-SGBD avec focus PostgreSQL et MySQL  
-- [pganalyze Blog](https://pganalyze.com/blog) — articles fouillés sur l'internals (séries « Five minutes of Postgres », « Waiting for Postgres N »)  
+- [pganalyze Blog](https://pganalyze.com/blog) — articles fouillés sur l'internals (série vidéo « 5mins of Postgres »)  
+- [depesz](https://www.depesz.com/) — blog de Hubert Lubaczewski, référence pour la série **« Waiting for PostgreSQL »** (les nouveautés de chaque version, depuis 2008) et l'outil d'analyse de plans `explain.depesz.com`  
 - [CYBERTEC Blog](https://www.cybertec-postgresql.com/en/blog/) — éditeur autrichien spécialisé PostgreSQL, contenus très techniques
 
 ### 📨 Newsletters et veille

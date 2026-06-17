@@ -418,6 +418,124 @@ statut VARCHAR(20) CHECK (statut IN ('actif', 'inactif', 'suspendu'))
 date_fin DATE CHECK (date_fin > date_debut)
 ```
 
+### 6. FOREIGN KEY (Clés Étrangères)
+
+**Objectif** : garantir l'**intégrité référentielle** — une valeur doit exister dans une autre table. C'est le mécanisme qui **relie les tables** entre elles.
+
+Une clé étrangère (`FOREIGN KEY`) impose qu'une colonne (ou un groupe de colonnes) corresponde à une clé **`PRIMARY KEY`** (ou **`UNIQUE`**) d'une table **référencée**. PostgreSQL refuse alors d'insérer une ligne « enfant » pointant vers un parent inexistant, et de supprimer un parent encore référencé (selon l'action choisie).
+
+```sql
+CREATE TABLE clients (
+    id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    nom VARCHAR(100) NOT NULL
+);
+
+CREATE TABLE commandes (
+    id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    client_id INTEGER NOT NULL REFERENCES clients(id),  -- clé étrangère
+    montant NUMERIC(10, 2)
+);
+
+INSERT INTO clients (nom) VALUES ('Alice');                    -- id = 1
+INSERT INTO commandes (client_id, montant) VALUES (1, 99.90);  -- OK : le client 1 existe
+
+-- Client inexistant → rejet
+INSERT INTO commandes (client_id, montant) VALUES (999, 10.00);
+-- ERROR: insert or update on table "commandes" violates foreign key constraint
+```
+
+**Deux syntaxes** :
+
+```sql
+-- Syntaxe colonne (la plus courte)
+client_id INTEGER REFERENCES clients(id)
+
+-- Syntaxe contrainte de table (obligatoire pour les clés composites, et nommable)
+CONSTRAINT fk_commandes_client FOREIGN KEY (client_id) REFERENCES clients(id)
+```
+
+> 💡 Si vous omettez la colonne référencée (`REFERENCES clients`), PostgreSQL utilise la **clé primaire** de la table cible.
+
+#### Actions `ON DELETE` et `ON UPDATE`
+
+Que faire quand le parent référencé est **supprimé** (ou que sa clé est **modifiée**) ? On le précise avec `ON DELETE` / `ON UPDATE` :
+
+| Action | Comportement quand le parent disparaît |
+|--------|----------------------------------------|
+| `NO ACTION` (défaut) | Rejet si des enfants existent (vérifié en fin d'instruction, donc compatible avec une réaffectation dans la même requête) |
+| `RESTRICT` | Rejet immédiat si des enfants existent |
+| `CASCADE` | Supprime (ou met à jour) aussi les lignes enfants |
+| `SET NULL` | Met la clé étrangère des enfants à `NULL` |
+| `SET DEFAULT` | Met la clé étrangère des enfants à leur valeur `DEFAULT` |
+
+```sql
+CREATE TABLE lignes_commande (
+    id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    commande_id INTEGER NOT NULL
+        REFERENCES commandes(id) ON DELETE CASCADE,  -- supprimer la commande supprime ses lignes
+    produit VARCHAR(200),
+    quantite INTEGER
+);
+```
+
+> 🆕 **PostgreSQL 15+** : `ON DELETE SET NULL (colonne)` (et `SET DEFAULT (colonne)`) permet de ne réinitialiser **qu'une partie** des colonnes d'une clé étrangère composite.
+
+#### Bonnes pratiques
+
+- **Indexez les colonnes de clé étrangère** : PostgreSQL n'indexe **pas** automatiquement le côté « enfant ». Sans index, chaque suppression d'un parent provoque un *seq scan* de la table enfant.
+  ```sql
+  CREATE INDEX idx_commandes_client_id ON commandes(client_id);
+  ```
+- Sur une grande table existante, ajoutez la FK avec `NOT VALID` puis `VALIDATE CONSTRAINT` pour éviter un long verrou (voir section 4.7).
+- Une clé étrangère ne peut référencer qu'une clé **`PRIMARY KEY`** ou **`UNIQUE`** de la table cible.
+
+---
+
+## Contraintes Temporelles (🆕 PostgreSQL 18)
+
+PostgreSQL 18 implémente les **contraintes temporelles** du standard SQL:2011 : une clé primaire ou étrangère peut inclure une **période de validité** (un type *range*), de sorte que l'unicité ou la référence ne s'applique qu'à des **périodes qui ne se chevauchent pas**.
+
+### `PRIMARY KEY … WITHOUT OVERLAPS`
+
+`WITHOUT OVERLAPS` rend une clé primaire « temporelle » : deux lignes peuvent partager la même clé classique **à condition** que leurs périodes ne se chevauchent pas.
+
+```sql
+-- Prérequis : l'opérateur && (chevauchement) dans un index exige btree_gist
+CREATE EXTENSION IF NOT EXISTS btree_gist;
+
+CREATE TABLE occupation_chambre (
+    chambre_id INTEGER,
+    sejour     DATERANGE,
+    -- Une chambre ne peut pas être occupée deux fois sur des périodes qui se chevauchent
+    PRIMARY KEY (chambre_id, sejour WITHOUT OVERLAPS)
+);
+
+INSERT INTO occupation_chambre VALUES (101, daterange('2025-12-01','2025-12-05'));
+INSERT INTO occupation_chambre VALUES (101, daterange('2025-12-05','2025-12-09'));  -- OK : périodes contiguës (bornes [) )
+
+-- Chevauchement sur la même chambre → rejet
+INSERT INTO occupation_chambre VALUES (101, daterange('2025-12-03','2025-12-08'));
+-- ERROR: conflicting key value violates exclusion constraint "occupation_chambre_pkey"
+```
+
+> Avant PG 18, on obtenait ce résultat avec une **contrainte d'exclusion** `EXCLUDE USING GIST (chambre_id WITH =, sejour WITH &&)` (voir section 4.4.3). `WITHOUT OVERLAPS` est la forme **standard**, plus lisible.
+
+### `FOREIGN KEY … PERIOD`
+
+Le pendant côté clé étrangère : `PERIOD` exige que la période de l'enfant soit **couverte** par celle du parent.
+
+```sql
+CREATE TABLE reservation (
+    id          INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    chambre_id  INTEGER,
+    sejour      DATERANGE,
+    FOREIGN KEY (chambre_id, PERIOD sejour)
+        REFERENCES occupation_chambre (chambre_id, PERIOD sejour)
+);
+```
+
+**Cas d'usage** : réservations, tarifs valables sur une période, historisation (*versioning*) de données, plannings de ressources.
+
 ---
 
 ## Les Colonnes Générées (GENERATED COLUMNS)
@@ -688,7 +806,9 @@ CREATE UNLOGGED TABLE cache_donnees (
 | Survit à un crash brutal (kill -9, panne) | ❌ Non (vidée au redémarrage) | ✅ Oui |
 | Répliquée par streaming replication | ❌ Non | ✅ Oui |
 | Répliquée par logical replication | ❌ Non | ✅ Oui |
-| Utilisable comme PK / FK depuis tables normales | ✅ Oui | ✅ Oui |
+| Référençable par une FK **depuis une table permanente** | ❌ Non¹ | ✅ Oui |
+
+> ¹ Une **table permanente ne peut pas avoir de clé étrangère vers une table `UNLOGGED`** (`ERROR: constraints on permanent tables may reference only permanent tables`) — logique, puisqu'une table `UNLOGGED` est vidée après un crash, ce qui casserait l'intégrité référentielle. L'inverse est permis : une table `UNLOGGED` peut référencer une table permanente.
 
 **Cas d'usage** : caches applicatifs, tables de staging ETL, indexes inversés rebuilt-able, agrégats reconstructibles.
 

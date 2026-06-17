@@ -958,7 +958,7 @@ ERROR: relation "sales_summary" does not exist
 
 4. **`public` est le schéma par défaut** : Créé automatiquement dans chaque database.
 
-5. **`pg_catalog` est toujours prioritaire** : Il contient les fonctions et tables système et est toujours cherché en premier (implicitement).
+5. **`pg_catalog` est implicitement prioritaire** : Il contient les fonctions et tables système et est cherché **avant les schémas de votre `search_path`** (sauf si vous le listez explicitement ; seul `pg_temp` le précède pour les tables).
 
 6. **Spécifiez le schéma pour plus de clarté** : en production, utilisez toujours `schema.table` pour éviter les ambiguïtés.
 

@@ -14,7 +14,7 @@ Ces concepts peuvent sembler abstraits au premier abord, mais vous allez découv
 
 ### Définition simple
 
-Une **donnée** est une information brute, un fait observable ou mesurable qui représente quelque chose dans le monde réel. C'est l'élément de base de toute information numérique.
+Une **donnée** est un fait brut, observable ou mesurable, qui représente quelque chose du monde réel. C'est l'élément de base de toute information numérique.
 
 Pour le dire autrement : une donnée, c'est simplement **un morceau d'information**.
 
@@ -85,6 +85,20 @@ Les sciences de l'information formalisent cette distinction avec la **pyramide D
 | **W** — Sagesse | Connaissance évaluée | « Avec cet historique, je consulte un médecin » |
 
 👉 Une base de données stocke des **données**. C'est l'application (et son utilisateur) qui les transforme progressivement en information, connaissance, puis sagesse.
+
+### Données structurées, semi-structurées et non structurées
+
+Au-delà de leur type, les données se distinguent aussi par leur **degré d'organisation**. Cette classification est essentielle : elle détermine en grande partie le type de base de données le plus adapté pour les stocker.
+
+| Catégorie | Description | Exemples | Stockage typique |
+|-----------|-------------|----------|------------------|
+| **Structurées** | Organisées selon un schéma strict et prédéfini (lignes et colonnes typées) | Table de clients, transactions bancaires, catalogue produits | SGBDR (PostgreSQL, MySQL…) |
+| **Semi-structurées** | Dotées d'une structure souple et auto-descriptive (la structure est portée par la donnée elle-même) | JSON, XML, YAML | JSONB (PostgreSQL), MongoDB |
+| **Non structurées** | Sans modèle prédéfini ; contenu libre | Texte libre, images, vidéos, audio, PDF | Stockage de fichiers ou objet (S3), `BYTEA` |
+
+La majorité des données produites aujourd'hui (une proportion souvent estimée autour de **80 %**) sont non structurées — d'où l'importance des outils capables de les exploiter.
+
+> 🐘 **La polyvalence de PostgreSQL** : il couvre les trois catégories. Le modèle **relationnel** pour les données structurées, le type **JSONB** pour le semi-structuré, et la **recherche plein texte** (*Full-Text Search*) ou le type **BYTEA** pour exploiter et stocker des contenus non structurés.
 
 ### Pourquoi les données sont-elles importantes ?
 
@@ -265,7 +279,7 @@ Tout comme vous ne stockeriez pas 10 000 livres en vrac dans une cave (impossibl
 
 ### Points clés à retenir
 
-✅ **Une donnée** est une information brute, un fait mesurable (nom, âge, prix, date, etc.)
+✅ **Une donnée** est un fait brut mesurable (nom, âge, prix, date, etc.) ; mise en contexte, elle devient de l'**information**
 
 ✅ **Une base de données** est un ensemble organisé de données, structuré pour faciliter le stockage, la recherche et la gestion
 

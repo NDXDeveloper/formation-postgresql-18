@@ -121,7 +121,7 @@ Problème : le solde devrait être 500 € (1000 - 200 - 300), pas 700 € !
 **Solution du SGBD** :
 Le SGBD utilise plusieurs mécanismes pour empêcher ce type d'anomalie :
 - **Verrouillage** (*locks*) : empêche temporairement deux transactions d'écrire au même endroit
-- **MVCC** (*Multiversion Concurrency Control*) : permet à PostgreSQL de servir des lectures sans bloquer les écritures
+- **MVCC** (*Multiversion Concurrency Control*) : en maintenant plusieurs versions de chaque ligne, il permet aux lectures de ne pas bloquer les écritures (ni l'inverse)
 - **Niveaux d'isolation** des transactions (Read Committed, Repeatable Read, Serializable)
 
 Ces mécanismes sont étudiés en détail au chapitre 12. Pour l'instant, retenez que **le SGBD vous protège** contre les anomalies de concurrence.
@@ -318,7 +318,7 @@ De nombreuses entreprises de renom utilisent PostgreSQL pour de nombreux besoins
 - **Instagram** : l'un des plus grands déploiements PostgreSQL au monde (utilisateurs, métadonnées)
 - **Spotify** : nombreux services de stockage et données utilisateurs
 - **Reddit** : données utilisateurs, commentaires, votes, statistiques (modèle « ThingDB »)
-- **Twitch** : la majorité de leurs ~125 bases (utilisateurs, diffusions, sauvegardes)
+- **Twitch** : nombreux services de données backend (utilisateurs, diffusions, systèmes internes)
 - **Skype** (Microsoft) : annuaire utilisateurs historique
 - **TripAdvisor** : avis et données géographiques
 - **Heroku, Supabase, Neon** : services managés basés sur PostgreSQL

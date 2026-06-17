@@ -683,7 +683,7 @@ Langage inspiré d'Oracle PL/SQL, mais open :
 
 ```sql
 -- Exemple PL/pgSQL
-CREATE FUNCTION get_employees_bonus(department_id INTEGER)  
+CREATE FUNCTION get_employees_bonus(p_department_id INTEGER)  
 RETURNS TABLE(employee_id INTEGER, name TEXT, salary NUMERIC, bonus NUMERIC)  
 AS $$  
 DECLARE  
@@ -696,7 +696,7 @@ BEGIN
         e.salary,
         e.salary * bonus_rate
     FROM employees e
-    WHERE e.department_id = department_id;
+    WHERE e.department_id = p_department_id;
 END;
 $$ LANGUAGE plpgsql;
 ```
@@ -723,7 +723,7 @@ Plusieurs éditions avec coûts variables :
 - Usage : Développement, petites applications
 
 **Standard Edition :**
-- 💰 ~4 000 € par cœur (ou ~1 000 € par **CAL**, *Client Access License*)
+- 💰 ~4 000 € par cœur (ou modèle « serveur + CAL » : ~200 € par **CAL**, *Client Access License*)
 - Fonctionnalités standard complètes
 - Limité à 128 GB RAM
 - Usage : PME, applications moyennes
@@ -953,21 +953,21 @@ Distributions **dérivées du code source** PostgreSQL, qui ajoutent des fonctio
 | **CitusDB → Microsoft** | Microsoft | Sharding distribué (extension, pas un fork) |
 | **TimescaleDB** | Timescale Inc. | Séries temporelles (extension, pas un fork) |
 
-### PostgreSQL-compatible : compatibles au protocole, pas au code
+### PostgreSQL-compatible : du code PostgreSQL réutilisé à la simple compatibilité protocole
 
-Ces produits **réimplémentent** le protocole wire PostgreSQL pour permettre aux clients existants (`psql`, drivers JDBC, `libpq`…) de s'y connecter, mais **leur moteur n'est pas PostgreSQL**.
+Ces produits exposent le **protocole** PostgreSQL pour que les clients existants (`psql`, drivers JDBC, `libpq`…) s'y connectent. Mais deux approches très différentes se cachent derrière l'étiquette « compatible » : certains **réutilisent le code source PostgreSQL** pour la couche SQL (et ne réécrivent surtout que le stockage), d'autres **réimplémentent le moteur** de zéro et ne partagent que le protocole.
 
-| Produit | Éditeur | Moteur réel | Note |
-|---------|---------|-------------|------|
-| **Aurora PostgreSQL** | AWS | Stockage distribué propriétaire AWS | API compatible PG, cluster optimisé |
-| **AlloyDB** | Google | Stockage propriétaire Google | API compatible PG, OLAP renforcé |
-| **CockroachDB** | Cockroach Labs | Moteur distribué original (Go) | NewSQL, géo-réplication active-active |
-| **YugabyteDB** | Yugabyte Inc. | Moteur distribué inspiré de Spanner | NewSQL, multi-région |
-| **Neon** | Neon Inc. | Storage séparé de compute (custom) | Serverless, branching |
-| **Tembo, Crunchy Bridge** | Divers | PostgreSQL standard managé | Vraies distributions PG |
+| Produit | Éditeur | Couche SQL | Note |
+|---------|---------|------------|------|
+| **Aurora PostgreSQL** | AWS | **Code PostgreSQL** + stockage distribué AWS | Très proche de PG, stockage réécrit |
+| **AlloyDB** | Google | **Code PostgreSQL** + stockage Google | Proche de PG, accélération OLAP |
+| **YugabyteDB** | Yugabyte Inc. | **Code PostgreSQL** (couche YSQL) + stockage distribué (DocDB, inspiré de Spanner) | NewSQL, multi-région |
+| **Neon** | Neon Inc. | **PostgreSQL quasi standard** + stockage séparé du compute | Serverless, branching |
+| **CockroachDB** | Cockroach Labs | **Réimplémentation en Go** — pas de code PostgreSQL | NewSQL ; seulement compatible au protocole |
+| **Tembo, Crunchy Bridge** | Divers | **PostgreSQL standard** managé | Vraies distributions PG |
 
-> ⚠️ **Pourquoi c'est important** : avec un produit « PostgreSQL-compatible mais pas PostgreSQL », vous bénéficiez de l'écosystème client, mais :  
-> - Certaines extensions PostgreSQL (PostGIS, pgvector…) peuvent ne pas fonctionner  
+> ⚠️ **Pourquoi c'est important** : aucun de ces produits n'est le **PostgreSQL communautaire standard** que vous installeriez vous-même. Vous bénéficiez de l'écosystème client, mais :  
+> - Sur les moteurs réimplémentés ou distribués (CockroachDB, YugabyteDB), certaines extensions (PostGIS, pgvector…) peuvent ne pas fonctionner  
 > - Les comportements peuvent différer sur les cas limites (verrouillage, niveaux d'isolation…)  
 > - Vous êtes lié à l'éditeur, pas à la communauté open source  
 > - La migration vers un autre fournisseur peut nécessiter du travail

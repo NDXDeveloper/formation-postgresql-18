@@ -243,13 +243,13 @@ COMMIT;
 BEGIN;
 
     INSERT INTO reservations (vol, siege, passager)
-    VALUES ('AF001', '12A', 'Jean Dupont');  ✅
+    VALUES ('AF001', '12A', 'Jean Dupont');  -- ✅
 
     INSERT INTO reservations (vol, siege, passager)
-    VALUES ('AF002', '15C', 'Jean Dupont');  ✅
+    VALUES ('AF002', '15C', 'Jean Dupont');  -- ✅
 
     -- Oups, le client n'a pas assez d'argent !
-    UPDATE comptes SET solde = solde - 850 WHERE client = 'Jean Dupont';  ❌
+    UPDATE comptes SET solde = solde - 850 WHERE client = 'Jean Dupont';  -- ❌
     -- ERREUR : Solde insuffisant
 
 ROLLBACK;  -- Automatique en cas d'erreur
@@ -390,23 +390,25 @@ Chaque transaction ne voit pas les modifications **non validées** (non COMMITé
 ### Principe : Chacun dans sa bulle
 
 ```
-    Transaction A              Transaction B
-         │                          │
-         │ BEGIN                    │
-         │ Lit solde = 500€         │
-         │                          │ BEGIN
-         │                          │ Lit solde = 500€
-         │ Retire 100€              │
-         │ (solde = 400€)           │
-         │ [PAS ENCORE VALIDÉ]      │
-         │                          │ Retire 50€
-         │                          │ (solde = 450€)
-         │                          │ COMMIT ✅
-         │ COMMIT ✅                │
-         │                          │
-    Résultat final : 350€ ✅
-    (500 - 100 - 50 = 350)
+    Transaction A                        Transaction B
+         │                                   │
+         │ BEGIN                             │
+         │ UPDATE … SET solde = solde - 100  │
+         │   solde : 500 → 400               │
+         │   [verrou posé sur la ligne]      │
+         │                                   │ BEGIN
+         │                                   │ UPDATE … SET solde = solde - 50
+         │                                   │   ⏳ BLOQUÉ : attend la fin de A
+         │ COMMIT ✅ (solde = 400 €)         │
+         │                                   │   ▶ débloqué : recalcule sur 400 €
+         │                                   │   solde : 400 → 350
+         │                                   │ COMMIT ✅
+         │                                   │
+    Résultat final : 350 € ✅
+    (500 - 100 = 400, puis 400 - 50 = 350)
 ```
+
+> 💡 **Le secret** : l'écriture `UPDATE … SET solde = solde - montant` est exécutée *atomiquement* par PostgreSQL, qui **verrouille la ligne** le temps de l'opération. La transaction B ne peut pas s'intercaler : elle patiente jusqu'au `COMMIT` de A, puis **recalcule sur la valeur à jour** (400 → 350). Le résultat reste donc toujours cohérent. *(Comportement vérifiable : la transaction B reste réellement bloquée jusqu'à la fin de A.)*
 
 **Sans isolation** (catastrophique) :
 ```
@@ -709,6 +711,8 @@ Pour des données transactionnelles critiques (argent, santé, inventaire), **AC
 > - Les systèmes **BASE** (Cassandra, DynamoDB) privilégient la **disponibilité** : tous les nœuds acceptent les requêtes, mais la cohérence est atteinte « à terme ».  
 >  
 > ACID et BASE ne sont donc pas en opposition philosophique : ils sont deux réponses différentes au compromis imposé par le théorème CAP, adaptées à des besoins différents.
+>
+> ⚠️ **Ne pas confondre les deux « C »** : le *C* d'**ACID** désigne le respect des **règles d'intégrité** d'une transaction (clés étrangères, `CHECK`, unicité…), tandis que le *C* de **CAP** désigne le fait que **tous les nœuds d'un système distribué voient la même donnée au même instant**. Ce sont deux notions de « cohérence » distinctes, qui portent malencontreusement le même nom.
 
 ---
 

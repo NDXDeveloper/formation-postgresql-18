@@ -211,7 +211,7 @@ Chaque message échangé suit une structure précise :
 ┌─────────────────────────────────────┐
 │  Type de Message (1 byte)           │  Ex. : 'Q' pour Query, 'D' pour DataRow
 ├─────────────────────────────────────┤
-│  Longueur du Message (4 bytes)      │  Taille totale en octets
+│  Longueur du Message (4 bytes)      │  Ces 4 octets + le contenu (hors octet de type)
 ├─────────────────────────────────────┤
 │  Contenu du Message (variable)      │  Données spécifiques au message
 └─────────────────────────────────────┘
@@ -221,7 +221,7 @@ Chaque message échangé suit une structure précise :
 
 ```
 Type:     'Q' (Query)  
-Longueur: 30 octets  
+Longueur: 25 octets (le champ « longueur » compte ses propres 4 octets + les 21 octets de la chaîne)  
 Contenu:  "SELECT * FROM users;\0"  ← \0 = caractère null de fin  
 ```
 
@@ -298,11 +298,14 @@ cur.execute("INSERT INTO users(name) VALUES (%s)", ("Alice",))
 Lors de l'établissement de la connexion, plusieurs méthodes d'authentification sont possibles :
 
 1. **trust** : Pas d'authentification (dangereux, seulement pour dev local)  
-2. **password** : Mot de passe en clair (déprécié)  
-3. **md5** : Hash MD5 du mot de passe (déprécié)  
-4. **scram-sha-256** : Standard moderne sécurisé (recommandé)  
-5. **cert** : Certificat SSL/TLS client  
-6. **OAuth 2.0** : Nouveau dans PostgreSQL 18
+2. **peer** / **ident** : Identité de l'utilisateur du système d'exploitation (souvent le défaut en local sur Linux — c'est ce qui explique que `sudo -u postgres psql` fonctionne sans mot de passe)  
+3. **password** : Mot de passe en clair (déprécié)  
+4. **md5** : Hash MD5 du mot de passe (déprécié)  
+5. **scram-sha-256** : Standard moderne sécurisé (recommandé)  
+6. **cert** : Certificat SSL/TLS client  
+7. **OAuth 2.0** : Nouveau dans PostgreSQL 18
+
+D'autres méthodes existent pour l'intégration en entreprise : **LDAP**, **GSSAPI**/**Kerberos**, **RADIUS**, **PAM**. La configuration de tout cela (fichier `pg_hba.conf`) est détaillée au **chapitre 16**.
 
 ### Flux d'Authentification SCRAM-SHA-256
 
@@ -461,8 +464,11 @@ postgresql://alice:secret@db.example.com:5432/production
 # Avec paramètres : SSL obligatoire, timeout, application name
 postgresql://alice:secret@db.example.com/prod?sslmode=require&connect_timeout=10&application_name=batch_job
 
-# Socket Unix (chemin entre crochets)
+# Socket Unix (chemin du répertoire via le paramètre host)
 postgresql:///mydb?host=/var/run/postgresql
+
+# Adresse IPv6 (entre crochets)
+postgresql://alice@[::1]:5432/mydb
 
 # Multi-hôtes (failover automatique côté client)
 postgresql://alice@host1,host2,host3:5432/mydb?target_session_attrs=primary
@@ -536,8 +542,8 @@ Clients ───> PgBouncer ───> PostgreSQL
 
 3. **Nombre de Round-Trips**
    - 1 requête simple : 1 round-trip
-   - Requête préparée : 3 round-trips (Parse, Bind, Execute)
-   - Transaction : +2 round-trips (BEGIN, COMMIT)
+   - Requête préparée : souvent **1 seul** round-trip — les drivers groupent Parse/Bind/Execute/Sync dans un même envoi, et réutilisent le `Parse` mis en cache pour les exécutions suivantes
+   - Transaction explicite : +1 round-trip pour `BEGIN`, +1 pour `COMMIT`
 
 ### Bonnes Pratiques pour Minimiser la Latence
 
@@ -546,7 +552,7 @@ Clients ───> PgBouncer ───> PostgreSQL
 - ✅ **Limiter les résultats** avec `LIMIT` / pagination  
 - ✅ **Utiliser le pipelining** si supporté par le driver  
 - ✅ **Connecter via socket Unix** pour les applications locales  
-- ✅ **Activer la compression** pour les gros volumes de données
+- ✅ **Récupérer les gros résultats par curseur** (`DECLARE … CURSOR` / `FETCH`) plutôt qu'en un seul bloc *(PostgreSQL n'a pas de compression native du protocole ; passez par TLS ou un tunnel SSH si vous devez compresser)*
 
 ---
 

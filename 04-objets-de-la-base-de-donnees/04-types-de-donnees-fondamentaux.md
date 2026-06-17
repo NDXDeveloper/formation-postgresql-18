@@ -117,8 +117,10 @@ SELECT AGE(DATE '2025-11-19', DATE '1995-06-15');  -- 30 years 5 mons 4 days
 -- Opérations sur JSON
 SELECT '{"nom": "Alice"}'::JSONB ->> 'nom';  -- 'Alice'
 
--- ❌ Impossible : mélanger les types incorrectement
-SELECT '100' + 50;  -- ERREUR : operator does not exist: text + integer
+-- ❌ Impossible : additionner du texte explicitement typé et un entier
+SELECT '100'::text + 50;  -- ERREUR : operator does not exist: text + integer
+-- ⚠️ Subtilité : SELECT '100' + 50 donne 150 — le littéral '100' non typé (unknown)
+--    est casté automatiquement en entier. C'est le cast explicite ::text qui force l'erreur.
 ```
 
 **Avantage** : les types garantissent que vous utilisez les bonnes opérations !
@@ -405,24 +407,26 @@ CREATE TABLE bonne_table (
 ### ❌ Erreur 2 : Utiliser FLOAT pour l'Argent
 
 ```sql
--- ❌ CATASTROPHIQUE : FLOAT pour l'argent
-CREATE TABLE mauvais_prix (
-    prix FLOAT
-);
+-- ❌ CATASTROPHIQUE : FLOAT (= DOUBLE PRECISION) pour l'argent
+CREATE TABLE mauvais_prix (prix DOUBLE PRECISION);
 
-INSERT INTO mauvais_prix VALUES (0.1 + 0.2);  
-SELECT * FROM mauvais_prix;  
--- Résultat : 0.30000000000000004 (erreur d'arrondi !)
+-- Dès que les calculs se font en virgule flottante, l'imprécision apparaît.
+-- Additionner 10 fois 0,10 € devrait donner 1,00 € :
+INSERT INTO mauvais_prix SELECT 0.1::float8 FROM generate_series(1, 10);
+SELECT SUM(prix) FROM mauvais_prix;
+-- Résultat : 0.9999999999999999  (au lieu de 1.0 !)
 
 -- ✅ CORRECT : NUMERIC pour l'argent
-CREATE TABLE bon_prix (
-    prix NUMERIC(10, 2)
-);
+CREATE TABLE bon_prix (prix NUMERIC(10, 2));
 
-INSERT INTO bon_prix VALUES (0.1 + 0.2);  
-SELECT * FROM bon_prix;  
--- Résultat : 0.30 (exact !)
+INSERT INTO bon_prix SELECT 0.1 FROM generate_series(1, 10);
+SELECT SUM(prix) FROM bon_prix;
+-- Résultat : 1.00  (exact !)
 ```
+
+> 💡 **Pourquoi ?** Les types `FLOAT`/`REAL`/`DOUBLE PRECISION` stockent en binaire (IEEE 754) : une valeur comme 0,1 n'a **pas** de représentation binaire exacte. `SELECT 0.1::float8 + 0.2::float8` renvoie d'ailleurs `0.30000000000000004`. `NUMERIC` stocke en décimal exact.
+>
+> ⚠️ Subtilité : `INSERT ... VALUES (0.1 + 0.2)` dans une colonne FLOAT donnerait `0.3`, car `0.1 + 0.2` est d'abord calculé en `NUMERIC` (littéraux décimaux) — c'est le calcul **en flottant** qui introduit l'erreur.
 
 **Règle d'or** : JAMAIS FLOAT/REAL pour l'argent !
 
@@ -563,7 +567,7 @@ SELECT pg_typeof(NOW());         -- timestamp with time zone
 \d nom_table
 
 -- Taille de stockage
-SELECT pg_column_size(colonne) FROM table;
+SELECT pg_column_size(colonne) FROM nom_table;
 ```
 
 ---

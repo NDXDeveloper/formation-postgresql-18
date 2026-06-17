@@ -86,7 +86,7 @@ Sur le système de fichiers :
 /var/lib/postgresql/18/main/
     ├─> base/                       # Répertoire des bases
     |   ├─> 1/                      # template1 (OID 1)
-    |   ├─> 12345/                  # template0
+    |   ├─> 4/                      # template0 (OID 4)
     |   └─> 16384/                  # Votre base de données
     |       ├─> 24576               # Fichier heap de la table users
     |       ├─> 24576.1             # Suite du fichier (si > 1 GB)
@@ -100,7 +100,7 @@ Sur le système de fichiers :
         └─> ...
 ```
 
-**Note** : Les noms de fichiers sont des **OID (Object Identifier)**, des identifiants internes PostgreSQL.
+**Note** : le nom du fichier de données est le **`relfilenode`**, pas l'OID. Pour une table fraîchement créée les deux coïncident (ici 24576), mais le `relfilenode` **change** après un `VACUUM FULL`, un `TRUNCATE` ou un `REINDEX` (l'OID, lui, reste stable). Pour obtenir le chemin réel, utilisez `pg_relation_filepath('users')`.
 
 ### Trouver l'OID d'une Table
 
@@ -374,7 +374,7 @@ Table de 3.5 GB
 
 ### 🛡️ Data Checksums : détecter la corruption silencieuse
 
-Chaque page de 8 Ko inclut dans son en-tête un **checksum CRC-32C** calculé à l'écriture et vérifié à chaque lecture. Si le checksum ne correspond pas, PostgreSQL le signale immédiatement par une erreur :
+Chaque page de 8 Ko inclut dans son en-tête un **checksum 16 bits (algorithme FNV-1a)** calculé à l'écriture et vérifié à chaque lecture — l'adresse du bloc entre dans le calcul, ce qui détecte aussi une page écrite au mauvais endroit. *(À ne pas confondre avec le WAL, qui protège ses enregistrements par un CRC-32C.)* Si le checksum ne correspond pas, PostgreSQL le signale immédiatement par une erreur :
 
 ```
 ERROR: invalid page in block 1234 of relation base/16384/24576
@@ -593,27 +593,53 @@ ALTER COLUMN content SET STORAGE EXTERNAL;
 
 ---
 
+### Algorithme de Compression : `pglz` vs `lz4`
+
+Depuis PostgreSQL 14, TOAST peut compresser avec deux algorithmes :
+
+| Algorithme | Caractéristiques |
+|------------|------------------|
+| **`pglz`** | Historique, **défaut**. Compression correcte mais plus lent |
+| **`lz4`**  | Compression/décompression très **rapides**, ratio légèrement inférieur — souvent le meilleur compromis |
+
+```sql
+-- Voir l'algorithme par défaut
+SHOW default_toast_compression;        -- pglz par défaut
+
+-- Choisir lz4 globalement (postgresql.conf)
+SET default_toast_compression = 'lz4';
+
+-- Ou colonne par colonne
+ALTER TABLE articles ALTER COLUMN content SET COMPRESSION lz4;
+
+-- Vérifier l'algorithme réellement appliqué à une valeur stockée
+SELECT pg_column_compression(content) FROM articles LIMIT 1;
+```
+
+> 💡 `lz4` doit être compilé dans PostgreSQL (c'est le cas des paquets officiels et de l'image Docker `postgres`). Pour les charges générant beaucoup de TOAST, `lz4` réduit nettement le coût CPU par rapport à `pglz`. *(Le `zstd` existe pour la compression du WAL, mais pas — encore — pour TOAST.)*
+
+---
+
 ### Monitoring TOAST
 
 ```sql
--- Taille de la table principale vs TOAST
+-- Décomposition exacte : table principale / TOAST / index
+-- ⚠️ (total_relation_size − relation_size) mélangerait TOAST ET index : à éviter
 SELECT
-    schemaname,
-    tablename,
-    pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename)) as total_size,
-    pg_size_pretty(pg_relation_size(schemaname||'.'||tablename)) as table_size,
-    pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename) -
-                   pg_relation_size(schemaname||'.'||tablename)) as toast_size
-FROM pg_tables  
-WHERE tablename = 'documents';  
+    pg_size_pretty(pg_relation_size(c.oid))                              AS table_principale,
+    pg_size_pretty(COALESCE(pg_total_relation_size(c.reltoastrelid), 0)) AS toast,
+    pg_size_pretty(pg_indexes_size(c.oid))                               AS index,
+    pg_size_pretty(pg_total_relation_size(c.oid))                        AS total
+FROM pg_class c
+WHERE c.relname = 'documents' AND c.relkind = 'r';
 
 -- Résultat
- schemaname | tablename | total_size | table_size | toast_size
-------------+-----------+------------+------------+------------
- public     | documents |    125 MB  |      5 MB  |    120 MB
+ table_principale |  toast  | index |  total
+------------------+---------+-------+---------
+ 5 MB             | 120 MB  | 2 MB  | 127 MB
 ```
 
-**Interprétation** : La majorité des données est TOASTée.
+**Interprétation** : la majorité des données est TOASTée (le contenu binaire) ; la table principale et les index restent petits.
 
 ---
 
@@ -741,13 +767,15 @@ Le WAL est stocké dans le répertoire `pg_wal/` :
 Chaque enregistrement WAL a un **LSN (Log Sequence Number)** unique :
 
 ```
-LSN Format : 0/15D5E88
+LSN Format : 0/15D5E88   (position absolue sur 64 bits, en deux moitiés hexadécimales)
 
 0/       15D5E88
 │        │
-│        └──> Offset dans le segment
-└──────────> Numéro de fichier WAL
+│        └──> 32 bits de poids faible
+└──────────> 32 bits de poids fort
 ```
+
+> ⚠️ Un LSN n'est pas un couple « fichier / offset » : c'est une position **64 bits** dans le flux WAL (moitié de poids fort `/` moitié de poids faible). Le segment de 16 Mo qui le contient se calcule — `pg_walfile_name('0/15D5E88')` renvoie ici `000000010000000000000001`.
 
 Le LSN est **strictement croissant** et permet de :
 - Identifier une position dans le WAL
@@ -814,7 +842,7 @@ min_wal_size = 80MB
 fsync = on                      -- TOUJOURS ON en production !  
 synchronous_commit = on         -- on | off | remote_apply  
 
--- Compression du WAL (PG 15+)
+-- Compression des full-page images du WAL (option lz4/zstd depuis PG 15)
 wal_compression = on
 ```
 
@@ -923,9 +951,9 @@ FROM pg_ls_waldir();
 #### 4. Nouveauté PostgreSQL 18 : Statistiques I/O WAL
 
 ```sql
--- Statistiques I/O détaillées par backend
+-- I/O du WAL (objet 'wal'), ventilées par type de backend
 SELECT * FROM pg_stat_io  
-WHERE context = 'wal';  
+WHERE object = 'wal';  
 ```
 
 ---
@@ -1014,18 +1042,31 @@ VALUES ('big_file.pdf', <5 MB de données>);
 **Cause** : Mises à jour fréquentes sans VACUUM régulier
 
 ```sql
--- Détecter le bloat
+-- Vue d'ensemble : répartition table vs index + TOAST
+-- ⚠️ Ceci n'est PAS le bloat : (total − table) = taille des index + TOAST, pas l'espace mort.
 SELECT
     schemaname,
     tablename,
     pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename)) as total_size,
-    pg_size_pretty(pg_relation_size(schemaname||'.'||tablename)) as actual_size,
+    pg_size_pretty(pg_relation_size(schemaname||'.'||tablename)) as table_size,
     round(100 * (pg_total_relation_size(schemaname||'.'||tablename)::numeric -
                  pg_relation_size(schemaname||'.'||tablename)::numeric) /
-          NULLIF(pg_total_relation_size(schemaname||'.'||tablename)::numeric, 0), 2) as bloat_ratio
+          NULLIF(pg_total_relation_size(schemaname||'.'||tablename)::numeric, 0), 2) as pct_index_toast
 FROM pg_tables  
 WHERE schemaname = 'public'  
 ORDER BY pg_total_relation_size(schemaname||'.'||tablename) DESC;  
+```
+
+```sql
+-- ✅ Mesurer le VRAI bloat (espace mort laissé par MVCC) avec l'extension pgstattuple
+CREATE EXTENSION IF NOT EXISTS pgstattuple;
+
+SELECT
+    dead_tuple_percent,   -- % d'espace occupé par des tuples morts
+    free_percent          -- % d'espace libre réutilisable dans la table
+FROM pgstattuple('users');
+-- ⚠️ pgstattuple lit toute la table ; sur de grosses tables, préférez
+--    pgstattuple_approx('users') (échantillonnage, bien plus rapide).
 ```
 
 **Solution** :
