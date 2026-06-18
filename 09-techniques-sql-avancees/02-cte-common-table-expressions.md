@@ -734,11 +734,11 @@ Seq Scan on grande_table  (cost=...)
 1. **CTE inutiles**
    ```sql
    -- ❌ INUTILE
-   WITH tous AS (SELECT * FROM table)
+   WITH tous AS (SELECT * FROM nom_table)
    SELECT * FROM tous;
 
    -- ✅ DIRECT
-   SELECT * FROM table;
+   SELECT * FROM nom_table;
    ```
 
 2. **Trop de niveaux d'imbrication**
@@ -760,14 +760,15 @@ Seq Scan on grande_table  (cost=...)
    SELECT * FROM huge WHERE id = 1;  -- Utilise 1 ligne sur 100M
    ```
 
-4. **Oublier que les CTE sont réévaluées dans les sous-requêtes**
+4. **Croire qu'une CTE référencée plusieurs fois est recalculée à chaque référence**
    ```sql
    WITH ma_cte AS (...)
    SELECT
        x,
-       (SELECT COUNT(*) FROM ma_cte) AS total  -- Réévaluation !
+       (SELECT COUNT(*) FROM ma_cte) AS total
    FROM ma_cte;
    ```
+   **Faux en PG 12+** : `ma_cte` étant référencée **deux fois** (le `FROM` *et* la sous-requête scalaire), PostgreSQL la **matérialise automatiquement** — elle est calculée **une seule fois** puis réutilisée, pas réévaluée (vérifiable avec `EXPLAIN ANALYZE` : le sous-arbre de la CTE affiche `loops=1`). Si vous voulez au contraire éviter ce figeage, forcez `NOT MATERIALIZED`.
 
 ---
 
@@ -969,7 +970,7 @@ WITH nouvelles AS (
 ruptures AS (
     SELECT n.produit_id, n.quantite
     FROM nouvelles n
-    JOIN produits p USING (produit_id)
+    JOIN produits p ON p.id = n.produit_id
     WHERE p.stock < n.quantite
 )
 INSERT INTO commandes_reappro (produit_id, quantite_a_commander)
@@ -994,7 +995,7 @@ SELECT produit_id, quantite * 10 FROM ruptures;
 
 4. **Triggers `BEFORE`/`AFTER`** : se déclenchent normalement comme pour un `INSERT`/`UPDATE`/`DELETE` simple.
 
-5. Sur PG 18 : `MERGE` est également utilisable dans une CTE, avec `RETURNING` (PG 17+) qui expose l'action (`INSERT`/`UPDATE`/`DELETE`) via `merge_action()`.
+5. **Depuis PG 17**, `MERGE` est lui aussi autorisé dans une CTE en écriture : son `RETURNING` expose l'action réellement effectuée sur chaque ligne (`INSERT`/`UPDATE`/`DELETE`) via la fonction `merge_action()`. (Avant PG 17, `MERGE` n'avait pas de `RETURNING` et ne figurait pas dans la liste des instructions de modification admises dans `WITH`.)
 
 ---
 

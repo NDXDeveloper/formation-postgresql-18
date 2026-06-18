@@ -248,6 +248,8 @@ Execution Time: 2.1 ms  ← 4× plus rapide !
 
 **Observation :** Un seul Index Scan avec condition `ANY` !
 
+> 📌 **Selon la sélectivité, le nœud diffère** : l'`Index Scan` simple ci-dessus n'apparaît que pour des valeurs **très sélectives** (peu de lignes). Pour des valeurs **fréquentes** (beaucoup de lignes retournées), PostgreSQL 18 conserve un **`Bitmap Heap Scan`** — mais avec **un seul** `Bitmap Index Scan` portant `Index Cond: (departement = ANY (…))`, au lieu du `BitmapOr` de N `Bitmap Index Scan` d'avant PG 18. L'essentiel reste identique : **un seul parcours d'index avec `= ANY`** remplace les N scans.
+
 ---
 
 ## Gains de performance
@@ -555,7 +557,7 @@ WHERE event_type = 'error'
 
 ```sql
 EXPLAIN (ANALYZE, BUFFERS, VERBOSE)  
-SELECT * FROM table  
+SELECT * FROM nom_table  
 WHERE col = 'a' OR col = 'b' OR col = 'c';  
 ```
 
@@ -602,10 +604,10 @@ PostgreSQL 18 introduit aussi le **Skip Scan** sur les index multi-colonnes.
 **Synergie :**
 ```sql
 -- Index multi-colonnes
-CREATE INDEX idx_multi ON table(colonne1, colonne2);
+CREATE INDEX idx_multi ON nom_table(colonne1, colonne2);
 
 -- Requête optimisée doublement
-SELECT * FROM table  
+SELECT * FROM nom_table  
 WHERE colonne2 = 'a' OR colonne2 = 'b' OR colonne2 = 'c';  
 
 -- Bénéficie de : OR→ANY + Skip Scan !
@@ -629,7 +631,7 @@ Le JIT (Just-In-Time) compile les **expressions** (tuple deforming, filtres, agr
 ```sql
 -- Vérifier l'éligibilité au JIT via EXPLAIN
 EXPLAIN (ANALYZE, BUFFERS, VERBOSE)
-SELECT * FROM table
+SELECT * FROM nom_table
 WHERE category = ANY(ARRAY['A','B',/* … */,'Z']);
 -- Chercher "JIT: yes/no" dans la sortie
 ```
@@ -648,7 +650,7 @@ WHERE category = ANY(ARRAY['A','B',/* … */,'Z']);
 
 2. **Maintenir des index sur les colonnes fréquemment filtrées**
    ```sql
-   CREATE INDEX idx_col ON table(col);
+   CREATE INDEX idx_col ON nom_table(col);
    ```
 
 3. **Tester les performances avec EXPLAIN après migration**
@@ -658,7 +660,7 @@ WHERE category = ANY(ARRAY['A','B',/* … */,'Z']);
 
 4. **Mettre à jour les statistiques régulièrement**
    ```sql
-   ANALYZE table;
+   ANALYZE nom_table;
    ```
 
 5. **Utiliser IN pour la lisibilité (> 3 valeurs)**
@@ -688,13 +690,13 @@ WHERE category = ANY(ARRAY['A','B',/* … */,'Z']);
 
 ## Limitations connues
 
-### 1. Nombre maximum de valeurs
+### 1. Très grand nombre de valeurs
 
-PostgreSQL peut appliquer l'optimisation jusqu'à un certain nombre de conditions `OR` (typiquement plusieurs dizaines).
+La transformation s'applique **même à un grand nombre** de conditions `OR` : vérifié sans souci à **100 valeurs** (un seul `Index Cond: (id = ANY ('{1,…,100}'))`). Il n'y a donc **pas de seuil bas** « magique ».
 
-**Au-delà :**
-- L'optimiseur peut choisir une autre stratégie
-- Considérez une sous-requête ou une table temporaire
+**Pour des centaines ou des milliers de valeurs**, préférez quand même une autre forme — non pour débloquer l'optimisation, mais pour la **lisibilité** et parce que le planificateur estime alors différemment le coût :
+- une liste explicite `IN (…)` ou `= ANY(ARRAY[…])` ;
+- une **sous-requête** ou une **table temporaire** (`WHERE id = ANY(SELECT … FROM liste)`), surtout si les valeurs proviennent déjà d'une requête.
 
 ### 2. Expressions mixtes
 
@@ -732,10 +734,10 @@ WHERE col IN ('a', 'b', 'c') OR col IS NULL
 
 ### Conditions pour l'optimisation
 
-- ✅ Même colonne  
+- ✅ Même colonne (ou même expression, ex. `UPPER(col)`)  
 - ✅ Opérateur `=` (égalité)  
-- ✅ Valeurs constantes  
-- ✅ Pas de NULL
+- ✅ Valeurs constantes (ou *params*)  
+- ✅ Pas de prédicat `IS NULL` (un `NULL` parmi les valeurs est permis, mais ne matche rien)
 
 ### Impact typique
 

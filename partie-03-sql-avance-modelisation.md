@@ -176,7 +176,7 @@ Tout au long de cette partie, vous remarquerez l'annotation **"Nouveauté PG 18"
 - **Colonnes générées VIRTUAL** : calculées à la lecture, sans stockage physique. **VIRTUAL devient le mode par défaut** quand on omet `STORED`/`VIRTUAL` — rupture par rapport aux versions PG 12 à 17 où seul `STORED` était disponible (chapitre 11)
 
 D'autres optimisations PG 18 sont traitées dans d'autres parties de la formation :
-- L'**auto-élimination des self-joins**, le **réordonnancement de DISTINCT/GROUP BY** et les autres optimisations du planificateur sont étudiés en Partie 4 (chapitre 13)
+- L'**auto-élimination des self-joins**, la **réorganisation automatique des colonnes `DISTINCT`** (`enable_distinct_reordering`) et l'optimisation **`IN (VALUES …)` → `ANY`** sont étudiées en Partie 4 (chapitre 13.9)
 - Les **contraintes temporelles** (`PRIMARY KEY`/`UNIQUE … WITHOUT OVERLAPS` et `FOREIGN KEY … PERIOD`) sont traitées en Partie 2 (chapitre 7)
 
 Ces innovations rendent PostgreSQL encore plus performant et expressif. Même si vous utilisez une version antérieure, comprendre ces concepts vous préparera à les exploiter lors de votre migration.

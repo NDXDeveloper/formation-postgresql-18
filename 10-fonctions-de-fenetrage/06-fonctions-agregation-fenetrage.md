@@ -846,12 +846,12 @@ SELECT
     date,
     cours,
     AVG(cours) OVER w AS mm20,
-    AVG(cours) OVER w + 2 * STDDEV(cours) OVER w AS bande_haute,
-    AVG(cours) OVER w - 2 * STDDEV(cours) OVER w AS bande_basse,
+    AVG(cours) OVER w + 2 * STDDEV_POP(cours) OVER w AS bande_haute,
+    AVG(cours) OVER w - 2 * STDDEV_POP(cours) OVER w AS bande_basse,
     CASE
-        WHEN cours > AVG(cours) OVER w + 2 * STDDEV(cours) OVER w
+        WHEN cours > AVG(cours) OVER w + 2 * STDDEV_POP(cours) OVER w
         THEN 'Surachat'
-        WHEN cours < AVG(cours) OVER w - 2 * STDDEV(cours) OVER w
+        WHEN cours < AVG(cours) OVER w - 2 * STDDEV_POP(cours) OVER w
         THEN 'Survente'
         ELSE 'Neutre'
     END AS signal
@@ -859,6 +859,8 @@ FROM cours_bourse
 WINDOW w AS (ORDER BY date ROWS BETWEEN 19 PRECEDING AND CURRENT ROW)  
 ORDER BY date;  
 ```
+
+> ℹ️ On utilise **`STDDEV_POP`** (écart-type de **population**, diviseur `N`) plutôt que `STDDEV`/`STDDEV_SAMP` (diviseur `N-1`) : c'est la convention des Bandes de Bollinger telles que définies par John Bollinger. L'écart reste faible sur 20 périodes (facteur √(20/19) ≈ 1,026), mais autant rester fidèle à la définition.
 
 ### 7. Taux de Croissance Composé (CAGR Annualisé)
 
@@ -1182,18 +1184,33 @@ WHERE prix IS NOT NULL;
 
 ℹ️ **Cas particulier** : `AVG(...)` ne retourne `NULL` que si **toutes** les valeurs sont NULL. Dans ce cas, `COALESCE(AVG(prix) OVER (), 0)` peut être utile.
 
-### 4. Mélanger Agrégation et Window Functions
+### 4. Window Function sur le Résultat d'un GROUP BY
+
+On **peut** mélanger `GROUP BY` et window functions dans la **même** requête, à condition que la window prenne en argument une **expression agrégée** : après le regroupement, une colonne brute n'est plus accessible.
 
 ```sql
--- ❌ ERREUR : Mélange GROUP BY et window functions sans sous-requête
+-- ❌ ERREUR : `ventes` (brut) n'est ni groupé ni agrégé dans la window function
 SELECT
     categorie,
-    SUM(ventes) AS total_categorie,  -- Agrégation GROUP BY
-    SUM(ventes) OVER () AS total_global  -- Window function
-FROM ventes  
-GROUP BY categorie;  
+    SUM(ventes) AS total_categorie,
+    SUM(ventes) OVER () AS total_global
+FROM ventes
+GROUP BY categorie;
+-- ERROR: column "ventes.ventes" must appear in the GROUP BY clause
+--        or be used in an aggregate function
 
--- ✅ CORRECT : Utiliser une sous-requête ou CTE
+-- ✅ CORRECT (directement, sans sous-requête) : imbriquer l'agrégat DANS la window
+SELECT
+    categorie,
+    SUM(ventes) AS total_categorie,
+    SUM(SUM(ventes)) OVER () AS total_global   -- window SUR l'agrégat de chaque groupe
+FROM ventes
+GROUP BY categorie;
+```
+
+`SUM(SUM(ventes)) OVER ()` se lit « la window `SUM` appliquée à l'agrégat `SUM(ventes)` de chaque catégorie » : elle additionne donc les totaux par catégorie pour donner le total global, **sans CTE**. Une **CTE** reste néanmoins une alternative souvent plus lisible quand la requête se complexifie :
+
+```sql
 WITH totaux_cat AS (
     SELECT categorie, SUM(ventes) AS total_categorie
     FROM ventes
@@ -1248,7 +1265,7 @@ SELECT
             [ORDER BY ordre]          -- Ordre de calcul (optionnel)
             [frame_specification]     -- Fenêtre précise (optionnel)
         ) AS resultat
-FROM table;
+FROM nom_table;
 
 -- Utilisables en window function (OVER) :
 -- SUM, AVG, COUNT, MIN, MAX                     -- General-purpose

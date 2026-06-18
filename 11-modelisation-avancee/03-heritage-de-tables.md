@@ -151,19 +151,18 @@ SELECT * FROM animaux;
 
 **Résultat :**
 ```
-animal_id | nom    | age | date_arrivee | race              | dresse | type_poil | declaws
-----------+--------+-----+--------------+-------------------+--------+-----------+---------
-1         | Rex    | 3   | 2025-11-20   | Berger Allemand   | t      | NULL      | NULL
-2         | Max    | 1   | 2025-11-20   | Golden Retriever  | f      | NULL      | NULL
-3         | Minou  | 2   | 2025-11-20   | NULL              | NULL   | long      | f
-4         | Felix  | 4   | 2025-11-20   | NULL              | NULL   | court     | t
-5         | Animal | 5   | 2025-11-20   | NULL              | NULL   | NULL      | NULL
+animal_id | nom    | age | date_arrivee
+----------+--------+-----+-------------
+1         | Rex    | 3   | 2025-11-20
+2         | Max    | 1   | 2025-11-20
+3         | Minou  | 2   | 2025-11-20
+4         | Felix  | 4   | 2025-11-20
+5         | Animal | 5   | 2025-11-20
 ```
 
-**Observation :**
-- Les lignes de `chiens` apparaissent avec leurs colonnes `race` et `dresse`
-- Les lignes de `chats` apparaissent avec leurs colonnes `type_poil` et `declaws`
-- Les colonnes non applicables sont NULL
+**Observation (très important) :**
+- La requête sur la table parent retourne **uniquement les colonnes du parent** (`animal_id`, `nom`, `age`, `date_arrivee`). Les colonnes **spécifiques aux enfants** (`race`, `dresse`, `type_poil`, `declaws`) **n'apparaissent pas**, même si les lignes des chiens et des chats sont bien incluses (ici, les 5 lignes).
+- Pour récupérer les colonnes propres à un type, il faut interroger **directement la table enfant** (`SELECT * FROM chiens`) ou s'appuyer sur `tableoid` pour distinguer l'origine de chaque ligne.
 
 ### Requêtes sur les Tables Enfants
 
@@ -317,23 +316,24 @@ videos       | 20     | 10.00
 CREATE TABLE mesures_capteurs (
     mesure_id SERIAL PRIMARY KEY,
     capteur_id INTEGER NOT NULL,
+    continent VARCHAR(20) NOT NULL,       -- colonne discriminante
     timestamp TIMESTAMPTZ DEFAULT NOW(),
     valeur NUMERIC(10,2)
 );
 
 -- Mesures Europe
 CREATE TABLE mesures_europe (
-    CHECK (timestamp >= '2025-01-01' AND timestamp < '2026-01-01')
+    CHECK (continent = 'Europe')
 ) INHERITS (mesures_capteurs);
 
 -- Mesures Amérique
 CREATE TABLE mesures_amerique (
-    CHECK (timestamp >= '2025-01-01' AND timestamp < '2026-01-01')
+    CHECK (continent = 'Amérique')
 ) INHERITS (mesures_capteurs);
 
 -- Mesures Asie
 CREATE TABLE mesures_asie (
-    CHECK (timestamp >= '2025-01-01' AND timestamp < '2026-01-01')
+    CHECK (continent = 'Asie')
 ) INHERITS (mesures_capteurs);
 ```
 
@@ -520,12 +520,14 @@ ALTER TABLE chiens ADD COLUMN puce_electronique VARCHAR(20);
 ### Supprimer une Colonne
 
 ```sql
--- Supprimer de la table parent
+-- Supprimer une colonne du parent : la suppression se propage automatiquement
+-- aux tables enfants (la colonne héritée disparaît partout)
 ALTER TABLE animaux DROP COLUMN couleur;
 
--- Par défaut, PostgreSQL supprime aussi la colonne des enfants
--- Pour éviter cela (comportement rare) :
-ALTER TABLE animaux DROP COLUMN couleur RESTRICT;  -- Échoue si utilisée dans enfants
+-- ⚠️ Une colonne héritée ne peut PAS être supprimée directement sur un enfant :
+ALTER TABLE chiens DROP COLUMN couleur;
+-- ERROR: cannot drop inherited column "couleur"
+-- (il faut la supprimer du parent, ce qui la retire de toute la hiérarchie)
 ```
 
 ---
@@ -1161,8 +1163,10 @@ COMMENT ON TABLE chiens IS
 ALTER TABLE chiens ADD PRIMARY KEY (animal_id);  
 ALTER TABLE chats ADD PRIMARY KEY (animal_id);  
 
--- Contraintes CHECK pour éviter les conflits
-ALTER TABLE chiens ADD CONSTRAINT chk_type CHECK (TRUE);
+-- ⚠️ Rappel : l'unicité d'une colonne ne peut PAS être garantie à travers toute
+--    la hiérarchie (un même email peut coexister dans chiens ET chats). Si cette
+--    unicité globale est nécessaire, gérez-la applicativement ou via une table
+--    de référence dédiée (un simple CHECK sur l'enfant ne résout pas ce problème).
 ```
 
 ### 3. Créer les Index sur Tous les Niveaux
@@ -1267,10 +1271,10 @@ ROLLBACK;  -- ou COMMIT si OK
 
 PostgreSQL continue d'améliorer le **partitionnement déclaratif**, qui est l'évolution naturelle de l'héritage pour les cas de partitionnement. Les cas d'usage légitimes de l'héritage de tables deviennent de plus en plus rares.
 
-**Citation de la documentation PostgreSQL :**
-> "Table inheritance is often not what you want. Consider using declarative partitioning instead."
+**Position de la documentation PostgreSQL** (section *Caveats* de l'héritage) :
+> "Some functionality not implemented for inheritance hierarchies is implemented for declarative partitioning. Considerable care is needed in deciding whether partitioning with legacy inheritance is useful for your application."
 
-Cette phrase résume bien la position actuelle de la communauté PostgreSQL sur l'héritage de tables.
+Autrement dit : pour le **partitionnement**, le partitionnement déclaratif (chapitre 11.4) est à privilégier ; l'héritage de tables ne se justifie que dans des cas très spécifiques.
 
 ---
 

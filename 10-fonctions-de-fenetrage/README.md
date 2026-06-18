@@ -282,7 +282,7 @@ SELECT
     colonne1,
     colonne2,
     FONCTION() OVER (...) AS resultat
-FROM table;
+FROM nom_table;
 ```
 
 **Données** :

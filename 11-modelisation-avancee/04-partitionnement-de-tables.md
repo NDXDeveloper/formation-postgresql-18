@@ -495,11 +495,12 @@ ORDER BY tablename, indexname;
 **Résultat :**
 ```
 tablename    | indexname
--------------+---------------------------
-ventes_2023  | ventes_2023_date_idx  
-ventes_2023  | ventes_2023_client_idx  
-ventes_2023  | ventes_2023_montant_idx  
-ventes_2024  | ventes_2024_date_idx  
+-------------+----------------------------
+ventes_2023  | ventes_2023_client_id_idx
+ventes_2023  | ventes_2023_date_vente_idx
+ventes_2023  | ventes_2023_montant_idx
+ventes_2024  | ventes_2024_client_id_idx
+ventes_2024  | ventes_2024_date_vente_idx
 ...
 ```
 
@@ -572,7 +573,7 @@ CREATE TABLE ventes (
     date_vente DATE NOT NULL,
     montant NUMERIC(10,2)
 ) PARTITION BY RANGE (date_vente);
--- ERROR: primary key constraint must include all partitioning columns
+-- ERROR: unique constraint on partitioned table must include all partitioning columns
 
 -- ✅ Solution : PK composite incluant la colonne de partitionnement
 CREATE TABLE ventes (
@@ -588,8 +589,8 @@ CREATE TABLE ventes (
 ### 2. Clés Étrangères
 
 **Limitations :**
-- ✅ Une partition **peut** référencer une table normale (FK sortante)  
-- ❌ Une table normale **ne peut pas** facilement référencer une table partitionnée (FK entrante)
+- ✅ Une partition (ou la table partitionnée) **peut** référencer une table normale (FK sortante)  
+- ✅ Depuis **PostgreSQL 12**, une table normale **peut** référencer une table partitionnée (FK entrante), à condition de pointer vers une clé unique incluant la **colonne de partition**
 
 ```sql
 -- ✅ OK : FK de partition vers table normale
@@ -605,14 +606,23 @@ CREATE TABLE ventes (
     montant NUMERIC(10,2)
 ) PARTITION BY RANGE (date_vente);
 
--- ❌ Problématique : FK vers table partitionnée
+-- ❌ Échoue : `vente_id` seul n'est pas unique (la PK est composite : vente_id, date_vente)
 CREATE TABLE paiements (
     paiement_id SERIAL PRIMARY KEY,
-    vente_id BIGINT REFERENCES ventes(vente_id)  -- Difficile
+    vente_id BIGINT REFERENCES ventes(vente_id)
+);
+-- ERROR: there is no unique constraint matching given keys for referenced table "ventes"
+
+-- ✅ Correct (PostgreSQL 12+) : référencer TOUTE la clé, colonne de partition incluse
+CREATE TABLE paiements (
+    paiement_id SERIAL PRIMARY KEY,
+    vente_id BIGINT,
+    date_vente DATE,
+    FOREIGN KEY (vente_id, date_vente) REFERENCES ventes(vente_id, date_vente)
 );
 ```
 
-**Workaround :** Partitionner les deux tables de la même manière.
+> ℹ️ **Depuis PostgreSQL 12**, une FK entrante vers une table partitionnée est bel et bien **possible** (testé, la violation d'intégrité est correctement rejetée). La seule contrainte : la FK doit pointer vers une clé unique de la table partitionnée, qui **inclut la colonne de partition** — d'où la clé composite à référencer. C'est cette obligation, et non une impossibilité, qui rend les FK entrantes un peu plus lourdes à manier.
 
 ### 3. Triggers BEFORE ROW
 
@@ -627,6 +637,20 @@ CREATE TABLE ventes_autres PARTITION OF ventes DEFAULT;
 ```
 
 **Usage :** Utile en développement, à éviter en production (peut devenir un goulot d'étranglement).
+
+> ⚠️ **Piège : la partition `DEFAULT` bloque l'ajout de nouvelles partitions**. Si la partition `DEFAULT` contient déjà des lignes qui appartiendraient à une nouvelle partition, sa création **échoue** :
+>
+> ```sql
+> -- ventes_autres (DEFAULT) contient déjà une vente de 2025
+> CREATE TABLE ventes_2025 PARTITION OF ventes
+>     FOR VALUES FROM ('2025-01-01') TO ('2026-01-01');
+> -- ERROR: updated partition constraint for default partition "ventes_autres"
+> --        would be violated by some row
+> ```
+>
+> PostgreSQL doit en effet revalider la `DEFAULT` (qui ne doit plus accepter ce qui irait dans la nouvelle partition). Il faut d'abord **sortir ces lignes** de la `DEFAULT` (les détacher/déplacer) avant de créer la nouvelle partition. C'est une raison de plus d'éviter la partition `DEFAULT` en production.
+
+> ℹ️ **Bornes qui se chevauchent** : deux partitions `RANGE` ne peuvent pas se recouvrir — `CREATE TABLE … FOR VALUES FROM ('2024-06-01') TO ('2025-06-01')` sur une table ayant déjà `ventes_2024` (2024 entier) échoue avec `ERROR: partition "…" would overlap partition "ventes_2024"`.
 
 ---
 
@@ -711,15 +735,15 @@ ORDER BY tablename;
 ```sql
 SELECT
     schemaname,
-    tablename,
+    relname,
     n_live_tup AS lignes_actives,
     n_dead_tup AS lignes_mortes,
     last_vacuum,
     last_autovacuum,
     last_analyze
 FROM pg_stat_user_tables  
-WHERE tablename LIKE 'ventes_%'  
-ORDER BY tablename;  
+WHERE relname LIKE 'ventes_%'  
+ORDER BY relname;  
 ```
 
 ---

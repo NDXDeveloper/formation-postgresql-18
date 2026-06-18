@@ -546,7 +546,7 @@ L'ordre logique d'exécution d'une requête SQL avec window functions est :
 - Les window functions **ne sont pas autorisées** dans `WHERE`, `GROUP BY`, `HAVING` (évaluées avant)
 - Les window functions **sont autorisées** dans `ORDER BY` final (évalué après)
 - `DISTINCT` s'applique **après** les window functions : `SELECT DISTINCT col, ROW_NUMBER() OVER (...)` est généralement inutile, car le `ROW_NUMBER` rend chaque ligne unique
-- `LIMIT` ne réduit pas le coût des window functions : elles parcourent **toute** la partition avant que le LIMIT soit appliqué
+- `LIMIT` ne réduit **pas toujours** le coût : une **agrégation** fenêtrée (`SUM`/`AVG` `OVER (PARTITION BY …)`) doit voir toute la partition avant d'émettre la première ligne — `LIMIT` n'aide alors pas. En revanche, un `ROW_NUMBER()`/`RANK() OVER (ORDER BY …)` adossé à un **index** fournissant déjà l'ordre peut s'arrêter dès la N-ième ligne (l'`Index Scan` ne lit que N lignes). Et un filtre `WHERE rang <= N` bénéficie de l'optimisation **Run Condition** (PG 16+, cf. 10.4)
 
 ### Utilisation des Index
 
@@ -643,7 +643,7 @@ SELECT
         PARTITION BY colonne_groupe    -- Divise en groupes (optionnel)
         ORDER BY colonne_ordre         -- Définit l'ordre (optionnel)
     ) AS resultat
-FROM table  
+FROM nom_table  
 ORDER BY colonne_affichage;            -- Ordre d'affichage (optionnel)  
 ```
 

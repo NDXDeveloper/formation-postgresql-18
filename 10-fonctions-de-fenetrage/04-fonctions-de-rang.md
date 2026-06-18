@@ -173,7 +173,7 @@ SELECT * FROM (
 WHERE rn BETWEEN 21 AND 30;  -- Page 3 (10 articles par page)
 ```
 
-⚠️ **Attention au mythe de la performance** : cette approche n'est **pas** plus rapide qu'`OFFSET 20 LIMIT 10`. PostgreSQL doit calculer le `ROW_NUMBER` sur **toutes** les lignes correspondantes avant de filtrer — c'est donc équivalent (souvent un peu plus lent) qu'`OFFSET`.
+⚠️ **Attention au mythe de la performance** : cette approche n'est **pas** plus rapide qu'`OFFSET 20 LIMIT 10`. Depuis **PostgreSQL 16**, l'optimisation **Run Condition** permet au nœud `WindowAgg` de **s'arrêter** dès que `ROW_NUMBER` dépasse la borne haute du filtre — visible dans `EXPLAIN` sous la forme `Run Condition: (row_number() OVER w <= 30)`. PostgreSQL ne parcourt donc « que » jusqu'à la 30ᵉ ligne… exactement comme `OFFSET 20 LIMIT 10`, qui doit lui aussi traverser les 20 lignes sautées. Les deux restent en **O(offset + limit)** : d'où leur équivalence, et leur ralentissement commun à mesure qu'on avance dans les pages.
 
 ✅ **Pour vraiment paginer efficacement** sur de grandes tables, utilisez la **keyset pagination** (« seek method »), qui exploite un index pour sauter directement à la page voulue :
 
@@ -534,19 +534,23 @@ SELECT
 FROM produits;
 ```
 
-#### 3. Distribution Équitable
+> ℹ️ Ici `NTILE(3)` découpe en **trois tiers de taille égale** (par *nombre* de produits) — une approximation rapide. La **vraie analyse ABC** (loi de Pareto) répartit selon la **valeur cumulée** (A ≈ 80 % du CA pour peu de produits, B ≈ 15 %, C ≈ 5 %), donnant des classes de tailles très inégales : voir l'exemple complet au chapitre 10.7.
 
-Répartir équitablement des tâches entre des travailleurs :
+#### 3. Répartition en Groupes de Taille Égale
+
+`NTILE` répartit les lignes en groupes de **nombre égal** (et non de charge égale) :
 
 ```sql
 SELECT
     tache_id,
     duree_estimee,
-    NTILE(5) OVER (ORDER BY duree_estimee) AS worker_id
+    NTILE(5) OVER (ORDER BY tache_id) AS worker_id
 FROM taches;
 ```
 
-Attribue chaque tâche à un worker (1 à 5) en équilibrant la charge.
+Chaque worker reçoit le **même nombre** de tâches (à une près).
+
+⚠️ `NTILE(5) OVER (ORDER BY duree_estimee)` **n'équilibre PAS la charge** : trier par durée concentrerait au contraire les tâches les plus longues dans le dernier bucket. Pour équilibrer la **durée totale** par worker (un problème de *bin packing*), `NTILE` ne suffit pas — il faut un algorithme dédié (par exemple une affectation gloutonne à la file la moins chargée).
 
 ## PERCENT_RANK() et CUME_DIST() : Rang Relatif
 
@@ -566,13 +570,15 @@ PERCENT_RANK = (rang - 1) / (nombre_total_de_lignes - 1)
 
 ### CUME_DIST() : Distribution Cumulative
 
-Retourne la proportion de lignes ayant une valeur **inférieure ou égale** à la ligne courante :
+Retourne la proportion de lignes qui **précèdent ou sont à égalité** avec la ligne courante **dans l'ordre de la fenêtre** (c'est la définition exacte de la doc PostgreSQL) :
 
 ```text
-CUME_DIST = (nb_lignes_avec_valeur_inferieure_ou_egale) / (nombre_total_de_lignes)
+CUME_DIST = (nb_lignes_précédentes_ou_peers) / (nombre_total_de_lignes)
 ```
 
-- Première ligne : `1/N` (au moins elle-même)
+⚠️ Le sens de « précéder » dépend du tri : avec `ORDER BY x DESC` (comme dans l'exemple ci-dessous), ce sont les lignes de valeur **supérieure ou égale** ; avec `ORDER BY x ASC`, ce seraient les valeurs **inférieures ou égales**.
+
+- Première ligne (dans l'ordre) : `≥ 1/N` (elle-même, plus ses éventuels peers)
 - Dernière ligne : toujours `1.0`
 
 ### Comportement en Cas d'Égalité (Peers)
@@ -600,9 +606,9 @@ FROM vendeurs;
 ```
 | vendeur | ventes | rang | pct_rank | cume_dist |
 |---------|--------|------|----------|-----------|
-| Alice   | 1000   | 1    | 0.00     | 0.20      | ← 1 ligne <= 1000 sur 5 = 1/5
-| Bob     | 800    | 2    | 0.25     | 0.40      | ← 2 lignes <= 800 sur 5 = 2/5
-| Carol   | 600    | 3    | 0.50     | 0.80      | ← 4 lignes <= 600 sur 5 = 4/5 (peers inclus)
+| Alice   | 1000   | 1    | 0.00     | 0.20      | ← 1 ligne ≥ 1000 sur 5 = 1/5
+| Bob     | 800    | 2    | 0.25     | 0.40      | ← 2 lignes ≥ 800 sur 5 = 2/5
+| Carol   | 600    | 3    | 0.50     | 0.80      | ← 4 lignes ≥ 600 sur 5 = 4/5 (peers inclus)
 | David   | 600    | 3    | 0.50     | 0.80      | ← Même valeur que Carol (peer)
 | Eve     | 400    | 5    | 1.00     | 1.00      |
 ```
@@ -1040,7 +1046,7 @@ SELECT
     PERCENT_RANK() OVER (ORDER BY valeur DESC) AS pct_rank,   -- 0.0, 0.0, 0.4, 0.6, 0.6, 1.0
     CUME_DIST()    OVER (ORDER BY valeur DESC) AS cume_dist,  -- 0.333, 0.333, 0.5, 0.833, 0.833, 1.0
     NTILE(3)       OVER (ORDER BY valeur DESC) AS tertile     -- 1, 1, 2, 2, 3, 3
-FROM table;
+FROM nom_table;
 
 -- Avec partitionnement par groupe
 SELECT
@@ -1050,7 +1056,7 @@ SELECT
         PARTITION BY groupe
         ORDER BY valeur DESC
     ) AS rang_dans_groupe
-FROM table;
+FROM nom_table;
 ```
 
 ---

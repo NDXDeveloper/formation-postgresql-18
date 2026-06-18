@@ -567,11 +567,12 @@ FROM employes;
 
 **Avec NULL :**
 
-⚠️ Si **une seule valeur** est `NULL`, le résultat est `NULL`.
+⚠️ En PostgreSQL, `GREATEST` et `LEAST` **ignorent les `NULL`** : le résultat n'est `NULL` que si **toutes** les valeurs sont `NULL`. (Ce comportement **diffère du standard SQL et d'Oracle**, où un seul `NULL` suffit à rendre le résultat `NULL`.)
 
 ```sql
-SELECT GREATEST(10, NULL, 30);  -- Résultat : NULL  
-SELECT LEAST(10, NULL, 30);     -- Résultat : NULL  
+SELECT GREATEST(10, NULL, 30);  -- Résultat : 30 (le NULL est ignoré)  
+SELECT LEAST(10, NULL, 30);     -- Résultat : 10 (le NULL est ignoré)  
+SELECT GREATEST(NULL, NULL);    -- Résultat : NULL (toutes les valeurs sont NULL)  
 ```
 
 ---
@@ -664,24 +665,28 @@ FROM clients;
 
 ```sql
 -- Rapport avec catégories personnalisées
-SELECT
-    CASE
-        WHEN EXTRACT(HOUR FROM date_commande) BETWEEN 0 AND 5 THEN 'Nuit (0h-5h)'
-        WHEN EXTRACT(HOUR FROM date_commande) BETWEEN 6 AND 11 THEN 'Matin (6h-11h)'
-        WHEN EXTRACT(HOUR FROM date_commande) BETWEEN 12 AND 17 THEN 'Après-midi (12h-17h)'
-        ELSE 'Soirée (18h-23h)'
-    END AS tranche_horaire,
-    COUNT(*) AS nb_commandes,
-    SUM(montant) AS total_ventes
-FROM commandes  
-WHERE date_commande >= CURRENT_DATE - INTERVAL '30 days'  
-GROUP BY  
-    CASE
-        WHEN EXTRACT(HOUR FROM date_commande) BETWEEN 0 AND 5 THEN 'Nuit (0h-5h)'
-        WHEN EXTRACT(HOUR FROM date_commande) BETWEEN 6 AND 11 THEN 'Matin (6h-11h)'
-        WHEN EXTRACT(HOUR FROM date_commande) BETWEEN 12 AND 17 THEN 'Après-midi (12h-17h)'
-        ELSE 'Soirée (18h-23h)'
-    END
+-- ⚠️ On encapsule la catégorisation dans une CTE : ainsi `tranche_horaire`
+--    devient une vraie COLONNE, réutilisable dans l'expression CASE du ORDER BY.
+--    (Un alias de SELECT n'est PAS visible dans une expression du ORDER BY,
+--     seulement en référence directe `ORDER BY tranche_horaire`.)
+--    NB : `date_commande` est ici un TIMESTAMP — `EXTRACT(HOUR …)` exige une heure
+--    et échoue (« unit "hour" not supported for type date ») sur une colonne DATE.
+WITH rapport_horaire AS (
+    SELECT
+        CASE
+            WHEN EXTRACT(HOUR FROM date_commande) BETWEEN 0 AND 5 THEN 'Nuit (0h-5h)'
+            WHEN EXTRACT(HOUR FROM date_commande) BETWEEN 6 AND 11 THEN 'Matin (6h-11h)'
+            WHEN EXTRACT(HOUR FROM date_commande) BETWEEN 12 AND 17 THEN 'Après-midi (12h-17h)'
+            ELSE 'Soirée (18h-23h)'
+        END AS tranche_horaire,
+        COUNT(*) AS nb_commandes,
+        SUM(montant) AS total_ventes
+    FROM commandes  
+    WHERE date_commande >= CURRENT_DATE - INTERVAL '30 days'  
+    GROUP BY 1   -- groupe par le CASE (1ʳᵉ colonne), sans le répéter
+)
+SELECT *
+FROM rapport_horaire  
 ORDER BY
     CASE tranche_horaire
         WHEN 'Nuit (0h-5h)' THEN 1
@@ -775,21 +780,21 @@ FROM scores;
 
 ## Performance et optimisation
 
-### 1. CASE vs fonctions
+### 1. CASE vs fonctions dédiées
 
-Pour des logiques simples, les fonctions dédiées sont souvent plus performantes.
+Pour des logiques simples, les fonctions dédiées (`COALESCE`, `NULLIF`…) sont plus **concises et lisibles** qu'un `CASE`. Côté performance, elles sont équivalentes : `COALESCE` est en interne **traduit en `CASE`** par PostgreSQL.
 
 ```sql
--- ❌ MOINS EFFICACE
+-- ❌ VERBEUX
 SELECT
     CASE
         WHEN colonne IS NULL THEN 'Défaut'
         ELSE colonne
     END
-FROM table;
+FROM nom_table;
 
--- ✅ PLUS EFFICACE
-SELECT COALESCE(colonne, 'Défaut') FROM table;
+-- ✅ CONCIS (même plan d'exécution, mais bien plus lisible)
+SELECT COALESCE(colonne, 'Défaut') FROM nom_table;
 ```
 
 ### 2. CASE dans WHERE : Impact sur les index
@@ -984,7 +989,7 @@ SELECT
         WHEN NULL THEN 'Est NULL'  -- ❌ Ne marche pas !
         ELSE 'Pas NULL'
     END
-FROM table;
+FROM nom_table;
 
 -- ✅ CORRECT : utiliser IS NULL
 SELECT
@@ -992,7 +997,7 @@ SELECT
         WHEN valeur IS NULL THEN 'Est NULL'
         ELSE 'Pas NULL'
     END
-FROM table;
+FROM nom_table;
 ```
 
 ---
@@ -1176,7 +1181,7 @@ ORDER BY date DESC;
 5. **Utiliser des CTE pour éviter la répétition**
    ```sql
    WITH categories AS (
-       SELECT *, CASE ... END AS categorie FROM table
+       SELECT *, CASE ... END AS categorie FROM nom_table
    )
    SELECT * FROM categories WHERE categorie = 'X';
    ```
@@ -1253,7 +1258,7 @@ ORDER BY date DESC;
 
 ---
 
-**Prochain chapitre :** 10. Fonctions de Fenêtrage (Window Functions)
+**Prochain chapitre :** 9.6. Optimisation des OR-clauses transformées en ANY (PostgreSQL 18)
 
 ---
 

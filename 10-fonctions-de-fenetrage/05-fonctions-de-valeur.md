@@ -807,7 +807,7 @@ FROM produits;
 
 ### Option FROM FIRST / FROM LAST (SQL Standard)
 
-Le standard SQL permet `NTH_VALUE(col, N) FROM FIRST` (par défaut) ou `FROM LAST`. **PostgreSQL ne supporte que `FROM FIRST`** : pour obtenir l'avant-dernière valeur, par exemple, il faut inverser l'ORDER BY :
+Le standard SQL permet `NTH_VALUE(col, N) FROM FIRST` (par défaut) ou `FROM LAST`. **PostgreSQL n'accepte aucune de ces deux clauses** — écrire `FROM FIRST` ou `FROM LAST` produit une **erreur de syntaxe** (le mot `FROM` y est interprété comme le début d'une clause `FROM`). PostgreSQL applique donc **toujours** le comportement `FROM FIRST` (compter depuis le début de la fenêtre). Pour obtenir l'équivalent de `FROM LAST` (par exemple l'avant-dernière valeur), il faut **inverser l'`ORDER BY`** :
 
 ```sql
 -- Avant-dernier prix (le N-1 = 2ème dans l'ordre inversé)

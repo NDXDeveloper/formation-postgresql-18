@@ -152,7 +152,7 @@ Les six techniques sont présentées par difficulté croissante :
 SELECT nom, salaire  
 FROM employes  
 WHERE salaire > (SELECT AVG(salaire) FROM employes);  
-                 └─────── sous-requête ──────┘
+--               └─────── sous-requête ──────┘
 ```
 
 **Quand l'utiliser :**

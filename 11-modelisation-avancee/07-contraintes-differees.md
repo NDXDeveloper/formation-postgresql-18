@@ -533,6 +533,10 @@ CREATE TABLE exemple3 (
 );
 
 -- Contrainte EXCLUDE différable (ex. : pas de chevauchement de plages horaires)
+-- Prérequis : l'extension btree_gist permet de combiner un entier (opérateur =)
+-- et un range (opérateur &&) dans un même index GiST.
+CREATE EXTENSION IF NOT EXISTS btree_gist;
+
 CREATE TABLE exemple4 (
     id INTEGER PRIMARY KEY,
     salle_id INTEGER,
@@ -541,6 +545,8 @@ CREATE TABLE exemple4 (
         DEFERRABLE INITIALLY IMMEDIATE
 );
 ```
+
+> ℹ️ Sans `btree_gist`, la création échoue avec `data type integer has no default operator class for access method "gist"` : seul le type range (`creneau`) saurait entrer dans un index GiST par défaut, pas l'entier `salle_id`.
 
 ❌ **Rappel** : `CHECK (...) DEFERRABLE` est **interdit** par PostgreSQL.
 
@@ -651,18 +657,18 @@ MySQL vérifie **toujours** les contraintes immédiatement, sans possibilité de
 |----------------|------------|--------|
 | **Contraintes différées** | ✅ Support complet | ✅ Support complet |
 | **SET CONSTRAINTS** | ✅ Oui | ✅ Oui (syntaxe identique) |
-| **Comportement par défaut** | NOT DEFERRABLE | DEFERRABLE INITIALLY IMMEDIATE |
+| **Comportement par défaut** | NOT DEFERRABLE | NOT DEFERRABLE |
 
-Oracle et PostgreSQL ont des comportements similaires, mais Oracle rend plus de contraintes DEFERRABLE par défaut.
+Oracle et PostgreSQL ont des comportements très similaires : dans les deux, le défaut est **NOT DEFERRABLE**, et déclarer `DEFERRABLE` sans précision équivaut à `INITIALLY IMMEDIATE`. La principale différence est qu'Oracle expose en plus un attribut `VALIDATE`/`NOVALIDATE` distinct du report en fin de transaction.
 
 ### PostgreSQL vs SQL Server
 
 | Fonctionnalité | PostgreSQL | SQL Server |
 |----------------|------------|------------|
 | **Contraintes différées** | ✅ Support complet | ⚠️ Support partiel |
-| **SET CONSTRAINTS** | ✅ Oui | ❌ Non (utilise CHECK_CONSTRAINTS) |
+| **SET CONSTRAINTS** | ✅ Oui | ❌ Non (`ALTER TABLE … NOCHECK CONSTRAINT`) |
 
-SQL Server a une approche différente avec `SET CHECK_CONSTRAINTS ON/OFF`, qui désactive complètement les contraintes.
+SQL Server a une approche différente avec `ALTER TABLE … NOCHECK CONSTRAINT` / `WITH CHECK CHECK CONSTRAINT`, qui **désactive puis réactive** une contrainte (ce n'est pas un report en fin de transaction : la contrainte est ignorée tant qu'elle est désactivée).
 
 ---
 
@@ -906,7 +912,7 @@ COMMIT;
 ```sql
 -- Tables avec relations complexes
 CREATE TABLE utilisateurs (
-    user_id INTEGER PRIMARY KEY DEFERRABLE INITIALLY IMMEDIATE,
+    user_id INTEGER PRIMARY KEY,        -- NON différable (voir note ci-dessous)
     username VARCHAR(100) UNIQUE,
     email VARCHAR(255)
 );
@@ -919,21 +925,32 @@ CREATE TABLE sessions (
         DEFERRABLE INITIALLY IMMEDIATE
 );
 
--- Échanger les user_id de deux utilisateurs
+INSERT INTO utilisateurs VALUES (1, 'alice', 'a@x'), (2, 'bob', 'b@x');
+INSERT INTO sessions (user_id) VALUES (1), (2);
+
+-- Échanger les user_id de deux utilisateurs (Alice = 1, Bob = 2)
 BEGIN;
-    SET CONSTRAINTS ALL DEFERRED;
+    SET CONSTRAINTS ALL DEFERRED;  -- diffère la FK fk_user
 
-    -- Temporairement, les user_id seront en conflit
+    -- Swap via une valeur temporaire : la PK reste unique à CHAQUE étape
     UPDATE utilisateurs SET user_id = 999 WHERE user_id = 1;
-    UPDATE utilisateurs SET user_id = 1 WHERE user_id = 2;
-    UPDATE utilisateurs SET user_id = 2 WHERE user_id = 999;
+    UPDATE utilisateurs SET user_id = 1   WHERE user_id = 2;
+    UPDATE utilisateurs SET user_id = 2   WHERE user_id = 999;
 
-    -- Mettre à jour les FK
-    UPDATE sessions SET user_id = 1 WHERE user_id = 2;
-    UPDATE sessions SET user_id = 2 WHERE user_id = 999;
+    -- Faire suivre les sessions (orphelines tolérées car fk_user est différée)
+    UPDATE sessions SET user_id = 2 WHERE session_id = 1;  -- Alice (ex-1) est maintenant 2
+    UPDATE sessions SET user_id = 1 WHERE session_id = 2;  -- Bob   (ex-2) est maintenant 1
 
-COMMIT;
+COMMIT;  -- Vérification des FK ici : tout est cohérent
 ```
+
+> ⚠️ **Point crucial** : la clé primaire `user_id` est volontairement **NON différable**. Une clé étrangère **ne peut pas référencer une contrainte `UNIQUE`/`PRIMARY KEY` elle-même `DEFERRABLE`** — PostgreSQL refuse alors la création de la FK :
+>
+> ```
+> ERROR: cannot use a deferrable unique constraint for referenced table "utilisateurs"
+> ```
+>
+> Le swap fonctionne quand même : en passant par une valeur temporaire (`999`), la PK reste **unique à chaque étape** ; seule la **FK** (`fk_user`) a besoin d'être différée le temps de la transaction.
 
 ---
 
@@ -1000,18 +1017,22 @@ SELECT
     condeferrable AS is_deferrable,
     condeferred AS is_deferred_by_default
 FROM pg_constraint  
-WHERE conrelid = 'employes'::regclass;  
+WHERE conrelid = 'employes'::regclass  
+ORDER BY contype;  
 ```
 
-**Résultat :**
+**Résultat (PostgreSQL 18) :**
 ```
-constraint_name | constraint_type | is_deferrable | is_deferred_by_default
-----------------+-----------------+---------------+------------------------
-fk_manager      | f               | t             | f  
-pk_employe_id   | p               | f             | f  
+constraint_name              | constraint_type | is_deferrable | is_deferred_by_default
+-----------------------------+-----------------+---------------+------------------------
+fk_manager                   | f               | t             | f
+employes_employe_id_not_null | n               | f             | f
+pk_employe_id                | p               | f             | f
 ```
 
-- `constraint_type` : 'f' = FK, 'p' = PK, 'u' = UNIQUE, 'c' = CHECK  
+> ℹ️ **Nouveauté PG 18** : les contraintes `NOT NULL` sont devenues des objets à part entière de `pg_constraint` (type **`n`**) et apparaissent donc dans cette liste. Avant PG 18, `NOT NULL` n'était qu'un attribut de colonne (`pg_attribute.attnotnull`), invisible ici. Ajoutez `WHERE contype <> 'n'` pour ne lister que PK / FK / UNIQUE / CHECK / EXCLUDE.
+
+- `constraint_type` : 'f' = FK, 'p' = PK, 'u' = UNIQUE, 'c' = CHECK, 'x' = EXCLUDE, **'n' = NOT NULL (PG 18+)**  
 - `is_deferrable` : 't' = DEFERRABLE, 'f' = NOT DEFERRABLE  
 - `is_deferred_by_default` : 't' = INITIALLY DEFERRED, 'f' = INITIALLY IMMEDIATE
 

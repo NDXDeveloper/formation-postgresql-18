@@ -217,6 +217,28 @@ ADD COLUMN prix_ttc NUMERIC(10,2) GENERATED ALWAYS AS (prix_ht * (1 + taux_tva /
 
 **Avantage majeur :** L'ajout d'une colonne VIRTUAL est **quasi-instantané** car aucune donnée n'est stockée. Pas besoin de réécrire toute la table.
 
+### Comportement à l'INSERT / UPDATE
+
+Une colonne générée (STORED **ou** VIRTUAL) se calcule **toujours** seule. Tenter de lui fournir une valeur explicite échoue :
+
+```sql
+INSERT INTO produits (nom, prix_ht, prix_ttc) VALUES ('X', 100, 120);
+-- ERROR:  cannot insert a non-DEFAULT value into column "prix_ttc"
+-- DETAIL:  Column "prix_ttc" is a generated column.
+```
+
+Le seul « valeur » accepté pour cette colonne est le mot-clé `DEFAULT` (qui déclenche le calcul) :
+
+```sql
+-- ✅ Autorisé : DEFAULT laisse PostgreSQL calculer la colonne
+INSERT INTO produits (nom, prix_ht, prix_ttc) VALUES ('X', 100, DEFAULT);
+
+-- ✅ Le plus simple : ne pas mentionner la colonne du tout
+INSERT INTO produits (nom, prix_ht) VALUES ('X', 100);
+```
+
+Idem pour `UPDATE` : on ne peut pas affecter directement une colonne générée (sauf à `DEFAULT`). Pour changer sa valeur, il faut modifier les colonnes **sources** de l'expression.
+
 ---
 
 ## Comparaison STORED vs VIRTUAL
@@ -488,7 +510,7 @@ CREATE TABLE personnes (
 
 -- ❌ Erreur : impossible d'indexer une colonne VIRTUAL
 CREATE INDEX idx_nom_complet ON personnes(nom_complet);
--- ERROR: cannot create index on virtual generated column "nom_complet"
+-- ERROR: indexes on virtual generated columns are not supported
 ```
 
 **Workaround :** Utiliser STORED ou créer un index sur l'expression directement.
@@ -509,6 +531,10 @@ CREATE INDEX idx_nom_complet ON personnes((prenom || ' ' || nom));
 -- Pas besoin de colonne supplémentaire ; PostgreSQL utilisera l'index
 -- pour les requêtes WHERE prenom || ' ' || nom = '...'
 ```
+
+> ℹ️ **Conséquences directes de la non-indexabilité** :  
+> - Une colonne `VIRTUAL` ne peut pas servir de **clé primaire** ni de contrainte `UNIQUE` (qui reposent sur un index) : `ERROR: primary keys on virtual generated columns are not supported`. Une colonne **`STORED`**, elle, le peut.  
+> - Une colonne générée — **`VIRTUAL` comme `STORED`** — ne peut pas être **colonne de partitionnement** : `ERROR: cannot use generated column in partition key`. Pour partitionner par une valeur dérivée (ex. l'année d'une date), partitionnez plutôt sur la **colonne source** (`PARTITION BY RANGE (date_vente)`) ou maintenez une colonne ordinaire dédiée.
 
 ### 2. Restrictions sur les Expressions
 
@@ -559,7 +585,8 @@ CREATE TABLE calculs (
     somme NUMERIC GENERATED ALWAYS AS (a + b) VIRTUAL,
     moyenne NUMERIC GENERATED ALWAYS AS (somme / 2) VIRTUAL  -- Erreur !
 );
--- ERROR: generated column cannot reference another generated column
+-- ERROR: cannot use generated column "somme" in column generation expression
+-- DETAIL: A generated column cannot reference another generated column.
 
 -- ✅ Solution : Répéter l'expression
 CREATE TABLE calculs (
@@ -574,10 +601,10 @@ CREATE TABLE calculs (
 
 ## Migration de STORED vers VIRTUAL (ou inverse)
 
-⚠️ **PG 18 ne fournit pas** de syntaxe directe `ALTER COLUMN SET STORED/VIRTUAL`. Les seules opérations supportées sur les colonnes générées sont :
+⚠️ **PG 18 ne fournit pas** de syntaxe directe `ALTER COLUMN SET STORED/VIRTUAL`. Les opérations supportées sur les colonnes générées sont :
 
-- `ALTER COLUMN col SET EXPRESSION AS (...)` : changer l'expression d'une colonne **STORED** (pas VIRTUAL)
-- `ALTER COLUMN col DROP EXPRESSION` : transformer une colonne générée en colonne ordinaire (les valeurs deviennent fixes)
+- `ALTER COLUMN col SET EXPRESSION AS (...)` : change l'**expression** d'une colonne générée, **STORED comme VIRTUAL** (sans changer son type de stockage). Sur une colonne STORED, la table est réécrite ; sur VIRTUAL, c'est instantané.
+- `ALTER COLUMN col DROP EXPRESSION` : transforme une colonne générée en colonne ordinaire (les valeurs stockées deviennent fixes). **Uniquement pour STORED** — sur une colonne VIRTUAL, cela échoue : `ERROR: ALTER TABLE / DROP EXPRESSION is not supported for virtual generated columns`.
 
 Pour **migrer entre STORED et VIRTUAL**, on doit donc passer par DROP + ADD :
 

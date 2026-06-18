@@ -36,7 +36,7 @@ PostgreSQL propose **deux types** pour stocker du JSON :
 | **Stockage** | Texte brut | Format binaire décomposé |
 | **Performance en écriture** | Plus rapide | Légèrement plus lent (conversion) |
 | **Performance en lecture** | Plus lent | Beaucoup plus rapide |
-| **Indexation** | Non supportée | Supportée (GIN) |
+| **Indexation** | Index B-Tree sur expression uniquement (pas de GIN) | GIN + B-Tree sur expression |
 | **Ordre des clés** | Préservé | Non garanti |
 | **Doublons de clés** | Conservés | Dernière valeur gardée |
 | **Espaces blancs** | Conservés | Supprimés |
@@ -635,6 +635,53 @@ FROM utilisateurs;
 
 > 💡 Les opérateurs traditionnels (`->`, `->>`, `@>`) restent plus concis pour les cas simples. SQL/JSON Path est préférable pour les requêtes complexes avec filtrage et pour la portabilité SQL standard.
 
+### `JSON_TABLE` : transformer du JSON en table relationnelle (PostgreSQL 17+)
+
+`JSON_TABLE` (standard SQL:2016, disponible depuis **PostgreSQL 17**) « déplie » un document JSON en **lignes et colonnes relationnelles typées** — idéal pour joindre, filtrer ou agréger le contenu d'un tableau JSON comme une vraie table, sans cast manuel.
+
+```sql
+SELECT *
+FROM JSON_TABLE(
+    '{"items": [{"nom": "Clavier", "qte": 2}, {"nom": "Souris", "qte": 5}]}'::jsonb,
+    '$.items[*]'                         -- chemin vers les éléments à déplier
+    COLUMNS (
+        nom TEXT    PATH '$.nom',
+        qte INTEGER PATH '$.qte'
+    )
+) AS t;
+--   nom   | qte
+-- --------+-----
+--  Clavier|   2
+--  Souris |   5
+```
+
+On peut gérer les valeurs absentes avec `DEFAULT … ON EMPTY` (et `… ON ERROR`) :
+
+```sql
+-- Le 2e item n'a pas de "qte" → 0 grâce à DEFAULT 0 ON EMPTY
+SELECT *
+FROM JSON_TABLE(
+    '{"items": [{"nom": "Clavier", "qte": 2}, {"nom": "Souris"}]}'::jsonb,
+    '$.items[*]'
+    COLUMNS (
+        nom TEXT    PATH '$.nom',
+        qte INTEGER PATH '$.qte' DEFAULT 0 ON EMPTY
+    )
+) AS t;
+--   nom   | qte
+-- --------+-----
+--  Clavier|   2
+--  Souris |   0
+```
+
+**Avantages par rapport à `jsonb_array_elements`** :
+- ✅ Colonnes **typées** directement (pas de `(… ->> …)::INTEGER` répétés)
+- ✅ Plusieurs colonnes extraites en une seule passe, avec des `PATH` distincts
+- ✅ Gestion fine des cas limites (`DEFAULT … ON EMPTY` / `ON ERROR`)
+- ✅ Syntaxe **SQL standard**, donc portable
+
+`JSON_TABLE` s'utilise naturellement dans un `FROM` joint à la table source (`FROM commandes c, JSON_TABLE(c.payload, '$.lignes[*]' COLUMNS (...)) AS lignes`) pour « relationnaliser » une colonne JSONB à la volée.
+
 ### Fonctions de Manipulation
 
 #### 1. `jsonb_set` : Modifier ou ajouter une valeur
@@ -1101,9 +1148,9 @@ SELECT
     COUNT(DISTINCT CASE WHEN type_evenement = 'achat' THEN utilisateur_id END) as achats,
     ROUND(
         COUNT(DISTINCT CASE WHEN type_evenement = 'achat' THEN utilisateur_id END)::NUMERIC /
-        COUNT(DISTINCT CASE WHEN type_evenement = 'page_vue' THEN utilisateur_id END) * 100,
+        NULLIF(COUNT(DISTINCT CASE WHEN type_evenement = 'page_vue' THEN utilisateur_id END), 0) * 100,
         2
-    ) as taux_conversion_pct
+    ) as taux_conversion_pct  -- NULLIF évite la division par zéro (aucune page vue)
 FROM evenements  
 WHERE timestamp >= NOW() - INTERVAL '7 days';  
 
@@ -1566,15 +1613,15 @@ VACUUM ANALYZE produits;
 ```sql
 -- Vérifier la taille moyenne des JSONB
 SELECT
-    pg_size_pretty(AVG(pg_column_size(specifications))) as taille_moyenne,
-    pg_size_pretty(MAX(pg_column_size(specifications))) as taille_max
+    pg_size_pretty(AVG(pg_column_size(specifications))::bigint) as taille_moyenne,
+    pg_size_pretty(MAX(pg_column_size(specifications))::bigint) as taille_max
 FROM produits;
 
 -- Identifier les JSONB trop gros (> 50KB)
 SELECT
     produit_id,
     nom,
-    pg_size_pretty(pg_column_size(specifications)) as taille
+    pg_size_pretty(pg_column_size(specifications)::bigint) as taille
 FROM produits  
 WHERE pg_column_size(specifications) > 50000  
 ORDER BY pg_column_size(specifications) DESC;  

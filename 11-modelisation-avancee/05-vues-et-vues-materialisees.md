@@ -205,6 +205,17 @@ GRANT SELECT ON v_employes_public TO role_lecture;
 REVOKE SELECT ON employes FROM role_lecture;  
 ```
 
+> ℹ️ **Pourquoi ce pattern fonctionne** : par défaut, une vue s'exécute avec les **droits de son propriétaire**, pas de l'appelant. `role_lecture` peut donc lire à travers `v_employes_public` **sans aucun droit** sur la table `employes` — c'est exactement ce qui permet de masquer la colonne `salaire`.
+>
+> Depuis **PostgreSQL 15**, l'option `security_invoker` inverse ce comportement : la vue s'exécute alors avec les droits de **l'appelant**, qui doit posséder les droits sur les tables sous-jacentes.
+>
+> ```sql
+> CREATE VIEW v_public WITH (security_invoker = true) AS SELECT ... ;
+> -- ou : ALTER VIEW v_public SET (security_invoker = true);
+> ```
+>
+> ⚠️ Avec `security_invoker = true`, le pattern « GRANT sur la vue + REVOKE sur la table » **ne suffit plus** (l'appelant obtient `permission denied for table employes`). Pour une vue de **filtrage de sécurité**, conservez donc le comportement par défaut (droits du propriétaire).
+
 #### 4. Compatibilité lors de Migrations
 
 Maintenir une interface stable même si la structure change :
@@ -252,7 +263,8 @@ Impossible de créer un index directement sur une vue classique.
 ```sql
 -- ❌ Erreur
 CREATE INDEX idx_vue ON v_employes_complet(salaire);
--- ERROR: cannot create index on view "v_employes_complet"
+-- ERROR: cannot create index on relation "v_employes_complet"
+-- DETAIL: This operation is not supported for views.
 ```
 
 **Workaround :** Créer des index sur les tables sous-jacentes.
@@ -286,6 +298,32 @@ DELETE FROM v_employes_it WHERE employe_id = 10;
 ```
 
 **Note :** Les modifications sont appliquées à la table sous-jacente (`employes`).
+
+#### `WITH CHECK OPTION` : empêcher les lignes « invisibles »
+
+Par défaut, une vue modifiable accepte un `INSERT`/`UPDATE` **même si la ligne résultante ne satisfait pas** la clause `WHERE` de la vue : la ligne est bien écrite dans la table, mais devient **invisible** à travers la vue.
+
+```sql
+-- v_employes_it ne montre que le département 1...
+INSERT INTO v_employes_it (nom, prenom, salaire) VALUES ('Hors', 'Zone', 40000);
+-- departement_id vaut NULL (colonne absente de la vue) → la ligne existe en table,
+-- mais n'apparaît PAS dans v_employes_it. Incohérence silencieuse.
+```
+
+`WITH CHECK OPTION` interdit ce comportement : toute ligne insérée ou modifiée via la vue doit rester **visible** dans la vue.
+
+```sql
+CREATE VIEW v_employes_it AS
+SELECT employe_id, nom, prenom, salaire, departement_id
+FROM employes
+WHERE departement_id = 1
+WITH CHECK OPTION;
+
+-- INSERT avec departement_id = 2 :
+--   ERROR: new row violates check option for view "v_employes_it"
+```
+
+Deux portées existent : `WITH LOCAL CHECK OPTION` (vérifie uniquement la vue courante) et `WITH CASCADED CHECK OPTION` (vérifie aussi les vues sous-jacentes empilées). Écrire simplement `WITH CHECK OPTION` équivaut à `CASCADED`.
 
 #### Vues Non-Modifiables avec INSTEAD OF Triggers
 
@@ -338,7 +376,7 @@ Une **vue matérialisée** est une vue dont les **résultats sont stockés physi
 | **Refresh** | ❌ Automatique | ⚠️ Manuel (REFRESH) |
 | **Indexation** | ❌ Impossible | ✅ Possible |
 | **Espace disque** | ✅ Aucun | ❌ Occupe de l'espace |
-| **Mise à jour** | ❌ Impossibles (sauf triggers) | ❌ Impossibles |
+| **Mise à jour** | ⚠️ Oui si vue simple (sinon trigger `INSTEAD OF`) | ❌ Non (`REFRESH` uniquement) |
 
 ### Syntaxe de Base
 
@@ -348,6 +386,19 @@ SELECT ...
 FROM ...  
 WHERE ...;  
 ```
+
+> ℹ️ **Option `WITH NO DATA`** : on peut créer la vue matérialisée **sans la peupler** immédiatement (pratique pour la définir, créer ses index, puis la remplir lors d'un premier `REFRESH`) :
+>
+> ```sql
+> CREATE MATERIALIZED VIEW vm_stats AS SELECT ... WITH NO DATA;
+> ```
+>
+> Tant qu'elle n'est pas peuplée, **toute lecture échoue** :
+> ```
+> ERROR:  materialized view "vm_stats" has not been populated
+> HINT:   Use the REFRESH MATERIALIZED VIEW command.
+> ```
+> De plus, le **tout premier** refresh d'une vue jamais peuplée doit être un `REFRESH MATERIALIZED VIEW` **classique** : un `REFRESH ... CONCURRENTLY` est alors refusé (`CONCURRENTLY cannot be used when the materialized view is not populated`).
 
 ### Exemple Simple
 
@@ -602,8 +653,8 @@ REFRESH MATERIALIZED VIEW CONCURRENTLY vm_stats_ventes;
 **Sans index UNIQUE :**
 ```sql
 REFRESH MATERIALIZED VIEW CONCURRENTLY vm_stats_ventes;
--- ERROR: cannot refresh materialized view "vm_stats_ventes" concurrently
--- HINT: Create a unique index with no WHERE clause on one or more columns
+-- ERROR: cannot refresh materialized view "public.vm_stats_ventes" concurrently
+-- HINT: Create a unique index with no WHERE clause on one or more columns of the materialized view.
 ```
 
 ### Stratégies de Refresh
@@ -842,11 +893,15 @@ Pour requêtes fréquentes sur sous-ensemble.
 CREATE MATERIALIZED VIEW vm_commandes AS  
 SELECT * FROM commandes;  
 
--- Index uniquement sur commandes récentes
+-- Index uniquement sur les commandes d'une période donnée
+-- ⚠️ Le prédicat d'un index partiel doit être IMMUTABLE : NOW()/CURRENT_DATE
+--    (catégorie STABLE) sont INTERDITS → on fixe une borne littérale.
 CREATE INDEX idx_vm_commandes_recentes  
 ON vm_commandes(date_commande)  
-WHERE date_commande >= NOW() - INTERVAL '30 days';  
+WHERE date_commande >= DATE '2025-01-01';  
 ```
+
+> ⚠️ Écrire `WHERE date_commande >= NOW() - INTERVAL '30 days'` échoue avec `ERROR: functions in index predicate must be marked IMMUTABLE`. Pour un index « glissant » (toujours les 30 derniers jours), il faut **recréer périodiquement** l'index avec une nouvelle borne littérale (via un job planifié), car la borne ne peut pas être dynamique.
 
 #### 5. Index GIN (Pour JSONB, Arrays)
 

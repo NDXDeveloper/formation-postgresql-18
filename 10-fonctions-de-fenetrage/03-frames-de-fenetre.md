@@ -775,6 +775,20 @@ WINDOW w AS (ORDER BY date ROWS BETWEEN 6 PRECEDING AND CURRENT ROW);
 
 La clause `WINDOW` définit un frame réutilisable, évitant la duplication de code.
 
+**Héritage de définitions** : une fenêtre nommée peut **dériver d'une autre** pour réutiliser sa `PARTITION BY` et y ajouter un `ORDER BY` (ou un frame). Pratique quand plusieurs fenêtres partagent la même partition :
+
+```sql
+SELECT
+    vendeur, date, montant,
+    SUM(montant) OVER w_part  AS total_vendeur,   -- toute la partition du vendeur
+    SUM(montant) OVER w_cumul AS cumul_vendeur    -- cumul chronologique
+FROM ventes
+WINDOW w_part  AS (PARTITION BY vendeur),
+       w_cumul AS (w_part ORDER BY date);         -- hérite de « PARTITION BY vendeur »
+```
+
+⚠️ **Règles de l'héritage** : la fenêtre dérivée **copie** le `PARTITION BY` (impossible de le redéfinir → `ERROR: cannot override PARTITION BY clause`) ; elle ne peut **ajouter** un `ORDER BY` que si la fenêtre de base n'en possède pas ; et la fenêtre de base ne doit **pas** comporter de frame.
+
 ## Points Clés à Retenir
 
 - ✅ **ROWS** compte les lignes physiquement, une par une  
@@ -799,7 +813,7 @@ SELECT
         [{ROWS | RANGE | GROUPS} BETWEEN debut AND fin]
         [EXCLUDE {CURRENT ROW | GROUP | TIES | NO OTHERS}]
     ) AS resultat
-FROM table;
+FROM nom_table;
 
 -- Bornes possibles (debut/fin) :
 --   UNBOUNDED PRECEDING

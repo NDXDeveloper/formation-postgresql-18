@@ -97,6 +97,8 @@ WHERE salaire = (SELECT salaire FROM employes WHERE departement = 'IT');
 
 **Solution :** Utilisez des opérateurs adaptés comme `IN`, `ANY`, `ALL` pour les résultats multi-lignes.
 
+> 📌 **À l'inverse, si la sous-requête ne retourne AUCUNE ligne**, elle vaut **`NULL`** (pas d'erreur). C'est un piège plus discret : `WHERE salaire = (SELECT salaire FROM employes WHERE id = 999)` avec un `id` inexistant devient `salaire = NULL` → toujours `UNKNOWN`, donc **aucune ligne** n'est retournée — silencieusement, sans la moindre erreur.
+
 ---
 
 ### 2. Sous-requêtes Vectorielles (ou de Ligne)
@@ -197,9 +199,9 @@ FROM clients c
 WHERE EXISTS (SELECT 1 FROM commandes WHERE client_id = c.id);  
 ```
 
-> ⚠️ **Mythe à démythifier** : « `EXISTS` s'arrête au premier match, `IN` charge tout en mémoire ». **Faux depuis PostgreSQL 10**. Dans la majorité des cas, le planificateur transforme `WHERE x IN (sous-requête)` et `WHERE EXISTS (sous-requête corrélée)` en un **Semi Join** identique. Les deux formes produisent **le même plan d'exécution** et donc la même performance. Vérifiez avec `EXPLAIN` plutôt que de présumer.
+> ⚠️ **Mythe à démythifier** : « `EXISTS` s'arrête au premier match, `IN` charge tout en mémoire ». **Faux depuis PostgreSQL 8.4** (2009). Dans la majorité des cas, le planificateur transforme `WHERE x IN (sous-requête)` et `WHERE EXISTS (sous-requête corrélée)` en un **Semi Join** identique. Les deux formes produisent **le même plan d'exécution** et donc la même performance. Vérifiez avec `EXPLAIN` plutôt que de présumer.
 
-**Règle générale (PG 10+)** :
+**Règle générale (PG 8.4+)** :
 - Pour un **test d'existence**, `IN` et `EXISTS` sont **équivalents en performance** ; choisissez la forme la plus lisible.
 - `IN` est plus naturel pour comparer à une **liste fournie** (`WHERE x IN (1,2,3)`).
 - `EXISTS` est plus naturel quand on a besoin d'une **condition complexe** dans la sous-requête (jointures, plusieurs prédicats).
@@ -353,8 +355,8 @@ WHERE EXISTS (
 Par défaut, une sous-requête placée dans `FROM` **ne peut PAS** référencer les colonnes des tables qui la précèdent dans la même clause `FROM`. Pour autoriser cette corrélation, on doit ajouter le mot-clé **`LATERAL`** :
 
 ```sql
--- ❌ ERREUR : "missing FROM-clause entry for table c"
--- (la sous-requête ne voit pas c.id)
+-- ❌ ERREUR : invalid reference to FROM-clause entry for table "c"
+-- (la sous-requête ne voit pas c.id sans LATERAL)
 SELECT c.nom, derniere.date_commande
 FROM clients c
 LEFT JOIN (
@@ -393,8 +395,8 @@ LEFT JOIN LATERAL (
 |------|-------------|----------|
 | Scalaire non-corrélée | ⭐⭐⭐⭐⭐ Excellente | Exécutée 1 fois (InitPlan) |
 | Scalaire corrélée | ⭐⭐ Médiocre | Potentiellement exécutée N fois (SubPlan) |
-| Vectorielle (IN) | ⭐⭐⭐⭐ Très bonne | Transformée en Semi Join (PG 10+) |
-| Vectorielle (EXISTS) | ⭐⭐⭐⭐ Très bonne | Transformée en Semi Join (PG 10+) — identique à `IN` |
+| Vectorielle (IN) | ⭐⭐⭐⭐ Très bonne | Transformée en Semi Join (PG 8.4+) |
+| Vectorielle (EXISTS) | ⭐⭐⭐⭐ Très bonne | Transformée en Semi Join (PG 8.4+) — identique à `IN` |
 | Table (FROM) | ⭐⭐⭐⭐ Très bonne | Souvent inlinée par l'optimiseur |
 
 #### 2. Corrélation
@@ -536,7 +538,7 @@ WHERE EXISTS (
 
 1. **Choisir entre `IN` et `EXISTS` selon la lisibilité, pas la performance**
    ```sql
-   -- Les deux formes ci-dessous produisent le MÊME plan en PG 10+ (Semi Join)
+   -- Les deux formes ci-dessous produisent le MÊME plan en PG 8.4+ (Semi Join)
    WHERE EXISTS (SELECT 1 FROM ... WHERE ... = parent.col)
    WHERE id IN (SELECT id FROM ...)
    ```
@@ -663,13 +665,13 @@ WHERE id IN (
 | Type | Retour | Utilisation | Performance |
 |------|--------|-------------|-------------|
 | **Scalaire** | 1 ligne, 1 colonne | WHERE, SELECT, HAVING | Excellente si non-corrélée (InitPlan) |
-| **Vectorielle** | N lignes, 1 colonne | IN, ANY, ALL, EXISTS | Très bonne (IN/EXISTS → Semi Join identique en PG 10+) |
+| **Vectorielle** | N lignes, 1 colonne | IN, ANY, ALL, EXISTS | Très bonne (IN/EXISTS → Semi Join identique en PG 8.4+) |
 | **Table** | N lignes, M colonnes | FROM | Très bonne (souvent inlinée ou avec LATERAL) |
 
 **Points clés à retenir :**
 
 1. Les sous-requêtes permettent de décomposer des problèmes complexes  
-2. `IN` et `EXISTS` sont **équivalents en performance** depuis PG 10 (Semi Join) — choisir selon la lisibilité  
+2. `IN` et `EXISTS` sont **équivalents en performance** depuis PG 8.4 (Semi Join) — choisir selon la lisibilité  
 3. Évitez les sous-requêtes corrélées dans `SELECT` si possible  
 4. Les index sur les colonnes de corrélation sont cruciaux  
 5. Utilisez `EXPLAIN ANALYZE` pour valider vos optimisations  

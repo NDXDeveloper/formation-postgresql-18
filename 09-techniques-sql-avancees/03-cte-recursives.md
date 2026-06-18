@@ -61,17 +61,18 @@ PDG (Alice)
 CREATE TABLE employes (
     id INTEGER PRIMARY KEY,
     nom VARCHAR(100),
-    manager_id INTEGER REFERENCES employes(id)
+    manager_id INTEGER REFERENCES employes(id),
+    salaire NUMERIC(10, 2)              -- utilisé par l'exemple « agrégats hiérarchiques »
 );
 
 INSERT INTO employes VALUES
-    (1, 'Alice (PDG)', NULL),           -- Alice n'a pas de manager
-    (2, 'Bob (Dir IT)', 1),             -- Bob reporte à Alice
-    (3, 'Charlie (Dev Senior)', 2),     -- Charlie reporte à Bob
-    (4, 'Diana (Dev Junior)', 3),       -- Diana reporte à Charlie
-    (5, 'Eve (DevOps)', 2),             -- Eve reporte à Bob
-    (6, 'Frank (Dir RH)', 1),           -- Frank reporte à Alice
-    (7, 'Grace (Assistant RH)', 6);     -- Grace reporte à Frank
+    (1, 'Alice (PDG)', NULL, 120000),       -- Alice n'a pas de manager
+    (2, 'Bob (Dir IT)', 1, 90000),          -- Bob reporte à Alice
+    (3, 'Charlie (Dev Senior)', 2, 70000),  -- Charlie reporte à Bob
+    (4, 'Diana (Dev Junior)', 3, 45000),    -- Diana reporte à Charlie
+    (5, 'Eve (DevOps)', 2, 65000),          -- Eve reporte à Bob
+    (6, 'Frank (Dir RH)', 1, 85000),        -- Frank reporte à Alice
+    (7, 'Grace (Assistant RH)', 6, 40000);  -- Grace reporte à Frank
 ```
 
 ### Questions typiques
@@ -268,7 +269,7 @@ WITH RECURSIVE arbre AS (
         nom,
         manager_id,
         1 AS niveau,
-        nom AS chemin,  -- Le chemin commence avec le nom de la racine
+        nom::text AS chemin,  -- Le chemin (cast en text : voir note ci-dessous)
         ARRAY[id] AS ids_chemin  -- Tableau des IDs du chemin
     FROM employes
     WHERE manager_id IS NULL
@@ -308,6 +309,8 @@ niveau | nom_indente              | chemin
      3 |     Grace (Assistant RH) | Alice (PDG) → Frank (Dir RH) → Grace (Assistant RH)
 ```
 
+> ⚠️ **Piège de typage des CTE récursives** : une colonne construite par **concaténation** (`a.chemin || ' → ' || e.nom`) produit du **`text`** dans le terme récursif. Mais le terme d'ancrage, lui, part souvent d'une colonne `VARCHAR(n)` (ici `nom VARCHAR(100)`). PostgreSQL exige que **les deux termes aient le même type** et refuse sinon : `ERROR: recursive query ... has type character varying(100) in non-recursive term but type character varying overall`. **Solution** : caster la valeur de départ en `text` dans l'ancrage — `nom::text AS chemin`. Les colonnes numériques ou `ARRAY[id]` ne sont pas concernées.
+
 ---
 
 ## Exemple 4 : Catégories de produits avec profondeur
@@ -343,7 +346,7 @@ WITH RECURSIVE arbre_categories AS (
         nom,
         parent_id,
         0 AS profondeur,
-        nom AS chemin_complet
+        nom::text AS chemin_complet
     FROM categories
     WHERE parent_id IS NULL
 
@@ -502,7 +505,7 @@ WITH RECURSIVE parcours AS (
 SELECT * FROM parcours;
 ```
 
-**Inconvénient :** Plus lent (tri nécessaire pour éliminer les doublons).
+**Inconvénient :** Plus lent — le nœud `Recursive Union` déduplique en comparant chaque nouvelle ligne à l'ensemble déjà produit (via une table de hachage interne, **pas un tri**), au lieu de simplement empiler les lignes comme avec `UNION ALL`.
 
 ### Stratégie 2 : Suivre le chemin avec un tableau
 
@@ -679,7 +682,7 @@ WITH RECURSIVE arbre AS (
         nom,
         manager_id,
         1            AS niveau,
-        nom          AS chemin_complet,
+        nom::text    AS chemin_complet,
         ARRAY[id]    AS chemin_ids      -- tableau d'INTEGER (et non TEXT concaténé)
     FROM employes
     WHERE manager_id IS NULL
@@ -723,7 +726,7 @@ CREATE INDEX idx_chemin  ON employes_denormalises USING GIN(chemin_ids);
 
 > 💡 **Pourquoi `INTEGER[]` plutôt que `TEXT`** : GIN n'accepte pas le type `text` par défaut (il faudrait `gin_trgm_ops` via l'extension `pg_trgm`). Avec un **array d'entiers**, GIN est utilisable nativement et l'opérateur `@>` (containment) permet de répondre à *« quels employés ont X dans leur chaîne de hiérarchie ? »* en O(log n).  
 >  
-> Alternative : stocker `chemin_ids` en `ltree` + index `USING GIST` — plus puissant pour les requêtes de type *« descendants directs de X »* via les opérateurs `<@`, `~`, `?`.
+> Alternative : stocker le chemin en `ltree` + index `USING GIST` — plus expressif pour les requêtes hiérarchiques par **motif**. `chemin <@ 'X'` renvoie **tous** les descendants de `X` (équivalent du `@>` sur l'array) ; les motifs `lquery` (opérateur `~`) ciblent en plus finement, par exemple les **enfants directs** (`'X.*{1}'`) ou une profondeur bornée (`'X.*{1,2}'`) — ce que l'array `INTEGER[]` ne sait pas faire simplement.
 
 ---
 
@@ -781,7 +784,7 @@ WITH RECURSIVE bom AS (
         prix_unitaire,
         1 AS quantite_totale,
         0 AS niveau,
-        nom AS chemin
+        nom::text AS chemin
     FROM pieces
     WHERE id = 1  -- Vélo
 
@@ -872,7 +875,7 @@ SELECT * FROM arbre;
 WHERE NOT (e.id = ANY(a.chemin_ids))
 ```
 
-Côté planificateur, **PG 16+** introduit `recursive_worktable_factor` (défaut 10.0) qui aide le moteur à estimer la taille de la *worktable* — utile pour le choix du plan, mais n'a aucun effet de protection. Une `work_mem` insuffisante peut indirectement faire échouer une récursion qui produit trop de lignes intermédiaires.
+Côté planificateur, **PG 15+** introduit `recursive_worktable_factor` (défaut 10.0) qui aide le moteur à estimer la taille de la *worktable* — utile pour le choix du plan, mais n'a aucun effet de protection. Une `work_mem` insuffisante peut indirectement faire échouer une récursion qui produit trop de lignes intermédiaires.
 
 ### 2. Indexer les colonnes de jointure
 
@@ -1067,7 +1070,7 @@ WHERE chemin <@ 'Électronique.Informatique';  -- Tous les descendants
 
 2. **Utiliser des index sur les colonnes de jointure**
    ```sql
-   CREATE INDEX idx_parent ON table(parent_id);
+   CREATE INDEX idx_parent ON nom_table(parent_id);
    ```
 
 3. **Ajouter un niveau/profondeur pour le monitoring**
@@ -1124,14 +1127,14 @@ WHERE chemin <@ 'Électronique.Informatique';  -- Tous les descendants
 WITH RECURSIVE nom AS (
     -- 1. ANCRAGE (non récursif)
     SELECT colonnes, 0 AS niveau
-    FROM table
+    FROM nom_table
     WHERE condition_racine
 
     UNION ALL
 
     -- 2. RÉCURSIF (auto-référence)
     SELECT colonnes, n.niveau + 1
-    FROM table t
+    FROM nom_table t
     INNER JOIN nom n ON t.parent = n.id
     WHERE condition_continuation  -- ← IMPORTANT !
 )
@@ -1153,7 +1156,7 @@ SELECT * FROM nom;
 
 - **ltree Extension** : Hiérarchies optimisées avec chemins matérialisés  
 - **Closure Tables** : Pré-calcul de toutes les relations  
-- **Graph Databases** : Neo4j, RedisGraph pour graphes complexes  
+- **Graph Databases** : Neo4j, Memgraph pour graphes complexes  
 - **Window Functions** : Alternative pour certains calculs hiérarchiques
 
 ---

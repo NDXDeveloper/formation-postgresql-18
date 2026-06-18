@@ -367,6 +367,8 @@ Dans la **grande majorité des cas pratiques**, la **3NF est suffisante**. La BC
 
 **Règle pratique :** Visez la 3NF dans vos projets, et ne vous préoccupez de BCNF que si vous identifiez un problème concret.
 
+> ℹ️ **Au-delà de BCNF** : il existe des formes normales supérieures — la **4NF** (élimine les *dépendances multivaluées* : par exemple un employé associé, dans la même table, à plusieurs compétences **et** plusieurs langues, indépendamment l'une de l'autre → produit cartésien parasite) et la **5NF** (dépendances de jointure). Elles sont **exceptionnelles** en pratique et ne concernent que des cas de modélisation très particuliers : viser la 3NF — voire la BCNF — couvre la quasi-totalité des besoins réels.
+
 ---
 
 ## Récapitulatif Visuel des Formes Normales

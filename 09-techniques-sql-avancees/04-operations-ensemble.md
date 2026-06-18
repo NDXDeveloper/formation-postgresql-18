@@ -90,6 +90,8 @@ SELECT id, nom FROM consultants;
 
 Le tri s'applique au résultat final de l'opération d'ensemble.
 
+> ⚠️ **Sans `ORDER BY`, l'ordre des lignes n'est jamais garanti.** PostgreSQL 18 déduplique `UNION`/`INTERSECT`/`EXCEPT` (sans `ALL`) par **hachage** (`HashSetOp`/`HashAggregate`) — un mécanisme qui ne préserve aucun ordre : le résultat peut sortir dans un ordre différent de celui des tables sources **comme** de l'ordre alphabétique. Dans ce chapitre, les blocs de résultats sont **affichés triés par souci de lisibilité** ; sur votre instance, l'ordre réel peut différer tant que vous n'ajoutez pas un `ORDER BY` explicite.
+
 ```sql
 SELECT nom FROM employes  
 UNION  
@@ -234,7 +236,7 @@ Eve
 | Critère | UNION | UNION ALL |
 |---------|-------|-----------|
 | **Doublons** | Éliminés | Conservés |
-| **Performance** | Plus lent (tri + déduplication) | Plus rapide |
+| **Performance** | Plus lent (déduplication) | Plus rapide |
 | **Cas d'usage** | Listes uniques | Comptages, tous les résultats |
 | **Opération interne** | DISTINCT implicite | Simple concaténation |
 
@@ -750,8 +752,8 @@ SELECT nom FROM grande_table_2;
 ```
 
 **Observation typique :**
-- `UNION` : Unique + Sort (coûteux sur grandes tables)  
-- `UNION ALL` : Append (très rapide)
+- `UNION` : `Append` puis **déduplication** — un `HashAggregate` dans la plupart des cas (ou un `Sort` + `Unique` si le volume dépasse `work_mem`). Coûteux.  
+- `UNION ALL` : simple `Append` (très rapide, aucune déduplication)
 
 **Règle :** Si vous **savez** qu'il n'y a pas de doublons (tables partitionnées par date, par exemple), utilisez `UNION ALL`.
 
@@ -866,15 +868,15 @@ Bob    2        2  RH           Bob    RH
 
 ## Alternatives aux opérations d'ensemble
 
-### UNION → FULL OUTER JOIN
+### UNION : pas d'équivalent JOIN direct
+
+Contrairement à `INTERSECT` et `EXCEPT`, **`UNION` n'a pas d'équivalent avec une jointure** : il **empile des lignes** (combinaison *verticale*), là où une jointure **apparie des colonnes** (combinaison *horizontale*) — cf. la section « UNION vs JOIN » ci-dessus.
 
 ```sql
--- Avec UNION
-SELECT nom FROM clients  
-UNION  
-SELECT nom FROM fournisseurs;  
-
--- Équivalent avec FULL OUTER JOIN (si clé commune)
+-- ⚠️ Ceci n'est PAS équivalent à
+--    « SELECT nom FROM clients UNION SELECT nom FROM fournisseurs » :
+-- un FULL JOIN apparie les lignes par `id`, et COALESCE écrase l'un des deux noms.
+-- Si client #1 = 'Alice' et fournisseur #1 = 'Charlie', 'Charlie' DISPARAÎT du résultat.
 SELECT COALESCE(c.nom, f.nom) AS nom  
 FROM clients c  
 FULL OUTER JOIN fournisseurs f ON c.id = f.id;  
@@ -903,12 +905,16 @@ EXCEPT
 SELECT email FROM bannis;  
 
 -- Équivalent avec NOT EXISTS
-SELECT email  
+-- ⚠️ DISTINCT indispensable : EXCEPT dédoublonne son résultat, pas NOT EXISTS.
+-- Sans lui, un email présent 2× dans « clients » ressortirait 2× ici.
+SELECT DISTINCT email  
 FROM clients c  
 WHERE NOT EXISTS (  
     SELECT 1 FROM bannis b WHERE b.email = c.email
 );
 ```
+
+> 📌 De même, l'équivalent `INNER JOIN` d'`INTERSECT` exige un `DISTINCT` (déjà présent ci-dessus) : les opérations d'ensemble standard (`UNION`/`INTERSECT`/`EXCEPT`, sans `ALL`) **éliminent les doublons**, ce que jointures et `NOT EXISTS` ne font pas d'eux-mêmes.
 
 **Performances :** Les équivalences avec JOIN peuvent être plus rapides avec les bons index.
 
@@ -1103,19 +1109,20 @@ ORDER BY categorie, ventes DESC;
 
 ```sql
 -- Totaux par ligne + ligne de total général (avec UNION ALL)
-SELECT
-    departement,
-    SUM(salaire) AS total
-FROM employes  
-GROUP BY departement  
+-- ⚠️ Le ORDER BY d'un UNION n'accepte QUE des noms de colonnes de sortie,
+--    pas une expression (CASE, fonction…). On encapsule donc l'UNION dans
+--    une sous-requête pour trier avec un CASE (total général en dernier).
+SELECT departement, total
+FROM (
+    SELECT departement, SUM(salaire) AS total
+    FROM employes
+    GROUP BY departement
 
-UNION ALL
+    UNION ALL
 
-SELECT
-    'TOTAL GÉNÉRAL' AS departement,
-    SUM(salaire)
-FROM employes
-
+    SELECT 'TOTAL GÉNÉRAL' AS departement, SUM(salaire)
+    FROM employes
+) AS rapport
 ORDER BY
     CASE WHEN departement = 'TOTAL GÉNÉRAL' THEN 1 ELSE 0 END,
     departement;
@@ -1248,7 +1255,7 @@ ORDER BY anomalie, id;
 
 1. **Même nombre de colonnes** et types compatibles  
 2. **ORDER BY à la fin** de toutes les opérations  
-3. **UNION ALL plus rapide** que UNION (pas de tri)  
+3. **UNION ALL plus rapide** que UNION (pas de déduplication)  
 4. **EXCEPT n'est pas commutatif** : A EXCEPT B ≠ B EXCEPT A  
 5. **Utiliser parenthèses** pour clarifier les combinaisons multiples
 
