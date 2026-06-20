@@ -745,9 +745,16 @@ SELECT * FROM clients WHERE ma_fonction_custom(nom) = true;
 CREATE OR REPLACE FUNCTION ma_fonction_custom(nom TEXT) RETURNS BOOLEAN AS $$
     ...
 $$ LANGUAGE plpgsql
-IMMUTABLE  -- ou STABLE  
-COST 100   -- Coût CPU estimé  
-ROWS 50;   -- Nombre de lignes attendues en sortie (pour fonctions set-returning)  
+IMMUTABLE   -- ou STABLE
+COST 100;   -- Coût CPU estimé (en multiples de cpu_operator_cost)
+
+-- 💡 La clause ROWS ne s'applique QU'AUX fonctions qui renvoient un ensemble
+--    (RETURNS SETOF … / TABLE …). Sur une fonction scalaire comme celle-ci
+--    (RETURNS BOOLEAN), ajouter « ROWS 50 » provoque :
+--      ERROR: ROWS is not applicable when function does not return a set
+-- Exemple correct pour une fonction set-returning :
+--    CREATE FUNCTION clients_par_ville(text) RETURNS SETOF clients
+--      AS $$ ... $$ LANGUAGE sql STABLE ROWS 50;
 ```
 
 ### 8.4. Problème : Jointures avec Mauvaises Estimations
@@ -859,8 +866,8 @@ SELECT
     relname,
     autovacuum_count,
     total_autovacuum_time,
-    ROUND(total_autovacuum_time / NULLIF(autovacuum_count, 0), 2)
-        AS avg_autovacuum_ms
+    ROUND((total_autovacuum_time / NULLIF(autovacuum_count, 0))::numeric, 2)
+        AS avg_autovacuum_ms  -- total_autovacuum_time est double precision → cast ::numeric pour ROUND(.,2)
 FROM pg_stat_all_tables  
 WHERE schemaname = 'public'  
 ORDER BY total_autovacuum_time DESC NULLS LAST  

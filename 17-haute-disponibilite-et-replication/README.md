@@ -26,7 +26,7 @@ La disponibilité se mesure généralement en pourcentage, souvent exprimé en n
 | Disponibilité | Downtime par an | Downtime par mois | Downtime par semaine | Classification |
 |---------------|-----------------|-------------------|---------------------|----------------|
 | 90% ("one nine") | 36,5 jours | 3 jours | 16,8 heures | Inacceptable |
-| 99% ("two nines") | 3,65 jours | 7,3 heures | 1,68 heures | Faible |
+| 99% ("two nines") | 3,65 jours | 7,2 heures | 1,68 heures | Faible |
 | 99,9% ("three nines") | 8,76 heures | 43,2 minutes | 10,08 minutes | Basique |
 | 99,99% ("four nines") | 52,56 minutes | 4,32 minutes | 1,01 minutes | Haute disponibilité |
 | 99,999% ("five nines") | 5,26 minutes | 26 secondes | 6 secondes | Très haute disponibilité |
@@ -199,7 +199,7 @@ Selon une étude de Google (2007) sur des millions de disques :
 6. **Attentat / Sabotage**
 
 **Exemple réel :**
-En 2021, un incendie chez OVH (hébergeur français) a détruit complètement 4 datacenters :
+En 2021, un incendie sur le site strasbourgeois d'OVH (hébergeur français) a **entièrement détruit le datacenter SBG2 et gravement endommagé SBG1** (SBG3 et SBG4 ont été préservés mais arrêtés) :
 - 3,6 millions de sites web inaccessibles
 - Données perdues pour les clients sans backup externe
 - Impact économique : plusieurs centaines de millions d'euros
@@ -706,16 +706,14 @@ Ce chapitre 17 est organisé en plusieurs sous-chapitres qui couvrent progressiv
 ### 6.2. Opérations (Sections 17.5 à 17.6)
 
 **17.5. Failover et Promotion**
-- Promotion manuelle d'un standby
-- Détection de panne
-- Procédures de basculement
-- Reconstruction après failover
+- Promotion manuelle d'un standby (`pg_ctl promote`, `pg_promote()`)
+- Patroni : HA automatisée avec consensus (etcd / Consul / ZooKeeper)
+- Repmgr : gestion de réplication et failover simplifiés
 
 **17.6. Architectures HA complètes**
-- Patroni : HA automatisée avec consensus
-- Repmgr : Gestion de réplication simplifiée
-- Architectures multi-datacenter
-- Load balancing avec HAProxy/PgPool-II
+- Synchrone vs asynchrone : comprendre les trade-offs
+- Quorum-based commit (tolérance aux pannes sans point unique)
+- Load balancing avec HAProxy / PgPool-II
 
 ---
 
@@ -777,7 +775,7 @@ Chaque version majeure bénéficie de **5 ans de support communautaire**. Il n'e
 - **PostgreSQL 11** (2018) : TRUNCATE répliqué par défaut en réplication logique
 - **PostgreSQL 12** (2019) : disparition de `recovery.conf`, paramètres de standby intégrés à `postgresql.conf`
 - **PostgreSQL 13** (2020) : `wal_keep_size` (remplace `wal_keep_segments`), `max_slot_wal_keep_size`
-- **PostgreSQL 14** (2021) : compression WAL (`wal_compression`), améliorations du décodage logique
+- **PostgreSQL 14** (2021) : streaming des transactions logiques **en cours** vers les abonnés (option `streaming`), compression LZ4 du TOAST (`default_toast_compression`) — *(`wal_compression` existe, lui, depuis la 9.5)*
 - **PostgreSQL 15** (2022) : filtres WHERE et de colonnes dans les publications, `archive_library`
 - **PostgreSQL 16** (2023) : `streaming = 'parallel'`, rôle `pg_create_subscription`, suppression de `promote_trigger_file`
 - **PostgreSQL 17** (2024) : failover slots logiques, `pg_createsubscriber`

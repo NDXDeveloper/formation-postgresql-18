@@ -300,15 +300,17 @@ Certaines méthodes acceptent des options supplémentaires.
 **Exemples :**
 ```conf
 # LDAP avec options (côté serveur, dans pg_hba.conf)
-host all all 0.0.0.0/0 ldap ldapserver=ad.company.com ldapport=636 ldaptls=1
+# LDAPS (LDAP sur TLS direct, port 636) → ldapscheme=ldaps
+host all all 0.0.0.0/0 ldap ldapserver=ad.company.com ldapscheme=ldaps ldapport=636
+# (Variante StartTLS sur le port LDAP standard 389 : ldaptls=1, SANS ldapscheme=ldaps)
 
 # OAuth avec options NATIVES (PG 18) : issuer, scope, map, delegate_ident_mapping
 hostssl all all 0.0.0.0/0 oauth issuer="https://auth.company.com" scope="postgres"
 ```
 
 > ⚠️ **À ne pas confondre — paramètres serveur vs client** :  
-> - `scram_channel_binding` est un paramètre **côté client** (libpq), pas une option de pg_hba.conf. Il se définit dans la chaîne de connexion (`scram_channel_binding=require`) ou via la variable d'environnement `PGSCRAMCHANNELBINDING`. Côté serveur, PostgreSQL **propose** le mécanisme SCRAM-SHA-256-PLUS (channel binding) quand SSL est actif, mais c'est le **client** qui décide de l'utiliser ou non via cette option. Pour imposer le channel binding, il faut donc `scram_channel_binding=require` côté client.  
-> - Pour OAuth, seules les options listées dans la documentation PostgreSQL 18 sont valides côté pg_hba.conf : `issuer`, `scope`, `map`, `delegate_ident_mapping`, `trust_validator_authz`. La validation effective du token est déléguée à une bibliothèque externe via `oauth_validator_libraries` (postgresql.conf).
+> - `channel_binding` est un paramètre **côté client** (libpq), pas une option de pg_hba.conf. Il se définit dans la chaîne de connexion (`channel_binding=require`) ou via la variable d'environnement `PGCHANNELBINDING`. Côté serveur, PostgreSQL **propose** le mécanisme SCRAM-SHA-256-PLUS (channel binding) quand SSL est actif, mais c'est le **client** qui décide de l'utiliser ou non via cette option. Pour imposer le channel binding, il faut donc `channel_binding=require` côté client.  
+> - Pour OAuth, seules les options listées dans la documentation PostgreSQL 18 sont valides côté pg_hba.conf : `issuer`, `scope`, `validator`, `map`, `delegate_ident_mapping`. La validation effective du token est déléguée à une bibliothèque externe via `oauth_validator_libraries` (postgresql.conf) ; l'option `validator` permet de désigner laquelle utiliser lorsque plusieurs bibliothèques sont configurées.
 
 ---
 
@@ -797,14 +799,18 @@ host    all   all   ::/0        reject
 # log_disconnections = on
 
 # ⭐ PostgreSQL 18 : log_connections accepte plusieurs catégories d'événements
-log_connections = 'authentication, authorization, connection, disconnection'
+log_connections = 'authentication, authorization, setup_durations'
 # Valeurs possibles (PG 18) :
-#   - 'all'              : toutes les catégories
-#   - 'authentication'   : tentatives d'authentification (succès + échecs)
-#   - 'authorization'    : décisions d'autorisation
-#   - 'connection'       : nouvelles connexions
-#   - 'disconnection'    : déconnexions
-#   - 'setup_durations'  : durées de mise en place
+#   - 'all'              : toutes les catégories ci-dessous
+#   - 'receipt'          : réception de la demande de connexion
+#   - 'authentication'   : identité retenue par la méthode d'authentification
+#   - 'authorization'    : autorisation menée à terme (connexion accordée)
+#   - 'setup_durations'  : durées d'établissement de la connexion (PG 18)
+# Rétrocompatibilité : on/true/1 ≡ 'receipt, authentication, authorization'.
+
+# La DÉCONNEXION reste gérée par un paramètre booléen SÉPARÉ
+# (+ durée de la session) :
+log_disconnections = on
 
 # Détail des messages (préfixe de chaque ligne de log)
 log_line_prefix = '%t [%p] %u@%d from %h '
@@ -813,7 +819,7 @@ log_line_prefix = '%t [%p] %u@%d from %h '
 log_min_messages = info
 ```
 
-> ⭐ **Nouveauté PostgreSQL 18** : `log_connections` était un booléen `on/off` jusqu'en PG 17. En PG 18, il accepte une liste de catégories, ce qui permet de logger très précisément les **échecs** d'authentification sans inonder les journaux de logs de connexions réussies.
+> ⭐ **Nouveauté PostgreSQL 18** : `log_connections` était un booléen `on/off` jusqu'en PG 17. En PG 18, il accepte une **liste de catégories** (`receipt`, `authentication`, `authorization`, `setup_durations`, ou `all`), ce qui permet de choisir précisément quelles étapes d'une connexion réussie journaliser, au lieu du tout-ou-rien. ⚠️ `connection`/`disconnection` ne sont **pas** des catégories : la déconnexion se journalise via le paramètre booléen distinct `log_disconnections`. Les **échecs** d'authentification (messages `FATAL`) restent toujours journalisés, indépendamment de ce paramètre. Pour rétrocompatibilité, `on`/`true`/`1` équivaut à `'receipt, authentication, authorization'`.
 
 ### Analyser les Logs
 

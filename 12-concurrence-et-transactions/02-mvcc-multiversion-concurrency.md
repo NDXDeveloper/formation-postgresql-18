@@ -64,7 +64,7 @@ Dans PostgreSQL, chaque ligne d'une table est appelée un **tuple**. Lorsqu'une 
 
 **Exemple concret :**
 
-```sql
+```text
 -- État initial de la table produits
 id |   nom    | prix
 ---|----------|------
@@ -252,7 +252,7 @@ DELETE FROM employes WHERE id = 1;
 COMMIT;  
 ```
 
-**État interne** (tant qu'aucun `VACUUM` n'est passé, **les quatre versions cohabitent** sur le disque) :
+**État interne** (tant qu'aucun `VACUUM` n'est passé, **les trois versions cohabitent** sur le disque — le `DELETE` ne crée pas de nouveau tuple, il marque le `xmax` de la version actuelle V3) :
 
 ```
 Version 1 :  xmin=100, xmax=105               (id=1, salaire=50000)  – morte  
@@ -789,8 +789,8 @@ Espace réutilisable pour futures insertions
 -- Requête pour détecter le bloat
 SELECT
   schemaname,
-  tablename,
-  pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename)) AS size,
+  relname AS tablename,
+  pg_size_pretty(pg_total_relation_size(schemaname||'.'||relname)) AS size,
   n_dead_tup,
   n_live_tup,
   round(n_dead_tup * 100.0 / NULLIF(n_live_tup + n_dead_tup, 0), 2) AS dead_ratio

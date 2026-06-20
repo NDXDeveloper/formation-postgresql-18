@@ -1028,7 +1028,10 @@ print(f"Gain: {(1 - duration_with/duration_without) * 100:.1f}%")
 CREATE FUNCTION get_client(client_id INT)  
 RETURNS TABLE(nom TEXT, email TEXT) AS $$  
 BEGIN  
-    RETURN QUERY SELECT nom, email FROM clients WHERE id = client_id;
+    -- ⚠️ cast ::text : si clients.nom/email sont déclarés VARCHAR(n), un RETURN QUERY
+    -- sans cast échoue à l'appel (« Returned type character varying does not match
+    -- expected type text »). Le cast rend l'exemple robuste quel que soit le type source.
+    RETURN QUERY SELECT c.nom::text, c.email::text FROM clients c WHERE c.id = client_id;
 END;
 $$ LANGUAGE plpgsql STABLE;   -- lecture seule → STABLE pour permettre les optimisations
 

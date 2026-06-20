@@ -859,8 +859,8 @@ EXPLAIN (ANALYZE) SELECT * FROM ma_table WHERE id = 123;
 ### 8. Améliorations d'Autovacuum
 
 **Description :**
-- Nouveau paramètre `autovacuum_vacuum_max_threshold`
-- Ajustements dynamiques des workers (`autovacuum_worker_slots`)
+- Nouveau paramètre `autovacuum_vacuum_max_threshold` (plafond absolu de lignes mortes déclenchant un autovacuum, défaut 100 000 000)
+- `autovacuum_worker_slots` réserve un **pool fixe** de slots de workers au démarrage (paramètre `postmaster`), ce qui permet désormais de modifier `autovacuum_max_workers` **à chaud** (reload, sans redémarrage) — il ne s'agit **pas** d'une « allocation dynamique des workers selon la charge »
 
 **Avantages pour la réplication :**
 - Moins de bloat sur les standbys (après promotion)
@@ -905,9 +905,9 @@ pg_upgrade --old-datadir=/old --new-datadir=/new --swap
 host replication replicator 192.168.1.20/32 oauth
 ```
 
-### 12. SCRAM Passthrough avec postgres_fdw et dblink (rappel, PG 16+)
+### 12. SCRAM Passthrough avec postgres_fdw et dblink (nouveauté PG 18)
 
-**Description :** Transmission transparente de l'authentification SCRAM via Foreign Data Wrappers (option `scram_pass_through`, introduite en **PostgreSQL 16**, toujours disponible en PG 18).
+**Description :** Transmission transparente de l'authentification SCRAM du client vers des serveurs distants via Foreign Data Wrappers, sans stocker de mot de passe. L'option correcte sur le `CREATE SERVER` de `postgres_fdw` est **`use_scram_passthrough`** (et non `scram_pass_through`), **introduite en PostgreSQL 18** (le même support a été ajouté à `dblink` ; côté libpq, nouveaux paramètres `scram_client_key`/`scram_server_key`).
 
 **Avantages :**
 - Authentification sécurisée pour les architectures fédérées (FDW vers d'autres bases)

@@ -2,18 +2,13 @@
 
 # 16.8. Nouveautés PostgreSQL 18 : Mode FIPS et Configuration TLS 1.3
 
-## ⚠️ AVERTISSEMENT IMPORTANT — Paramètres `ssl_fips` et `ssl_tls13_ciphers`
+## ⚠️ AVERTISSEMENT IMPORTANT — Le paramètre `ssl_fips` n'existe pas
 
-> **Ce chapitre présente des paramètres qui n'existent PAS dans PostgreSQL 18 :**  
+> - **`ssl_fips` n'existe PAS dans PostgreSQL.** Le mode FIPS s'active au niveau du **système d'exploitation** (OpenSSL en mode FIPS), pas via un paramètre PostgreSQL. **Dans tous les exemples ci-dessous, ignorez les lignes `ssl_fips = on` / `ssl_fips = off`** : remplacez-les par une activation FIPS au niveau OS (voir plus bas et la section 07). De même, `SHOW ssl_fips;` échoue (« unrecognized configuration parameter »).  
 >  
-> - **`ssl_fips`** : ce paramètre **n'existe pas** dans PostgreSQL. Le mode FIPS est activé au niveau du **système d'exploitation** (via OpenSSL FIPS), pas via un paramètre PostgreSQL. Voir le fichier `02.1-methodes-authentification.md` et la section 07 corrigée pour la méthode d'activation correcte.  
-> - **`ssl_tls13_ciphers`** : ce paramètre **n'existe pas** dans PostgreSQL 18 ni dans aucune version. Le paramètre `ssl_ciphers` existant **ne s'applique qu'à TLS 1.2 et antérieur** — pour TLS 1.3, les ciphers sont gérés directement par OpenSSL avec ses 3 cipher suites standards (`TLS_AES_256_GCM_SHA384`, `TLS_AES_128_GCM_SHA256`, `TLS_CHACHA20_POLY1305_SHA256`) et **ne sont pas configurables via PostgreSQL**.  
+> - **`ssl_tls13_ciphers`, en revanche, est un VRAI paramètre — et c'est une nouveauté de PostgreSQL 18.** Avant PG 18, `ssl_ciphers` ne configurait que TLS ≤ 1.2 et les cipher suites TLS 1.3 utilisaient la sélection par défaut d'OpenSSL ; depuis PG 18, `ssl_tls13_ciphers` permet de les choisir explicitement (liste séparée par `:`, vide = défaut OpenSSL ; positionnable uniquement dans `postgresql.conf` ou en ligne de commande serveur). **Les exemples de ce chapitre qui l'utilisent sont donc corrects.**  
 >  
-> **Les concepts présentés (FIPS, TLS 1.3, performance, sécurité) restent valides** ; seuls les exemples de code utilisant ces deux paramètres sont incorrects. Considérez ce chapitre comme une introduction conceptuelle, en remplaçant :  
-> - `ssl_fips = on` → activation au niveau OS (cf. section 07)  
-> - `ssl_tls13_ciphers = '...'` → configuration au niveau OpenSSL/OS (non configurable via PostgreSQL)  
->  
-> **Vraies nouveautés sécurité PostgreSQL 18** : authentification OAuth 2.0 native (section 02.2), SCRAM passthrough avec `use_scram_passthrough` (section 02.3), `log_connections` avec catégories.
+> **Vraies nouveautés sécurité PostgreSQL 18** : `ssl_tls13_ciphers` (ce chapitre), authentification OAuth 2.0 native (section 02.2), SCRAM passthrough avec `use_scram_passthrough` (section 02.3), `log_connections` avec catégories.
 
 ---
 
@@ -160,8 +155,8 @@ openssl fipsinstall -out /etc/ssl/fipsmodule.cnf -module /usr/lib/x86_64-linux-g
 
 # ===== CONFIGURATION FIPS =====
 
-# Activer le mode FIPS (nouveauté PostgreSQL 18)
-ssl_fips = on
+# Activer le mode FIPS — au niveau OS (voir ci-dessous) :
+# FIPS : activer au niveau OS (PAS via PostgreSQL — voir avertissement en tête)
 
 # Activer SSL/TLS (obligatoire)
 ssl = on
@@ -191,10 +186,12 @@ ssl_prefer_server_ciphers = on
 
 | Paramètre | Valeur | Signification |
 |-----------|--------|---------------|
-| `ssl_fips` | `on` | Active le mode FIPS (PostgreSQL 18+) |
-| `ssl_ciphers` | `FIPS` | Utilise uniquement les algorithmes FIPS-approuvés |
+| ~~`ssl_fips`~~ | — | ❌ **N'existe pas** : FIPS s'active au niveau OS (cf. avertissement) |
+| `ssl_ciphers` | `FIPS` | Alias hérité d'OpenSSL 1.x (⚠️ voir note ci-dessous) |
 | `ssl_min_protocol_version` | `TLSv1.2` | Minimum requis par FIPS |
-| `ssl_tls13_ciphers` | Liste d'algorithmes | Contrôle fin TLS 1.3 |
+| `ssl_tls13_ciphers` | Liste d'algorithmes | ⭐ Contrôle fin TLS 1.3 (réel, PG 18) |
+
+> ⚠️ **Précision OpenSSL 3.x (PostgreSQL 18) sur `ssl_ciphers = 'FIPS'`** : cette chaîne est un **héritage d'OpenSSL 1.x**. Sous OpenSSL 3.x — la version liée à PostgreSQL 18 — le filtrage FIPS réel est assuré par le **provider FIPS** activé au niveau de l'OS, **pas** par cette chaîne. `'FIPS'` reste acceptée *syntaxiquement* mais n'est **plus un filtre fiable** : `openssl ciphers FIPS` y inclut par exemple des suites **anonymes** (`ADH`/`AECDH`, sans authentification) et **ChaCha20**, qui ne sont **pas** approuvées FIPS. **Recommandation** : s'appuyer sur le **provider FIPS de l'OS**, puis restreindre explicitement les suites via `ssl_ciphers` (suites `ECDHE-…-AES…-GCM-…`) et `ssl_tls13_ciphers` (AES-GCM uniquement), plutôt que de compter sur l'alias `'FIPS'`. Les exemples ci-dessous gardent `ssl_ciphers = 'FIPS'` à titre illustratif, mais en production sous OpenSSL 3.x, préférez une liste explicite.
 
 #### Étape 2 : Redémarrage et Vérification
 
@@ -202,18 +199,18 @@ ssl_prefer_server_ciphers = on
 # Redémarrer PostgreSQL
 sudo systemctl restart postgresql
 
-# Vérifier que FIPS est activé
-sudo -u postgres psql -c "SHOW ssl_fips;"
-# Résultat attendu : on
+# Vérifier que FIPS est activé — AU NIVEAU OS (il n'y a pas de paramètre PostgreSQL)
+cat /proc/sys/crypto/fips_enabled        # 1 = FIPS actif
+openssl list -providers | grep -i fips   # doit lister le provider fips
 
-# Vérifier les paramètres SSL
+# Vérifier les paramètres SSL côté PostgreSQL
 sudo -u postgres psql -c "SHOW ssl_min_protocol_version;"  
 sudo -u postgres psql -c "SHOW ssl_ciphers;"  
 ```
 
-### Comportement du Mode FIPS
+### Comportement en Mode FIPS
 
-Lorsque `ssl_fips = on` est activé, PostgreSQL :
+Lorsque l'OS (et donc OpenSSL) est en mode FIPS, PostgreSQL :
 
 1. ✅ **Restreint les algorithmes** : Seuls les algorithmes validés FIPS sont autorisés  
 2. ✅ **Vérifie OpenSSL** : Vérifie qu'OpenSSL est en mode FIPS  
@@ -357,7 +354,7 @@ ssl_max_protocol_version = 'TLSv1.3'
 ssl_tls13_ciphers = 'TLS_AES_256_GCM_SHA384'
 
 # Mode FIPS
-ssl_fips = on
+# FIPS : activer au niveau OS (PAS via PostgreSQL — voir avertissement en tête)
 ```
 
 **Caractéristiques :**
@@ -456,7 +453,7 @@ ssl_prefer_server_ciphers = on
 # postgresql.conf - Gouvernement US
 
 # Mode FIPS obligatoire
-ssl_fips = on
+# FIPS : activer au niveau OS (PAS via PostgreSQL — voir avertissement en tête)
 
 # TLS 1.2 minimum (FIPS exige)
 ssl_min_protocol_version = 'TLSv1.2'  
@@ -480,9 +477,8 @@ hostssl  all  all  0.0.0.0/0  scram-sha-256
 
 **Validation :**
 ```bash
-# Vérifier le mode FIPS
-psql -c "SHOW ssl_fips;"
-# Résultat : on
+# Vérifier le mode FIPS (au niveau OS, pas de paramètre PostgreSQL)
+cat /proc/sys/crypto/fips_enabled   # 1 = FIPS actif
 
 # Tester la connexion
 psql "host=db.gov dbname=classified user=agent sslmode=verify-full sslrootcert=ca.crt"
@@ -504,7 +500,7 @@ psql -c "SELECT version, cipher FROM pg_stat_ssl WHERE pid = pg_backend_pid();"
 # postgresql.conf - SaaS moderne
 
 # Pas de FIPS requis
-ssl_fips = off
+# (aucun FIPS : rien à régler côté PostgreSQL)
 
 # TLS 1.3 prioritaire, TLS 1.2 en fallback
 ssl_min_protocol_version = 'TLSv1.2'  
@@ -552,7 +548,7 @@ ORDER BY connections DESC;
 # postgresql.conf - Finance
 
 # Mode FIPS recommandé (pas obligatoire pour PCI-DSS)
-ssl_fips = on
+# FIPS : activer au niveau OS (PAS via PostgreSQL — voir avertissement en tête)
 
 # TLS 1.2 minimum (PCI-DSS exige)
 ssl_min_protocol_version = 'TLSv1.2'  
@@ -606,7 +602,7 @@ END $$;
 # postgresql.conf - Mobile
 
 # Pas de FIPS
-ssl_fips = off
+# (aucun FIPS : rien à régler côté PostgreSQL)
 
 # TLS 1.3 pour performance (1-RTT)
 ssl_min_protocol_version = 'TLSv1.3'  
@@ -657,7 +653,7 @@ val conn = config.connection
 | **Support** | Universel | Très bon (2018+) |
 | **PostgreSQL** | Toutes versions | PG 12+ (si OpenSSL ≥ 1.1.1) |
 
-> 📝 **Précision** : TLS 1.3 n'est **pas une nouveauté de PG 18** — PostgreSQL utilise simplement la version de TLS supportée par OpenSSL du système. TLS 1.3 fonctionne dès PostgreSQL 12 si OpenSSL 1.1.1+ est installé. Sur PG 18, c'est l'écosystème (paramètres de configuration, monitoring, documentation) qui est mieux outillé pour TLS 1.3.
+> 📝 **Précision** : le **protocole** TLS 1.3 n'est **pas une nouveauté de PG 18** — PostgreSQL utilise la version de TLS supportée par l'OpenSSL du système, et TLS 1.3 fonctionne dès PostgreSQL 12 (avec OpenSSL 1.1.1+). Ce qui est **nouveau en PG 18**, c'est la possibilité de **configurer les cipher suites TLS 1.3** côté PostgreSQL via le paramètre `ssl_tls13_ciphers` (avant PG 18, elles n'étaient pas configurables depuis PostgreSQL — seul OpenSSL décidait).
 
 ### Mesures de Performance
 
@@ -693,12 +689,11 @@ SHOW ssl_min_protocol_version;
 SHOW ssl_max_protocol_version;
 -- Résultat : TLSv1.3
 
-SHOW ssl_tls13_ciphers;
+SHOW ssl_tls13_ciphers;   -- ⭐ vrai paramètre PG 18
 -- Résultat : TLS_AES_256_GCM_SHA384:TLS_AES_128_GCM_SHA256
 
--- Vérifier le mode FIPS
-SHOW ssl_fips;
--- Résultat : on ou off
+-- Le mode FIPS NE se vérifie PAS via PostgreSQL (pas de paramètre ssl_fips).
+-- Au niveau OS : cat /proc/sys/crypto/fips_enabled  (1 = actif)
 ```
 
 **Côté client (connexion active) :**
@@ -800,14 +795,9 @@ BEGIN
   AND pid NOT IN (SELECT pid FROM pg_stat_ssl WHERE ssl = true)
   HAVING COUNT(*) > 0;
 
-  -- Alerte : Mode FIPS désactivé (si requis)
-  IF current_setting('ssl_fips') = 'off' THEN
-    RETURN QUERY
-    SELECT
-      'INFO'::TEXT,
-      'Mode FIPS désactivé'::TEXT,
-      1::BIGINT;
-  END IF;
+  -- NB : le mode FIPS ne se vérifie PAS depuis PostgreSQL (il n'existe pas de
+  -- paramètre ssl_fips). Pour l'auditer, lire /proc/sys/crypto/fips_enabled
+  -- au niveau du système d'exploitation.
 END;
 $$ LANGUAGE plpgsql;
 
@@ -860,7 +850,7 @@ ssl_max_protocol_version = 'TLSv1.3'  # Préféré
 **Impact :**
 ```ini
 # Mode FIPS
-ssl_fips = on  
+# FIPS : activer au niveau OS (PAS via PostgreSQL — voir avertissement)
 ssl_tls13_ciphers = 'TLS_CHACHA20_POLY1305_SHA256:TLS_AES_128_GCM_SHA256'  
                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
                      ❌ Sera ignoré en mode FIPS
@@ -871,7 +861,7 @@ ssl_tls13_ciphers = 'TLS_CHACHA20_POLY1305_SHA256:TLS_AES_128_GCM_SHA256'
 **Solution :**
 ```ini
 # Configuration FIPS correcte
-ssl_fips = on  
+# FIPS : activer au niveau OS (PAS via PostgreSQL — voir avertissement)
 ssl_tls13_ciphers = 'TLS_AES_256_GCM_SHA384:TLS_AES_128_GCM_SHA256'  
                      ✅ Tous deux FIPS-approuvés
 ```
@@ -898,11 +888,11 @@ openssl genpkey -algorithm RSA -out server.key -pkeyopt rsa_keygen_bits:3072
 
 ## 🧠 Points Clés à Retenir
 
-1. **PostgreSQL 18** apporte le mode FIPS et la configuration avancée TLS 1.3  
+1. **PostgreSQL 18** apporte la configuration avancée TLS 1.3 (`ssl_tls13_ciphers`) ; le mode FIPS, lui, relève de l'OS  
 2. **Mode FIPS** : Obligatoire pour gouvernement US et secteurs régulés  
 3. **TLS 1.3** : 50% plus rapide (1-RTT), plus sûr, plus simple  
-4. **ssl_fips = on** : Active le mode FIPS (nécessite OpenSSL FIPS)  
-5. **ssl_tls13_ciphers** : Configure les algorithmes TLS 1.3  
+4. **FIPS** : s'active **au niveau OS** (OpenSSL FIPS) — ⚠️ il n'existe **pas** de paramètre `ssl_fips` dans PostgreSQL  
+5. **`ssl_tls13_ciphers`** (nouveauté PG 18) : configure les cipher suites TLS 1.3  
 6. **3 algorithmes TLS 1.3** : AES-256-GCM (fort), AES-128-GCM (standard), ChaCha20 (mobile)  
 7. **FIPS + ChaCha20** : Incompatibles (ChaCha20 non approuvé FIPS)  
 8. **Compatibilité** : TLS 1.3 nécessite OpenSSL 1.1.1+ et drivers récents
@@ -917,13 +907,13 @@ openssl genpkey -algorithm RSA -out server.key -pkeyopt rsa_keygen_bits:3072
 ☐ Vérifier qu'OpenSSL supporte FIPS
 ☐ Compiler/Installer OpenSSL en mode FIPS
 ☐ Configurer postgresql.conf :
-  ☐ ssl_fips = on
+  ☐ (FIPS : activer au niveau OS, pas de paramètre PostgreSQL)
   ☐ ssl_min_protocol_version = 'TLSv1.2'
   ☐ ssl_ciphers = 'FIPS'
   ☐ ssl_tls13_ciphers (algorithmes FIPS uniquement)
 ☐ Générer certificats conformes FIPS (RSA 2048+)
 ☐ Redémarrer PostgreSQL
-☐ Vérifier : SHOW ssl_fips; (résultat : on)
+☐ Vérifier FIPS au niveau OS : cat /proc/sys/crypto/fips_enabled (= 1)
 ☐ Tester connexion client
 ☐ Documenter pour audits
 ```

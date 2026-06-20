@@ -460,7 +460,7 @@ Ce chapitre couvre en détail les **nouveautés majeures** de PostgreSQL 18 en m
 
 ### 🆕 TLS 1.3 (Section 16.8)
 
-**À noter :** TLS 1.3 fonctionne nativement avec PostgreSQL via OpenSSL. Les ciphers TLS 1.3 ne sont **pas configurables côté PostgreSQL** (le paramètre `ssl_ciphers` ne s'applique qu'à TLS 1.2 et antérieur — OpenSSL gère les 3 cipher suites TLS 1.3 automatiquement).
+**À noter :** TLS 1.3 fonctionne nativement avec PostgreSQL via OpenSSL. ⭐ **Nouveauté PG 18** : le paramètre `ssl_tls13_ciphers` permet désormais de configurer explicitement les cipher suites TLS 1.3. Avant PG 18, seul `ssl_ciphers` existait et il ne s'applique qu'à TLS 1.2 et antérieur (les ciphers TLS 1.3 utilisaient alors la sélection par défaut d'OpenSSL).
 
 **Impact :** Sécurité et performance améliorées (handshake 50% plus rapide)
 
@@ -478,7 +478,7 @@ Ce chapitre couvre en détail les **nouveautés majeures** de PostgreSQL 18 en m
 
 ### 🆕 Améliorations Autovacuum (Section 16.10)
 
-**Nouveau :** Paramètre `autovacuum_vacuum_max_threshold`, ajustements dynamiques
+**Nouveau :** Paramètre `autovacuum_vacuum_max_threshold` (plafonne le seuil de déclenchement sur les très grandes tables) et `autovacuum_max_workers` désormais modifiable sans redémarrage (rechargement `SIGHUP`), dans la limite des slots réservés par `autovacuum_worker_slots`
 
 **Impact :** Maintenance automatique plus efficace sur grandes tables
 

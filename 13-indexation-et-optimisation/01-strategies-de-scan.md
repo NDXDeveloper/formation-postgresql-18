@@ -324,8 +324,8 @@ WHERE client_id = 12345;
 ```
 
 **Différence avec index multi-colonnes** :
-- **Index multi-colonnes** : `CREATE INDEX ON table(col1, col2, col3)` → col2 et col3 sont utilisables pour le filtrage  
-- **Index INCLUDE** : `CREATE INDEX ON table(col1) INCLUDE (col2, col3)` → col2 et col3 sont stockées mais pas utilisables pour le filtrage (seulement pour l'Index-Only Scan)
+- **Index multi-colonnes** : `CREATE INDEX ON ma_table(col1, col2, col3)` → col2 et col3 sont utilisables pour le filtrage  
+- **Index INCLUDE** : `CREATE INDEX ON ma_table(col1) INCLUDE (col2, col3)` → col2 et col3 sont stockées mais pas utilisables pour le filtrage (seulement pour l'Index-Only Scan)
 
 ### Quand PostgreSQL utilise-t-il l'Index-Only Scan ?
 
@@ -473,13 +473,10 @@ WHERE client_id = 12345
 GROUP BY client_id;  
 ```
 
-**Avec index couvrant** → **Index-Only Scan**
-```sql
-CREATE INDEX idx_client_covering ON commandes(client_id) INCLUDE (id);
-```
+**Avec l'index sur `client_id`** → **Index-Only Scan** : ici l'index simple `idx_client` (créé au scénario 1) suffit déjà — la requête ne lit que `client_id`, et `COUNT(*)` n'a besoin d'aucune autre colonne. Pas besoin d'`INCLUDE` pour cette requête.
 ```
 GroupAggregate
-  ->  Index Only Scan using idx_client_covering on commandes
+  ->  Index Only Scan using idx_client on commandes
         Heap Fetches: 0
 ```
 

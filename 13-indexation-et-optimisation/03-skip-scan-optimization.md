@@ -153,8 +153,9 @@ SELECT DISTINCT status FROM orders;
 ```
 
 **Étape 2** : Pour chaque valeur distincte, chercher dans l'index
-```sql
--- Boucle interne équivalente à :
+```text
+-- Pseudo-code : boucle interne équivalente (PostgreSQL ne l'écrit PAS en SQL,
+-- c'est le comportement du nœud d'exécution du Skip Scan) :
 FOR EACH status_value IN ['cancelled', 'pending', 'shipped'] LOOP
     -- Chercher dans l'index (status_value, created_at > '2024-01-01')
     Index Scan on idx_orders_status_date
@@ -321,7 +322,15 @@ Index Scan using idx_orders_status_date on orders
   Index Cond: (created_at > (now() - '7 days'::interval))
 ```
 
-> 📌 **Note** : EXPLAIN n'affiche **pas** d'étiquette explicite « Skip Scan » dans son plan textuel. Le Skip Scan est une optimisation interne au moteur B-Tree : on voit simplement un `Index Scan using …` là où, en PG ≤ 17, on aurait vu un `Seq Scan`. C'est en comparant le coût estimé (très inférieur) et le nombre de buffers lus (bien moindre) qu'on identifie l'utilisation effective du Skip Scan.
+> 📌 **Note — comment repérer un Skip Scan dans EXPLAIN** : le plan textuel n'affiche **pas** d'étiquette « Skip Scan ». Selon le nombre de lignes à remonter, le saut se manifeste soit par un `Index Scan using …`, soit par un **`Bitmap Index Scan using …`** (cas fréquent quand plusieurs blocs disjoints sont concernés) — là où, en PG ≤ 17, on aurait vu un `Seq Scan`. Dans les deux cas, **`EXPLAIN (ANALYZE)` en PostgreSQL 18 expose un compteur `Index Searches`** qui trahit le Skip Scan : un parcours d'index classique affiche `Index Searches: 1`, tandis qu'un Skip Scan affiche **`Index Searches: N`** avec N ≈ le nombre de valeurs distinctes de la 1ʳᵉ colonne réellement parcourues (+1). C'est l'indice le plus direct ; on peut le corroborer par le coût estimé (très inférieur à un Seq Scan) et le nombre de buffers lus. Exemple réel (vérifié sur PG 18.4, table `orders` à 4 valeurs de `status`) :
+>
+> ```
+> Bitmap Heap Scan on orders (actual rows=4663 loops=1)
+>   Recheck Cond: (created_at > ...)
+>   ->  Bitmap Index Scan on idx_orders_status_date (actual rows=4663 loops=1)
+>         Index Cond: (created_at > ...)
+>         Index Searches: 5          ← 4 valeurs de status « sautées » (+1) = Skip Scan
+> ```
 
 **Analyse** :
 - L'Index Scan visite l'index par paquets correspondant aux valeurs distinctes de `status` (4 valeurs ici)
@@ -552,6 +561,7 @@ Execution Time: 197.891 ms
 ```
 
 **Indicateurs qui suggèrent un Skip Scan effectif** :
+- **`Index Searches: N` avec N > 1** (PG 18, ligne affichée par `ANALYZE`) : c'est la signature la plus directe. Un Index Scan classique affiche `Index Searches: 1` ; un Skip Scan affiche N ≈ nombre de valeurs distinctes de la 1ʳᵉ colonne parcourues
 - L'index est utilisé alors que la première colonne (`status`) **n'est pas** dans `Index Cond`
 - Le coût estimé et le nombre de buffers lus sont bien inférieurs à un Seq Scan équivalent
 - L'`Index Cond` ne mentionne que la colonne postérieure (`created_at`) ; les colonnes principales sautées n'apparaissent pas comme filtre explicite
@@ -827,7 +837,7 @@ WHERE sensor_type = 'temperature'
 
 🔑 **Activation automatique** : Skip Scan activé par défaut, PostgreSQL choisit intelligemment.
 
-🔑 **Monitoring** : Vérifier avec `EXPLAIN (ANALYZE, BUFFERS)` qu'un `Index Scan` est utilisé alors que la première colonne de l'index n'apparaît pas dans la condition WHERE — c'est la signature du Skip Scan (PG 18 n'ajoute pas d'étiquette dédiée dans le plan textuel).
+🔑 **Monitoring** : la signature la plus fiable du Skip Scan est **`Index Searches: N` avec N > 1** dans `EXPLAIN (ANALYZE)` — sur un `Index Scan` **ou** un `Bitmap Index Scan` dont l'`Index Cond` ne mentionne pas la 1ʳᵉ colonne de l'index (PG 18 n'ajoute pas d'étiquette « Skip Scan » dédiée dans le plan textuel).
 
 🔑 **Limitation** : Inefficace si cardinalité de la première colonne > quelques milliers.
 

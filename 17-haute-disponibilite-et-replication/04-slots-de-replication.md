@@ -515,8 +515,8 @@ SELECT
     spill_bytes,     -- Octets écrits sur disque
     total_txns,      -- Total de transactions décodées
     total_bytes      -- Total d'octets décodés
-FROM pg_stat_replication_slots  
-WHERE slot_type = 'logical';  
+FROM pg_stat_replication_slots;  -- ne référence QUE les slots logiques
+                                 -- (cette vue n'a pas de colonne slot_type)
 ```
 
 **Interprétation :**
@@ -636,18 +636,22 @@ SELECT pg_replication_slot_advance('logical_slot', 'target_lsn');
 
 ### 5.3. Modifier un slot logique
 
-**Côté slot lui-même** : la fonction `pg_alter_replication_slot()` est introduite en **PostgreSQL 17** et permet uniquement de modifier l'option `failover` d'un slot logique :
+**Côté slot lui-même** : il n'existe **aucune fonction SQL** pour modifier les propriétés d'un slot déjà créé — ni son **plugin de décodage**, ni son option **`failover`**. (Contrairement à une idée répandue, il n'y a **pas** de fonction `pg_alter_replication_slot`.) L'option `failover` se fixe donc **à la création**, via le 5ᵉ argument de `pg_create_logical_replication_slot` (PG 17+) :
 
 ```sql
--- PostgreSQL 17+ : activer la synchronisation failover du slot
-SELECT pg_alter_replication_slot('slot_name', failover := true);
+-- pg_create_logical_replication_slot(slot_name, plugin, temporary, twophase, failover)
+SELECT pg_create_logical_replication_slot('mon_slot', 'pgoutput', false, false, true);
 ```
 
-Il **n'existe pas** de fonction native pour changer le **plugin de décodage** d'un slot existant — pour cela il faut supprimer puis recréer le slot.
+Pour changer le plugin **ou** l'option `failover` d'un slot **créé manuellement**, il faut le **supprimer puis le recréer**.
 
-**Côté subscription** : utiliser `ALTER SUBSCRIPTION` pour modifier les options du côté consommateur :
+**Côté subscription** : pour un slot **géré par une subscription**, on agit via `ALTER SUBSCRIPTION` (le changement est répercuté sur le slot côté publisher) :
 
 ```sql
+-- Activer/désactiver la synchronisation failover du slot associé (PG 17+).
+-- ⚠️ La subscription doit être DÉSACTIVÉE (ALTER SUBSCRIPTION ... DISABLE) pour changer failover.
+ALTER SUBSCRIPTION my_subscription SET (failover = true);
+
 -- Activer l'envoi des valeurs binaires (plus compact, moins de conversions)
 ALTER SUBSCRIPTION my_subscription SET (binary = true);
 
@@ -655,12 +659,16 @@ ALTER SUBSCRIPTION my_subscription SET (binary = true);
 ALTER SUBSCRIPTION my_subscription SET (streaming = on);
 ```
 
-### 5.4. Copier un slot (PostgreSQL 14+)
+### 5.4. Copier un slot (PostgreSQL 12+)
 
 Utile pour créer un nouveau standby sans perturber un existant.
 
 ```sql
+-- Slot physique
 SELECT pg_copy_physical_replication_slot('source_slot', 'new_slot');
+
+-- Variante pour les slots logiques (même version, PG 12+)
+SELECT pg_copy_logical_replication_slot('source_logical_slot', 'new_logical_slot');
 ```
 
 **Cas d'usage :**
@@ -1015,8 +1023,10 @@ logical_decoding_work_mem = 256MB  # Augmenter (défaut: 64MB)
 ```sql
 -- Sur le Subscriber, vérifier les erreurs
 SELECT * FROM pg_stat_subscription;
+```
 
--- Logs du Subscriber
+```bash
+# Logs du Subscriber
 tail -f /var/log/postgresql/postgresql.log | grep ERROR
 ```
 
@@ -1083,6 +1093,13 @@ SELECT pg_create_logical_replication_slot(
 # Sur chaque standby (PG 17+, postgresql.conf)
 sync_replication_slots = on
 ```
+
+> 💡 **Complément — empêcher les subscribers de « dépasser » les standbys (`synchronized_standby_slots`, PG 17)** : pour un failover réellement **sans perte**, il faut aussi garantir que les subscribers logiques ne reçoivent **pas** de changements que le futur primary (un standby physique) n'a pas encore appliqués. Le paramètre `synchronized_standby_slots` (sur le primary) liste les **slots physiques** que les WAL senders logiques doivent attendre avant d'envoyer leurs changements aux subscribers :
+> ```ini
+> # Sur le primary (PG 17+, postgresql.conf)
+> synchronized_standby_slots = 'physical_standby1_slot, physical_standby2_slot'
+> ```
+> Sans cela, un subscriber pourrait recevoir une transaction, puis le primary tombe : le standby promu — qui ne l'avait pas encore reçue — se retrouverait « en retard » par rapport au subscriber, créant une divergence.
 
 > ℹ️ `hot_standby_feedback` (paramètre du standby) sert à éviter les conflits de requêtes en informant le primary des transactions actives sur le standby — il **ne participe pas** à la préservation des slots après failover. Les deux mécanismes sont indépendants.
 
@@ -1478,8 +1495,8 @@ max_slot_wal_keep_size = 10GB  # Limite la rétention par slot
 ### Prochaines Étapes
 
 Maintenant que vous maîtrisez les slots de réplication :
-- **17.5** : Failover et Promotion (gestion des basculements)  
-- **17.6** : Architectures HA complètes (Patroni, Repmgr)  
+- **17.5** : Failover et Promotion (promotion manuelle, Patroni, Repmgr)  
+- **17.6** : Architectures HA complètes (synchrone/asynchrone, quorum, load balancing)  
 - **Chapitre 18** : Extensions et cas d'usage avancés
 
 ---

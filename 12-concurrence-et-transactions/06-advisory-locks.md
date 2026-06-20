@@ -555,7 +555,7 @@ $$ LANGUAGE plpgsql;
 SELECT check_rate_limit(42, 10);  -- true ou false
 ```
 
-> ⚠️ **Piège classique** : nommer le paramètre `user_id` alors que la table contient une colonne `user_id` rend la clause `WHERE user_id = user_id` ambiguë — PostgreSQL résout en faveur de la colonne, donc la condition devient `colonne = colonne` (toujours vraie) et **compte toutes les lignes de la table**. C'est pourquoi on préfixe ici les paramètres par `p_`. Une alternative est d'utiliser `#variable_conflict use_variable` en tête de fonction.
+> ⚠️ **Piège classique** : nommer le paramètre `user_id` alors que la table contient une colonne `user_id` rend la clause `WHERE user_id = user_id` **ambiguë**. Par défaut (`plpgsql.variable_conflict = error`), PostgreSQL **refuse la requête** et lève `column reference "user_id" is ambiguous` (`DETAIL: It could refer to either a PL/pgSQL variable or a table column`) : la fonction échoue franchement au lieu de renvoyer un résultat faux. C'est pourquoi on préfixe ici les paramètres par `p_`. On peut aussi qualifier la colonne (`api_requests.user_id`) ou placer `#variable_conflict use_variable` en tête de fonction. À l'inverse, forcer `#variable_conflict use_column` ferait résoudre l'ambiguïté en `colonne = colonne` (toujours vraie), qui **compterait alors toutes les lignes** — exactement le bug silencieux que le défaut `error` vous évite.
 
 ### Cas 5 : Leader election (élection de leader)
 
@@ -1072,11 +1072,11 @@ SELECT * FROM pg_locks WHERE locktype = 'advisory';
 **Solution** :
 ```sql
 -- Identifier le PID
-SELECT pid, objid, age(NOW(), query_start)  
+SELECT l.pid, l.objid, age(NOW(), a.query_start)  
 FROM pg_locks l  
 JOIN pg_stat_activity a ON l.pid = a.pid  
-WHERE locktype = 'advisory'  
-ORDER BY query_start;  
+WHERE l.locktype = 'advisory'  
+ORDER BY a.query_start;  
 
 -- Tuer la session si nécessaire
 SELECT pg_terminate_backend(pid_problematique);

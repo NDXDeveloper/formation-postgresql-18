@@ -263,14 +263,19 @@ COMMIT;
 
 ### 2.4. Avantages de STABLE
 
-✅ **Optimisation intra-transaction**
+✅ **Évaluée une seule fois dans un prédicat → parcours d'index possible**
 ```sql
--- PostgreSQL peut optimiser ceci :
-SELECT nom_complet_client(1), nom_complet_client(1), nom_complet_client(1)  
-FROM commandes;  
+-- Une fonction STABLE dans un WHERE est évaluée UNE SEULE FOIS pour toute la
+-- requête ; sa valeur (constante le temps de la requête) peut alors servir à
+-- parcourir un index :
+SELECT * FROM commandes WHERE id_client = client_courant();
+-- Plan : Index Scan / Bitmap Index Scan (client_courant() évaluée une fois)
 
--- En calculant nom_complet_client(1) une seule fois par ligne !
+-- Avec une fonction VOLATILE, PostgreSQL doit la réévaluer à CHAQUE ligne :
+-- l'index ne peut pas être utilisé → Seq Scan + Filter (beaucoup plus lent).
 ```
+
+> ⚠️ **Idée fausse fréquente** : STABLE ne « met pas en cache » et ne **déduplique pas** les appels répétés dans la liste du `SELECT`. Ainsi `SELECT f(1), f(1), f(1) FROM t` — avec `f` STABLE en **PL/pgSQL** — appelle réellement `f` **3 fois par ligne** (soit 3 × nombre de lignes ; vérifié sur PostgreSQL 18). Le bénéfice de STABLE n'est donc pas la déduplication, mais le fait que son résultat est **constant pour la durée de la requête** : cela permet au planificateur de l'évaluer **une seule fois** dans un prédicat indexable, là où une fonction VOLATILE force un parcours séquentiel.
 
 ✅ **Lecture de données sécurisée**
 ```sql
@@ -288,9 +293,12 @@ $$;
 
 ✅ **Utilisable dans certaines optimisations**
 ```sql
--- PostgreSQL peut simplifier partiellement
-WHERE prix > obtenir_taux_tva() * 100
--- Le taux sera récupéré une fois au début
+-- Comme obtenir_taux_tva() est STABLE, PostgreSQL l'évalue UNE SEULE FOIS pour
+-- toute la requête, puis compare chaque ligne à cette valeur constante :
+SELECT nom, prix
+FROM produits
+WHERE prix > obtenir_taux_tva() * 100;
+-- Le taux est récupéré une fois au début, pas à chaque ligne parcourue.
 ```
 
 ### 2.5. Différence clé avec IMMUTABLE
@@ -455,7 +463,7 @@ $$;
 | **Utilise NOW()** | ❌ Non | ✅ Oui | ✅ Oui |
 | **Utilise random()** | ❌ Non | ❌ Non | ✅ Oui |
 | **Utilisable dans index** | ✅ Oui | ❌ Non | ❌ Non |
-| **Mise en cache du résultat** | ✅ Maximum | ⚠️ Par transaction | ❌ Aucune |
+| **Réutilisation du résultat** | ✅ *Constant folding* (argument constant évalué 1×) | ⚠️ Évaluée 1× dans un prédicat indexable (pas de mémoïsation dans le `SELECT`) | ❌ Réévaluée à chaque appel |
 | **Optimisation par le planificateur** | ✅ Maximum | ⚠️ Partielle | ❌ Minimale |
 | **Comportement par défaut** | Non | Non | ✅ Oui (si non spécifié) |
 | **Performance** | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐ |
@@ -469,35 +477,48 @@ $$;
 Comparons l'exécution de la même logique avec différentes volatilités :
 
 ```sql
--- Version IMMUTABLE
+-- Version IMMUTABLE (corps volontairement coûteux pour rendre l'effet visible)
 CREATE FUNCTION calcul_immutable(x INTEGER)  
 RETURNS INTEGER  
-LANGUAGE SQL  
+LANGUAGE plpgsql  
 IMMUTABLE  
 AS $$  
-    SELECT x * 2;
+DECLARE s BIGINT := 0; i INT;
+BEGIN
+    FOR i IN 1..5000 LOOP s := s + i; END LOOP;  -- simule un calcul lourd
+    RETURN x;
+END;
 $$;
 
--- Version VOLATILE (par défaut)
+-- Version VOLATILE (corps strictement identique, seule la volatilité change)
 CREATE FUNCTION calcul_volatile(x INTEGER)  
 RETURNS INTEGER  
-LANGUAGE SQL  
+LANGUAGE plpgsql  
 VOLATILE  
 AS $$  
-    SELECT x * 2;
+DECLARE s BIGINT := 0; i INT;
+BEGIN
+    FOR i IN 1..5000 LOOP s := s + i; END LOOP;
+    RETURN x;
+END;
 $$;
 
--- Test sur une grande table
+-- Test avec un ARGUMENT CONSTANT (5) sur 100 000 lignes
 EXPLAIN ANALYZE  
-SELECT calcul_immutable(5) FROM generate_series(1, 1000000);  
--- Résultat : ~50ms (fonction appelée 1 seule fois, résultat mis en cache)
+SELECT calcul_immutable(5) FROM generate_series(1, 100000);  
+-- ~15 ms : avec un argument constant, PostgreSQL pré-évalue la fonction
+--          UNE SEULE FOIS au moment de la planification (constant folding)
 
 EXPLAIN ANALYZE  
-SELECT calcul_volatile(5) FROM generate_series(1, 1000000);  
--- Résultat : ~250ms (fonction appelée 1 million de fois !)
+SELECT calcul_volatile(5) FROM generate_series(1, 100000);  
+-- ~30 000 ms : la fonction VOLATILE est réellement appelée 100 000 fois
 ```
 
-**Différence de performance : 5× plus rapide avec IMMUTABLE !**
+**Ici la différence atteint plusieurs ordres de grandeur** (facteur ~2000× sur cet exemple).
+
+> ⚠️ **Le gain n'est pas automatique — il dépend de deux conditions** :
+> 1. **L'argument doit être constant** (`calcul_immutable(5)`). C'est ce qui déclenche le *constant folding* : la fonction IMMUTABLE est évaluée une seule fois à la planification. Si l'argument est une **colonne** (`calcul_immutable(t.col)`), la fonction est appelée à chaque ligne dans les deux cas — l'avantage de IMMUTABLE se reporte alors sur d'autres optimisations (index fonctionnels, simplification de prédicats, mémoïsation).
+> 2. **La fonction doit être coûteuse** pour que l'écart soit mesurable. Avec une fonction triviale comme `SELECT x * 2`, le coût d'un appel est négligeable : même répété un million de fois, il reste noyé dans le coût du parcours, et les versions IMMUTABLE et VOLATILE s'exécutent en un temps quasi identique. **IMMUTABLE n'accélère donc pas magiquement toute fonction** : son bénéfice se révèle sur les calculs lourds et dans les contextes d'optimisation (index, prédicats constants).
 
 ### 5.2. Visualisation de l'optimisation
 
@@ -875,18 +896,20 @@ CREATE INDEX idx_nom_normalise
 ON clients(nom_complet_normalise(prenom, nom));  
 -- ✅ Succès !
 
--- ❌ IMPOSSIBLE : Fonction STABLE
+-- ❌ IMPOSSIBLE : Fonction STABLE (ici en PL/pgSQL, donc jamais « inlinée » — voir note)
 CREATE FUNCTION prix_avec_tva_actuelle(prix NUMERIC)  
 RETURNS NUMERIC  
-LANGUAGE SQL  
+LANGUAGE plpgsql  
 STABLE  -- Lit le taux de TVA depuis une table  
 AS $$  
-    SELECT prix * (1 + obtenir_taux_tva());
+BEGIN
+    RETURN prix * (1 + obtenir_taux_tva());
+END;
 $$;
 
 CREATE INDEX idx_prix_tva  
 ON produits(prix_avec_tva_actuelle(prix));  
--- ❌ ERREUR : functions in index must be marked IMMUTABLE
+-- ❌ ERREUR : functions in index expression must be marked IMMUTABLE
 ```
 
 ### 11.2. Raison : Cohérence de l'index
@@ -894,6 +917,9 @@ ON produits(prix_avec_tva_actuelle(prix));
 Un index doit être **déterministe** :
 - Si `f(x) = y` aujourd'hui, alors `f(x)` doit toujours égaler `y`
 - Sinon, l'index devient incohérent avec les données réelles
+
+> 🔬 **Subtilité avancée — l'*inlining* des fonctions SQL** : une fonction **SQL** (pas PL/pgSQL) suffisamment simple est *inlinée* par le planificateur, qui remplace l'appel par le corps de la fonction avant d'évaluer la volatilité. Conséquence surprenante : une fonction déclarée `STABLE` mais dont le corps est en réalité immuable (ex. `CREATE FUNCTION f(p numeric) RETURNS numeric LANGUAGE SQL STABLE AS $$ SELECT p * 1.2 $$;`) **peut quand même être indexée** — après inlining, PostgreSQL ne voit plus que l'expression `p * 1.2`, qui est immuable.
+> C'est pourquoi l'exemple ci-dessus est écrit en **PL/pgSQL** : une fonction PL/pgSQL n'est **jamais** inlinée, donc PostgreSQL voit bien une fonction `STABLE` et rejette l'index avec le message attendu. (Détail observé en pratique : une fonction **SQL** `STABLE` qui lit une table échoue elle aussi, mais souvent avec un *autre* message — `function ... does not exist during inlining` — car `CREATE INDEX` réanalyse le corps inliné avec un `search_path` restreint pour des raisons de sécurité ; le résultat net reste identique : l'index est refusé.) Règle pratique : **ne comptez jamais sur une fonction non-immuable dans un index** — déclarez explicitement `IMMUTABLE` les fonctions destinées à être indexées.
 
 ---
 
@@ -919,11 +945,14 @@ PARALLEL SAFE        -- ⭐ Permet l'exécution en parallèle
 AS $$ SELECT x * 2 $$;  
 ```
 
-**Règles de pouce** :
+**Règles de pouce** (telles que définies par la documentation PostgreSQL) :
 - Fonctions IMMUTABLE pures → presque toujours `PARALLEL SAFE`
-- Fonctions qui lisent des tables → généralement `PARALLEL SAFE` (la lecture parallèle est sûre)
-- Fonctions qui modifient des données → `PARALLEL UNSAFE` obligatoire
-- Fonctions qui appellent `SETSEED`, `nextval`, ou modifient des GUC → `PARALLEL RESTRICTED` minimum
+- Fonctions qui lisent des tables (permanentes) → généralement `PARALLEL SAFE` (la lecture parallèle est sûre)
+- Fonctions qui **modifient des données** (INSERT/UPDATE/DELETE) **ou accèdent à une séquence** (`nextval`, `setval`, `currval`, `lastval`) → `PARALLEL UNSAFE` obligatoire
+- Fonctions qui **changent l'état de la transaction**, même temporairement — typiquement une fonction PL/pgSQL contenant un **bloc `EXCEPTION`** — → `PARALLEL UNSAFE`
+- Fonctions qui utilisent `random()` / `setseed()`, ou qui accèdent à des **tables temporaires**, curseurs, *prepared statements* ou autre état *backend-local* → `PARALLEL RESTRICTED`
+
+> 🔎 **Vérification** : ces classements sont ceux des fonctions natives. On peut le confirmer dans le catalogue : `SELECT proname, proparallel FROM pg_proc WHERE proname IN ('nextval','setval','currval','random','setseed');` renvoie `u` (unsafe) pour les fonctions de séquence et `r` (restricted) pour `random`/`setseed`.
 
 > ⚠️ **Défaut historique** : sans déclaration explicite, une fonction est `PARALLEL UNSAFE` ! C'est extrêmement restrictif et peut empêcher des plans parallèles efficaces. **Toujours déclarer `PARALLEL SAFE`** pour les fonctions IMMUTABLE/STABLE qui s'y prêtent.
 
@@ -961,7 +990,8 @@ STABLE
 SECURITY DEFINER                      -- s'exécute avec les droits du propriétaire  
 SET search_path = pg_catalog, public  -- ⚠️ critique pour la sécurité (voir ci-dessous)  
 AS $$  
-    SELECT solde FROM comptes WHERE id_utilisateur = current_user;
+    -- ⚠️ session_user (l'appelant réel), PAS current_user : voir l'encart ci-dessous
+    SELECT solde FROM comptes WHERE id_utilisateur = session_user;
 $$;
 
 -- Le propriétaire de la fonction (typiquement un admin) a accès à la table.
@@ -971,6 +1001,7 @@ REVOKE SELECT ON comptes FROM PUBLIC;
 ```
 
 ⚠️ **Sécurité critique avec SECURITY DEFINER :**
+- **`current_user` ≠ `session_user` dans une fonction `SECURITY DEFINER` !** À l'intérieur, **`current_user` vaut le PROPRIÉTAIRE** de la fonction (celui qui « définit »), pas l'appelant. Pour identifier l'**utilisateur appelant**, utilisez **`session_user`**. (Vérifié sur PostgreSQL 18 : connecté en tant que `alice`, `mon_solde()` filtré par `current_user` renvoie le solde du *propriétaire* — fuite de données ! — alors que `session_user` renvoie bien celui d'`alice`.) En `SECURITY INVOKER` (le défaut), les deux coïncident, d'où la confusion fréquente.
 - **Toujours** définir explicitement `SET search_path = pg_catalog, public` (ou similaire) sur les fonctions `SECURITY DEFINER`. Sans cela, un utilisateur peut détourner la fonction en créant des objets dans un schéma `temp` placé en tête de son `search_path` (attaque par « path injection »).
 - Le propriétaire de la fonction doit lui-même avoir les droits sur les objets utilisés.
 - À utiliser avec parcimonie : c'est un mécanisme puissant d'élévation de privilège.

@@ -459,11 +459,11 @@ Recherche full-text sur 1M documents :
 
 ```sql
 -- ❌ PROBLÈME : Index sur tout
-CREATE INDEX idx1 ON table(col1);  
-CREATE INDEX idx2 ON table(col2);  
-CREATE INDEX idx3 ON table(col3);  
-CREATE INDEX idx4 ON table(col1, col2);  
-CREATE INDEX idx5 ON table(col1, col3);  
+CREATE INDEX idx1 ON ma_table(col1);  
+CREATE INDEX idx2 ON ma_table(col2);  
+CREATE INDEX idx3 ON ma_table(col3);  
+CREATE INDEX idx4 ON ma_table(col1, col2);  
+CREATE INDEX idx5 ON ma_table(col1, col3);  
 -- ... 10 index de plus
 
 -- Conséquences :
@@ -492,11 +492,11 @@ CREATE INDEX idx_email_btree ON users (email);
 
 ```sql
 -- ❌ PROBLÈME
-CREATE INDEX idx_new ON table(column);
+CREATE INDEX idx_new ON ma_table(column);
 -- L'index existe mais le planificateur ne sait pas comment l'utiliser
 
 -- ✅ SOLUTION
-CREATE INDEX idx_new ON table(column);  
+CREATE INDEX idx_new ON ma_table(column);  
 ANALYZE table;  -- Met à jour les statistiques  
 ```
 
@@ -506,8 +506,8 @@ ANALYZE table;  -- Met à jour les statistiques
 -- ❌ PROBLÈME : Index créés "au cas où" jamais supprimés
 SELECT
     schemaname,
-    tablename,
-    indexname,
+    relname,
+    indexrelname,
     idx_scan
 FROM pg_stat_user_indexes  
 WHERE idx_scan = 0  -- Jamais utilisé  
@@ -560,7 +560,7 @@ SELECT
     idx_tup_fetch,
     pg_size_pretty(pg_relation_size(indexrelid))
 FROM pg_stat_user_indexes  
-WHERE indexname = 'idx_tags_gin';  
+WHERE indexrelname = 'idx_tags_gin';  
 
 -- 7. Décider : garder ou supprimer
 -- Si utilisé et utile → garder

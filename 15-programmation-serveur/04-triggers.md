@@ -499,6 +499,14 @@ Le moment d'exécution (expliqué précédemment).
 - `DELETE` : Suppression  
 - `TRUNCATE` : Vidage de table
 
+> 🎯 **`UPDATE OF colonne` — déclenchement ciblé** : restreindre un trigger `UPDATE` à certaines colonnes évite de l'exécuter inutilement.
+> ```sql
+> CREATE TRIGGER recalcul_prix
+>   BEFORE UPDATE OF prix, taux_tva ON produits   -- seulement si l'une de ces colonnes est mise à jour
+>   FOR EACH ROW EXECUTE FUNCTION recalculer_ttc();
+> ```
+> ⚠️ **Subtilité (vérifiée sur PostgreSQL 18)** : le déclenchement dépend des colonnes **présentes dans la clause `SET`**, et **non** d'un changement réel de valeur. `UPDATE produits SET prix = prix` (même valeur) **déclenche** le trigger ; `UPDATE produits SET stock = stock - 1` ne le déclenche **pas**. Si vous voulez n'agir que lorsque la valeur change vraiment, testez `IF NEW.prix IS DISTINCT FROM OLD.prix THEN …` dans la fonction.
+
 #### ON nom_table
 La table (ou vue) sur laquelle le trigger est attaché.
 
@@ -541,21 +549,17 @@ Restrictions : doit être `AFTER`, `FOR EACH ROW`, et défini sur une table (pas
 
 #### REFERENCING ... TABLE : Tables de transition (PG 10+)
 
-Pour les triggers `AFTER ... FOR EACH STATEMENT`, on peut **référencer l'ensemble des lignes** modifiées via des « tables de transition » nommées :
+Pour les triggers `AFTER ... FOR EACH STATEMENT`, on peut **référencer l'ensemble des lignes** modifiées via des « tables de transition » nommées.
+
+> ⚠️ **Restrictions à connaître** (vérifiées sur PostgreSQL 18) :
+> - Les tables de transition ne sont autorisées que pour un trigger portant sur **un seul événement**. Un `AFTER INSERT OR UPDATE OR DELETE` avec `REFERENCING` échoue : `transition tables cannot be specified for triggers with more than one event`. Il faut donc **un trigger par événement**.
+> - `NEW TABLE` n'existe que pour `INSERT`/`UPDATE` ; `OLD TABLE` que pour `UPDATE`/`DELETE` (sinon : `OLD TABLE can only be specified for a DELETE or UPDATE trigger`).
+> - Réservées aux triggers `AFTER` (jamais `BEFORE`), au niveau `STATEMENT` comme `ROW`.
+
+Exemple correct pour un `UPDATE` en lot — les **deux** tables de transition existent, ce qui permet de comparer l'avant et l'après :
 
 ```sql
-CREATE TRIGGER trace_changements
-    AFTER INSERT OR UPDATE OR DELETE ON commandes
-    REFERENCING OLD TABLE AS lignes_avant
-                NEW TABLE AS lignes_apres
-    FOR EACH STATEMENT
-    EXECUTE FUNCTION journaliser_lot();
-```
-
-À l'intérieur de la fonction, `lignes_avant` et `lignes_apres` se comportent comme des **tables temporaires** SQL qu'on peut interroger normalement :
-
-```sql
-CREATE FUNCTION journaliser_lot() RETURNS TRIGGER AS $$  
+CREATE FUNCTION journaliser_update() RETURNS TRIGGER AS $$  
 BEGIN  
     INSERT INTO journal_commandes(operation, n_lignes, total_avant, total_apres)
     SELECT
@@ -566,7 +570,34 @@ BEGIN
     RETURN NULL;
 END;
 $$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trace_update
+    AFTER UPDATE ON commandes
+    REFERENCING OLD TABLE AS lignes_avant
+                NEW TABLE AS lignes_apres
+    FOR EACH STATEMENT
+    EXECUTE FUNCTION journaliser_update();
 ```
+
+Pour couvrir aussi `INSERT` et `DELETE`, on crée des triggers **distincts** ne référençant que la table de transition disponible :
+
+```sql
+-- INSERT : seule NEW TABLE existe
+CREATE TRIGGER trace_insert
+    AFTER INSERT ON commandes
+    REFERENCING NEW TABLE AS lignes_apres
+    FOR EACH STATEMENT
+    EXECUTE FUNCTION journaliser_insert();
+
+-- DELETE : seule OLD TABLE existe
+CREATE TRIGGER trace_delete
+    AFTER DELETE ON commandes
+    REFERENCING OLD TABLE AS lignes_avant
+    FOR EACH STATEMENT
+    EXECUTE FUNCTION journaliser_delete();
+```
+
+À l'intérieur de la fonction, ces tables de transition se comportent comme des **tables temporaires** SQL qu'on peut interroger normalement.
 
 **Cas d'usage typique** : audit en lot beaucoup plus performant que via un trigger `FOR EACH ROW`, surtout pour les UPDATE/DELETE massifs.
 

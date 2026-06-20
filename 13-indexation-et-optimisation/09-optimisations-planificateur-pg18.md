@@ -593,11 +593,11 @@ Si vos statistiques sont obsolètes ou incorrectes, le planificateur peut faire 
 -- Vérifier la date du dernier ANALYZE
 SELECT
     schemaname,
-    tablename,
+    relname,
     last_analyze,
     last_autoanalyze
 FROM pg_stat_user_tables  
-WHERE tablename = 'ma_table';  
+WHERE relname = 'ma_table';  
 ```
 
 ### 2. Overhead de Planification Minime
@@ -640,10 +640,10 @@ LIMIT 10;
 
 Activer le logging des requêtes lentes :
 
-```sql
--- Dans postgresql.conf
-log_min_duration_statement = 1000  -- Log requêtes > 1 seconde  
-auto_explain.log_min_duration = 1000  -- Log plans des requêtes lentes  
+```ini
+# Dans postgresql.conf
+log_min_duration_statement = 1000   # Log requêtes > 1 seconde
+auto_explain.log_min_duration = 1000  # Log plans des requêtes lentes
 ```
 
 ---

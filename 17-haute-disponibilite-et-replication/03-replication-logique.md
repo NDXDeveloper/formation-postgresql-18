@@ -304,19 +304,23 @@ Transaction :
 UPDATE commandes SET statut = 'payee' WHERE id = 100;  
 
 ┌─────────────────────────────────────────┐
-│ 1. Écriture dans le WAL (instantané)    │
+│ 1. Écriture dans le WAL (rapide)        │
 │    "UPDATE commandes id=100..."         │
 └─────────────────────────────────────────┘
            │
            ▼
 ┌─────────────────────────────────────────┐
-│ 2. Modification sur disque (différé)    │
-│    Mise à jour de la page de données    │
+│ 2. COMMIT : le WAL est flushé sur       │
+│    disque → transaction durable         │
+│    (le WAL seul suffit à rejouer        │
+│     la transaction après un crash)      │
 └─────────────────────────────────────────┘
            │
            ▼
 ┌─────────────────────────────────────────┐
-│ 3. COMMIT : Transaction validée         │
+│ 3. Écriture des pages de données sur    │
+│    disque : DIFFÉRÉE au checkpoint,     │
+│    donc APRÈS le COMMIT                  │
 └─────────────────────────────────────────┘
 ```
 
@@ -839,11 +843,13 @@ L'écosystème de la réplication logique a beaucoup évolué ces dernières ann
 ### PostgreSQL 17 (2024)
 - **Failover slots logiques** (`failover = true`) : survie au failover physique du publisher
 - **`pg_createsubscriber`** : transforme un standby physique en subscriber logique
-- **`ALTER SUBSCRIPTION ... DISABLE_ON_ERROR`** plus mature
+- **`pg_upgrade` préserve les slots de réplication logique des publishers** : la réplication logique n'a plus besoin d'être entièrement reconstruite après une montée de version majeure
+- *(rappel : l'option `disable_on_error` de `CREATE SUBSCRIPTION`, elle, existe depuis PostgreSQL 15)*
 
 ### PostgreSQL 18 (2025)
 - **Sous-système I/O asynchrone (AIO)** : améliore indirectement le débit de réplication
 - **Observabilité enrichie** via `pg_stat_io` étendu (suivi `walsender` / `walreceiver`)
+- **Détection et comptage des conflits de réplication logique** : `pg_stat_subscription_stats` expose de nouveaux compteurs par type de conflit (`confl_insert_exists`, `confl_update_exists`, `confl_update_missing`, `confl_update_origin_differs`, `confl_delete_missing`, `confl_delete_origin_differs`, `confl_multiple_unique_conflicts`), et chaque conflit est journalisé de façon détaillée
 - **Authentification OAuth 2.0** : utilisable pour les connexions de réplication
 - **Data checksums activés par défaut** lors d'`initdb`
 

@@ -99,7 +99,7 @@ Ce chapitre couvre quatre stratégies puissantes qui répondent à ces probléma
 
 **Syntaxe :**
 ```sql
-CREATE INDEX nom_index ON table(colonne) WHERE condition;
+CREATE INDEX nom_index ON ma_table(colonne) WHERE condition;
 ```
 
 **Exemple :**
@@ -130,7 +130,7 @@ WHERE est_supprime = FALSE;
 
 **Syntaxe :**
 ```sql
-CREATE INDEX nom_index ON table((expression));
+CREATE INDEX nom_index ON ma_table((expression));
 -- Les parenthèses externes sont OBLIGATOIRES seulement pour
 -- les expressions avec opérateurs (||, *, ->>, etc.).
 -- Pour un simple appel de fonction, elles sont optionnelles.
@@ -172,7 +172,7 @@ Le détail complet sur les règles de parenthèses est documenté dans la sectio
 
 **Syntaxe :**
 ```sql
-CREATE INDEX nom_index ON table(col1, col2, col3);
+CREATE INDEX nom_index ON ma_table(col1, col2, col3);
 ```
 
 **Exemple :**
@@ -191,7 +191,7 @@ ORDER BY date_commande DESC;
 
 **Syntaxe :**
 ```sql
-CREATE INDEX nom_index ON table(colonnes_indexées)  
+CREATE INDEX nom_index ON ma_table(colonnes_indexées)  
 INCLUDE (colonnes_couvertes);  
 ```
 
@@ -229,10 +229,10 @@ WHERE client_id = 12345;
 **Syntaxe :**
 ```sql
 -- GIN standard (tous opérateurs)
-CREATE INDEX nom_index ON table USING gin(colonne_jsonb);
+CREATE INDEX nom_index ON ma_table USING gin(colonne_jsonb);
 
 -- GIN optimisé (opérateur @> uniquement, 3× plus compact)
-CREATE INDEX nom_index ON table USING gin(colonne_jsonb jsonb_path_ops);
+CREATE INDEX nom_index ON ma_table USING gin(colonne_jsonb jsonb_path_ops);
 ```
 
 **Exemple :**
@@ -415,13 +415,13 @@ EXPLAIN (ANALYZE, BUFFERS) SELECT ...;
 -- Vérifier que l'index est utilisé
 SELECT
     schemaname,
-    tablename,
-    indexname,
+    relname,
+    indexrelname,
     idx_scan AS utilisations,
     idx_tup_read,
     pg_size_pretty(pg_relation_size(indexrelid)) AS taille
 FROM pg_stat_user_indexes  
-WHERE indexname = 'nom_de_votre_index';  
+WHERE indexrelname = 'nom_de_votre_index';  
 ```
 
 **Si `idx_scan = 0` après quelques jours :** L'index n'est pas utilisé → À supprimer.
@@ -436,10 +436,10 @@ Créer un index bloque les écritures (sauf avec `CONCURRENTLY`) :
 
 ```sql
 -- Bloque les écritures (rapide mais bloquant)
-CREATE INDEX idx ON table(col);
+CREATE INDEX idx ON ma_table(col);
 
 -- Ne bloque pas (plus lent mais production-safe)
-CREATE INDEX CONCURRENTLY idx ON table(col);
+CREATE INDEX CONCURRENTLY idx ON ma_table(col);
 ```
 
 **Temps de création :** Dépend de la taille de la table
@@ -453,10 +453,10 @@ Chaque index a un coût lors des opérations d'écriture :
 
 ```sql
 -- Sans index : INSERT rapide
-INSERT INTO table VALUES (...);  -- 0.5 ms
+INSERT INTO ma_table VALUES (...);  -- 0.5 ms
 
 -- Avec 5 index : INSERT plus lent
-INSERT INTO table VALUES (...);  -- 2.5 ms (5× plus lent)
+INSERT INTO ma_table VALUES (...);  -- 2.5 ms (5× plus lent)
 ```
 
 **Règle générale :**
@@ -495,9 +495,9 @@ Table: commandes
 
 ```sql
 -- ❌ MAUVAIS : 10 index sur une table OLTP
-CREATE INDEX idx1 ON table(col1);  
-CREATE INDEX idx2 ON table(col2);  
-CREATE INDEX idx3 ON table(col3);  
+CREATE INDEX idx1 ON ma_table(col1);  
+CREATE INDEX idx2 ON ma_table(col2);  
+CREATE INDEX idx3 ON ma_table(col3);  
 -- ... 10 index au total
 -- Problème : INSERT/UPDATE très lents !
 ```
@@ -508,9 +508,9 @@ CREATE INDEX idx3 ON table(col3);
 
 ```sql
 -- ❌ MAUVAIS : Index redondants
-CREATE INDEX idx1 ON table(a, b, c);  
-CREATE INDEX idx2 ON table(a, b);     -- Redondant avec idx1 !  
-CREATE INDEX idx3 ON table(a);        -- Redondant avec idx1 !  
+CREATE INDEX idx1 ON ma_table(a, b, c);  
+CREATE INDEX idx2 ON ma_table(a, b);     -- Redondant avec idx1 !  
+CREATE INDEX idx3 ON ma_table(a);        -- Redondant avec idx1 !  
 ```
 
 **Solution :** Un index sur (a, b, c) couvre automatiquement (a, b) et (a).
@@ -519,10 +519,10 @@ CREATE INDEX idx3 ON table(a);        -- Redondant avec idx1 !
 
 ```sql
 -- Index créé mais jamais utilisé
-CREATE INDEX idx_ancien ON table(colonne_jamais_requetee);
+CREATE INDEX idx_ancien ON ma_table(colonne_jamais_requetee);
 
 -- Vérifier après 1 mois
-SELECT * FROM pg_stat_user_indexes WHERE indexname = 'idx_ancien';
+SELECT * FROM pg_stat_user_indexes WHERE indexrelname = 'idx_ancien';
 -- idx_scan = 0  ← Jamais utilisé !
 ```
 
@@ -532,10 +532,10 @@ SELECT * FROM pg_stat_user_indexes WHERE indexname = 'idx_ancien';
 
 ```sql
 -- ❌ MAUVAIS en production : Bloque la table
-CREATE INDEX idx ON table(col);
+CREATE INDEX idx ON ma_table(col);
 
 -- ✅ BON en production : Non bloquant
-CREATE INDEX CONCURRENTLY idx ON table(col);
+CREATE INDEX CONCURRENTLY idx ON ma_table(col);
 ```
 
 ### ❌ Piège 5 : Mauvais Ordre dans Index Multi-Colonnes
@@ -587,7 +587,7 @@ CREATE INDEX idx_good ON commandes(client_id, statut);
 
 6. **Combiner les stratégies quand pertinent**
    ```sql
-   CREATE INDEX idx ON table(col1, col2)
+   CREATE INDEX idx ON ma_table(col1, col2)
    INCLUDE (col3)
    WHERE condition;
    ```
@@ -643,15 +643,15 @@ CREATE EXTENSION pg_qualstats;
 
 -- Taille des index
 SELECT
-    indexname,
+    indexrelname,
     pg_size_pretty(pg_relation_size(indexrelid))
 FROM pg_stat_user_indexes  
-WHERE tablename = 'nom_table';  
+WHERE relname = 'nom_table';  
 
 -- Index inutilisés
 SELECT
-    schemaname || '.' || tablename AS table,
-    indexname,
+    schemaname || '.' || relname AS table,
+    indexrelname,
     pg_size_pretty(pg_relation_size(indexrelid)) AS taille
 FROM pg_stat_user_indexes  
 WHERE idx_scan = 0  

@@ -595,8 +595,8 @@ track_functions = all
 ### Créer l'extension pg_stat_statements
 
 ```sql
--- Se connecter en tant que superuser
-psql -U postgres -d mydatabase
+-- Se connecter en tant que superuser (commande shell) :
+--   psql -U postgres -d mydatabase
 
 -- Créer l'extension
 CREATE EXTENSION IF NOT EXISTS pg_stat_statements;

@@ -92,7 +92,7 @@ UPDATE comptes SET solde = solde - 100 WHERE id = 'A';  -- Débiter A
 -- [PANNE DE COURANT !]
 UPDATE comptes SET solde = solde + 100 WHERE id = 'B';  -- Créditer B (jamais exécuté)
 
-Résultat : 100€ ont disparu ! 💸
+-- Résultat : 100€ ont disparu ! 💸
 ```
 
 **Avec transaction** (SÛR ✅) :
@@ -124,9 +124,9 @@ PostgreSQL garantit quatre propriétés fondamentales pour chaque transaction, r
 **Exemple** :
 ```sql
 BEGIN;  
-INSERT INTO commandes (client_id, montant) VALUES (42, 100);  
-INSERT INTO lignes_commande (commande_id, produit_id) VALUES (1001, 'ABC');  
-INSERT INTO lignes_commande (commande_id, produit_id) VALUES (1001, 'DEF');  
+INSERT INTO commandes (client_id, montant_total) VALUES (42, 100);  
+INSERT INTO lignes_commande (commande_id, produit_id) VALUES (1001, 1);  
+INSERT INTO lignes_commande (commande_id, produit_id) VALUES (1001, 2);  
 COMMIT;  
 ```
 
@@ -169,7 +169,7 @@ C'est grâce au **MVCC** (Multiversion Concurrency Control) que PostgreSQL réal
 **Garantie** :
 ```sql
 BEGIN;  
-INSERT INTO commandes (client_id, montant) VALUES (42, 1000000);  
+INSERT INTO commandes (client_id, montant_total) VALUES (42, 1000000);  
 COMMIT;  -- À partir de cet instant, la commande est GARANTIE enregistrée  
 
 -- Même si le serveur plante 1 milliseconde après, la commande sera là au redémarrage

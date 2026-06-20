@@ -50,7 +50,7 @@ AS $$
 $$;
 
 -- Utilisation
-SELECT calculer_prix_ttc(100, 20);  -- Retourne 120.00
+SELECT calculer_prix_ttc(100, 20);  -- Retourne 120.00000000000000000000
 ```
 
 **Explication** :
@@ -58,6 +58,14 @@ SELECT calculer_prix_ttc(100, 20);  -- Retourne 120.00
 - Elle retourne un résultat de type `NUMERIC`
 - Le corps de la fonction contient une simple expression SQL
 - Aucune logique conditionnelle ou itérative
+
+> ⚠️ **Échelle de `NUMERIC` après une division** : le résultat brut n'est pas `120.00` mais **`120.00000000000000000000`** (≈ 20 décimales). En effet, la division `taux_tva / 100` produit un `NUMERIC` à forte échelle (`0.20000000000000000000`), qui se propage au produit. Pour un montant monétaire, **arrondissez explicitement** avec `ROUND(..., 2)` :
+> ```sql
+> CREATE FUNCTION calculer_prix_ttc(prix_ht NUMERIC, taux_tva NUMERIC)
+> RETURNS NUMERIC LANGUAGE SQL AS $$
+>     SELECT ROUND(prix_ht * (1 + taux_tva / 100), 2);  -- Retourne 120.00
+> $$;
+> ```
 
 ### 1.5. Exemple avec accès à une table
 
@@ -209,7 +217,9 @@ END;
 $$;
 
 -- Utilisation
-SELECT calculer_prix_avec_remise(100, 20, 600);  -- Retourne 114.00 (avec 5% de remise)
+SELECT calculer_prix_avec_remise(100, 20, 600);  -- = 114 (avec 5% de remise)
+-- Résultat brut : 114.0000000000000000000000 (échelle NUMERIC, cf. note §1.4) ;
+-- ajoutez ROUND(prix_ttc, 2) au RETURN pour obtenir 114.00
 ```
 
 **Explication** :

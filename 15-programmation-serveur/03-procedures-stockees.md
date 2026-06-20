@@ -104,7 +104,7 @@ BEGIN
     INSERT INTO logs VALUES ('Début traitement');
 
     -- ❌ IMPOSSIBLE dans une fonction !
-    -- COMMIT;  -- ERREUR : cannot commit/rollback in a function
+    -- COMMIT;  -- ERREUR : invalid transaction termination
 
     -- Traitement 2
     UPDATE stock SET quantite = quantite - 1 WHERE id = 1;
@@ -261,9 +261,9 @@ CALL traiter_avec_validation();
 - Si `montant_total > 10000` : l'INSERT est annulé (ROLLBACK)
 - Sinon : l'INSERT est validé (COMMIT)
 
-### 3.3. COMMIT automatique en fin de procédure
+### 3.3. Pas de `COMMIT` explicite : qui valide les modifications ?
 
-Si vous ne mettez pas de `COMMIT` explicite, PostgreSQL fait un COMMIT automatique à la fin :
+Une procédure **ne fait pas** de `COMMIT` automatique de sa propre initiative. Ce qui valide (ou non) ses modifications dépend du **contexte d'appel** :
 
 ```sql
 CREATE PROCEDURE insertion_simple()  
@@ -275,9 +275,17 @@ BEGIN
 END;
 $$;
 
+-- ✅ Contexte 1 : CALL en mode autocommit (hors transaction explicite)
 CALL insertion_simple();
--- COMMIT automatique à la fin → Données sauvegardées
+-- La transaction implicite qui entoure le CALL est validée → données sauvegardées.
+
+-- ⚠️ Contexte 2 : CALL à l'intérieur d'une transaction explicite
+BEGIN;
+    CALL insertion_simple();
+ROLLBACK;  -- ❌ L'INSERT de la procédure est ANNULÉ (pas de COMMIT automatique)
 ```
+
+> ⚠️ **Idée fausse à éviter** : ce n'est **pas la procédure** qui « committe à la fin », mais l'**autocommit de la session** (en mode autocommit). Appelée dans un `BEGIN … COMMIT/ROLLBACK` explicite, une procédure sans `COMMIT` interne laisse ses modifications soumises à la décision de l'appelant — un `ROLLBACK` les annule (vérifié sur PostgreSQL 18).
 
 ---
 
@@ -361,35 +369,42 @@ CALL archiver_anciennes_commandes();
 
 ## 5. Gestion d'Erreurs avec COMMIT/ROLLBACK
 
-### 5.1. ⚠️ Règle CRUCIALE : COMMIT/ROLLBACK interdits dans un bloc EXCEPTION
+### 5.1. ⚠️ Règle CRUCIALE : pas de COMMIT/ROLLBACK quand une sous-transaction est active
 
-> 🛑 **Règle fondamentale à retenir** : il est **impossible** de faire `COMMIT` ou `ROLLBACK` à l'intérieur d'un bloc PL/pgSQL contenant un handler `EXCEPTION`.  
+> 🛑 **Règle fondamentale à retenir** : il est **impossible** de faire `COMMIT` ou `ROLLBACK` dans le **corps** d'un bloc PL/pgSQL qui possède un handler `EXCEPTION`.  
 >  
-> **Pourquoi ?** Un bloc avec gestionnaire d'exception crée automatiquement une **sous-transaction** (savepoint implicite). Or, les commandes de contrôle de transaction sont incompatibles avec les sous-transactions actives.  
+> **Pourquoi ?** Un bloc `BEGIN … EXCEPTION … END` ouvre automatiquement une **sous-transaction** (savepoint implicite) pendant l'exécution de son corps. Or, on ne peut pas terminer la transaction tant qu'une sous-transaction est active.  
 >  
-> **Erreur obtenue** :  
+> **Erreur obtenue** (message exact vérifié sur PostgreSQL 18) :  
 > ```  
-> ERROR: invalid transaction termination  
+> ERROR: cannot commit while a subtransaction is active  
 > CONTEXT: PL/pgSQL function ... line N at COMMIT  
 > ```
+>  
+> ℹ️ **Ne confondez pas** avec le message `invalid transaction termination`, qui apparaît dans d'**autres** situations : `COMMIT`/`ROLLBACK` dans une **fonction**, ou `CALL` d'une procédure (qui fait un COMMIT) depuis un **bloc transactionnel explicite** côté client (`BEGIN; CALL …;`).
 
 **Bonne nouvelle** : un bloc avec `EXCEPTION` **fait déjà un ROLLBACK partiel automatique** vers le savepoint implicite. Vous n'avez donc pas besoin de `ROLLBACK` explicite.
 
 ```sql
--- ❌ INCORRECT : ne compile pas / lève une erreur à l'exécution
+-- ❌ INCORRECT : COMMIT dans le corps d'un bloc qui a une clause EXCEPTION.
+--    La procédure se CRÉE sans erreur, mais le COMMIT échoue à l'EXÉCUTION.
 CREATE PROCEDURE mauvaise_procedure()  
 LANGUAGE plpgsql AS $$  
 BEGIN  
-    BEGIN
-        INSERT INTO logs VALUES ('test');
-        COMMIT;  -- ❌ Erreur : COMMIT dans un bloc EXCEPTION
-    EXCEPTION
-        WHEN OTHERS THEN
-            ROLLBACK;  -- ❌ Erreur identique
-    END;
+    INSERT INTO logs VALUES ('test');
+    COMMIT;  -- ❌ ERREUR : cannot commit while a subtransaction is active
+EXCEPTION
+    WHEN OTHERS THEN
+        RAISE NOTICE 'Capturé : %', SQLERRM;
 END;
 $$;
+
+CALL mauvaise_procedure();
+-- NOTICE:  Capturé : cannot commit while a subtransaction is active
+--          (l'erreur du COMMIT est interceptée par le handler WHEN OTHERS)
 ```
+
+> 🔎 **Subtilité (vérifiée en pratique)** : ce qui est interdit, c'est le `COMMIT`/`ROLLBACK` exécuté **alors qu'une sous-transaction est active**. Le corps d'un bloc avec `EXCEPTION` est dans ce cas. En revanche, dans le **handler** du bloc le plus externe, la sous-transaction a déjà été défaite par l'exception : un `COMMIT` y est techniquement accepté. **Ne vous reposez jamais là-dessus** — c'est fragile et illisible. La règle pratique reste : **placez toujours `COMMIT`/`ROLLBACK` en dehors de tout bloc `EXCEPTION`.**
 
 ### 5.2. Pattern correct : COMMIT à l'EXTÉRIEUR du bloc EXCEPTION
 
@@ -483,6 +498,8 @@ $$;
 ## 6. Paramètres IN, OUT et INOUT
 
 Les procédures peuvent avoir des paramètres de sortie (contrairement aux fonctions qui utilisent RETURNS) :
+
+> ℹ️ **Note de version** : le support des paramètres `OUT` dans les **procédures** est arrivé avec **PostgreSQL 14**. Avant la 14, une procédure ne pouvait déclarer que des paramètres `IN` et `INOUT`. Sur PostgreSQL 18, les trois modes sont évidemment disponibles.
 
 ### 6.1. Paramètres OUT
 
@@ -630,18 +647,25 @@ BEGIN
     COMMIT;
     RAISE NOTICE 'Sessions nettoyées : %', nb_supprimees;
 
-    -- VACUUM des tables concernées
-    VACUUM ANALYZE logs;
-    VACUUM ANALYZE sessions;
+    -- ⚠️ PAS de VACUUM ici ! `VACUUM` ne peut PAS s'exécuter depuis une
+    -- procédure (ni une fonction), même après un COMMIT — PostgreSQL lève :
+    --   ERROR: VACUUM cannot be executed from a function
+    -- Après de gros DELETE, laissez l'autovacuum faire son travail, ou lancez
+    -- le VACUUM séparément, en dehors de la procédure (voir ci-dessous).
 
     RAISE NOTICE 'Maintenance terminée';
 END;
 $$;
 
--- Planifier avec pg_cron
--- SELECT cron.schedule('maintenance-quotidienne', '0 2 * * *',
+-- Planifier avec pg_cron : on enchaîne le nettoyage (CALL) PUIS le VACUUM en
+-- deux tâches distinctes — le VACUUM s'exécute ainsi hors de toute fonction.
+-- SELECT cron.schedule('nettoyage-quotidien', '0 2 * * *',
 --                      'CALL nettoyer_anciennes_donnees()');
+-- SELECT cron.schedule('vacuum-quotidien',    '0 3 * * *',
+--                      'VACUUM ANALYZE logs; VACUUM ANALYZE sessions;');
 ```
+
+> ⚠️ **`VACUUM` (et `CREATE INDEX CONCURRENTLY`, `REINDEX CONCURRENTLY`, `CREATE DATABASE`…) ne peuvent pas être lancés depuis une procédure** : ces commandes interdisent tout contexte de fonction ou de transaction. Une procédure qui fait du `COMMIT` reste dans un **contexte de fonction**, ce qui ne suffit donc pas. Exécutez-les depuis une session SQL ordinaire (psql, un job pg_cron dédié, etc.).
 
 ### 8.2. Import de données par lots
 
@@ -748,36 +772,39 @@ $$;
 
 ## 9. Limitations et Considérations
 
-### 9.1. Pas de COMMIT/ROLLBACK dans un bloc contenant EXCEPTION
+### 9.1. Pas de COMMIT/ROLLBACK quand une sous-transaction est active
 
-⚠️ **Règle stricte** : `COMMIT` et `ROLLBACK` sont **interdits dans tout bloc PL/pgSQL qui contient un handler `EXCEPTION`**. La raison : un tel bloc est une sous-transaction implicite, et on ne peut pas terminer une transaction depuis une sous-transaction.
+⚠️ **Règle stricte** : `COMMIT` et `ROLLBACK` sont **interdits tant qu'une sous-transaction est active**. Or le **corps** d'un bloc `BEGIN … EXCEPTION … END` s'exécute précisément dans une telle sous-transaction (savepoint implicite). Tout `COMMIT`/`ROLLBACK` placé là échoue avec `cannot commit while a subtransaction is active`.
 
 ```sql
--- ❌ CECI NE FONCTIONNE PAS — COMMIT/ROLLBACK dans le bloc EXCEPTION
+-- ❌ CECI NE FONCTIONNE PAS — COMMIT dans le corps d'un bloc qui a une clause EXCEPTION
 CREATE PROCEDURE exemple_incorrect_1()  
 LANGUAGE plpgsql AS $$  
 BEGIN  
     INSERT INTO test VALUES (1);
+    COMMIT;  -- ❌ ERREUR : cannot commit while a subtransaction is active
 EXCEPTION
     WHEN OTHERS THEN
-        COMMIT;  -- ❌ ERREUR : invalid transaction termination
+        RAISE NOTICE '%', SQLERRM;
 END;
 $$;
 
--- ❌ CECI NON PLUS — COMMIT à l'intérieur d'un sous-bloc avec EXCEPTION
+-- ❌ CECI NON PLUS — COMMIT dans le corps d'un SOUS-bloc avec EXCEPTION
 CREATE PROCEDURE exemple_incorrect_2()  
 LANGUAGE plpgsql AS $$  
 BEGIN  
     BEGIN
         INSERT INTO test VALUES (1);
-        COMMIT;  -- ❌ ERREUR : ce sous-bloc a un EXCEPTION → sous-tx
+        COMMIT;  -- ❌ ERREUR : cannot commit while a subtransaction is active
     EXCEPTION
         WHEN OTHERS THEN
-            ROLLBACK;  -- ❌ ERREUR identique
+            RAISE NOTICE '%', SQLERRM;
     END;
 END;
 $$;
 ```
+
+> ℹ️ **Cas limite à connaître** : un `COMMIT` placé dans le **handler** du bloc le plus externe (après `WHEN … THEN`) s'exécute *après* que l'exception a défait la sous-transaction — il est donc techniquement accepté en PostgreSQL 18. Mais c'est fragile (il échoue dès qu'un autre bloc `EXCEPTION` l'englobe, avec `cannot commit while a subtransaction is active`) et trompeur. **Règle pratique : ne placez jamais de contrôle transactionnel à l'intérieur d'un bloc `EXCEPTION`.**
 
 **Solution correcte** : faire le `COMMIT` **après** la fin du sous-bloc EXCEPTION. Le sous-bloc se charge automatiquement du rollback partiel en cas d'erreur (via savepoint implicite).
 
@@ -1228,7 +1255,11 @@ BEGIN
     SET statut = 'RECONCILIE_PARTIEL'
     FROM relevés_bancaires rb
     WHERE t.montant = rb.montant
-      AND ABS(EXTRACT(EPOCH FROM (t.date - rb.date))/86400) <= 2
+      -- La colonne `date` est de type DATE : la soustraction de deux dates
+      -- renvoie directement un nombre de JOURS (entier), donc on compare tel quel.
+      -- (Pour des colonnes TIMESTAMP, on écrirait plutôt
+      --  ABS(EXTRACT(EPOCH FROM (t.date - rb.date)) / 86400) <= 2.)
+      AND ABS(t.date - rb.date) <= 2
       AND t.statut = 'EN_ATTENTE'
       AND rb.statut = 'NON_RECONCILIE';
 

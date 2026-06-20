@@ -106,7 +106,7 @@ PostgreSQL utilise des **Transaction IDs (XID)** pour gérer les versions :
 
 **Sans maintenance préventive** :
 - PostgreSQL ne peut plus déterminer quelles données sont anciennes ou récentes
-- Pour éviter la corruption, **PostgreSQL s'arrête automatiquement** !
+- Pour éviter la corruption, **PostgreSQL refuse les nouvelles écritures** (mode protection) !
 
 ```
 WARNING: database "mydb" must be vacuumed within 1000000 transactions  
@@ -114,9 +114,9 @@ ERROR: database is not accepting commands to avoid wraparound data loss
 ```
 
 **Impact** :
-- ❌ **Arrêt complet de la base** : Votre application devient indisponible  
-- ❌ **Perte de données potentielle** : Si non traité  
-- ❌ **Opération de récupération longue** : Plusieurs heures d'indisponibilité
+- ❌ **Écritures bloquées** : l'application ne peut plus écrire (la base n'est pas arrêtée — lectures et `VACUUM` restent possibles, mais une appli transactionnelle est de fait indisponible)  
+- ❌ **Perte de données potentielle** : Si vraiment non traité  
+- ❌ **Opération de récupération longue** : le `VACUUM FREEZE` de rattrapage peut durer des heures
 
 ### 3. La maintenance préventive vs corrective
 
@@ -308,10 +308,10 @@ SHOW autovacuum_analyze_scale_factor;      -- 0.1 (10%)
 
 PostgreSQL 18 apporte des **améliorations majeures** à autovacuum :
 
-1. **Allocation dynamique de workers** (`autovacuum_worker_slots`)
-   - Les workers sont créés à la demande
-   - Pas de gaspillage de ressources
-   - Meilleure adaptation aux pics d'activité
+1. **`autovacuum_max_workers` modifiable sans redémarrage** (grâce à `autovacuum_worker_slots`)
+   - `autovacuum_worker_slots` (défaut 16) réserve un **pool de slots en mémoire partagée au démarrage** (paramètre `postmaster`, redémarrage requis pour le changer)
+   - `autovacuum_max_workers` (défaut 3) = nombre de workers réellement actifs ; il devient **ajustable à chaud** (rechargement `SIGHUP`), dans la limite des slots réservés
+   - ⚠️ Ce n'est **pas** une « création dynamique de workers selon la charge » : le nombre de workers actifs reste plafonné par `autovacuum_max_workers`. La nouveauté est de pouvoir relever ce plafond sans redémarrer
 
 2. **Plafond pour les grandes tables** (`autovacuum_vacuum_max_threshold`)
    - Évite l'accumulation excessive de lignes mortes
@@ -610,7 +610,7 @@ VACUUM FULL; -- Verrou exclusif, très lent !
 WARNING: database "production" must be vacuumed within 10000000 transactions
 ```
 
-**Conséquence** : Arrêt automatique de PostgreSQL pour éviter la corruption !
+**Conséquence** : pour éviter la corruption, PostgreSQL **refuse les nouvelles écritures** (mode protection) — l'application ne peut plus écrire ; la base n'est pas réellement arrêtée (lectures et `VACUUM` restent possibles), mais elle est de fait indisponible pour une appli transactionnelle.
 
 **Correctif** :
 ```bash
@@ -650,7 +650,7 @@ autovacuum_vacuum_max_threshold = 2000000;
 
 - 🧹 **MVCC crée des lignes mortes** qui s'accumulent sans nettoyage  
 - 📊 **Les statistiques obsolètes** dégradent les performances des requêtes  
-- ⚠️ **Le XID wraparound** peut arrêter votre base de données
+- ⚠️ **Le XID wraparound** peut bloquer les écritures de votre base de données (mode protection)
 
 ### 2. Les trois piliers
 
@@ -683,7 +683,7 @@ Maintenant que vous comprenez **pourquoi** la maintenance est vitale et **commen
 
 2. **16.10.2 - ANALYZE** : Maîtriser la collecte de statistiques et l'optimisation du planificateur
 
-3. **16.10.3 - Autovacuum et ajustements dynamiques** : Découvrir les améliorations de PostgreSQL 18 avec l'allocation dynamique de workers
+3. **16.10.3 - Autovacuum et ajustements dynamiques** : Découvrir les améliorations de PostgreSQL 18, notamment `autovacuum_max_workers` ajustable sans redémarrage (grâce aux slots réservés par `autovacuum_worker_slots`)
 
 4. **16.10.4 - autovacuum_vacuum_max_threshold** : Protéger vos grandes tables contre l'accumulation excessive de bloat
 

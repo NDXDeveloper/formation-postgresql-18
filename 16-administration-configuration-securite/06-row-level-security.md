@@ -807,6 +807,19 @@ ALTER TABLE documents FORCE ROW LEVEL SECURITY;
 
 Maintenant, **même le propriétaire** doit respecter les politiques RLS.
 
+> ⚠️ **`FORCE` ne couvre QUE le propriétaire.** Trois catégories de rôles **contournent toujours** RLS, y compris quand `FORCE ROW LEVEL SECURITY` est actif :
+> - les **superusers** ;
+> - les rôles possédant l'attribut **`BYPASSRLS`** (`CREATE ROLE etl_loader BYPASSRLS;` ou `ALTER ROLE x BYPASSRLS;`) ;
+> - les processus internes (réplication, etc.).
+>
+> ```sql
+> -- Un rôle BYPASSRLS voit TOUTES les lignes, malgré ENABLE + FORCE + policies
+> CREATE ROLE etl_loader LOGIN BYPASSRLS;
+> -- → etl_loader ignore toutes les politiques RLS de toutes les tables
+> ```
+>
+> **Implication sécurité** : accorder `BYPASSRLS` revient à percer un trou dans toute votre isolation par ligne. Réservez-le à des comptes techniques de confiance (ETL, sauvegardes logiques qui doivent tout lire), auditez régulièrement `SELECT rolname FROM pg_roles WHERE rolbypassrls;`, et préférez `pg_read_all_data` quand un simple accès en lecture globale suffit. ⚠️ Subtilité **sauvegarde** : `pg_dump` lancé par un rôle **non**-superuser et **non**-`BYPASSRLS` sur une table protégée par RLS **échoue par défaut** (`ERROR: query would be affected by row-level security policy`) ; il faut alors passer `--enable-row-security`, mais l'export ne contient **que les lignes visibles** par les politiques. Pour une sauvegarde **complète**, dumpez avec un rôle superuser ou `BYPASSRLS`.
+
 ### Supprimer une Politique
 
 ```sql
@@ -832,31 +845,32 @@ SELECT * FROM documents;
 
 **Solution :** Toujours créer au moins une politique après activation de RLS.
 
-### Erreur #2 : Oublier WITH CHECK
+### Erreur #2 : Mal comprendre WITH CHECK
+
+⚠️ **Comportement clé** (souvent mal compris) : pour une politique `FOR ALL` ou `FOR UPDATE`, **si `WITH CHECK` est omis, PostgreSQL réutilise automatiquement l'expression `USING` comme `WITH CHECK`** pour valider les nouvelles lignes (doc officielle). Donc une politique sans `WITH CHECK` n'ouvre **pas** la porte à des insertions vers un autre tenant :
 
 ```sql
--- Politique sans WITH CHECK
-CREATE POLICY tenant_read
+CREATE POLICY tenant_rw
   ON documents
   FOR ALL
   USING (tenant_id = current_setting('app.current_tenant_id')::INT);
--- ❌ Manque WITH CHECK !
+-- Pas de WITH CHECK → l'expression USING sert AUSSI à valider les INSERT/UPDATE
 
--- Problème lors de INSERT
-INSERT INTO documents (tenant_id, title)  
-VALUES (999, 'Document malveillant');  
--- ✅ Insertion réussie ! (bug de sécurité)
--- L'utilisateur peut insérer pour un autre tenant !
+INSERT INTO documents (tenant_id, title) VALUES (999, 'Doc');
+-- ❌ ERROR: new row violates row-level security policy for table "documents"
+--    (999 ≠ tenant courant → rejeté, car USING fait office de WITH CHECK)
 ```
 
-**Solution :** Toujours utiliser WITH CHECK pour INSERT/UPDATE.
+**Le vrai piège** survient quand la condition de **lecture** doit être **plus large** que la condition d'**écriture**. Exemple : autoriser la LECTURE des documents publics OU des siens, mais n'autoriser l'ÉCRITURE que sur ses propres documents. Il faut alors un `WITH CHECK` explicite **plus strict** que `USING` :
 
 ```sql
-CREATE POLICY tenant_isolation
+CREATE POLICY read_broad_write_strict
   ON documents
   FOR ALL
-  USING (tenant_id = current_setting('app.current_tenant_id')::INT)
-  WITH CHECK (tenant_id = current_setting('app.current_tenant_id')::INT);
+  USING (owner = current_user OR is_public)   -- lecture large (mes docs OU publics)
+  WITH CHECK (owner = current_user);           -- écriture stricte (uniquement mes docs)
+-- Sans ce WITH CHECK, l'utilisateur pourrait insérer un document en le marquant
+-- is_public = true (cas couvert par l'expression USING réutilisée).
 ```
 
 ### Erreur #3 : Performance - Sous-requêtes Complexes

@@ -82,8 +82,8 @@ SET deadlock_timeout = '2s';  -- 2 secondes
 -- Au niveau de la base
 ALTER DATABASE ma_base SET deadlock_timeout = '500ms';
 
--- Au niveau du serveur (postgresql.conf)
-deadlock_timeout = 1s
+-- Au niveau du serveur (postgresql.conf, redémarrage non requis : reload)
+-- deadlock_timeout = 1s
 ```
 
 **Recommandations** :
@@ -414,8 +414,8 @@ SET lock_timeout = '10s';
 SET statement_timeout = '60s';  
 
 -- Pour les transactions batch/reporting
-SET lock_timeout = '5m';  
-SET statement_timeout = '30m';  
+SET lock_timeout = '5min';  
+SET statement_timeout = '30min';  
 ```
 
 ### 5. Éviter les transactions interactives ⭐⭐⭐
@@ -949,6 +949,8 @@ ORDER BY calls DESC
 LIMIT 20;  
 ```
 
+> ⚠️ **Prérequis** : `pg_stat_statements` doit être préchargé via `shared_preload_libraries = 'pg_stat_statements'` dans `postgresql.conf`, **suivi d'un redémarrage** du serveur. Le `CREATE EXTENSION` réussit sans cela, mais toute lecture de la vue échoue ensuite avec `ERROR: pg_stat_statements must be loaded via "shared_preload_libraries"`. Cette extension recense par ailleurs **toutes** les requêtes : elle ne marque pas spécifiquement celles impliquées dans un deadlock — on s'en sert pour repérer les requêtes fréquentes/coûteuses sur les tables citées dans les logs de deadlock.
+
 ### 2. Fonction personnalisée de diagnostic
 
 ```sql
@@ -966,10 +968,10 @@ BEGIN
     RETURN QUERY
     SELECT
         blocked.pid AS blocked_pid,
-        blocked_act.usename AS blocked_user,
+        blocked_act.usename::text AS blocked_user,
         blocked_act.query AS blocked_query,
         blocking.pid AS blocking_pid,
-        blocking_act.usename AS blocking_user,
+        blocking_act.usename::text AS blocking_user,
         blocking_act.query AS blocking_query,
         age(now(), blocked_act.query_start) AS wait_duration
     FROM pg_locks blocked
@@ -1213,7 +1215,7 @@ UPDATE produits
 COMMIT;
 ```
 
-> 💡 **Variante en une seule requête** (recommandée par la doc PostgreSQL pour ce cas) :  
+> 💡 **Variante en une seule requête** (elle applique le principe recommandé par la doc PostgreSQL — « acquérir les verrous sur les objets dans un ordre cohérent » — directement au sein de la CTE) :  
 >  
 > ```sql  
 > WITH locked AS (  

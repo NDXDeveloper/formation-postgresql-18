@@ -63,7 +63,7 @@ C'est comme envoyer une lettre :
 **Versions TLS :**
 - ❌ **TLS 1.0 et 1.1** : Dépréciés, non sécurisés  
 - ✅ **TLS 1.2** : Standard actuel, sécurisé  
-- ✅ **TLS 1.3** : Version la plus récente, plus rapide et plus sûre (PostgreSQL 18+)
+- ✅ **TLS 1.3** : Version la plus récente, plus rapide et plus sûre (supportée par PostgreSQL via OpenSSL 1.1.1+, paramètres `ssl_min/max_protocol_version` depuis PG 12 ; ⭐ PG 18 ajoute en plus le réglage des cipher suites TLS 1.3 via `ssl_tls13_ciphers`)
 
 ---
 
@@ -404,10 +404,11 @@ ssl_key_file = 'server.key'
 ssl_min_protocol_version = 'TLSv1.2'  # Minimum TLS 1.2  
 ssl_max_protocol_version = 'TLSv1.3'  # Maximum TLS 1.3 (supporté en PG 12+)  
 
-# Algorithmes de chiffrement autorisés (s'applique uniquement à TLS 1.2 et antérieur)
-# Pour TLS 1.3, les ciphers sont gérés par OpenSSL et NE sont PAS configurables
-# via PostgreSQL (le paramètre `ssl_tls13_ciphers` n'existe pas).
+# Algorithmes de chiffrement pour TLS 1.2 et antérieur
 ssl_ciphers = 'HIGH:!aNULL:!MD5'
+# ⭐ PG 18 : cipher suites TLS 1.3 (avant PG 18, elles n'étaient pas configurables
+# côté PostgreSQL — seule la sélection par défaut d'OpenSSL s'appliquait)
+ssl_tls13_ciphers = 'TLS_AES_256_GCM_SHA384:TLS_AES_128_GCM_SHA256'
 
 # Préférer les algorithmes du serveur
 ssl_prefer_server_ciphers = on
@@ -701,17 +702,18 @@ ssl_min_protocol_version = 'TLSv1.2'
 - Secteurs hautement régulés (défense, santé)
 - Conformité stricte requise
 
-### 2. TLS 1.3 (support et utilisation)
+### 2. TLS 1.3 et le paramètre `ssl_tls13_ciphers` (nouveauté PG 18)
 
-**Précision importante :** TLS 1.3 fonctionne nativement avec PostgreSQL via OpenSSL. **Il n'existe PAS** de paramètre PostgreSQL dédié pour configurer les ciphers TLS 1.3 (`ssl_tls13_ciphers` n'est pas un paramètre PostgreSQL). Les ciphers TLS 1.3 sont gérés directement par OpenSSL avec ses cipher suites standards.
+**Précision :** TLS 1.3 fonctionne nativement avec PostgreSQL via OpenSSL. ⭐ **Depuis PG 18**, le paramètre **`ssl_tls13_ciphers`** permet de configurer les cipher suites TLS 1.3. Avant PG 18, elles n'étaient **pas** configurables côté PostgreSQL (seule la sélection par défaut d'OpenSSL s'appliquait) ; `ssl_ciphers`, lui, ne concerne que TLS 1.2 et antérieur.
 
 ```
 # postgresql.conf — Forcer TLS 1.3 uniquement
 ssl_min_protocol_version = 'TLSv1.3'  
 ssl_max_protocol_version = 'TLSv1.3'  
 
-# Note : `ssl_ciphers` ne s'applique qu'à TLS 1.2 et antérieur,
-# pas à TLS 1.3.
+# PG 18 : restreindre les cipher suites TLS 1.3
+ssl_tls13_ciphers = 'TLS_AES_256_GCM_SHA384:TLS_AES_128_GCM_SHA256'
+# (ssl_ciphers ne s'applique qu'à TLS 1.2 et antérieur)
 ```
 
 **Avantages de TLS 1.3 :**
@@ -720,7 +722,7 @@ ssl_max_protocol_version = 'TLSv1.3'
 - ✅ **Confidentialité** : Forward secrecy par défaut  
 - ✅ **Simplicité** : Configuration plus simple
 
-**Cipher suites TLS 1.3 standards (gérés par OpenSSL, non configurables côté PostgreSQL) :**
+**Cipher suites TLS 1.3 standards (RFC 8446 ; configurables via `ssl_tls13_ciphers` depuis PG 18) :**
 ```
 TLS_AES_256_GCM_SHA384        # AES 256-bit (le plus fort)  
 TLS_AES_128_GCM_SHA256        # AES 128-bit (bon compromis)  
@@ -729,7 +731,7 @@ TLS_AES_128_CCM_SHA256        # AES CCM (IoT)
 TLS_AES_128_CCM_8_SHA256      # AES CCM 8 (IoT contraint)  
 ```
 
-> 💡 **Pour restreindre les ciphers TLS 1.3 au niveau système**, il faut configurer OpenSSL globalement (fichier `openssl.cnf`), pas PostgreSQL.
+> 💡 En PG 18, `ssl_tls13_ciphers` restreint les cipher suites TLS 1.3 directement côté PostgreSQL (liste séparée par `:`, vide = défaut OpenSSL). Avant PG 18, il fallait passer par la configuration globale d'OpenSSL (`openssl.cnf`).
 
 ### 3. Authentification Mutuelle Améliorée (mTLS)
 
@@ -812,7 +814,8 @@ echo | openssl s_client -connect database.example.com:5432 -starttls postgres 2>
 # postgresql.conf
 
 # PostgreSQL 18 : log_connections accepte plusieurs catégories
-log_connections = 'authentication, authorization, connection'  
+# (receipt, authentication, authorization, setup_durations, all)
+log_connections = 'authentication, authorization'  
 log_disconnections = on  
 
 # Note : log_statement = 'all' loggue toutes les requêtes SQL
@@ -987,9 +990,8 @@ ssl_max_protocol_version = 'TLSv1.3'  # Maximum (PostgreSQL 18+)
 ```
 # postgresql.conf
 
-# Algorithmes recommandés (TLS 1.2 uniquement)
-# Note : ssl_ciphers ne s'applique PAS à TLS 1.3 — OpenSSL choisit
-# automatiquement parmi les cipher suites TLS 1.3 standards (toutes considérées sûres).
+# Algorithmes recommandés pour TLS 1.2
+# (ssl_ciphers ne concerne que TLS 1.2 ; pour TLS 1.3, utiliser ssl_tls13_ciphers en PG 18)
 ssl_ciphers = 'ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES128-GCM-SHA256'
 ```
 

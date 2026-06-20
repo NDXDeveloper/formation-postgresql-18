@@ -58,11 +58,12 @@ Avant PostgreSQL 18, les informations sur VACUUM et ANALYZE étaient limitées :
 
 ### La solution PostgreSQL 18
 
-PostgreSQL 18 enrichit la vue `pg_stat_all_tables` avec de **nouvelles colonnes** qui donnent une visibilité complète sur :
-- Le nombre de fois où VACUUM et ANALYZE ont été exécutés
-- Combien de fois ils ont été **lancés** vs combien de fois ils ont **terminé**
-- Les erreurs et interruptions éventuelles
-- Des métriques détaillées sur chaque opération
+PostgreSQL 18 enrichit la vue `pg_stat_all_tables` avec **quatre nouvelles colonnes** — `total_vacuum_time`, `total_autovacuum_time`, `total_analyze_time`, `total_autoanalyze_time` — qui mesurent le **temps total cumulé** passé en VACUUM et ANALYZE pour chaque table. Combinées aux compteurs `*_count` (qui existaient déjà), elles permettent enfin de connaître non seulement **combien de fois** la maintenance s'est produite, mais aussi **combien de temps elle a coûté** :
+- repérer une table dont chaque passe d'autovacuum est anormalement longue ;
+- distinguer une table « nettoyée souvent et vite » d'une table « nettoyée rarement mais très coûteuse » ;
+- corréler le coût de la maintenance avec la charge d'écriture.
+
+> ⚠️ Ces colonnes mesurent un **temps cumulé**, pas un décompte « lancés vs terminés » ni un journal d'erreurs : il n'existe **pas** de colonnes `vacuum_started` / `vacuum_completed` / `vacuum_cancelled` en PG 18 (voir l'encart plus bas).
 
 Cela transforme votre capacité à diagnostiquer et résoudre les problèmes de maintenance !
 
@@ -607,7 +608,9 @@ done
 SELECT relname, last_autovacuum, n_dead_tup  
 FROM pg_stat_user_tables  
 WHERE relname = 'orders';  
+```
 
+```text
   relname  |     last_autovacuum      | n_dead_tup
 -----------+--------------------------+------------
  orders    | 2025-11-15 03:22:41.123  |     458932
@@ -632,7 +635,9 @@ SELECT
         AS ms_moyenne_par_passe
 FROM pg_stat_user_tables  
 WHERE relname = 'orders';  
+```
 
+```text
   relname  |     last_autovacuum      | n_dead_tup | autovacuum_count | sec_total | ms_moyenne_par_passe
 -----------+--------------------------+------------+------------------+-----------+----------------------
  orders    | 2025-11-15 03:22:41.123  |     458932 |               15 |     487.3 |              32480.0
@@ -665,17 +670,19 @@ WHERE relname = 'orders';
 
 Utilisez votre outil de monitoring pour déclencher des alertes sur :
 
-```sql
--- Alerte Critique : autovacuum « coûteux » et inefficace
--- (passe moyenne > 30 secondes ET lignes mortes encore élevées)
+```text
+# Conditions d'alerte (à brancher dans votre outil de monitoring — pas du SQL exécutable tel quel)
+
+# Alerte Critique : autovacuum « coûteux » et inefficace
+#   (passe moyenne > 30 secondes ET lignes mortes encore élevées)
 autovacuum_count > 0
-  AND total_autovacuum_time / autovacuum_count > 30000  -- ms
+  AND total_autovacuum_time / autovacuum_count > 30000  (ms)
   AND n_dead_tup > 50000
 
--- Alerte Warning : Table pas vacuum depuis longtemps
+# Alerte Warning : table pas vacuum depuis longtemps
 last_autovacuum < NOW() - INTERVAL '3 days' AND n_dead_tup > 10000
 
--- Alerte Info : ANALYZE obsolète
+# Alerte Info : ANALYZE obsolète
 last_autoanalyze < NOW() - INTERVAL '7 days' AND n_live_tup > 100000
 ```
 
@@ -707,16 +714,20 @@ ALTER TABLE ma_table SET (
     autovacuum_vacuum_scale_factor = 0.05,  -- Par défaut: 0.2
     autovacuum_analyze_scale_factor = 0.05  -- Par défaut: 0.1
 );
+```
 
--- Augmenter le nombre de workers autovacuum (postgresql.conf)
-autovacuum_max_workers = 4;  -- Par défaut: 3
+Et au niveau **serveur** (paramètre global, dans `postgresql.conf`) :
+
+```ini
+# postgresql.conf — augmenter le nombre de workers autovacuum
+autovacuum_max_workers = 4   # Par défaut : 3
 ```
 
 ### 6. Accélérer un VACUUM manuel : `vacuum_buffer_usage_limit` (PG 16+)
 
-Quand on lance un `VACUUM` manuel sur une grosse table en fenêtre de maintenance, on veut souvent que ça finisse **vite**. Le frein historique : PostgreSQL utilise par défaut un anneau de buffers très petit (256 kB) pour VACUUM, ce qui le ralentit énormément sur les grosses tables.
+Quand on lance un `VACUUM` manuel sur une grosse table en fenêtre de maintenance, on veut souvent que ça finisse **vite**. Le frein historique : **avant PG 16**, VACUUM utilisait un anneau de buffers (*buffer ring*) figé à **256 kB**, ce qui le ralentissait énormément sur les grosses tables.
 
-PG 16 introduit **`vacuum_buffer_usage_limit`** qui permet d'augmenter cet anneau :
+PG 16 introduit **`vacuum_buffer_usage_limit`** qui pilote la taille de cet anneau (et l'augmente par défaut) :
 
 ```ini
 # postgresql.conf — globalement
@@ -870,7 +881,7 @@ VACUUM (VERBOSE, ANALYZE);
 --    agressif gèle déjà tout ce qui est nécessaire pour repousser l'horizon, sans effort superflu.
 ```
 
-> ℹ️ **PG 18 — single-user mode** : il n'est plus nécessaire de redémarrer en mode mono-utilisateur (`postgres --single`) pour récupérer d'un wraparound. Les `VACUUM` peuvent tourner en mode multi-utilisateur normal, même quand le serveur est passé en lecture seule pour cause de wraparound imminent.
+> ℹ️ **Récupération sans single-user mode** : contrairement à une idée reçue, il n'est généralement **pas** nécessaire de redémarrer en mode mono-utilisateur (`postgres --single`) pour récupérer d'un wraparound. Même quand le serveur est passé en lecture seule (stade *read-only* ci-dessus), un **superutilisateur peut se connecter** et lancer les `VACUUM` nécessaires — car `VACUUM` ne consomme **pas** de nouvel XID. Le mode mono-utilisateur n'est requis que dans le cas extrême où la réserve d'XID est totalement épuisée. ⚠️ Ce comportement **n'est pas une nouveauté PG 18** : il est valable de longue date, et le *failsafe* automatique (PG 14+, voir tableaux ci-dessus) renforce encore cette protection en désactivant le throttling dès `vacuum_failsafe_age`.
 
 ### Alerter en amont
 
@@ -970,21 +981,33 @@ ORDER BY dead_pct DESC;
 ### Identifier les tables "à risque"
 
 ```sql
+-- Les alias dead_pct / hours_since_vacuum ne sont pas réutilisables dans le CASE
+-- du même SELECT : on les calcule dans une CTE, puis on les exploite à l'extérieur.
+WITH tables_risque AS (
+    SELECT
+        relname,
+        pg_size_pretty(pg_total_relation_size(schemaname||'.'||relname)) AS size,
+        n_dead_tup,
+        ROUND(100.0 * n_dead_tup / NULLIF(n_live_tup + n_dead_tup, 0), 2) AS dead_pct,
+        autovacuum_count,
+        ROUND(EXTRACT(EPOCH FROM (NOW() - last_autovacuum))/3600, 1) AS hours_since_vacuum
+    FROM pg_stat_user_tables
+    WHERE n_live_tup > 1000
+)
 SELECT
     relname,
-    pg_size_pretty(pg_total_relation_size(schemaname||'.'||relname)) AS size,
+    size,
     n_dead_tup,
-    ROUND(100.0 * n_dead_tup / NULLIF(n_live_tup + n_dead_tup, 0), 2) AS dead_pct,
+    dead_pct,
     autovacuum_count,
-    ROUND(EXTRACT(EPOCH FROM (NOW() - last_autovacuum))/3600, 1) AS hours_since_vacuum,
+    hours_since_vacuum,
     CASE
         WHEN n_dead_tup > 100000 AND dead_pct > 20 THEN 'CRITICAL - Manual VACUUM needed'
         WHEN n_dead_tup > 50000 AND dead_pct > 15 THEN 'WARNING - Monitor closely'
         WHEN hours_since_vacuum > 48 THEN 'INFO - Check autovacuum config'
         ELSE 'OK'
     END AS risk_level
-FROM pg_stat_user_tables  
-WHERE n_live_tup > 1000  
+FROM tables_risque  
 ORDER BY n_dead_tup DESC  
 LIMIT 20;  
 ```

@@ -518,7 +518,7 @@ PostgreSQL **détecte** que les deux transactions ont lu les mêmes données et 
 **Règle métier** : Le solde total de deux comptes liés doit rester positif.
 
 **État initial** :
-```sql
+```text
 compte_A : 100€  
 compte_B : 100€  
 Total : 200€  

@@ -47,15 +47,15 @@ Mot de passe A : "password123"  ➡️  Hash : "abc123def..."
 Mot de passe B : "p@ssw0rd456"  ➡️  Hash : "abc123def..." (même hash !)  
 ```
 
-⚠️ **Problème** : Un attaquant peut trouver un mot de passe différent qui produit le même hash et ainsi se connecter.
+⚠️ **Nuance importante** : pour *casser un mot de passe*, le vrai danger de MD5 n'est pas la collision (se connecter exigerait une « seconde préimage », **non réalisable** en pratique sur MD5) mais sa **rapidité de calcul** (point suivant) et l'absence de *key stretching*. Les collisions MD5 connues compromettent surtout les **signatures** et **certificats** ; elles confirment néanmoins que MD5 est cryptographiquement cassé et ne doit plus servir de primitive de sécurité.
 
 #### 3. **Attaques par Force Brute Rapides**
 
 Avec les ordinateurs modernes (et surtout les GPU), il est possible de tester des **milliards de combinaisons par seconde** pour casser un hash MD5.
 
 **Exemple de vitesse d'attaque :**
-- **MD5** : ~60 milliards de hashs/seconde sur un GPU moderne  
-- **SCRAM-SHA-256** : ~1000 hashs/seconde (60 millions de fois plus lent !)
+- **MD5** : un GPU moderne teste des **dizaines de milliards** de hashs/seconde  
+- **SCRAM-SHA-256** : chaque essai impose **4096 itérations** (key stretching), soit un coût par mot de passe testé **plusieurs milliers de fois** supérieur — la force brute en devient des milliers de fois plus lente (le facteur exact ≈ le nombre d'itérations, ajusté par `scram_iterations`)
 
 #### 4. **Vulnérable aux Rainbow Tables**
 
@@ -110,7 +110,17 @@ Chaque utilisateur a un hash unique, même avec le même mot de passe.
 - **2017** : PostgreSQL annonce que MD5 est considéré comme non sécurisé  
 - **PostgreSQL 10 (2017)** : Introduction de SCRAM-SHA-256  
 - **PostgreSQL 14 (2021)** : SCRAM-SHA-256 devient la méthode par défaut  
+- **PostgreSQL 18 (2025)** : un **avertissement explicite** est désormais émis à chaque création ou modification d'un mot de passe MD5 (voir ci-dessous), annonçant un **retrait futur**  
 - **Aujourd'hui** : MD5 est **officiellement déprécié** mais toujours supporté pour la rétrocompatibilité
+
+⚠️ **Nouveauté PostgreSQL 18** — toute commande `CREATE ROLE`/`ALTER ROLE ... PASSWORD` qui aboutit à un hash MD5 (parce que `password_encryption = 'md5'`, ou parce qu'un hash `md5...` déjà chiffré est fourni littéralement) déclenche maintenant cet avertissement :
+
+```text
+WARNING:  setting an MD5-encrypted password
+DETAIL:  MD5 password support is deprecated and will be removed in a future release of PostgreSQL.
+```
+
+C'est un **signal clair** : le support de MD5 finira par être **supprimé** d'une future version majeure. Toute nouvelle installation doit utiliser SCRAM-SHA-256, et les systèmes existants doivent planifier leur migration.
 
 ⚠️ **PostgreSQL recommande fortement** de ne plus utiliser MD5 pour les nouvelles installations et de migrer les systèmes existants.
 

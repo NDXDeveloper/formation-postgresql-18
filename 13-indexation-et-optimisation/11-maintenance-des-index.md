@@ -182,12 +182,22 @@ ORDER BY bloat_pct DESC NULLS LAST;
 - Bloat 20-40% → ⚠️ À surveiller
 - Bloat > 40% → 🔴 REINDEX recommandé
 
+> ⚠️ **`avg_leaf_density` ne révèle le bloat qu'APRÈS un VACUUM.** Tant que les
+> entrées supprimées sont encore « mortes » mais non nettoyées, `pgstatindex` les
+> compte toujours : juste après un `DELETE` massif **sans VACUUM**, `avg_leaf_density`
+> reste élevée et `bloat_pct` proche de 0 — un **faux négatif**. C'est le VACUUM (auto
+> ou manuel) qui retire les entrées mortes et fait **chuter** la densité, révélant le
+> vrai bloat (vérifié sur PG 18.4 : après suppression de 90 % des lignes, la densité
+> passe de **≈ 90 % à ≈ 9 %** une fois le `VACUUM` exécuté). Note connexe : le VACUUM
+> **ne rend pas** l'espace au système — `leaf_pages` reste identique (pages désormais
+> clairsemées) ; seul un `REINDEX` (ou `pg_repack`) recompacte physiquement l'index.
+
 #### Méthode 2 : Requête Approximative (Sans Extension)
 
 ```sql
 SELECT
     schemaname,
-    tablename,
+    relname,
     indexrelname,
     pg_size_pretty(pg_relation_size(indexrelid)) AS index_size,
     idx_scan AS index_scans,
@@ -698,7 +708,7 @@ SELECT cron.schedule('maintenance-hebdo', '0 2 * * 0', 'SELECT maintenance_hebdo
 -- 1. Vérifier le bloat des index
 SELECT
     schemaname,
-    tablename,
+    relname,
     indexrelname,
     pg_size_pretty(pg_relation_size(indexrelid)) AS size,
     idx_scan
@@ -797,7 +807,7 @@ df -h
 -- Avec extension pgstattuple (B-Tree uniquement)
 SELECT
     i.schemaname,
-    i.relname        AS tablename,
+    i.relname        AS relname,
     i.indexrelname,
     round(100 * (1 - s.avg_leaf_density::numeric / 100), 1) AS bloat_pct,
     pg_size_pretty(pg_relation_size(i.indexrelid))          AS index_size
@@ -1041,7 +1051,7 @@ psql -d mabase -c "ANALYZE"
 
 # Vérifier les performances
 psql -d mabase -c "
-    SELECT tablename, last_analyze
+    SELECT relname, last_analyze
     FROM pg_stat_user_tables
     WHERE schemaname = 'public'
 "

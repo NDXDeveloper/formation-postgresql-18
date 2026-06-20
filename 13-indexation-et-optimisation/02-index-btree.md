@@ -314,6 +314,15 @@ SELECT * FROM clients WHERE nom LIKE '%dup%';
 - Préfixe `'Dup%'` : PostgreSQL peut chercher toutes les valeurs commençant par "Dup" (triées ensemble)
 - Joker au début `'%dup%'` : Impossible de naviguer dans l'arbre car les valeurs ne sont pas regroupées
 
+> ⚠️ **Piège de collation (important)** : un B-Tree « ordinaire » ne sert au `LIKE 'préfixe%'` **que si la collation de la colonne est `C`**. Avec une collation linguistique — le cas le plus fréquent (`en_US.utf8`, `fr_FR.utf8`…) — l'ordre de tri ne suit pas l'ordre octet par octet, et PostgreSQL **n'utilise pas** l'index standard pour le `LIKE` : il fait un `Seq Scan`. Pour indexer un `LIKE 'préfixe%'` sur une telle colonne, créez l'index avec la **classe d'opérateurs `text_pattern_ops`** (ou `varchar_pattern_ops`) :
+>
+> ```sql
+> CREATE INDEX idx_clients_nom_pat ON clients(nom text_pattern_ops);
+> -- → LIKE 'Dup%' utilise désormais l'index (Index Cond avec ~>=~ / ~<~)
+> ```
+>
+> Alternative : déclarer la colonne (ou l'index) en `COLLATE "C"`. Réciproquement, `text_pattern_ops` ne sert **pas** aux comparaisons d'ordre linguistique (`<`, `ORDER BY`) : il faut parfois deux index sur la même colonne (un pour le tri, un pour le `LIKE`).
+
 ### 5.6. Recherche NULL
 
 ```sql
@@ -368,13 +377,15 @@ WHERE nom = 'Dupont' AND prenom = 'Alice' -- Colonnes 1 + 2
 WHERE nom LIKE 'Dup%'                    -- Préfixe colonne 1  
 ```
 
-❌ **NON utilisable** :
+❌ **NON utilisable** (en principe — voir la nuance Skip Scan ci-dessous) :
 ```sql
 WHERE prenom = 'Alice'                   -- Saut de colonne 1  
 WHERE nom = 'Dupont' OR prenom = 'Alice' -- OR entre colonnes  
 ```
 
 **Analogie** : Un annuaire téléphonique trié par Nom puis Prénom. Vous pouvez chercher par Nom seul, mais pas par Prénom seul.
+
+> 💡 **Nouveauté PG 18 — Skip Scan** : la règle « pas de saut de la 1ʳᵉ colonne » s'assouplit depuis PostgreSQL 18. Si la **1ʳᵉ colonne a peu de valeurs distinctes** (faible cardinalité), le planificateur peut « sauter » par‑dessus ces valeurs et exploiter quand même l'index `(col1, col2)` pour un `WHERE col2 = …` — c'est le **Skip Scan**, détaillé en section 13.3. Le *leftmost prefix* reste le cas par défaut : le skip scan n'est rentable que lorsque la 1ʳᵉ colonne est très peu sélective (quelques valeurs distinctes), pas pour un `(nom, prenom)` où `nom` prend des milliers de valeurs.
 
 ### Ordre des Colonnes : Critère Crucial
 
@@ -640,8 +651,8 @@ Le **bloat** (gonflement) est l'espace inutilisé dans un index.
 CREATE EXTENSION pgstattuple;
 
 SELECT
-    indexname,
-    round(100.0 * (1 - (avg_leaf_density / 100)), 1) AS bloat_pct
+    'idx_clients_nom' AS indexname,
+    round((100.0 * (1 - (avg_leaf_density / 100)))::numeric, 1) AS bloat_pct
 FROM pgstatindex('idx_clients_nom');
 ```
 

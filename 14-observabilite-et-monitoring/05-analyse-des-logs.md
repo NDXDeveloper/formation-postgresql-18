@@ -119,7 +119,7 @@ Le **JSON** (PG 15+) contient les mêmes informations sous forme d'objets clé/v
 
 Les champs notables `query_id` (PG 14+), `backend_type` (PG 13+) et `leader_pid` (PG 16+) permettent un **croisement direct** avec `pg_stat_statements` et le suivi des parallel workers.
 
-> 📖 Référence complète des colonnes : `\h CREATE FOREIGN TABLE` montre un schéma d'import CSV dans la doc officielle PostgreSQL — utile pour charger les logs dans une table via `COPY` ou un foreign-data-wrapper.
+> 📖 Référence complète des colonnes : la doc officielle (section « Using CSV-Format Log Output ») fournit le `CREATE TABLE postgres_log (…)` exact à 26 colonnes, que l'on remplit ensuite avec `COPY postgres_log FROM '/chemin/logfile.csv' WITH csv;` (méthode recommandée, avec `PRIMARY KEY (session_id, session_line_num)` pour éviter les doublons à la ré-import). Pour interroger le fichier **sans** l'importer, l'extension `file_fdw` permet de le déclarer en table externe (`CREATE FOREIGN TABLE … SERVER log_server OPTIONS (filename '…', format 'csv')`).
 
 **Configuration recommandée** :
 ```conf
@@ -261,9 +261,12 @@ log_disconnections = on
 **Exemple de logs** :
 ```
 2025-11-21 14:30:12 CET [12340]: LOG:  connection received: host=192.168.1.50 port=54321
+2025-11-21 14:30:12 CET [12340]: LOG:  connection authenticated: user="webapp" method=scram-sha-256 (/etc/postgresql/18/main/pg_hba.conf:95)
 2025-11-21 14:30:12 CET [12340]: LOG:  connection authorized: user=webapp database=production application_name=MyApp
 2025-11-21 14:35:45 CET [12340]: LOG:  disconnection: session time: 0:05:33.123 user=webapp database=production host=192.168.1.50 port=54321
 ```
+
+> ℹ️ En **PostgreSQL 18**, `log_connections = on` (≡ `receipt,authentication,authorization`) produit aussi la ligne `connection authenticated: … method=…` (apparue en PG 16). Si l'on ajoute l'option **`setup_durations`** (PG 18), une ligne supplémentaire apparaît juste avant la première requête : `connection ready: setup total=2.5 ms, fork=0.5 ms, authentication=0.2 ms`.
 
 #### 4. log_statement
 
@@ -303,7 +306,7 @@ log_checkpoints = on
 **Exemple de log** :
 ```
 2025-11-21 14:40:00 CET [12330]: LOG:  checkpoint starting: time
-2025-11-21 14:40:15 CET [12330]: LOG:  checkpoint complete: wrote 2456 buffers (15.0%); 0 WAL file(s) added, 0 removed, 3 recycled; write=12.345 s, sync=2.123 s, total=15.123 s; sync files=45, longest=0.456 s, average=0.047 s; distance=45678 kB, estimate=45678 kB
+2025-11-21 14:40:15 CET [12330]: LOG:  checkpoint complete: wrote 2456 buffers (15.0%), wrote 12 SLRU buffers; 0 WAL file(s) added, 0 removed, 3 recycled; write=12.345 s, sync=2.123 s, total=15.123 s; sync files=45, longest=0.456 s, average=0.047 s; distance=45678 kB, estimate=45678 kB; lsn=2/3A4B5C60, redo lsn=2/3A4B5000
 ```
 
 **Utilité** : Identifier si les checkpoints prennent trop de temps (signe de problème I/O).
@@ -414,14 +417,21 @@ log_autovacuum_min_duration = -1
 ```
 2026-05-17 03:22:41 CET LOG:  automatic vacuum of table "myapp.public.orders":
   index scans: 2
-  pages: 0 removed, 245680 remain, 245680 scanned (100.00% of total)
+  pages: 0 removed, 245680 remain, 245680 scanned (100.00% of total), 0 eagerly scanned
   tuples: 234500 removed, 12500000 remain, 0 are dead but not yet removable
   removable cutoff: 123456789, which was 123 XIDs old when operation ended
   new relfrozenxid: 123456000, which is 1234567 XIDs ahead of previous value
+  frozen: 1200 pages from table (0.49% of total) had 95000 tuples frozen
+  visibility map: 1200 pages set all-visible, 800 pages set all-frozen
+  index scan needed: 5400 pages from table (2.20% of total) had 234500 dead item identifiers removed
+  I/O timings: read: 145.231 ms, write: 88.114 ms
+  avg read rate: 12.345 MB/s, avg write rate: 6.789 MB/s
   buffer usage: 562345 hits, 12345 reads, 8901 dirtied
-  WAL usage: 5234 records, 123 full page images, 234567 bytes
+  WAL usage: 5234 records, 123 full page images, 234567 bytes, 0 buffers full
   system usage: CPU: user: 23.45 s, system: 2.34 s, elapsed: 35.78 s
 ```
+
+> ℹ️ Format réel **PostgreSQL 18** (vérifié) : la ligne `pages: …` se termine par `eagerly scanned` (lié à l'*eager freezing* introduit en PG 18), et `WAL usage: …` se termine par `N buffers full` (compteur `wal_buffers_full`). Les lignes `frozen:`, `visibility map:`, `index scan needed:` et `I/O timings:` ne s'affichent que lorsqu'elles sont pertinentes (gel, scan d'index, `track_io_timing = on`).
 
 **Informations utiles** :
 - `tuples: ... removed, ... remain, ... are dead but not yet removable` : si **dead but not yet removable** est élevé, une transaction longue empêche le nettoyage
@@ -1212,8 +1222,8 @@ SHOW logging_collector;
 SHOW log_directory;  
 SHOW log_filename;  
 
--- Vérifier les permissions
-ls -la /var/log/postgresql/
+-- Vérifier les permissions (commande shell) :
+--   ls -la /var/log/postgresql/
 ```
 
 ### Q2 : auto_explain ne fonctionne pas

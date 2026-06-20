@@ -39,7 +39,7 @@ Le tableau ci-dessous reflète **le comportement réel de PostgreSQL** (qui dép
 | Dirty Read | ✅ Impossible | ✅ Impossible | ✅ Impossible | ✅ Impossible |
 | Non-Repeatable Read | ❌ Possible | ❌ Possible | ✅ Impossible | ✅ Impossible |
 | Phantom Read | ❌ Possible | ❌ Possible | ✅ Impossible | ✅ Impossible |
-| Lost Update | ❌ Possible | ⚠️ Parfois | ✅ Impossible | ✅ Impossible |
+| Lost Update | ⚠️ Parfois | ⚠️ Parfois | ✅ Impossible | ✅ Impossible |
 | Write Skew | ❌ Possible | ❌ Possible | ❌ Possible | ✅ Impossible |
 | Read Skew | ❌ Possible | ❌ Possible | ✅ Impossible | ✅ Impossible |
 
@@ -70,7 +70,7 @@ Deux utilisateurs travaillent sur un système bancaire :
 > ⚠️ **À titre pédagogique** : le scénario ci-dessous décrit ce qui **se passerait** dans un SGBD qui autorise vraiment `READ UNCOMMITTED`. **PostgreSQL ne le permet jamais** (voir la section suivante). Si vous tapiez cette séquence en PostgreSQL, Alice verrait `1000€` (l'ancienne valeur committée), pas `500€`.
 
 **État initial** :
-```sql
+```text
 -- Table comptes
 id | proprietaire | solde
 ---|--------------|-------
@@ -142,7 +142,7 @@ BEGIN TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;
 -- Aucune donnée non commitée ne sera jamais visible
 ```
 
-**Mécanisme MVCC** : Grâce au MVCC, chaque transaction voit seulement les versions de lignes qui ont été validées (xmax = 0 ou xmax correspondant à une transaction commitée).
+**Mécanisme MVCC** : Grâce au MVCC, chaque transaction ne voit que les versions de ligne **dont la création a été validée** — c'est-à-dire dont le `xmin` pointe vers une transaction déjà commitée. Une version produite par une transaction encore en cours (`xmin` non validé) reste invisible : c'est précisément ce qui rend tout Dirty Read impossible. (À l'inverse, une version dont le `xmax` désigne une transaction commitée a été supprimée/remplacée et n'est donc **plus** visible.)
 
 ### Visualisation du MVCC empêchant Dirty Read
 
@@ -177,7 +177,7 @@ Une **Non-Repeatable Read** se produit lorsqu'une transaction lit la **même lig
 Un système de réservation d'hôtel où les prix changent fréquemment.
 
 **État initial** :
-```sql
+```text
 -- Table chambres
 id | numero | prix_nuit
 ---|--------|----------
@@ -341,7 +341,7 @@ Une **Phantom Read** se produit lorsqu'une transaction exécute la **même requ�
 Un système de gestion de commandes où un manager calcule des statistiques.
 
 **État initial** :
-```sql
+```text
 -- Table commandes
 id | client_id | montant | statut
 ---|-----------|---------|----------
@@ -547,7 +547,7 @@ Une **Lost Update** se produit lorsque deux transactions lisent la même valeur,
 Un système de likes sur les réseaux sociaux.
 
 **État initial** :
-```sql
+```text
 -- Table posts
 id | titre         | nb_likes
 ---|---------------|----------
@@ -745,7 +745,7 @@ Un **Write Skew** se produit lorsque deux transactions lisent les **mêmes donn�
 Un hôpital doit **toujours** avoir au moins 1 médecin de garde. Contrainte : `COUNT(*) WHERE en_service = true >= 1`
 
 **État initial** :
-```sql
+```text
 -- Table medecins_garde
 id | nom    | en_service
 ---|--------|------------
@@ -871,8 +871,7 @@ PostgreSQL détecte que la combinaison des deux transactions créerait une incoh
 **Règle** : Une place ne peut être réservée qu'une fois.
 
 ```sql
--- État initial : Place 42 disponible
-disponible = true
+-- État initial : Place 42 disponible (disponible = true)
 
 -- Transaction A
 BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ;  
@@ -908,7 +907,7 @@ Un **Read Skew** se produit lorsqu'une transaction lit plusieurs lignes et voit 
 Un virement entre deux comptes.
 
 **État initial** :
-```sql
+```text
 -- Table comptes
 id | proprietaire | solde
 ---|--------------|-------
@@ -1180,12 +1179,12 @@ Avant de choisir un niveau d'isolation, posez-vous ces questions :
 
 ```sql
 -- ❌ MAUVAIS : Read-Modify-Write
-SELECT valeur FROM table WHERE id = 1;
+SELECT valeur FROM ma_table WHERE id = 1;
 -- [Calcul dans l'application]
-UPDATE table SET valeur = nouvelle_valeur WHERE id = 1;
+UPDATE ma_table SET valeur = nouvelle_valeur WHERE id = 1;
 
 -- ✅ BON : Opération atomique
-UPDATE table SET valeur = valeur + increment WHERE id = 1;
+UPDATE ma_table SET valeur = valeur + increment WHERE id = 1;
 ```
 
 ### 3. Utiliser les contraintes de base de données
@@ -1241,7 +1240,7 @@ Un taux de rollback élevé peut indiquer :
 > ⚠️ **`xact_rollback` ne distingue pas** les rollbacks volontaires (votre appli choisit d'annuler) des rollbacks forcés par une erreur de sérialisation ou un deadlock. Pour mesurer spécifiquement la pression de concurrence :  
 >  
 > - `deadlocks` (colonne ci-dessus) compte uniquement les deadlocks détectés ;  
-> - Les **serialization failures** (`SQLSTATE 40001`) n'ont pas de compteur dédié — il faut activer `log_min_messages = error` et compter les occurrences dans les logs, ou poser un trigger applicatif côté driver pour incrémenter une métrique custom.
+> - Les **serialization failures** (`SQLSTATE 40001`) n'ont pas de compteur dédié — mais comme ce sont des erreurs de niveau `ERROR`, elles figurent **déjà** dans le log serveur (le défaut `log_min_messages = warning` capture tout ce qui est `WARNING` et au‑dessus, donc les `ERROR` : inutile de le passer à `error`, ce qui ne ferait que masquer les `WARNING`). Il suffit donc de **compter les occurrences** du message « could not serialize access » / du `SQLSTATE 40001` dans les logs, ou de poser un compteur applicatif côté driver pour une métrique custom.
 
 ---
 

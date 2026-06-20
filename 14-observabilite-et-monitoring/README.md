@@ -353,7 +353,7 @@ Cache Hit Ratio = (blks_hit / (blks_hit + blks_read)) × 100
 **Comment le mesurer** :
 ```sql
 SELECT
-    sum(blks_hit) * 100.0 / (sum(blks_hit) + sum(blks_read)) AS cache_hit_ratio
+    sum(blks_hit) * 100.0 / NULLIF(sum(blks_hit) + sum(blks_read), 0) AS cache_hit_ratio
 FROM pg_stat_database;
 ```
 

@@ -172,7 +172,7 @@ ROLLBACK TO nom_du_point;  -- Forme courte
 
 - Le savepoint **nommé reste valide** : vous pouvez y revenir à nouveau plus tard si nécessaire.  
 - Tous les **savepoints établis après** ce point sont **détruits** automatiquement (ainsi que les modifications qui y étaient associées).  
-- Les verrous acquis depuis le savepoint sont conservés (PostgreSQL ne sait pas annuler sélectivement un verrou de ligne).
+- Les **verrous** (de ligne comme de table) acquis **depuis** ce savepoint sont **relâchés** : le `ROLLBACK TO` annule la sous-transaction qui les détenait (vérifiable dans `pg_locks`). En revanche, un verrou que la transaction tenait **déjà avant** le savepoint est conservé jusqu'à la fin de la transaction.
 
 #### RELEASE SAVEPOINT
 

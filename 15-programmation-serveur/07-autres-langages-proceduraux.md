@@ -356,7 +356,7 @@ $$ LANGUAGE plpython3u;
 CREATE OR REPLACE FUNCTION parser_log_serveur(log_line TEXT)  
 RETURNS TABLE(  
     ip TEXT,
-    timestamp TIMESTAMP,
+    horodatage TIMESTAMP,   -- NB : `timestamp` est un mot-clé SQL, interdit comme nom de colonne
     methode TEXT,
     url TEXT,
     code INTEGER,
@@ -373,7 +373,7 @@ RETURNS TABLE(
 
         return_next({
             ip => $ip,
-            timestamp => $ts,
+            horodatage => $ts,
             methode => $method,
             url => $url,
             code => $code,
@@ -482,7 +482,7 @@ $$ LANGUAGE plpython3u;
 
 -- 3. PL/Perl : Parsing logs serveur
 CREATE OR REPLACE FUNCTION analyser_logs_acces(log_file TEXT)  
-RETURNS TABLE(ip TEXT, url TEXT, timestamp TIMESTAMP) AS $$  
+RETURNS TABLE(ip TEXT, url TEXT, horodatage TIMESTAMP) AS $$  
     # Regex puissantes pour parsing
 $$ LANGUAGE plperlu;
 

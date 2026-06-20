@@ -179,7 +179,7 @@ Détermine la quantité d'informations écrites dans le WAL.
 wal_level = replica
 ```
 
-💡 Depuis PostgreSQL 9.6, `replica` est la valeur par défaut.
+💡 La valeur `replica` a été **introduite** en PostgreSQL 9.6 (fusion de `archive` et `hot_standby`) ; elle est le **défaut depuis PostgreSQL 10** (auparavant, le défaut était `minimal`).
 
 #### Paramètre 2 : `archive_mode`
 
@@ -258,7 +258,7 @@ archive_timeout = 5min
 | `1min` | ~1 min | Significatif si base peu active |
 | `30s` | ~30 s | Important |
 
-> 💡 La compression WAL (`wal_compression`, PG 14+) ne réduit **pas** la taille sur disque du segment archivé (qui reste 16 Mo), mais réduit la taille des **records WAL à l'intérieur** du segment. Depuis PG 15, plusieurs algorithmes sont disponibles : `pglz` (défaut historique), `lz4` (très rapide), `zstd` (ratio compression optimal). Exemple : `wal_compression = lz4`.
+> 💡 La compression WAL (`wal_compression`, disponible depuis la 9.5) ne réduit **pas** la taille sur disque du segment archivé (qui reste 16 Mo), mais réduit la taille des **records WAL à l'intérieur** du segment (concrètement, les *full-page writes*). Depuis PG 15, plusieurs algorithmes sont configurables : `pglz` (l'unique algorithme jusqu'en 14), `lz4` (très rapide), `zstd` (ratio compression optimal). Exemple : `wal_compression = lz4`.
 
 ### 4.2. Exemples de commandes d'archivage
 
@@ -353,8 +353,8 @@ max_wal_size = 2GB
 # Intervalle maximum entre deux checkpoints (optionnel)
 checkpoint_timeout = 10min
 
-# Compression du WAL (PG 14+) — `on` utilise pglz par défaut
-# PG 15+ permet aussi : pglz, lz4 (rapide), zstd (meilleur ratio)
+# Compression du WAL (depuis 9.5) — `on` = pglz
+# PG 15+ permet de choisir l'algorithme : pglz, lz4 (rapide), zstd (meilleur ratio)
 wal_compression = lz4
 ```
 
@@ -601,10 +601,10 @@ Ce sujet sera approfondi dans les chapitres 17.2 et 17.3.
 
 ### 8.2. Performances et optimisation
 
-1. **Activez la compression WAL** (PostgreSQL 14+) :
+1. **Activez la compression WAL** (paramètre disponible depuis 9.5 ; choix d'algorithme depuis PG 15) :
    ```ini
    # Défaut : off (pas de compression). Valeurs possibles si activé :
-   #   - on / pglz : algorithme historique (PG 14+)
+   #   - on / pglz : algorithme historique (depuis 9.5)
    #   - lz4       : rapide, bon ratio (PG 15+, recommandé)
    #   - zstd      : meilleur ratio, légèrement plus coûteux en CPU (PG 15+)
    wal_compression = lz4

@@ -321,6 +321,24 @@ INSERT INTO clients (nom) VALUES ('Test');
    DROP ROLE mon_utilisateur;
 ```
 
+> ⚠️ **`DROP ROLE` échoue tant que le rôle possède des objets ou détient des privilèges** :
+> ```
+> ERROR:  role "mon_utilisateur" cannot be dropped because some objects depend on it
+> DETAIL:  owner of table commandes, 3 objects in database app
+> ```
+> Un simple `REVOKE` ne suffit pas : il faut d'abord régler **la propriété des objets** et **les privilèges accordés au rôle**, et ce **dans chaque base** où il intervient. Deux commandes dédiées (à exécuter connecté à la bonne base) :
+> ```sql
+> -- Option A : transférer la propriété de TOUS ses objets à un autre rôle
+> REASSIGN OWNED BY mon_utilisateur TO un_autre_role;
+> -- puis retirer les privilèges qui lui ont été accordés (et purger l'éventuel reste)
+> DROP OWNED BY mon_utilisateur;
+> DROP ROLE mon_utilisateur;
+>
+> -- Option B : supprimer purement et simplement ce qu'il possède (⚠️ DROP les tables !)
+> -- DROP OWNED BY mon_utilisateur;  -- supprime objets possédés + révoque ses privilèges
+> ```
+> `REASSIGN OWNED` change le propriétaire, `DROP OWNED` supprime les objets possédés **et** révoque les privilèges accordés au rôle. À répéter dans chaque base concernée avant que `DROP ROLE` (commande globale) ne réussisse.
+
 ### Les Permissions Sont Additives
 
 Important : Les permissions sont **additives** (cumulatives), pas exclusives.

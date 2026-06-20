@@ -417,7 +417,7 @@ initdb --no-data-checksums -D /var/lib/postgresql/18/main
    SELECT
      sum(heap_blks_read) as heap_read,
      sum(heap_blks_hit) as heap_hit,
-     sum(heap_blks_hit) / (sum(heap_blks_hit) + sum(heap_blks_read)) AS ratio
+     sum(heap_blks_hit) / NULLIF(sum(heap_blks_hit) + sum(heap_blks_read), 0) AS ratio
    FROM pg_statio_user_tables;
 
    -- Objectif : ratio > 0.99 (99%)
@@ -736,36 +736,44 @@ psql -c "SHOW data_checksums;"
 
 **Scénario :** Migration de PostgreSQL 17 (sans checksums) vers PostgreSQL 18.
 
-#### Option 1 : pg_upgrade avec Activation
+#### Option 1 : pg_upgrade (gérer le mismatch de checksums)
 
+⚠️ **`pg_upgrade` EXIGE que l'ancien et le nouveau cluster aient le MÊME statut checksums.** Comme PG 18 active les checksums par défaut et qu'une ancienne instance PG 17 ne les a généralement pas, un `initdb` PG 18 standard suivi de `pg_upgrade` **échoue** avec :
+`old cluster does not use data checksums but the new one does`.
+
+Deux façons de résoudre — **choisir l'une des deux** :
+
+**A. Aligner la nouvelle instance (sans checksums), puis activer après l'upgrade :**
 ```bash
-# 1. Sauvegarder l'ancienne instance
+# 1. Sauvegarde de sécurité + arrêt de l'ancienne
 pg_dumpall > backup_pre_upgrade.sql
-
-# 2. Arrêter PostgreSQL 17
 sudo systemctl stop postgresql@17
 
-# 3. Initialiser PostgreSQL 18 (checksums automatiques)
-/usr/lib/postgresql/18/bin/initdb -D /var/lib/postgresql/18/main
+# 2. Initialiser PG 18 SANS checksums pour matcher l'ancienne
+/usr/lib/postgresql/18/bin/initdb --no-data-checksums -D /var/lib/postgresql/18/main
 
-# 4. Utiliser pg_upgrade
+# 3. pg_upgrade (les deux clusters sont « sans checksums » → OK)
 /usr/lib/postgresql/18/bin/pg_upgrade \
-  -b /usr/lib/postgresql/17/bin \
-  -B /usr/lib/postgresql/18/bin \
-  -d /var/lib/postgresql/17/main \
-  -D /var/lib/postgresql/18/main
+  -b /usr/lib/postgresql/17/bin -B /usr/lib/postgresql/18/bin \
+  -d /var/lib/postgresql/17/main -D /var/lib/postgresql/18/main
 
-# Note : pg_upgrade CONSERVE le statut checksums de l'ancienne instance
-# Si l'ancienne n'avait pas de checksums, la nouvelle non plus !
+# 4. Activer les checksums APRÈS la migration (cluster arrêté)
+pg_checksums --enable -D /var/lib/postgresql/18/main
+sudo systemctl start postgresql@18
+psql -c "SHOW data_checksums;"   # Résultat : on ✅
+```
 
-# 5. Activer les checksums après migration
-sudo systemctl stop postgresql@18  
-pg_checksums --enable -D /var/lib/postgresql/18/main  
-sudo systemctl start postgresql@18  
+**B. Activer les checksums sur l'ANCIENNE instance AVANT l'upgrade :**
+```bash
+# 1. Arrêter l'ancienne et activer ses checksums
+sudo systemctl stop postgresql@17
+pg_checksums --enable -D /var/lib/postgresql/17/main
 
-# 6. Vérifier
-psql -c "SHOW data_checksums;"
-# Résultat : on ✅
+# 2. initdb PG 18 standard (checksums par défaut) → les deux ont des checksums → OK
+/usr/lib/postgresql/18/bin/initdb -D /var/lib/postgresql/18/main
+/usr/lib/postgresql/18/bin/pg_upgrade \
+  -b /usr/lib/postgresql/17/bin -B /usr/lib/postgresql/18/bin \
+  -d /var/lib/postgresql/17/main -D /var/lib/postgresql/18/main
 ```
 
 #### Option 2 : Nouvelle Instance avec Restauration
@@ -795,15 +803,33 @@ psql -c "SHOW data_checksums;"
 
 ### Statistiques de Checksums
 
-**PostgreSQL ne fournit pas de statistiques détaillées sur les checksums**, mais vous pouvez surveiller :
+**PostgreSQL expose un compteur natif d'échecs de checksum par base** dans la vue `pg_stat_database` (colonnes **`checksum_failures`** et **`checksum_last_failure`**, disponibles depuis PostgreSQL 12). C'est **le** moyen canonique de surveiller la corruption détectée — à privilégier sur l'analyse des logs :
 
-**1. Erreurs dans les logs**
+**1. Compteur natif `pg_stat_database` (recommandé)**
+```sql
+-- Échecs de checksum détectés, par base (0 = sain)
+SELECT
+    datname,
+    checksum_failures,                         -- nombre cumulé d'échecs
+    checksum_last_failure                      -- horodatage du dernier échec (NULL si aucun)
+FROM pg_stat_database
+WHERE datname IS NOT NULL
+ORDER BY checksum_failures DESC;
+
+-- Alerte : toute base avec checksum_failures > 0 signale une corruption
+SELECT datname, checksum_failures
+FROM pg_stat_database
+WHERE checksum_failures > 0;
+```
+> 💡 Ce compteur s'incrémente **en temps réel** dès qu'une page corrompue est lue par la base. Branchez une alerte (Prometheus/Grafana, `check_postgres`) sur `checksum_failures > 0`. C'est une statistique par base de `pg_stat_database` : elle est remise à zéro par un `pg_stat_reset()` exécuté dans la base concernée.
+
+**2. Erreurs dans les logs**
 ```bash
 # Compter les erreurs de checksums
 grep -c "checksum verification failed" /var/log/postgresql/postgresql-*.log
 ```
 
-**2. Vérification manuelle**
+**3. Vérification manuelle**
 ```bash
 # Utiliser pg_checksums pour vérifier l'intégrité (instance arrêtée)
 pg_checksums --check -D /var/lib/postgresql/18/main
@@ -815,7 +841,7 @@ pg_checksums --check -D /var/lib/postgresql/18/main
 # Bad checksums:  0        ◄── Important
 ```
 
-**3. Monitoring avec extension pg_stat_statements**
+**4. Monitoring avec extension pg_stat_statements**
 ```sql
 -- Surveiller les requêtes qui échouent fréquemment
 SELECT
@@ -877,9 +903,9 @@ ORDER BY calls DESC;
 ### Migration depuis PostgreSQL ≤ 17
 
 ```
-☐ Vérifier si l'instance actuelle a des checksums
-  ☐ Si oui : pg_upgrade préserve le statut
-  ☐ Si non : décider de la stratégie d'activation
+☐ Vérifier si l'instance actuelle a des checksums (SHOW data_checksums)
+  ☐ Si OUI : initdb PG 18 par défaut (avec checksums) → statuts alignés, pg_upgrade OK
+  ☐ Si NON : aligner les statuts (initdb --no-data-checksums OU pg_checksums --enable sur l'ancienne) — voir Option 1
 ☐ Planifier le downtime pour activation
 ☐ Sauvegarder complètement avant migration
 ☐ Effectuer la migration

@@ -87,9 +87,9 @@ PostgreSQL définit **8 modes de verrous de table**, de moins restrictif à plus
 | **ROW EXCLUSIVE** | Modification de lignes | SHARE, SHARE ROW EXCLUSIVE, EXCLUSIVE, ACCESS EXCLUSIVE | INSERT, UPDATE, DELETE |
 | **SHARE UPDATE EXCLUSIVE** | Modification non-concurrente | Lui-même, SHARE, SHARE ROW EXCLUSIVE, EXCLUSIVE, ACCESS EXCLUSIVE | VACUUM, CREATE INDEX CONCURRENTLY |
 | **SHARE** | Lecture partagée protégée | ROW EXCLUSIVE, SHARE UPDATE EXCLUSIVE, SHARE ROW EXCLUSIVE, EXCLUSIVE, ACCESS EXCLUSIVE | CREATE INDEX |
-| **SHARE ROW EXCLUSIVE** | Lecture partagée exclusive | ROW EXCLUSIVE, SHARE, SHARE UPDATE EXCLUSIVE, EXCLUSIVE, ACCESS EXCLUSIVE | Rarement utilisé |
-| **EXCLUSIVE** | Exclusion des écritures | ROW SHARE, ROW EXCLUSIVE, SHARE UPDATE EXCLUSIVE, SHARE, SHARE ROW EXCLUSIVE, EXCLUSIVE, ACCESS EXCLUSIVE | REFRESH MATERIALIZED VIEW |
-| **ACCESS EXCLUSIVE** | Exclusion totale | TOUS | DROP TABLE, TRUNCATE, ALTER TABLE (certains cas) |
+| **SHARE ROW EXCLUSIVE** | Lecture partagée exclusive | ROW EXCLUSIVE, SHARE UPDATE EXCLUSIVE, SHARE, SHARE ROW EXCLUSIVE, EXCLUSIVE, ACCESS EXCLUSIVE | Rarement utilisé |
+| **EXCLUSIVE** | Exclusion des écritures | ROW SHARE, ROW EXCLUSIVE, SHARE UPDATE EXCLUSIVE, SHARE, SHARE ROW EXCLUSIVE, EXCLUSIVE, ACCESS EXCLUSIVE | REFRESH MATERIALIZED VIEW **CONCURRENTLY** |
+| **ACCESS EXCLUSIVE** | Exclusion totale | TOUS | DROP TABLE, TRUNCATE, VACUUM FULL, REFRESH MATERIALIZED VIEW (sans CONCURRENTLY), ALTER TABLE (certains cas) |
 
 ### Comprendre la compatibilité des verrous
 
@@ -453,7 +453,7 @@ Quatre paramètres jouent ensemble pour contrôler la concurrence et éviter les
 -- Dans postgresql.conf ou via SET au niveau session/transaction
 
 -- Temps d'attente avant de lancer la DÉTECTION de deadlock (défaut : 1s)
-deadlock_timeout = 1s
+-- deadlock_timeout = 1s   ← ligne de postgresql.conf (en session : SET deadlock_timeout = '1s';)
 
 -- Temps maximum d'attente pour OBTENIR un verrou avant erreur (0 = infini, défaut = 0)
 SET lock_timeout = '30s';
@@ -1011,7 +1011,7 @@ WHERE locktype = 'advisory';
 
 Connaissez quel type de verrou pose chaque opération :
 
-```sql
+```text
 SELECT → ACCESS SHARE (lecture)  
 UPDATE/DELETE → ROW EXCLUSIVE (table) + verrou ligne  
 INSERT → ROW EXCLUSIVE (table)  

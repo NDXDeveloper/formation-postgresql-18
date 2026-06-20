@@ -91,7 +91,7 @@ En maîtrisant les concepts de cette partie, vous serez capable de :
 
 #### Administrer Professionnellement
 - ✅ Configurer l'**authentification sécurisée** (SCRAM-SHA-256, OAuth 2.0 avec PG 18)  
-- ✅ Implémenter le **chiffrement TLS 1.3** et le mode FIPS (PostgreSQL 18)  
+- ✅ Implémenter le **chiffrement TLS 1.3** (`ssl_tls13_ciphers`, PG 18) ; le **mode FIPS**, lui, s'active au niveau de l'OS/OpenSSL (PostgreSQL ne le configure pas — PG 18 ajoute seulement `fips_mode()` pour en rapporter l'état)  
 - ✅ Gérer les **autorisations** avec le principe du moindre privilège  
 - ✅ Maîtriser **VACUUM et ANALYZE** avec les optimisations de PG 18  
 - ✅ Mettre en place des **sauvegardes robustes** (logiques, physiques, PITR)  
@@ -279,13 +279,13 @@ PostgreSQL 18 (septembre 2025) apporte des améliorations majeures pour la produ
 
 #### **Sécurité**
 - ✨ **Authentification OAuth 2.0** native (`oauth_validator_libraries`)  
-- ✨ **Mode FIPS** et configuration TLS 1.3 (`ssl_tls13_ciphers`, `ssl_groups`)  
-- ✨ **TLS 1.2 minimum** par défaut côté client (TLS 1.0/1.1 désactivés)
+- ✨ **Configuration TLS 1.3** (`ssl_tls13_ciphers`) et négociation des groupes de clés (`ssl_groups`, qui remplace `ssl_ecdh_curve`)  
+- ✨ Support d'**OpenSSL ≥ 1.1.1 requis** (versions antérieures abandonnées) ; fonction `fips_mode()` (pgcrypto) pour *rapporter* l'état FIPS d'OpenSSL — le mode FIPS lui-même reste géré au niveau OS, pas par PostgreSQL
 
 #### **Administration**
 - ✨ **Data Checksums** activés par défaut (initdb)  
 - ✨ **pg_upgrade** avec préservation des statistiques et option `--swap`  
-- ✨ Étapes supplémentaires parallélisées dans `pg_upgrade --jobs`  
+- ✨ **`pg_upgrade`** exécute désormais les **vérifications de bases de données en parallèle** (`--jobs`)  
 - ✨ Autovacuum optimisé avec nouveaux paramètres
 
 Ces innovations seront signalées tout au long de la partie avec l'annotation **"Nouveauté PG 18"**.

@@ -94,7 +94,9 @@ SELECT
     blks_hit        -- Total de blocs trouvés en cache (TOUTES connexions)
 FROM pg_stat_database  
 WHERE datname = 'ma_base';  
+```
 
+```text
   blks_read  |   blks_hit
 -------------+--------------
   45234789   | 923847234
@@ -161,12 +163,12 @@ Pour que les colonnes de **temps** soient peuplées dans `pg_stat_io`, deux para
 | Paramètre | Effet | Cible |
 |-----------|-------|-------|
 | `track_io_timing` | Active le timing des I/O sur les **relations** (read_time, write_time, fsync_time…) | Lignes `object` = `relation` ou `temp relation` |
-| `track_wal_io_timing` (PG 18+) | Active le timing des I/O **WAL** | Lignes `object` = `wal` |
+| `track_wal_io_timing` (paramètre **PG 14+**) | Active le timing des I/O **WAL** | Lignes `object` = `wal` (ces lignes WAL de `pg_stat_io` sont, elles, nouvelles en PG 18) |
 
 ```ini
 # postgresql.conf
 track_io_timing      = on   # défaut : off  
-track_wal_io_timing  = on   # défaut : off  (PG 18+)  
+track_wal_io_timing  = on   # défaut : off  (paramètre PG 14+ ; il peuple la ligne WAL de pg_stat_io en PG 18)  
 ```
 
 > ⚠️ Ces paramètres interrogent l'horloge système à chaque opération I/O — sur certaines plateformes le surcoût peut être notable. Pour le valider, comparez `EXPLAIN (ANALYZE)` avec/sans `track_io_timing` sur une charge représentative. Sur Linux/x86 récent, le surcoût est en pratique sous 1 %.
@@ -333,7 +335,9 @@ FROM io_snapshot_2 s2
 LEFT JOIN io_snapshot_1 s1 USING (pid)  
 WHERE (s2.reads  - COALESCE(s1.reads, 0))  > 100  
    OR (s2.writes - COALESCE(s1.writes, 0)) > 100
-ORDER BY reads_per_5sec + writes_per_5sec DESC;
+-- on répète les expressions : les alias reads_per_5sec/writes_per_5sec ne sont pas
+-- utilisables dans une EXPRESSION du ORDER BY (seulement en référence directe)
+ORDER BY (s2.reads - COALESCE(s1.reads, 0)) + (s2.writes - COALESCE(s1.writes, 0)) DESC;
 ```
 
 **Utilité** :
@@ -660,19 +664,22 @@ done
 Combinez les statistiques par backend avec `pg_stat_statements` pour une analyse complète :
 
 ```sql
--- Trouver les requêtes qui génèrent le plus de WAL
+-- Trouver les requêtes qui génèrent le plus de WAL.
+-- pg_stat_statements expose DIRECTEMENT le WAL par requête normalisée
+-- (colonnes wal_records / wal_fpi / wal_bytes, depuis PG 13). Inutile — et
+-- incorrect — d'aller chercher un « wal_bytes » dans pg_stat_activity : cette
+-- vue n'a pas cette colonne (le WAL par backend passe par pg_stat_get_backend_wal()).
 SELECT
     pss.queryid,
     LEFT(pss.query, 100) AS query_preview,
     pss.calls,
-    pg_size_pretty(pss.total_exec_time::bigint * 1000) AS total_time,
-    -- Corrélation avec les backends actifs
-    (SELECT SUM(wal_bytes)
-     FROM pg_stat_activity
-     WHERE query LIKE '%' || SUBSTRING(pss.query, 1, 30) || '%') AS estimated_wal
+    ROUND((pss.total_exec_time / 1000)::numeric, 1) AS total_sec,
+    pss.wal_records,
+    pss.wal_fpi,
+    pg_size_pretty(pss.wal_bytes) AS wal_generated
 FROM pg_stat_statements pss  
 WHERE pss.calls > 100  
-ORDER BY estimated_wal DESC NULLS LAST  
+ORDER BY pss.wal_bytes DESC  
 LIMIT 10;  
 ```
 

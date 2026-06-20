@@ -241,7 +241,7 @@ PostgreSQL fournit plusieurs **rôles prédéfinis** (sans mot de passe, qu'on g
 | `pg_read_all_stats` (PG 10+) | Voir toutes les vues `pg_stat_*` (toutes sessions, toutes bases) | Inclus dans `pg_monitor` |
 | `pg_read_all_settings` (PG 10+) | Voir tous les `pg_settings`, y compris ceux marqués « superuser-only » (ex. `data_directory`) | Inclus dans `pg_monitor` |
 | `pg_stat_scan_tables` (PG 10+) | Appeler des fonctions de monitoring qui posent un verrou court sur les tables système | Inclus dans `pg_monitor` |
-| `pg_signal_backend` (PG 13+) | Appeler `pg_cancel_backend()` et `pg_terminate_backend()` sur les sessions d'autres rôles non-superuser | Outil d'administration sans superuser |
+| `pg_signal_backend` (PG 9.6+) | Appeler `pg_cancel_backend()` et `pg_terminate_backend()` sur les sessions d'autres rôles non-superuser | Outil d'administration sans superuser |
 | `pg_read_all_data` (PG 14+) | Lire toutes les données de toutes les tables — **équivalent superuser en lecture** | À éviter pour le monitoring (trop large) |
 
 ```sql
@@ -249,7 +249,7 @@ PostgreSQL fournit plusieurs **rôles prédéfinis** (sans mot de passe, qu'on g
 CREATE USER monitoring WITH PASSWORD '...';  
 GRANT pg_monitor TO monitoring;  
 
--- Pour un outil d'admin sans superuser (PG 13+)
+-- Pour un outil d'admin sans superuser (pg_monitor = PG 10+, pg_signal_backend = PG 9.6+)
 GRANT pg_monitor, pg_signal_backend TO ops_user;
 ```
 
@@ -267,7 +267,8 @@ track_counts = on
 # Suivi des temps I/O (à activer pour pg_stat_database et pg_stat_io)
 track_io_timing = on
 
-# Suivi des temps I/O sur le WAL (PG 18+, peuple pg_stat_io ligne WAL)
+# Suivi des temps I/O sur le WAL (paramètre PG 14+ ; en PG 18 il peuple la ligne
+# WAL de pg_stat_io — avant PG 18, il alimentait pg_stat_wal.wal_write_time/wal_sync_time)
 track_wal_io_timing = on
 
 # Suivi des fonctions : 'none' (défaut), 'pl' (PL/pgSQL), 'all'
@@ -485,7 +486,7 @@ SELECT
     s.n_tup_ins + s.n_tup_upd + s.n_tup_del AS total_modifications,
     pg_size_pretty(pg_total_relation_size(c.oid)) AS taille
 FROM pg_stat_user_tables s  
-JOIN pg_class c ON s.relname = c.relname  
+JOIN pg_class c ON s.relid = c.oid   -- joindre sur l'OID (relid), PAS sur relname : sinon doublons si des tables homonymes existent dans plusieurs schémas
 ORDER BY total_scans DESC  
 LIMIT 20;  
 ```

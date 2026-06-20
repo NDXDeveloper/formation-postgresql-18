@@ -235,7 +235,7 @@ Phase 5: MAINTENANCE (Optimisation continue)
 ```sql
 -- 1. Cache Hit Ratio
 SELECT
-    sum(heap_blks_hit) / (sum(heap_blks_hit) + sum(heap_blks_read)) * 100 AS cache_hit_ratio
+    sum(heap_blks_hit) / NULLIF(sum(heap_blks_hit) + sum(heap_blks_read), 0) * 100 AS cache_hit_ratio
 FROM pg_statio_user_tables;
 
 -- 2. Requêtes lentes (avec pg_stat_statements)
@@ -668,7 +668,7 @@ huge_pages
 max_connections  
 
 # WAL
-wal_buffers (si > 2048 blocs)  
+wal_buffers  
 wal_level  
 
 # Divers
@@ -938,7 +938,7 @@ Checkpoints plus fréquents :
 **Cache Hit Ratio** :
 ```sql
 SELECT
-    sum(heap_blks_hit) / (sum(heap_blks_hit) + sum(heap_blks_read)) * 100 AS cache_hit_pct
+    sum(heap_blks_hit) / NULLIF(sum(heap_blks_hit) + sum(heap_blks_read), 0) * 100 AS cache_hit_pct
 FROM pg_statio_user_tables;
 
 -- Objectif : > 95%

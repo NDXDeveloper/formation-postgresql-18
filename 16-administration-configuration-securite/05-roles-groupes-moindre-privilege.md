@@ -218,12 +218,13 @@ PostgreSQL fournit un ensemble de **rôles prédéfinis** (commençant par `pg_`
 | `pg_read_all_stats` | PG 10 | Lire toutes les vues `pg_stat_*` sans restriction |
 | `pg_stat_scan_tables` | PG 10 | Exécuter certaines fonctions de statistiques nécessitant un ACCESS SHARE |
 | `pg_monitor` | PG 10 | Combine `pg_read_all_settings` + `pg_read_all_stats` + `pg_stat_scan_tables` |
-| `pg_signal_backend` | PG 13 | Envoyer des signaux (`pg_cancel_backend`, `pg_terminate_backend`) à des backends non-superusers |
+| `pg_signal_backend` | PG 9.6 | Envoyer des signaux (`pg_cancel_backend`, `pg_terminate_backend`) à des backends non-superusers |
 | `pg_database_owner` | PG 14 | Pseudo-rôle représentant le propriétaire courant de la base (utile pour `public`) |
 | `pg_checkpoint` | PG 15 | Exécuter `CHECKPOINT` sans être superuser |
 | `pg_use_reserved_connections` | PG 16 | Utiliser des connexions réservées (`reserved_connections`) |
 | `pg_create_subscription` | PG 16 | Créer des subscriptions de réplication logique sans être superuser |
 | `pg_maintain` | PG 17 | Exécuter VACUUM, ANALYZE, CLUSTER, REFRESH MATERIALIZED VIEW, REINDEX, LOCK TABLE sur **toutes** les tables sans être propriétaire |
+| `pg_signal_autovacuum_worker` | PG 18 | 🆕 Envoyer `pg_cancel_backend`/`pg_terminate_backend` aux **workers autovacuum** uniquement — permet de débloquer un autovacuum gênant sans accorder `pg_signal_backend` (qui vise tous les backends) ni le superuser |
 | `pg_read_server_files` | PG 11 | Lire des fichiers du serveur via `COPY FROM '/chemin/fichier'`, `file_fdw`, `pg_ls_dir()`, etc. (⚠️ accès filesystem côté serveur) |
 | `pg_write_server_files` | PG 11 | Écrire des fichiers sur le serveur via `COPY ... TO '/chemin/fichier'` (⚠️ accès filesystem côté serveur) |
 | `pg_execute_server_program` | PG 11 | Exécuter un programme externe via `COPY ... TO PROGRAM 'commande'` (⚠️ équivalent à un shell sur le serveur — très puissant) |
@@ -340,6 +341,32 @@ SELECT * FROM table_sensible;  -- ❌ Erreur : permission denied
 ❌ **N'utilisez PAS NOINHERIT pour :**
 - Rôles de permissions normales (lecture, écriture)
 - Simplifie trop la gestion au quotidien
+
+### ⭐ Nouveauté PostgreSQL 16 : héritage par appartenance (`WITH INHERIT`)
+
+Jusqu'à PostgreSQL 15, l'héritage dépendait **uniquement** de l'attribut `INHERIT`/`NOINHERIT` du rôle membre. Depuis **PostgreSQL 16**, on peut régler l'héritage **appartenance par appartenance**, au moment du `GRANT` :
+
+```sql
+-- alice hérite de lecteurs (par défaut : suit l'attribut INHERIT d'alice)
+GRANT lecteurs TO alice WITH INHERIT TRUE;
+
+-- alice est membre d'admins mais n'hérite PAS automatiquement de ses droits
+-- (elle devra faire SET ROLE admins), même si alice a l'attribut INHERIT
+GRANT admins TO alice WITH INHERIT FALSE;
+```
+
+⚠️ **Point important** : l'option est **figée au moment du `GRANT`** (stockée dans la colonne `pg_auth_members.inherit_option`, PG 16+). Un `ALTER ROLE alice INHERIT` ultérieur ne modifie **pas** les appartenances déjà accordées ; il ne sert que de valeur **par défaut** pour les futurs `GRANT ... TO alice` qui ne précisent pas `WITH INHERIT`.
+
+```sql
+-- Inspecter l'option d'héritage réellement enregistrée pour chaque appartenance
+SELECT r.rolname AS membre, g.rolname AS groupe, am.inherit_option
+FROM pg_auth_members am
+JOIN pg_roles r ON am.member = r.oid
+JOIN pg_roles g ON am.roleid = g.oid
+ORDER BY 1, 2;
+```
+
+PostgreSQL 16 a également ajouté l'option `WITH SET TRUE|FALSE` (autoriser ou non `SET ROLE` vers le groupe) et `WITH ADMIN` (déléguer l'attribution de l'appartenance), pour un contrôle encore plus fin.
 
 ---
 

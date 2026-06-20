@@ -319,7 +319,8 @@ $$;
 SELECT demo_diagnostics();
 -- NOTICE:  État SQL : 22012
 -- NOTICE:  Message : division by zero
--- NOTICE:  Contexte : SQL function "demo_diagnostics" statement 1
+-- NOTICE:  Contexte : SQL statement "SELECT 1 / 0"
+--          PL/pgSQL function demo_diagnostics() line N at PERFORM
 ```
 
 **Variables disponibles** :
@@ -577,7 +578,7 @@ BEGIN
     INSERT INTO historique_transferts (source, destination, montant, date)
     VALUES (compte_source, compte_dest, montant, NOW());
 
-    RETURN format('Transfert réussi : % transférés du compte % vers %',
+    RETURN format('Transfert réussi : %s transférés du compte %s vers %s',
                   montant, compte_source, compte_dest);
 
 EXCEPTION

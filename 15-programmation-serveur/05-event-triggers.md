@@ -77,7 +77,7 @@ Se déclenche **après** l'exécution réussie d'une commande DDL, **et après**
 
 ### 2.3. table_rewrite
 
-Se déclenche quand une table doit être complètement réécrite (`ALTER TABLE ... ALTER COLUMN TYPE`, ajout de colonne avec valeur par défaut volatile, `SET TABLESPACE`, `SET ACCESS METHOD`).
+Se déclenche quand une table doit être complètement réécrite (`ALTER TABLE ... ALTER COLUMN TYPE`, ajout de colonne avec valeur par défaut volatile, changement de persistance `SET LOGGED`/`SET UNLOGGED`, `SET ACCESS METHOD`).
 
 **Utilisation typique** : Alerter sur les opérations potentiellement longues
 
@@ -111,7 +111,7 @@ EXECUTE FUNCTION audit_login();
 - Si l'event trigger échoue (RAISE EXCEPTION), **la connexion échoue** : risque de se retrouver verrouillé hors de sa propre base.
 - Pour se rattraper en cas de blocage : démarrer le serveur en mode mono-utilisateur (`postgres --single`) ou désactiver l'event trigger via une connexion superuser autorisée.
 - Bonne pratique : envelopper la logique dans un `BEGIN...EXCEPTION WHEN OTHERS` qui logge mais ne bloque pas la connexion.
-- L'event trigger `login` s'exécute hors transaction utilisateur visible — il ne peut pas accéder à `current_query()`.
+- Au moment du déclenchement de `login`, **aucune requête SQL utilisateur n'est encore en cours** : `current_query()` y renvoie donc **`NULL`** (l'appel ne lève pas d'erreur, mais il n'y a tout simplement pas de requête à auditer — vérifié sur PostgreSQL 18).
 
 **Utilisation typique** : Audit de connexion, vérification d'autorisation, mise à jour de paramètres de session.
 
@@ -793,7 +793,7 @@ Seul un **superutilisateur** peut créer des Event Triggers.
 -- ❌ Utilisateur normal
 CREATE EVENT TRIGGER test ON ddl_command_end EXECUTE FUNCTION f();
 -- ERREUR : permission denied to create event trigger "test"
--- CONSEIL : Only superusers can create event triggers.
+-- CONSEIL (HINT) : Must be superuser to create an event trigger.
 
 -- ✅ En tant que superutilisateur (typiquement le rôle 'postgres')
 -- Exécuter le CREATE EVENT TRIGGER avec un rôle déjà superuser
@@ -808,8 +808,9 @@ CREATE EVENT TRIGGER test ON ddl_command_end EXECUTE FUNCTION f();
 -- ❌ ÉVITER : élève un utilisateur applicatif en superuser pour un besoin ponctuel
 ALTER USER mon_user_appli WITH SUPERUSER;
 
--- ✅ Préférer : se connecter directement en tant que superuser existant
-psql -U postgres -d ma_base -c 'CREATE EVENT TRIGGER ...;'
+-- ✅ Préférer : se connecter directement en tant que superuser existant.
+--    (Commande shell à lancer dans un terminal, pas en SQL :)
+--    psql -U postgres -d ma_base -c 'CREATE EVENT TRIGGER ...;'
 ```
 
 ### 9.2. Event Triggers et transactions
@@ -863,7 +864,7 @@ Plusieurs catégories de commandes **n'activent pas** les Event Triggers :
 
 **3. Commandes DML** (gérées par les triggers classiques, pas par les Event Triggers) :
 - `SELECT`, `INSERT`, `UPDATE`, `DELETE`, `MERGE`, `COPY`
-- Le `TRUNCATE` en revanche **est** un événement DDL et **déclenche** les Event Triggers.
+- `TRUNCATE` : bien que proche du DDL, il **ne déclenche PAS** les Event Triggers `ddl_command_start` / `ddl_command_end` (vérifié sur PostgreSQL 18 ; `TRUNCATE` n'apparaît pas dans la liste des commandes interceptées par les event triggers). Il peut toutefois être capturé par un **trigger classique** `BEFORE`/`AFTER TRUNCATE ... FOR EACH STATEMENT` (voir 15.4).
 
 **4. Commandes sur les Event Triggers eux-mêmes** (pour éviter la récursion) :
 - `CREATE EVENT TRIGGER`, `ALTER EVENT TRIGGER`, `DROP EVENT TRIGGER`
@@ -1103,7 +1104,7 @@ EXECUTE FUNCTION version_functions();
 
 ⚠️ **Attention aux signatures :** dans l'événement `table_rewrite`, PostgreSQL fournit **deux fonctions scalaires** (pas des fonctions retournant un setof) :
 - `pg_event_trigger_table_rewrite_oid()` → OID de la table en cours de réécriture
-- `pg_event_trigger_table_rewrite_reason()` → entier indiquant la raison (1 = `ALTER COLUMN TYPE`, 2 = `ADD COLUMN avec valeur par défaut volatile`, 4 = `SET TABLESPACE`, 8 = `SET ACCESS METHOD`)
+- `pg_event_trigger_table_rewrite_reason()` → entier (**champ de bits**) indiquant la raison. Codes vérifiés sur PostgreSQL 18 : **1** = changement de persistance (`SET LOGGED`/`SET UNLOGGED`), **2** = `ADD COLUMN` avec valeur par défaut volatile, **4** = `ALTER COLUMN TYPE` (réécriture de colonne), **8** = `SET ACCESS METHOD`. Plusieurs causes peuvent se combiner (ex. `6` = `2 | 4`).
 
 Il ne faut donc **pas** boucler sur leur résultat. Utilisation correcte :
 
@@ -1122,11 +1123,12 @@ BEGIN
     raison := pg_event_trigger_table_rewrite_reason();
 
     -- Décoder la raison
-    raison_texte := CASE raison
-        WHEN 1 THEN 'changement de type de colonne (ALTER COLUMN TYPE)'
-        WHEN 2 THEN 'ajout de colonne avec valeur par défaut volatile'
-        WHEN 4 THEN 'changement de tablespace (SET TABLESPACE)'
-        WHEN 8 THEN 'changement de méthode d''accès (SET ACCESS METHOD)'
+    -- Note : 'raison' est un champ de bits ; on teste donc chaque bit.
+    raison_texte := CASE
+        WHEN raison & 1 = 1 THEN 'changement de persistance (SET LOGGED / SET UNLOGGED)'
+        WHEN raison & 2 = 2 THEN 'ajout de colonne avec valeur par défaut volatile'
+        WHEN raison & 4 = 4 THEN 'changement de type de colonne (ALTER COLUMN TYPE)'
+        WHEN raison & 8 = 8 THEN 'changement de méthode d''accès (SET ACCESS METHOD)'
         ELSE 'raison inconnue (code ' || raison || ')'
     END;
 

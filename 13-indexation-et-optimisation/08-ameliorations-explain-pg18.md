@@ -762,7 +762,7 @@ L'affichage automatique des buffers encourage :
 
 🔑 **Rétrocompatible** : Toutes les anciennes syntaxes fonctionnent toujours.
 
-🔑 **Impact positif sur auto_explain** : Configuration simplifiée, logs automatiquement complets.
+🔑 **auto_explain inchangé** : `auto_explain.log_buffers` reste `off` par défaut (identique en PG 17 et PG 18). La nouveauté « BUFFERS automatique » ne concerne QUE la commande SQL `EXPLAIN`, pas l'extension — il faut toujours activer `auto_explain.log_buffers = on` pour voir les I/O dans les logs.
 
 🔑 **Désactivation possible** : `BUFFERS OFF` si vraiment nécessaire (rare).
 

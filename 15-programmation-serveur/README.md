@@ -119,6 +119,11 @@ SELECT SUM(prix) FROM produits WHERE categorie = 'Livres';
 
 **En PL/pgSQL** (procédural) :
 ```sql
+-- On encapsule la logique dans une fonction PL/pgSQL :
+CREATE FUNCTION total_livres_remise()
+RETURNS NUMERIC
+LANGUAGE plpgsql
+AS $$
 DECLARE
     total NUMERIC := 0;
     prix_courant NUMERIC;
@@ -135,8 +140,10 @@ BEGIN
 
     RETURN total;
 END;
+$$;
 
 -- Plus complexe, mais beaucoup plus flexible !
+SELECT total_livres_remise();
 ```
 
 ---
